@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import type { Tur, TurStatus, Overnatning, Aktivitet, Terraen, Erfaring, Deltager, BudgetLinje } from './db';
 import { hentVejr, vejrIkonKode, beregnForbrug, findAdvarsler, foreslaaGrupper, soegSted } from './smartMotor';
-import type { StedForslag } from './smartMotor';
+import type { VejrData, StedForslag } from './smartMotor';
 
 interface Props {
   turId: number;
