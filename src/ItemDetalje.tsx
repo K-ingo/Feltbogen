@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { db } from './db';
 import type { Item, ItemStatus, Garanti } from './db';
 import TagsInput from './TagsInput';
-import { Knap, Felt, Kort, layout, SektionsTitel } from './ui';
+import {Felt, Kort, layout, SektionsTitel } from './ui';
 
 interface Props {
   itemId: number;

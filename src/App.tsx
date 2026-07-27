@@ -7,7 +7,7 @@ import GrupperListe from './GrupperListe';
 import TureListe from './TureListe';
 import BundNav from './BundNav';
 import type { Fane } from './BundNav';
-import { Knap, Kort, Chip, Badge, layout } from './ui';
+import { Knap, Kort, Chip, layout } from './ui';
 
 function App() {
   const [fane, setFane] = useState<Fane>('inventar');
