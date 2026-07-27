@@ -31,13 +31,28 @@ export interface Item {
   aendret: Date;
 }
 
+export interface Gruppe {
+  id?: number;
+  navn: string;
+  tags: string[];
+  item_ids: number[];
+  noter: string;
+  oprettet: Date;
+  aendret: Date;
+}
+
 export class FeltbogenDB extends Dexie {
   items!: Table<Item>;
+  grupper!: Table<Gruppe>;
 
   constructor() {
     super('FeltbogenDB');
     this.version(1).stores({
       items: '++id, navn, status, oprettet'
+    });
+    this.version(2).stores({
+      items: '++id, navn, status, oprettet',
+      grupper: '++id, navn, oprettet'
     });
   }
 }
