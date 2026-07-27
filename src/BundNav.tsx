@@ -1,4 +1,4 @@
-type Fane = 'inventar' | 'grupper';
+type Fane = 'inventar' | 'grupper' | 'ture';
 
 interface Props {
   aktiv: Fane;
@@ -34,6 +34,9 @@ function BundNav({ aktiv, skift }: Props) {
       </button>
       <button style={stil(aktiv === 'grupper')} onClick={() => skift('grupper')}>
         Grupper
+      </button>
+      <button style={stil(aktiv === 'ture')} onClick={() => skift('ture')}>
+        Ture
       </button>
     </div>
   );

@@ -4,6 +4,7 @@ import { db } from './db';
 import type { Item } from './db';
 import ItemDetalje from './ItemDetalje';
 import GrupperListe from './GrupperListe';
+import TureListe from './TureListe';
 import BundNav from './BundNav';
 import type { Fane } from './BundNav';
 
@@ -56,6 +57,15 @@ function App() {
     return (
       <>
         <GrupperListe />
+        <BundNav aktiv={fane} skift={setFane} />
+      </>
+    );
+  }
+
+  if (fane === 'ture') {
+    return (
+      <>
+        <TureListe />
         <BundNav aktiv={fane} skift={setFane} />
       </>
     );
