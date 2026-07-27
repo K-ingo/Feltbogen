@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import type { Tur, TurStatus, Overnatning, Aktivitet, Terraen, Erfaring, Deltager, BudgetLinje } from './db';
+import { hentVejr, vejrIkonKode, beregnForbrug, findAdvarsler, foreslaaGrupper, soegSted } from './smartMotor';
+import type { StedForslag } from './smartMotor';
 
 interface Props {
   turId: number;
@@ -12,12 +14,31 @@ function TurDetalje({ turId, tilbage }: Props) {
   const [tur, setTur] = useState<Tur | null>(null);
   const [menuAaben, setMenuAaben] = useState(false);
   const [aktivSektion, setAktivSektion] = useState<'oversigt' | 'pakkeliste' | 'deltagere' | 'budget'>('oversigt');
+  const [vejrData, setVejrData] = useState<VejrData | null>(null);
+  const [vejrHentes, setVejrHentes] = useState(false);
+  const [vejrFejl, setVejrFejl] = useState('');
+  const [koordinatTekst, setKoordinatTekst] = useState('');
+  const [koordinatFejl, setKoordinatFejl] = useState('');
+  const [stedForslag, setStedForslag] = useState<StedForslag[]>([]);
+  const [stedSoeger, setStedSoeger] = useState(false);
 
   const items = useLiveQuery(() => db.items.toArray());
   const grupper = useLiveQuery(() => db.grupper.toArray());
 
   useEffect(() => {
-    db.ture.get(turId).then((fundet) => setTur(fundet ?? null));
+    db.ture.get(turId).then((fundet) => {
+      setTur(fundet ?? null);
+      if (fundet?.koordinater) {
+        setKoordinatTekst(`${fundet.koordinater.lat}, ${fundet.koordinater.lng}`);
+      }
+      if (fundet?.vejrsnapshot) {
+        try {
+          setVejrData(JSON.parse(fundet.vejrsnapshot));
+        } catch {
+          setVejrData(null);
+        }
+      }
+    });
   }, [turId]);
 
   const opdater = async (aendringer: Partial<Tur>) => {
@@ -40,6 +61,71 @@ function TurDetalje({ turId, tilbage }: Props) {
     const nyStart = aendringer.startdato ?? tur.startdato;
     const nySlut = aendringer.slutdato ?? tur.slutdato;
     await opdater({ ...aendringer, naetter: beregnNaetter(nyStart, nySlut) });
+  };
+
+  const opdaterKoordinater = async (v: string) => {
+    setKoordinatTekst(v);
+    setKoordinatFejl('');
+
+    if (v.trim() === '') {
+      await opdater({ koordinater: null });
+      return;
+    }
+
+    const dele = v.split(',').map((s) => s.trim());
+    if (dele.length === 2) {
+      const lat = parseFloat(dele[0]);
+      const lng = parseFloat(dele[1]);
+      if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        await opdater({ koordinater: { lat, lng } });
+        return;
+      }
+    }
+
+    setKoordinatFejl('Format: "55.66, 10.05"');
+  };
+  const soegPaaSted = async () => {
+    if (!tur?.sted.trim()) return;
+    setStedSoeger(true);
+    setStedForslag([]);
+    const resultater = await soegSted(tur.sted);
+    setStedSoeger(false);
+    if (resultater.length === 1) {
+      await vaelgSted(resultater[0]);
+    } else if (resultater.length > 1) {
+      setStedForslag(resultater);
+    } else {
+      setKoordinatFejl('Ingen resultater for stedet');
+    }
+  };
+
+  const vaelgSted = async (forslag: StedForslag) => {
+    await opdater({
+      koordinater: { lat: forslag.lat, lng: forslag.lng }
+    });
+    setKoordinatTekst(`${forslag.lat}, ${forslag.lng}`);
+    setStedForslag([]);
+    setKoordinatFejl('');
+  };
+  const hentVejrForTur = async () => {
+    if (!tur?.koordinater) {
+      setVejrFejl('Angiv koordinater først (fx 55.66, 10.05)');
+      return;
+    }
+    if (!tur.startdato || !tur.slutdato) {
+      setVejrFejl('Angiv start- og slutdato først');
+      return;
+    }
+    setVejrHentes(true);
+    setVejrFejl('');
+    const data = await hentVejr(tur.koordinater.lat, tur.koordinater.lng, tur.startdato, tur.slutdato);
+    setVejrHentes(false);
+    if (data) {
+      setVejrData(data);
+      await opdater({ vejrsnapshot: JSON.stringify(data) });
+    } else {
+      setVejrFejl('Kunne ikke hente vejrudsigt. Tjek koordinater og dato.');
+    }
   };
 
   const slet = async () => {
@@ -133,6 +219,10 @@ function TurDetalje({ turId, tilbage }: Props) {
   const totalForventet = tur.budget_linjer.reduce((s, l) => s + l.forventet_kr, 0);
   const totalFaktisk = tur.budget_linjer.reduce((s, l) => s + l.faktisk_kr, 0);
 
+  const advarsler = findAdvarsler(pakItems);
+  const beregninger = beregnForbrug(tur);
+  const gruppeForslag = grupper ? foreslaaGrupper(tur, grupper) : [];
+
   const statusFarve = (s: TurStatus) => {
     switch (s) {
       case 'kladde': return { bg: '#f0f0f0', tekst: '#666' };
@@ -218,6 +308,28 @@ function TurDetalje({ turId, tilbage }: Props) {
         })}
       </div>
 
+      {advarsler.length > 0 && (
+        <div style={{ marginBottom: '20px' }}>
+          {advarsler.map((a, i) => {
+            const bg = a.niveau === 'roed' ? '#fee' : '#fff4e0';
+            const tekst = a.niveau === 'roed' ? '#c00' : '#a06000';
+            return (
+              <div key={i} style={{
+                padding: '8px 12px',
+                background: bg,
+                borderLeft: `3px solid ${tekst}`,
+                fontSize: '12px',
+                color: tekst,
+                marginBottom: '4px'
+              }}>
+                <div style={{ fontWeight: 500 }}>{a.besked}</div>
+                <div style={{ fontSize: '11px', opacity: 0.85, marginTop: '2px' }}>{a.detalje}</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       <div style={{ display: 'flex', gap: '2px', marginBottom: '16px', borderBottom: '1px solid #eee' }}>
         {(['oversigt', 'pakkeliste', 'deltagere', 'budget'] as const).map((sek) => (
           <button
@@ -243,7 +355,72 @@ function TurDetalje({ turId, tilbage }: Props) {
 
       {aktivSektion === 'oversigt' && (
         <div style={{ display: 'grid', gap: '12px' }}>
-          <Felt label="Sted" value={tur.sted} onChange={(v) => opdater({ sted: v })} placeholder="fx Øghaven Naturskole" />
+<div>
+            <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>Sted</label>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <input
+                type="text"
+                value={tur.sted}
+                onChange={(e) => opdater({ sted: e.target.value })}
+                placeholder="fx Øghaven Naturskole"
+                style={{ flex: 1, padding: '8px', fontSize: '14px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+              />
+              <button
+                onClick={soegPaaSted}
+                disabled={stedSoeger || !tur.sted.trim()}
+                style={{
+                  padding: '8px 12px',
+                  fontSize: '12px',
+                  background: stedSoeger || !tur.sted.trim() ? '#eee' : '#333',
+                  color: stedSoeger || !tur.sted.trim() ? '#888' : 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: stedSoeger || !tur.sted.trim() ? 'default' : 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {stedSoeger ? 'Søger...' : 'Find'}
+              </button>
+            </div>
+
+            {stedForslag.length > 0 && (
+              <div style={{ marginTop: '8px', border: '1px solid #ddd', borderRadius: '4px', overflow: 'hidden' }}>
+                {stedForslag.map((f, i) => (
+                  <button
+                    key={i}
+                    onClick={() => vaelgSted(f)}
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      padding: '8px 12px',
+                      background: 'white',
+                      border: 'none',
+                      borderBottom: i < stedForslag.length - 1 ? '1px solid #eee' : 'none',
+                      cursor: 'pointer',
+                      textAlign: 'left'
+                    }}
+                  >
+                    <div style={{ fontSize: '13px', fontWeight: 500 }}>{f.navn}</div>
+                    {f.detalje && <div style={{ fontSize: '11px', color: '#888' }}>{f.detalje}</div>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>
+              Koordinater (til vejr)
+              {koordinatFejl && <span style={{ color: '#c00', marginLeft: '8px', fontSize: '11px' }}>· {koordinatFejl}</span>}
+            </label>
+            <input
+              type="text"
+              value={koordinatTekst}
+              onChange={(e) => opdaterKoordinater(e.target.value)}
+              placeholder="fx 55.66, 10.05"
+              style={{ width: '100%', padding: '8px', fontSize: '14px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+            />
+          </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
             <Felt label="Startdato" type="date" value={tur.startdato} onChange={(v) => skiftDato({ startdato: v })} />
@@ -263,6 +440,88 @@ function TurDetalje({ turId, tilbage }: Props) {
           <Dropdown label="Aktivitet" value={tur.aktivitet} onChange={(v) => opdater({ aktivitet: v as Aktivitet })} options={['bushcraft', 'vandretur', 'kano', 'andet']} />
           <Dropdown label="Terræn" value={tur.terraen} onChange={(v) => opdater({ terraen: v as Terraen })} options={['skov', 'kyst', 'fjeld', 'mix']} />
           <Dropdown label="Erfaringsniveau" value={tur.erfaring} onChange={(v) => opdater({ erfaring: v as Erfaring })} options={['begynder', 'oevet', 'erfaren']} />
+
+          <div style={{ padding: '12px', background: '#f9f9f9', borderRadius: '6px' }}>
+            <div style={{ fontSize: '11px', color: '#666', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Beregninger</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', fontSize: '13px' }}>
+              <div>
+                <div style={{ fontSize: '18px', fontWeight: 500 }}>{beregninger.vand_liter} L</div>
+                <div style={{ fontSize: '10px', color: '#888' }}>Vand</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '18px', fontWeight: 500 }}>{beregninger.mad_kg} kg</div>
+                <div style={{ fontSize: '10px', color: '#888' }}>Mad (tørkost)</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '18px', fontWeight: 500 }}>{beregninger.gas_g} g</div>
+                <div style={{ fontSize: '10px', color: '#888' }}>Gas</div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ border: '1px solid #ddd', borderRadius: '6px', padding: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+              <div style={{ fontSize: '11px', color: '#666', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Vejrudsigt</div>
+              <button
+                onClick={hentVejrForTur}
+                disabled={vejrHentes}
+                style={{
+                  padding: '4px 10px',
+                  fontSize: '11px',
+                  background: vejrHentes ? '#eee' : '#333',
+                  color: vejrHentes ? '#888' : 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: vejrHentes ? 'default' : 'pointer'
+                }}
+              >
+                {vejrHentes ? 'Henter...' : vejrData ? 'Opdater' : 'Hent vejr'}
+              </button>
+            </div>
+
+            {vejrFejl && (
+              <div style={{ fontSize: '12px', color: '#c00', marginBottom: '8px' }}>{vejrFejl}</div>
+            )}
+
+            {vejrData && (
+              <>
+                <div style={{ display: 'grid', gap: '4px', fontSize: '13px' }}>
+                  {vejrData.dage.map((d) => (
+                    <div key={d.dato} style={{ display: 'grid', gridTemplateColumns: '60px 24px 1fr 60px 50px', gap: '8px', alignItems: 'center', padding: '4px 0' }}>
+                      <span style={{ color: '#666', fontSize: '11px' }}>{formatterDag(d.dato)}</span>
+                      <span style={{ fontSize: '16px' }}>{vejrIkonKode(d.vejrkode)}</span>
+                      <span>{d.temp_min}–{d.temp_max}°C</span>
+                      <span style={{ color: '#888', fontSize: '11px' }}>{d.vind_ms} m/s</span>
+                      <span style={{ color: d.nedboer_mm > 0 ? '#a06000' : '#888', fontSize: '11px', textAlign: 'right' }}>
+                        {d.nedboer_mm > 0 ? `${d.nedboer_mm} mm` : '—'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {vejrData.dage[0] && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#888', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #eee' }}>
+                    <span>Sol op {vejrData.dage[0].sol_op}</span>
+                    <span>Sol ned {vejrData.dage[0].sol_ned}</span>
+                  </div>
+                )}
+
+                {vejrData.observationer.length > 0 && (
+                  <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #eee' }}>
+                    {vejrData.observationer.map((obs, i) => (
+                      <div key={i} style={{ fontSize: '11px', color: '#666', marginBottom: '3px' }}>· {obs}</div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {!vejrData && !vejrFejl && (
+              <div style={{ fontSize: '12px', color: '#888' }}>
+                Angiv koordinater og datoer, klik "Hent vejr".
+              </div>
+            )}
+          </div>
 
           <div>
             <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>Besked til gæster</label>
@@ -296,9 +555,34 @@ function TurDetalje({ turId, tilbage }: Props) {
             </div>
           </div>
 
+          {gruppeForslag.length > 0 && (
+            <div style={{ padding: '10px 12px', background: '#eef5fb', borderRadius: '6px', marginBottom: '16px' }}>
+              <div style={{ fontSize: '11px', color: '#2a5a8a', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Foreslåede grupper</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {gruppeForslag.map((g) => (
+                  <button
+                    key={g.id}
+                    onClick={() => g.id && toggleGruppe(g.id)}
+                    style={{
+                      padding: '4px 10px',
+                      fontSize: '12px',
+                      background: 'white',
+                      color: '#2a5a8a',
+                      border: '1px solid #b8d4ea',
+                      borderRadius: '12px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    + {g.navn}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <h4 style={{ fontSize: '13px', color: '#666', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Grupper</h4>
           {grupper?.length === 0 && (
-            <p style={{ fontSize: '13px', color: '#888' }}>Ingen grupper endnu. Opret nogle under Grupper-fanen.</p>
+            <p style={{ fontSize: '13px', color: '#888' }}>Ingen grupper endnu.</p>
           )}
           {grupper?.map((g) => {
             const er_med = g.id ? tur.gruppe_ids.includes(g.id) : false;
@@ -459,6 +743,12 @@ function TurDetalje({ turId, tilbage }: Props) {
       )}
     </div>
   );
+}
+
+function formatterDag(dato: string): string {
+  const d = new Date(dato);
+  const dage = ['søn', 'man', 'tir', 'ons', 'tor', 'fre', 'lør'];
+  return `${dage[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}`;
 }
 
 interface FeltProps {

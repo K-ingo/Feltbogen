@@ -83,10 +83,10 @@ export interface Tur {
   budget_linjer: BudgetLinje[];
   besked_fra_ejer: string;
   noter: string;
+  vejrsnapshot: string;
   oprettet: Date;
   aendret: Date;
 }
-
 export class FeltbogenDB extends Dexie {
   items!: Table<Item>;
   grupper!: Table<Gruppe>;

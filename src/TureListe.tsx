@@ -34,6 +34,7 @@ function TureListe() {
       budget_linjer: [],
       besked_fra_ejer: '',
       noter: '',
+      vejrsnapshot: '',
       oprettet: nu,
       aendret: nu
     });
