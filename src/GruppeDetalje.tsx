@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import type { Gruppe } from './db';
 import TagsInput from './TagsInput';
+import { Kort, layout, SektionsTitel } from './ui';
 
 interface Props {
   gruppeId: number;
@@ -45,7 +46,7 @@ function GruppeDetalje({ gruppeId, tilbage }: Props) {
   };
 
   if (!gruppe) {
-    return <div style={{ padding: '20px' }}>Indlæser...</div>;
+    return <div style={{ padding: '20px', color: 'var(--tekst-dæmpet)' }}>Indlæser...</div>;
   }
 
   const valgteItems = items?.filter((i) => i.id && gruppe.item_ids.includes(i.id)) ?? [];
@@ -58,15 +59,18 @@ function GruppeDetalje({ gruppeId, tilbage }: Props) {
   ) ?? [];
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'system-ui, sans-serif', maxWidth: '600px', margin: '0 auto', paddingBottom: '80px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <button onClick={tilbage} style={{ background: 'transparent', border: 'none', fontSize: '16px', cursor: 'pointer' }}>
+    <div style={layout.container}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+        <button
+          onClick={tilbage}
+          style={{ background: 'transparent', border: 'none', fontSize: '14px', cursor: 'pointer', color: 'var(--tekst-dæmpet)', padding: '4px 0' }}
+        >
           ‹ Tilbage
         </button>
         <div style={{ position: 'relative' }}>
           <button
             onClick={() => setMenuAaben(!menuAaben)}
-            style={{ background: 'transparent', border: 'none', fontSize: '20px', cursor: 'pointer', padding: '4px 12px' }}
+            style={{ background: 'transparent', border: 'none', fontSize: '18px', cursor: 'pointer', padding: '4px 12px', color: 'var(--tekst-dæmpet)' }}
           >
             ⋯
           </button>
@@ -75,12 +79,13 @@ function GruppeDetalje({ gruppeId, tilbage }: Props) {
               position: 'absolute',
               right: 0,
               top: '100%',
-              background: 'white',
-              border: '1px solid #ddd',
-              borderRadius: '6px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              minWidth: '120px',
-              zIndex: 10
+              background: 'var(--bg-forhoejet)',
+              border: '1px solid var(--border)',
+              borderRadius: '8px',
+              boxShadow: '0 4px 12px var(--skygge)',
+              minWidth: '140px',
+              zIndex: 10,
+              overflow: 'hidden'
             }}>
               <button
                 onClick={() => { setMenuAaben(false); slet(); }}
@@ -92,7 +97,8 @@ function GruppeDetalje({ gruppeId, tilbage }: Props) {
                   border: 'none',
                   textAlign: 'left',
                   cursor: 'pointer',
-                  color: '#c00'
+                  color: 'var(--fejl)',
+                  fontSize: '13px'
                 }}
               >
                 Slet gruppe
@@ -105,43 +111,62 @@ function GruppeDetalje({ gruppeId, tilbage }: Props) {
       <input
         value={gruppe.navn}
         onChange={(e) => opdater({ navn: e.target.value })}
-        style={{ fontSize: '22px', fontWeight: 500, border: 'none', outline: 'none', width: '100%', marginBottom: '16px' }}
+        style={{
+          fontFamily: "'Fraunces', Georgia, serif",
+          fontSize: '26px',
+          fontWeight: 400,
+          border: 'none',
+          background: 'transparent',
+          padding: '4px 0',
+          width: '100%',
+          marginBottom: '14px',
+          color: 'var(--tekst)'
+        }}
       />
 
-      <div style={{ display: 'grid', gap: '12px', marginBottom: '24px' }}>
+      <div style={{ display: 'grid', gap: '14px', marginBottom: '24px' }}>
         <TagsInput
           tags={gruppe.tags}
           onChange={(nye) => opdater({ tags: nye })}
           hjaelpetekst="fx sommer, hængekøje, solo"
         />
 
-        <div style={{ padding: '10px 12px', background: '#f5f5f5', borderRadius: '6px', fontSize: '13px', color: '#666' }}>
-          {valgteItems.length} items · {(totalVaegt / 1000).toFixed(2)} kg · {totalPris} kr
-        </div>
+        <Kort fremhaevet>
+          <div style={{ fontSize: '14px', fontWeight: 500 }}>
+            {valgteItems.length} items
+          </div>
+          <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
+            {(totalVaegt / 1000).toFixed(2)} kg · {totalPris} kr
+          </div>
+        </Kort>
 
         <div>
-          <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>Noter</label>
+          <label style={{ display: 'block', fontSize: '11px', color: 'var(--tekst-dæmpet)', marginBottom: '5px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Noter
+          </label>
           <textarea
             value={gruppe.noter}
             onChange={(e) => opdater({ noter: e.target.value })}
             rows={2}
-            style={{ width: '100%', padding: '8px', fontSize: '14px', border: '1px solid #ddd', borderRadius: '4px', fontFamily: 'inherit', resize: 'vertical' }}
+            style={{ width: '100%', resize: 'vertical', fontFamily: 'inherit' }}
           />
         </div>
       </div>
 
-      <h3 style={{ fontSize: '15px', marginBottom: '8px' }}>Items i gruppen</h3>
+      <SektionsTitel>Items i gruppen</SektionsTitel>
 
       <input
-        placeholder="Søg items i inventaret..."
+        placeholder="Søg items..."
         value={soegning}
         onChange={(e) => setSoegning(e.target.value)}
-        style={{ width: '100%', padding: '8px', fontSize: '14px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+        style={{ width: '100%', marginBottom: '12px' }}
       />
 
       <div>
         {tilgaengeligeItems.length === 0 && (
-          <p style={{ color: '#888', fontSize: '13px' }}>Ingen items matcher.</p>
+          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--tekst-svag)', fontSize: '13px' }}>
+            Ingen items matcher.
+          </div>
         )}
         {tilgaengeligeItems.map((item) => {
           const er_med = item.id ? gruppe.item_ids.includes(item.id) : false;
@@ -152,20 +177,23 @@ function GruppeDetalje({ gruppeId, tilbage }: Props) {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '10px',
-                padding: '10px',
-                borderBottom: '1px solid #eee',
+                padding: '10px 12px',
+                borderRadius: '8px',
                 cursor: 'pointer',
-                background: er_med ? '#f0f7f0' : 'transparent'
+                background: er_med ? 'var(--accent-bg)' : 'transparent',
+                marginBottom: '2px',
+                border: '1px solid transparent'
               }}
             >
               <input
                 type="checkbox"
                 checked={er_med}
                 onChange={() => item.id && toggleItem(item.id)}
+                style={{ width: 'auto' }}
               />
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '14px' }}>{item.navn}</div>
-                <div style={{ fontSize: '11px', color: '#666' }}>
+                <div style={{ fontSize: '13px', color: 'var(--tekst)' }}>{item.navn}</div>
+                <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)' }}>
                   {item.vaegt_g} g · {item.pris_kr} kr{item.delt && ' · delt'}
                 </div>
               </div>

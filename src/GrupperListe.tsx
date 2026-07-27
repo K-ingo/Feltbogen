@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import type { Gruppe } from './db';
 import GruppeDetalje from './GruppeDetalje';
+import { Knap, Kort, Chip, layout } from './ui';
 
 function GrupperListe() {
   const [nytNavn, setNytNavn] = useState('');
@@ -29,46 +30,47 @@ function GrupperListe() {
     return <GruppeDetalje gruppeId={valgtGruppeId} tilbage={() => setValgtGruppeId(null)} />;
   }
 
-  const beregnGruppeInfo = (g: Gruppe) => {
+  const beregnInfo = (g: Gruppe) => {
     if (!items) return { antal: 0, vaegt: 0 };
     const gItems = items.filter((i) => i.id && g.item_ids.includes(i.id));
-    return {
-      antal: gItems.length,
-      vaegt: gItems.reduce((sum, i) => sum + i.vaegt_g, 0)
-    };
+    return { antal: gItems.length, vaegt: gItems.reduce((s, i) => s + i.vaegt_g, 0) };
   };
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'system-ui, sans-serif', maxWidth: '600px', margin: '0 auto', paddingBottom: '80px' }}>
+    <div style={layout.container}>
       <h1>Feltbogen</h1>
-      <h2>Grupper</h2>
-
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', padding: '16px', background: '#f5f5f5', borderRadius: '8px' }}>
-        <input
-          placeholder="Ny gruppe (fx Hængekøje-sommer)"
-          value={nytNavn}
-          onChange={(e) => setNytNavn(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && opret()}
-          style={{ flex: 1, padding: '8px', fontSize: '14px' }}
-        />
-        <button onClick={opret} style={{ padding: '8px 16px', fontSize: '14px', cursor: 'pointer' }}>
-          Opret
-        </button>
+      <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginBottom: '20px' }}>
+        Grupper · {grupper?.length ?? 0}
       </div>
+
+      <Kort fremhaevet style={{ marginBottom: '20px' }}>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <input
+            placeholder="Ny gruppe (fx Hængekøje-sommer)"
+            value={nytNavn}
+            onChange={(e) => setNytNavn(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && opret()}
+            style={{ flex: 1 }}
+          />
+          <Knap variant="primaer" onClick={opret}>Opret</Knap>
+        </div>
+      </Kort>
 
       <div>
         {grupper?.length === 0 && (
-          <p style={{ color: '#888' }}>Ingen grupper endnu. Opret din første ovenfor.</p>
+          <div style={{ padding: '30px 20px', textAlign: 'center', color: 'var(--tekst-svag)' }}>
+            Ingen grupper endnu. Opret din første ovenfor.
+          </div>
         )}
         {grupper?.map((g) => {
-          const info = beregnGruppeInfo(g);
+          const info = beregnInfo(g);
           return (
             <div
               key={g.id}
               onClick={() => g.id && setValgtGruppeId(g.id)}
               style={{
-                padding: '12px',
-                borderBottom: '1px solid #eee',
+                padding: '14px 4px',
+                borderBottom: '1px solid var(--border-svag)',
                 cursor: 'pointer',
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -76,30 +78,19 @@ function GrupperListe() {
               }}
             >
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 500 }}>{g.navn}</div>
-                <div style={{ fontSize: '12px', color: '#666' }}>
+                <div style={{ fontWeight: 500, color: 'var(--tekst)', fontSize: '14px' }}>{g.navn}</div>
+                <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
                   {info.antal} items · {(info.vaegt / 1000).toFixed(1)} kg
                 </div>
                 {g.tags.length > 0 && (
-                  <div style={{ display: 'flex', gap: '4px', marginTop: '4px', flexWrap: 'wrap' }}>
-                    {g.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        style={{
-                          fontSize: '10px',
-                          padding: '2px 6px',
-                          background: '#e8e8e8',
-                          borderRadius: '10px',
-                          color: '#555'
-                        }}
-                      >
-                        {tag}
-                      </span>
+                  <div style={{ display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap' }}>
+                    {g.tags.slice(0, 5).map((tag) => (
+                      <Chip key={tag} storrelse="lille">{tag}</Chip>
                     ))}
                   </div>
                 )}
               </div>
-              <div style={{ color: '#888', fontSize: '18px' }}>›</div>
+              <div style={{ color: 'var(--tekst-svag)', fontSize: '18px' }}>›</div>
             </div>
           );
         })}
