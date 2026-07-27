@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
+import type { Item } from './db';
+import ItemDetalje from './ItemDetalje';
 
 function App() {
   const [navn, setNavn] = useState('');
   const [vaegt, setVaegt] = useState('');
   const [pris, setPris] = useState('');
+  const [valgtItemId, setValgtItemId] = useState<number | null>(null);
 
   const items = useLiveQuery(() => db.items.toArray());
 
@@ -15,13 +18,30 @@ function App() {
       navn,
       vaegt_g: Number(vaegt) || 0,
       pris_kr: Number(pris) || 0,
+      dimensioner: '',
+      antal: 1,
+      delt: false,
+      status: 'ejer',
       tags: [],
-      oprettet: new Date()
+      kraever: [],
+      komplementer: [],
+      koebt_hos: '',
+      koebsdato: '',
+      koebslink: '',
+      ordrenummer: '',
+      garanti: null,
+      noter: '',
+      oprettet: new Date(),
+      aendret: new Date()
     });
     setNavn('');
     setVaegt('');
     setPris('');
   };
+
+  if (valgtItemId !== null) {
+    return <ItemDetalje itemId={valgtItemId} tilbage={() => setValgtItemId(null)} />;
+  }
 
   return (
     <div style={{ padding: '20px', fontFamily: 'system-ui, sans-serif', maxWidth: '600px', margin: '0 auto' }}>
@@ -56,20 +76,46 @@ function App() {
 
       <div>
         {items?.length === 0 && <p style={{ color: '#888' }}>Ingen items endnu. Tilføj dit første ovenfor.</p>}
-        {items?.map((item) => (
-          <div key={item.id} style={{ padding: '12px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between' }}>
-            <div>
+        {items?.map((item: Item) => (
+          <div
+            key={item.id}
+            onClick={() => item.id && setValgtItemId(item.id)}
+            style={{
+              padding: '12px',
+              borderBottom: '1px solid #eee',
+              cursor: 'pointer',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}
+          >
+            <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 500 }}>{item.navn}</div>
               <div style={{ fontSize: '12px', color: '#666' }}>
                 {item.vaegt_g} g · {item.pris_kr} kr
+                {item.delt && ' · delt'}
+                {item.status !== 'ejer' && ` · ${item.status}`}
               </div>
+              {item.tags.length > 0 && (
+                <div style={{ display: 'flex', gap: '4px', marginTop: '4px', flexWrap: 'wrap' }}>
+                  {item.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      style={{
+                        fontSize: '10px',
+                        padding: '2px 6px',
+                        background: '#e8e8e8',
+                        borderRadius: '10px',
+                        color: '#555'
+                      }}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
-            <button
-              onClick={() => item.id && db.items.delete(item.id)}
-              style={{ background: 'transparent', border: 'none', color: '#c00', cursor: 'pointer' }}
-            >
-              Slet
-            </button>
+            <div style={{ color: '#888', fontSize: '18px' }}>›</div>
           </div>
         ))}
       </div>
