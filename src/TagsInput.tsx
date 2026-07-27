@@ -1,16 +1,17 @@
 import { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
+import { Chip } from './ui';
 
 interface Props {
   tags: string[];
   onChange: (tags: string[]) => void;
   label?: string;
   hjaelpetekst?: string;
-  farve?: string;
+  farve?: 'default' | 'accent' | 'advarsel' | 'fejl';
 }
 
-function TagsInput({ tags, onChange, label, hjaelpetekst, farve }: Props) {
+function TagsInput({ tags, onChange, label, hjaelpetekst, farve = 'default' }: Props) {
   const visLabel = label ?? 'Tags';
   const [input, setInput] = useState('');
   const [fokuseret, setFokuseret] = useState(false);
@@ -66,55 +67,25 @@ function TagsInput({ tags, onChange, label, hjaelpetekst, farve }: Props) {
     }
   };
 
-  const chipBg = farve ? farve + '20' : '#e0e0e0';
-  const chipColor = farve ?? '#333';
-
   return (
     <div>
-      <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>
+      <label style={{ display: 'block', fontSize: '11px', color: 'var(--tekst-dæmpet)', marginBottom: '5px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
         {visLabel}
-        {hjaelpetekst && <span style={{ color: '#999', marginLeft: '6px', fontSize: '11px' }}>· {hjaelpetekst}</span>}
+        {hjaelpetekst && <span style={{ color: 'var(--tekst-svag)', marginLeft: '8px', textTransform: 'none', letterSpacing: 0, fontWeight: 400 }}>· {hjaelpetekst}</span>}
       </label>
       <div style={{
         display: 'flex',
         flexWrap: 'wrap',
         gap: '6px',
         padding: '8px',
-        border: '1px solid #ddd',
-        borderRadius: '4px',
+        background: 'var(--input-bg)',
+        border: '1px solid var(--border)',
+        borderRadius: '8px',
         alignItems: 'center',
-        minHeight: '38px'
+        minHeight: '42px'
       }}>
         {tags.map((tag) => (
-          <span
-            key={tag}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '3px 8px',
-              background: chipBg,
-              color: chipColor,
-              borderRadius: '12px',
-              fontSize: '12px'
-            }}
-          >
-            {tag}
-            <button
-              onClick={() => fjern(tag)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                padding: 0,
-                fontSize: '14px',
-                lineHeight: 1,
-                color: chipColor
-              }}
-            >
-              ×
-            </button>
-          </span>
+          <Chip key={tag} farve={farve} onFjern={() => fjern(tag)}>{tag}</Chip>
         ))}
         <input
           value={input}
@@ -137,10 +108,11 @@ function TagsInput({ tags, onChange, label, hjaelpetekst, farve }: Props) {
 
       {fokuseret && forslag.length > 0 && (
         <div style={{
-          border: '1px solid #ddd',
-          borderTop: 'none',
-          borderRadius: '0 0 4px 4px',
-          background: 'white',
+          marginTop: '4px',
+          background: 'var(--bg-forhoejet)',
+          border: '1px solid var(--border-svag)',
+          borderRadius: '8px',
+          overflow: 'hidden',
           maxHeight: '150px',
           overflowY: 'auto'
         }}>
@@ -149,13 +121,11 @@ function TagsInput({ tags, onChange, label, hjaelpetekst, farve }: Props) {
               key={tag}
               onClick={() => tilfoej(tag)}
               style={{
-                padding: '6px 10px',
+                padding: '8px 12px',
                 cursor: 'pointer',
                 fontSize: '13px',
-                borderBottom: '1px solid #f0f0f0'
+                borderBottom: '1px solid var(--border-svag)'
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = '#f5f5f5')}
-              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
             >
               {tag}
             </div>

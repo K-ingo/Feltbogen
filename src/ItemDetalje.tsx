@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { db } from './db';
 import type { Item, ItemStatus, Garanti } from './db';
 import TagsInput from './TagsInput';
+import { Knap, Felt, Kort, layout, SektionsTitel } from './ui';
 
 interface Props {
   itemId: number;
@@ -57,19 +58,22 @@ function ItemDetalje({ itemId, tilbage }: Props) {
   };
 
   if (!item) {
-    return <div style={{ padding: '20px' }}>Indlæser...</div>;
+    return <div style={{ padding: '20px', color: 'var(--tekst-dæmpet)' }}>Indlæser...</div>;
   }
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'system-ui, sans-serif', maxWidth: '600px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <button onClick={tilbage} style={{ background: 'transparent', border: 'none', fontSize: '16px', cursor: 'pointer' }}>
+    <div style={layout.container}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+        <button
+          onClick={tilbage}
+          style={{ background: 'transparent', border: 'none', fontSize: '14px', cursor: 'pointer', color: 'var(--tekst-dæmpet)', padding: '4px 0' }}
+        >
           ‹ Tilbage
         </button>
         <div style={{ position: 'relative' }}>
           <button
             onClick={() => setMenuAaben(!menuAaben)}
-            style={{ background: 'transparent', border: 'none', fontSize: '20px', cursor: 'pointer', padding: '4px 12px' }}
+            style={{ background: 'transparent', border: 'none', fontSize: '18px', cursor: 'pointer', padding: '4px 12px', color: 'var(--tekst-dæmpet)' }}
           >
             ⋯
           </button>
@@ -78,12 +82,13 @@ function ItemDetalje({ itemId, tilbage }: Props) {
               position: 'absolute',
               right: 0,
               top: '100%',
-              background: 'white',
-              border: '1px solid #ddd',
-              borderRadius: '6px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              minWidth: '120px',
-              zIndex: 10
+              background: 'var(--bg-forhoejet)',
+              border: '1px solid var(--border)',
+              borderRadius: '8px',
+              boxShadow: '0 4px 12px var(--skygge)',
+              minWidth: '140px',
+              zIndex: 10,
+              overflow: 'hidden'
             }}>
               <button
                 onClick={() => { setMenuAaben(false); slet(); }}
@@ -95,7 +100,8 @@ function ItemDetalje({ itemId, tilbage }: Props) {
                   border: 'none',
                   textAlign: 'left',
                   cursor: 'pointer',
-                  color: '#c00'
+                  color: 'var(--fejl)',
+                  fontSize: '13px'
                 }}
               >
                 Slet
@@ -108,23 +114,34 @@ function ItemDetalje({ itemId, tilbage }: Props) {
       <input
         value={item.navn}
         onChange={(e) => opdater({ navn: e.target.value })}
-        style={{ fontSize: '22px', fontWeight: 500, border: 'none', outline: 'none', width: '100%', marginBottom: '16px' }}
+        style={{
+          fontFamily: "'Fraunces', Georgia, serif",
+          fontSize: '26px',
+          fontWeight: 400,
+          border: 'none',
+          background: 'transparent',
+          padding: '4px 0',
+          width: '100%',
+          marginBottom: '14px',
+          color: 'var(--tekst)'
+        }}
       />
 
-      <div style={{ display: 'flex', gap: '4px', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', gap: '4px', marginBottom: '24px' }}>
         {(['ejer', 'overvejer', 'solgt'] as ItemStatus[]).map((s) => (
           <button
             key={s}
             onClick={() => opdater({ status: s })}
             style={{
-              padding: '6px 12px',
+              padding: '6px 14px',
               fontSize: '12px',
-              background: item.status === s ? '#333' : '#f0f0f0',
-              color: item.status === s ? 'white' : '#333',
-              border: 'none',
-              borderRadius: '4px',
+              background: item.status === s ? 'var(--accent)' : 'transparent',
+              color: item.status === s ? 'var(--accent-tekst)' : 'var(--tekst-dæmpet)',
+              border: `1px solid ${item.status === s ? 'var(--accent)' : 'var(--border)'}`,
+              borderRadius: '18px',
               cursor: 'pointer',
-              textTransform: 'capitalize'
+              textTransform: 'capitalize',
+              fontWeight: 500
             }}
           >
             {s}
@@ -132,20 +149,33 @@ function ItemDetalje({ itemId, tilbage }: Props) {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gap: '12px' }}>
-        <Felt label="Vægt (gram)" type="number" value={item.vaegt_g} onChange={(v) => opdater({ vaegt_g: Number(v) || 0 })} />
-        <Felt label="Pris (kr)" type="number" value={item.pris_kr} onChange={(v) => opdater({ pris_kr: Number(v) || 0 })} />
-        <Felt label="Antal" type="number" value={item.antal} onChange={(v) => opdater({ antal: Number(v) || 1 })} />
-        <Felt label="Dimensioner" value={item.dimensioner} onChange={(v) => opdater({ dimensioner: v })} placeholder="fx ø 33 × 15 cm, 9L" />
+      <div style={{ display: 'grid', gap: '14px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+          <Felt label="Vægt (gram)" type="number" value={item.vaegt_g} onChange={(v) => opdater({ vaegt_g: Number(v) || 0 })} />
+          <Felt label="Pris (kr)" type="number" value={item.pris_kr} onChange={(v) => opdater({ pris_kr: Number(v) || 0 })} />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+          <Felt label="Antal" type="number" value={item.antal} onChange={(v) => opdater({ antal: Number(v) || 1 })} />
+          <Felt label="Dimensioner" value={item.dimensioner} onChange={(v) => opdater({ dimensioner: v })} placeholder="ø 33 × 15 cm" />
+        </div>
 
-        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px', background: '#f5f5f5', borderRadius: '6px', cursor: 'pointer' }}>
-          <input
-            type="checkbox"
-            checked={item.delt}
-            onChange={(e) => opdater({ delt: e.target.checked })}
-          />
-          <span>Delt gear (bæres af én, bruges af flere)</span>
-        </label>
+        <Kort fremhaevet style={{ padding: '12px 14px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={item.delt}
+              onChange={(e) => opdater({ delt: e.target.checked })}
+              style={{ width: 'auto' }}
+            />
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 500 }}>Delt gear</div>
+              <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>Bæres af én, bruges af flere</div>
+            </div>
+          </label>
+        </Kort>
+
+        <div style={{ height: '4px' }} />
+        <SektionsTitel>Kompatibilitet</SektionsTitel>
 
         <TagsInput tags={item.tags} onChange={(nye) => opdater({ tags: nye })} />
         <TagsInput
@@ -153,111 +183,95 @@ function ItemDetalje({ itemId, tilbage }: Props) {
           onChange={(nye) => opdater({ kraever: nye })}
           label="Kræver"
           hjaelpetekst="Hårde afhængigheder"
-          farve="#c00"
+          farve="fejl"
         />
         <TagsInput
           tags={item.komplementer}
           onChange={(nye) => opdater({ komplementer: nye })}
           label="Komplementer"
           hjaelpetekst="Bløde forslag"
-          farve="#d97706"
+          farve="advarsel"
         />
 
-        <Felt label="Købt hos" value={item.koebt_hos} onChange={(v) => opdater({ koebt_hos: v })} placeholder="fx Friluftslageret.dk" />
-        <Felt label="Købsdato" value={item.koebsdato} onChange={(v) => opdater({ koebsdato: v })} placeholder="MM/ÅÅÅÅ" />
-        <Felt label="Købslink" value={item.koebslink} onChange={(v) => opdater({ koebslink: v })} placeholder="https://..." />
-        <Felt label="Ordrenummer" value={item.ordrenummer} onChange={(v) => opdater({ ordrenummer: v })} placeholder="til returnering/reklamation" />
+        <div style={{ height: '4px' }} />
+        <SektionsTitel>Købsinfo</SektionsTitel>
 
-        <div style={{ border: '1px solid #ddd', borderRadius: '6px', overflow: 'hidden' }}>
+        <Felt label="Købt hos" value={item.koebt_hos} onChange={(v) => opdater({ koebt_hos: v })} placeholder="fx Friluftslageret.dk" />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+          <Felt label="Købsdato" value={item.koebsdato} onChange={(v) => opdater({ koebsdato: v })} placeholder="MM/ÅÅÅÅ" />
+          <Felt label="Ordrenummer" value={item.ordrenummer} onChange={(v) => opdater({ ordrenummer: v })} />
+        </div>
+        <Felt label="Købslink" value={item.koebslink} onChange={(v) => opdater({ koebslink: v })} placeholder="https://..." />
+
+        <Kort fremhaevet style={{ padding: 0, overflow: 'hidden' }}>
           <button
             onClick={() => setGarantiAaben(!garantiAaben)}
             style={{
               width: '100%',
-              padding: '10px 12px',
-              background: '#f9f9f9',
+              padding: '12px 14px',
+              background: 'transparent',
               border: 'none',
               textAlign: 'left',
               cursor: 'pointer',
               fontSize: '13px',
               display: 'flex',
               justifyContent: 'space-between',
-              alignItems: 'center'
+              alignItems: 'center',
+              color: 'var(--tekst)'
             }}
           >
             <span>
               Garanti
               {item.garanti && item.garanti.laengde_aar > 0 && (
-                <span style={{ color: '#666', fontSize: '11px', marginLeft: '8px' }}>
+                <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '11px', marginLeft: '8px' }}>
                   · {item.garanti.laengde_aar} år
-                  {item.garanti.udloeber_dato && ` · udløber ${item.garanti.udloeber_dato}`}
                 </span>
               )}
             </span>
-            <span style={{ color: '#888', fontSize: '12px' }}>{garantiAaben ? '−' : '+'}</span>
+            <span style={{ color: 'var(--tekst-svag)', fontSize: '14px' }}>{garantiAaben ? '−' : '+'}</span>
           </button>
           {garantiAaben && (
-            <div style={{ padding: '12px', display: 'grid', gap: '10px', background: 'white' }}>
-              <Felt
-                label="Længde (år)"
-                type="number"
-                value={item.garanti?.laengde_aar ?? 0}
-                onChange={(v) => opdaterGaranti({ laengde_aar: Number(v) || 0 })}
-              />
+            <div style={{ padding: '4px 14px 14px', display: 'grid', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <Felt
+                  label="Længde (år)"
+                  type="number"
+                  value={item.garanti?.laengde_aar ?? 0}
+                  onChange={(v) => opdaterGaranti({ laengde_aar: Number(v) || 0 })}
+                />
+                <Felt
+                  label="Påmindelse (dage)"
+                  type="number"
+                  value={item.garanti?.paamindelse_dage ?? 30}
+                  onChange={(v) => opdaterGaranti({ paamindelse_dage: Number(v) || 30 })}
+                />
+              </div>
               <Felt
                 label="Udløber dato"
                 value={item.garanti?.udloeber_dato ?? ''}
                 onChange={(v) => opdaterGaranti({ udloeber_dato: v })}
                 placeholder="DD/MM/ÅÅÅÅ"
               />
-              <Felt
-                label="Påmindelse (dage før udløb)"
-                type="number"
-                value={item.garanti?.paamindelse_dage ?? 30}
-                onChange={(v) => opdaterGaranti({ paamindelse_dage: Number(v) || 30 })}
-              />
             </div>
           )}
-        </div>
+        </Kort>
 
         <div>
-          <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>Noter</label>
+          <label style={{ display: 'block', fontSize: '11px', color: 'var(--tekst-dæmpet)', marginBottom: '5px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Noter
+          </label>
           <textarea
             value={item.noter}
             onChange={(e) => opdater({ noter: e.target.value })}
             rows={3}
-            style={{ width: '100%', padding: '8px', fontSize: '14px', border: '1px solid #ddd', borderRadius: '4px', fontFamily: 'inherit', resize: 'vertical' }}
+            style={{ width: '100%', resize: 'vertical', fontFamily: 'inherit' }}
           />
         </div>
       </div>
 
-      <div style={{ marginTop: '30px', fontSize: '11px', color: '#999' }}>
-        Oprettet: {new Date(item.oprettet).toLocaleDateString('da-DK')}
-        {' · '}
-        Ændret: {new Date(item.aendret).toLocaleDateString('da-DK')}
+      <div style={{ marginTop: '30px', fontSize: '11px', color: 'var(--tekst-svag)', textAlign: 'center' }}>
+        Oprettet {new Date(item.oprettet).toLocaleDateString('da-DK')} · Ændret {new Date(item.aendret).toLocaleDateString('da-DK')}
       </div>
-    </div>
-  );
-}
-
-interface FeltProps {
-  label: string;
-  value: string | number;
-  onChange: (v: string) => void;
-  type?: string;
-  placeholder?: string;
-}
-
-function Felt({ label, value, onChange, type = 'text', placeholder }: FeltProps) {
-  return (
-    <div>
-      <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>{label}</label>
-      <input
-        type={type}
-        value={value}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        style={{ width: '100%', padding: '8px', fontSize: '14px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
-      />
     </div>
   );
 }

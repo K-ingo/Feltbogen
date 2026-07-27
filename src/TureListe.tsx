@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import type { Tur } from './db';
 import TurDetalje from './TurDetalje';
+import { Knap, Kort, Badge, layout } from './ui';
 
 function TureListe() {
   const [nytNavn, setNytNavn] = useState('');
@@ -45,76 +46,68 @@ function TureListe() {
     return <TurDetalje turId={valgtTurId} tilbage={() => setValgtTurId(null)} />;
   }
 
-  const statusFarve = (status: string) => {
+  const badgeNiveau = (status: string): 'info' | 'accent' | 'advarsel' | 'succes' => {
     switch (status) {
-      case 'kladde': return { bg: '#f0f0f0', tekst: '#666' };
-      case 'klar': return { bg: '#e8f0e8', tekst: '#2a6a2a' };
-      case 'aktiv': return { bg: '#fff4e0', tekst: '#a06000' };
-      case 'afsluttet': return { bg: '#f0f0f0', tekst: '#888' };
-      default: return { bg: '#f0f0f0', tekst: '#666' };
+      case 'kladde': return 'info';
+      case 'klar': return 'accent';
+      case 'aktiv': return 'advarsel';
+      case 'afsluttet': return 'info';
+      default: return 'info';
     }
   };
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'system-ui, sans-serif', maxWidth: '600px', margin: '0 auto', paddingBottom: '80px' }}>
+    <div style={layout.container}>
       <h1>Feltbogen</h1>
-      <h2>Ture</h2>
-
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', padding: '16px', background: '#f5f5f5', borderRadius: '8px' }}>
-        <input
-          placeholder="Ny tur (fx Uge 32 — Øghaven)"
-          value={nytNavn}
-          onChange={(e) => setNytNavn(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && opret()}
-          style={{ flex: 1, padding: '8px', fontSize: '14px' }}
-        />
-        <button onClick={opret} style={{ padding: '8px 16px', fontSize: '14px', cursor: 'pointer' }}>
-          Opret
-        </button>
+      <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginBottom: '20px' }}>
+        Ture · {ture?.length ?? 0}
       </div>
+
+      <Kort fremhaevet style={{ marginBottom: '20px' }}>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <input
+            placeholder="Ny tur (fx Uge 32 — Øghaven)"
+            value={nytNavn}
+            onChange={(e) => setNytNavn(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && opret()}
+            style={{ flex: 1 }}
+          />
+          <Knap variant="primaer" onClick={opret}>Opret</Knap>
+        </div>
+      </Kort>
 
       <div>
         {ture?.length === 0 && (
-          <p style={{ color: '#888' }}>Ingen ture endnu. Opret din første ovenfor.</p>
+          <div style={{ padding: '30px 20px', textAlign: 'center', color: 'var(--tekst-svag)' }}>
+            Ingen ture endnu. Opret din første ovenfor.
+          </div>
         )}
-        {ture?.map((t: Tur) => {
-          const farve = statusFarve(t.status);
-          return (
-            <div
-              key={t.id}
-              onClick={() => t.id && setValgtTurId(t.id)}
-              style={{
-                padding: '12px',
-                borderBottom: '1px solid #eee',
-                cursor: 'pointer',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}
-            >
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontWeight: 500 }}>{t.navn}</span>
-                  <span style={{
-                    fontSize: '10px',
-                    padding: '2px 8px',
-                    background: farve.bg,
-                    color: farve.tekst,
-                    borderRadius: '10px',
-                    textTransform: 'capitalize'
-                  }}>
-                    {t.status}
-                  </span>
-                </div>
-                <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>
-                  {t.sted || 'Intet sted'} · {t.startdato}
-                  {t.personer > 1 && ` · ${t.personer} personer`}
-                </div>
+        {ture?.map((t: Tur) => (
+          <div
+            key={t.id}
+            onClick={() => t.id && setValgtTurId(t.id)}
+            style={{
+              padding: '14px 4px',
+              borderBottom: '1px solid var(--border-svag)',
+              cursor: 'pointer',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}
+          >
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                <span style={{ fontWeight: 500, color: 'var(--tekst)', fontSize: '14px' }}>{t.navn}</span>
+                <Badge niveau={badgeNiveau(t.status)}>{t.status}</Badge>
               </div>
-              <div style={{ color: '#888', fontSize: '18px' }}>›</div>
+              <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)' }}>
+                {t.sted || 'Intet sted'} · {t.startdato}
+                {t.personer > 1 && ` · ${t.personer} personer`}
+              </div>
             </div>
-          );
-        })}
+            <div style={{ color: 'var(--tekst-svag)', fontSize: '18px' }}>›</div>
+          </div>
+        ))}
       </div>
     </div>
   );

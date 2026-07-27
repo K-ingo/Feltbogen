@@ -6,17 +6,30 @@ interface Props {
 }
 
 function BundNav({ aktiv, skift }: Props) {
-  const stil = (erAktiv: boolean) => ({
-    flex: 1,
-    padding: '12px',
-    background: 'transparent',
-    border: 'none',
-    cursor: 'pointer',
-    fontSize: '13px',
-    color: erAktiv ? '#333' : '#888',
-    fontWeight: erAktiv ? 500 : 400,
-    borderTop: erAktiv ? '2px solid #333' : '2px solid transparent'
-  });
+  const knap = (id: Fane, label: string) => {
+    const erAktiv = aktiv === id;
+    return (
+      <button
+        onClick={() => skift(id)}
+        style={{
+          flex: 1,
+          padding: '14px 4px 12px',
+          background: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          fontSize: '11px',
+          color: erAktiv ? 'var(--accent)' : 'var(--tekst-dæmpet)',
+          fontWeight: erAktiv ? 600 : 500,
+          textTransform: 'uppercase',
+          letterSpacing: '0.8px',
+          borderTop: erAktiv ? '2px solid var(--accent)' : '2px solid transparent',
+          transition: 'color 0.15s'
+        }}
+      >
+        {label}
+      </button>
+    );
+  };
 
   return (
     <div style={{
@@ -25,19 +38,15 @@ function BundNav({ aktiv, skift }: Props) {
       left: 0,
       right: 0,
       display: 'flex',
-      background: 'white',
-      borderTop: '1px solid #eee',
-      boxShadow: '0 -2px 8px rgba(0,0,0,0.04)'
+      background: 'var(--bg-topbar)',
+      borderTop: '1px solid var(--border)',
+      boxShadow: '0 -4px 12px var(--skygge)',
+      backdropFilter: 'blur(8px)',
+      zIndex: 20
     }}>
-      <button style={stil(aktiv === 'inventar')} onClick={() => skift('inventar')}>
-        Inventar
-      </button>
-      <button style={stil(aktiv === 'grupper')} onClick={() => skift('grupper')}>
-        Grupper
-      </button>
-      <button style={stil(aktiv === 'ture')} onClick={() => skift('ture')}>
-        Ture
-      </button>
+      {knap('inventar', 'Inventar')}
+      {knap('grupper', 'Grupper')}
+      {knap('ture', 'Ture')}
     </div>
   );
 }

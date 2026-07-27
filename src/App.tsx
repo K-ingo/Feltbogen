@@ -7,6 +7,7 @@ import GrupperListe from './GrupperListe';
 import TureListe from './TureListe';
 import BundNav from './BundNav';
 import type { Fane } from './BundNav';
+import { Knap, Kort, Chip, Badge, layout } from './ui';
 
 function App() {
   const [fane, setFane] = useState<Fane>('inventar');
@@ -14,6 +15,7 @@ function App() {
   const [vaegt, setVaegt] = useState('');
   const [pris, setPris] = useState('');
   const [valgtItemId, setValgtItemId] = useState<number | null>(null);
+  const [soegning, setSoegning] = useState('');
 
   const items = useLiveQuery(() => db.items.toArray());
 
@@ -71,47 +73,69 @@ function App() {
     );
   }
 
+  const filtreret = items?.filter((i) =>
+    soegning === '' || i.navn.toLowerCase().includes(soegning.toLowerCase()) ||
+    i.tags.some((t) => t.toLowerCase().includes(soegning.toLowerCase()))
+  );
+
+  const totalVaerdi = items?.reduce((sum, i) => sum + i.pris_kr, 0) ?? 0;
+  const antalEjer = items?.filter((i) => i.status === 'ejer').length ?? 0;
+
   return (
     <>
-      <div style={{ padding: '20px', fontFamily: 'system-ui, sans-serif', maxWidth: '600px', margin: '0 auto', paddingBottom: '80px' }}>
+      <div style={layout.container}>
         <h1>Feltbogen</h1>
-        <h2>Inventar</h2>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px', padding: '16px', background: '#f5f5f5', borderRadius: '8px' }}>
-          <input
-            placeholder="Navn (fx Toaks 1L gryde)"
-            value={navn}
-            onChange={(e) => setNavn(e.target.value)}
-            style={{ padding: '8px', fontSize: '14px' }}
-          />
-          <input
-            placeholder="Vægt i gram"
-            type="number"
-            value={vaegt}
-            onChange={(e) => setVaegt(e.target.value)}
-            style={{ padding: '8px', fontSize: '14px' }}
-          />
-          <input
-            placeholder="Pris i kr"
-            type="number"
-            value={pris}
-            onChange={(e) => setPris(e.target.value)}
-            style={{ padding: '8px', fontSize: '14px' }}
-          />
-          <button onClick={tilfoej} style={{ padding: '10px', fontSize: '14px', cursor: 'pointer' }}>
-            Tilføj item
-          </button>
+        <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginBottom: '20px' }}>
+          Inventar · {antalEjer} items · {totalVaerdi.toLocaleString('da-DK')} kr
         </div>
 
+        <Kort fremhaevet style={{ marginBottom: '20px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <input
+              placeholder="Navn (fx Toaks 1L gryde)"
+              value={navn}
+              onChange={(e) => setNavn(e.target.value)}
+            />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <input
+                placeholder="Vægt (gram)"
+                type="number"
+                value={vaegt}
+                onChange={(e) => setVaegt(e.target.value)}
+              />
+              <input
+                placeholder="Pris (kr)"
+                type="number"
+                value={pris}
+                onChange={(e) => setPris(e.target.value)}
+              />
+            </div>
+            <Knap variant="primaer" onClick={tilfoej}>
+              + Tilføj item
+            </Knap>
+          </div>
+        </Kort>
+
+        <input
+          placeholder="Søg items eller tags..."
+          value={soegning}
+          onChange={(e) => setSoegning(e.target.value)}
+          style={{ width: '100%', marginBottom: '16px' }}
+        />
+
         <div>
-          {items?.length === 0 && <p style={{ color: '#888' }}>Ingen items endnu. Tilføj dit første ovenfor.</p>}
-          {items?.map((item: Item) => (
+          {filtreret?.length === 0 && (
+            <div style={{ padding: '30px 20px', textAlign: 'center', color: 'var(--tekst-svag)' }}>
+              {soegning ? 'Ingen matches.' : 'Ingen items endnu. Tilføj dit første ovenfor.'}
+            </div>
+          )}
+          {filtreret?.map((item: Item) => (
             <div
               key={item.id}
               onClick={() => item.id && setValgtItemId(item.id)}
               style={{
-                padding: '12px',
-                borderBottom: '1px solid #eee',
+                padding: '14px 4px',
+                borderBottom: '1px solid var(--border-svag)',
                 cursor: 'pointer',
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -119,32 +143,26 @@ function App() {
               }}
             >
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 500 }}>{item.navn}</div>
-                <div style={{ fontSize: '12px', color: '#666' }}>
+                <div style={{ fontWeight: 500, color: 'var(--tekst)', fontSize: '14px' }}>
+                  {item.navn}
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
                   {item.vaegt_g} g · {item.pris_kr} kr
                   {item.delt && ' · delt'}
                   {item.status !== 'ejer' && ` · ${item.status}`}
                 </div>
                 {item.tags.length > 0 && (
-                  <div style={{ display: 'flex', gap: '4px', marginTop: '4px', flexWrap: 'wrap' }}>
-                    {item.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        style={{
-                          fontSize: '10px',
-                          padding: '2px 6px',
-                          background: '#e8e8e8',
-                          borderRadius: '10px',
-                          color: '#555'
-                        }}
-                      >
-                        {tag}
-                      </span>
+                  <div style={{ display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap' }}>
+                    {item.tags.slice(0, 4).map((tag) => (
+                      <Chip key={tag} storrelse="lille">{tag}</Chip>
                     ))}
+                    {item.tags.length > 4 && (
+                      <Chip storrelse="lille">+{item.tags.length - 4}</Chip>
+                    )}
                   </div>
                 )}
               </div>
-              <div style={{ color: '#888', fontSize: '18px' }}>›</div>
+              <div style={{ color: 'var(--tekst-svag)', fontSize: '18px' }}>›</div>
             </div>
           ))}
         </div>
