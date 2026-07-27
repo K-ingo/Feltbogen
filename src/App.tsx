@@ -1,122 +1,80 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from './db';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [navn, setNavn] = useState('');
+  const [vaegt, setVaegt] = useState('');
+  const [pris, setPris] = useState('');
+
+  const items = useLiveQuery(() => db.items.toArray());
+
+  const tilfoej = async () => {
+    if (!navn) return;
+    await db.items.add({
+      navn,
+      vaegt_g: Number(vaegt) || 0,
+      pris_kr: Number(pris) || 0,
+      tags: [],
+      oprettet: new Date()
+    });
+    setNavn('');
+    setVaegt('');
+    setPris('');
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
+    <div style={{ padding: '20px', fontFamily: 'system-ui, sans-serif', maxWidth: '600px', margin: '0 auto' }}>
+      <h1>Feltbogen</h1>
+      <h2>Inventar</h2>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px', padding: '16px', background: '#f5f5f5', borderRadius: '8px' }}>
+        <input
+          placeholder="Navn (fx Toaks 1L gryde)"
+          value={navn}
+          onChange={(e) => setNavn(e.target.value)}
+          style={{ padding: '8px', fontSize: '14px' }}
+        />
+        <input
+          placeholder="Vægt i gram"
+          type="number"
+          value={vaegt}
+          onChange={(e) => setVaegt(e.target.value)}
+          style={{ padding: '8px', fontSize: '14px' }}
+        />
+        <input
+          placeholder="Pris i kr"
+          type="number"
+          value={pris}
+          onChange={(e) => setPris(e.target.value)}
+          style={{ padding: '8px', fontSize: '14px' }}
+        />
+        <button onClick={tilfoej} style={{ padding: '10px', fontSize: '14px', cursor: 'pointer' }}>
+          Tilføj item
         </button>
-      </section>
+      </div>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      <div>
+        {items?.length === 0 && <p style={{ color: '#888' }}>Ingen items endnu. Tilføj dit første ovenfor.</p>}
+        {items?.map((item) => (
+          <div key={item.id} style={{ padding: '12px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontWeight: 500 }}>{item.navn}</div>
+              <div style={{ fontSize: '12px', color: '#666' }}>
+                {item.vaegt_g} g · {item.pris_kr} kr
+              </div>
+            </div>
+            <button
+              onClick={() => item.id && db.items.delete(item.id)}
+              style={{ background: 'transparent', border: 'none', color: '#c00', cursor: 'pointer' }}
+            >
+              Slet
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
-export default App
+export default App;
