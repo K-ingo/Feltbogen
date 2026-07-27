@@ -141,7 +141,6 @@ function TurDetalje({ turId, tilbage }: Props) {
       case 'afsluttet': return { bg: '#f0f0f0', tekst: '#888' };
     }
   };
-  const farve = statusFarve(tur.status);
 
   return (
     <div style={{ padding: '20px', fontFamily: 'system-ui, sans-serif', maxWidth: '600px', margin: '0 auto', paddingBottom: '80px' }}>
