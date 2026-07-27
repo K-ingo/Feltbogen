@@ -1,0 +1,664 @@
+# Feltbogen — Fundament
+ 
+En dansk friluftsapp der holder styr på gear-inventar, planlægger ture med smart forslag, og lærer over tid.
+ 
+**Version:** v1 fundament (færdig planlægning, klar til udvikling)
+**Sprog:** Dansk
+**Ejer:** Emil
+**Navn:** Feltbogen — dansk begreb for en notesbog man tager med ud i naturen til registrering og observation. Passer til appens karakter (systematisk friluftsliv). Ingen navnesammenfald med eksisterende apps.
+ 
+---
+ 
+## 1. Formål
+ 
+Feltbogen løser tre konkrete problemer for en aktiv friluftsudøver:
+ 
+1. **Overblik over gear** — hvad ejer jeg, hvor tungt er det, hvad koster det, hvornår har jeg sidst brugt det. Undgå at købe dubletter eller ting man ikke bruger.
+2. **Turplanlægning der ikke går galt** — appen regner mad, vand, brændstof og vægt ud fra parametre. Smart-motor foreslår gear baseret på vejr, personer, overnatning, terræn og bæreafstand. Kompatibilitets-tjek fanger huller (fx brænder uden brændstof).
+3. **Fælles planlægning** — gæster kan tilføje deres eget gear via delelink, så gruppen kan se den samlede pakkeliste og vægtfordeling.
+App'en fungerer offline. Online bruges kun til vejrudsigt, sync og deling.
+ 
+---
+ 
+## 2. Målgruppe
+ 
+**Primær:** Emil selv — en dansk friluftsudøver med hammock-camping, bushcraft, bålmad og gruppeture som fokus.
+ 
+**Sekundær:** Gæster der modtager delelinks. Bruger app'en via link, browserbaseret, ingen konto påkrævet. Kan opgradere til konto senere.
+ 
+**Tertiær (senere):** Andre der opretter egen konto og bruger app'en selvstændigt.
+ 
+---
+ 
+## 3. Enheder og platform
+ 
+**PWA (Progressive Web App)** — samme kodebase virker på:
+- iPhone (installeres via Safari → "Føj til hjemmeskærm")
+- Android
+- macOS / Windows / Linux desktop
+**PWA-fordele:**
+- Én kodebase
+- Installerbar som app
+- Offline-support
+- Push-notifikationer (siden iOS 16.4)
+- Ingen App Store-godkendelse eller udviklergebyrer
+**Enhedsopdeling:**
+- Mobil: bundnavigation, kompakt layout, foldbare sektioner
+- PC: sidebar-navigation, bredere layout, mere synligt samtidigt
+Brugeren skifter frit mellem enheder — data synkroniseres når man har konto.
+ 
+---
+ 
+## 4. Teknisk stack
+ 
+| Komponent | Valg | Formål |
+|---|---|---|
+| Frontend | PWA (HTML/CSS/JS + framework, fx React eller Vue) | Krydsplatformsapp |
+| Lokal lagring | IndexedDB | Offline-first datastore |
+| Sync & deling | PocketBase (open source) | Serverside data + gæstelinks |
+| Vejr-API | open-meteo.com | Gratis, ingen nøgle |
+| Kort/satellit | Mapbox Static Images eller OpenStreetMap | Satellitbilleder til turer |
+| Ikoner | Tabler Icons eller lignende | Visuelt konsistente ikoner |
+ 
+**Migration-strategi:** Alle valg peger på samme stack, både nu og når projektet flyttes til egen server. PocketBase kan flyttes ved at kopiere én mappe. Kun endpoints ændres i frontend-koden.
+ 
+---
+ 
+## 5. Datamodel
+ 
+### Item
+ 
+Ét stykke gear i inventaret eller Overvejer-listen.
+ 
+| Felt | Type | Beskrivelse |
+|---|---|---|
+| id | string (PK) | Unik identifikator |
+| navn | string | fx "Petromax Dutch Oven FT9" |
+| kategori | (dropbar) | Erstattet af grupper — findes ikke som separat felt |
+| vægt_g | int | Vægt i gram |
+| dimensioner | string | Fri tekst, fx "ø 33 × 15 cm, 9L" |
+| pris_kr | int | Købspris i DKK |
+| antal | int | Antal eksemplarer |
+| delt | boolean | Delt gear (bæres af én, bruges af flere) |
+| status | enum | `ejer` / `overvejer` / `solgt` |
+| tags | string[] | Frit definerede tags |
+| kræver | string[] | Hårde afhængigheder (tags) |
+| komplementer | string[] | Bløde forslag (tags) |
+| købt_hos | string | Forhandler |
+| købsdato | date | Formatet "MM/ÅÅÅÅ" er nok |
+| købslink | url | Til produkt (relevant især for Overvejer) |
+| ordrenummer | string | Valgfrit, til returnering/reklamation |
+| kvittering | image | Foto/PDF, komprimeret automatisk |
+| garanti | object | `{ længde_år, udløber_dato, påmindelse_dage }` |
+| noter | text | Fri tekst |
+| oprettet | timestamp | |
+| ændret | timestamp | |
+ 
+### Gruppe
+ 
+En navngiven samling af items — frit defineret af brugeren.
+ 
+| Felt | Type | Beskrivelse |
+|---|---|---|
+| id | string (PK) | |
+| navn | string | fx "Hængekøje-sommer" |
+| tags | string[] | Sæson, aktivitet, terræn osv. |
+| items | string[] | Item-referencer (many-to-many) |
+| noter | text | |
+| oprettet | timestamp | |
+ 
+**Flad struktur** — grupper kan ikke indeholde andre grupper i v1.
+ 
+### Tur
+ 
+En planlagt/aktiv/afsluttet tur.
+ 
+| Felt | Type | Beskrivelse |
+|---|---|---|
+| id | string (PK) | |
+| navn | string | fx "Uge 32 — Øghaven" |
+| sted | string | Fritekst-adresse |
+| koordinater | `{lat, lng}` | Til vejr + satellitbillede |
+| startdato | date | |
+| slutdato | date | |
+| nætter | int | Auto-beregnes |
+| personer | int | |
+| overnatning | enum | `hængekøje` / `telt` / `shelter` / `blandet` |
+| aktivitet | enum | `bushcraft` / `vandretur` / `kano` / andet |
+| terræn | enum | `skov` / `kyst` / `fjeld` / `mix` |
+| bæreafstand_km | float | |
+| erfaringsniveau | enum | `begynder` / `øvet` / `erfaren` |
+| status | enum | `kladde` / `klar` / `aktiv` / `afsluttet` |
+| vejrsnapshot | object | Cachet fra open-meteo |
+| grupper | array | `[{gruppe_id, item_ids_slået_fra[]}]` |
+| løse_items | string[] | Items ikke via en gruppe |
+| deltagere | array | Deltager-objekter |
+| budget_linjer | array | Budget-poster |
+| billeder | image[] | Uploadede fotos (kun ejer redigerer) |
+| besked_fra_ejer | text | Vises på gæsteview |
+| deleltoken | string | Til delelink |
+| noter | text | |
+| pak_af_tjek | object | Resultat af pak-af-tjek |
+| oprettet | timestamp | |
+| ændret | timestamp | |
+ 
+### Deltager
+ 
+En person på en tur.
+ 
+| Felt | Type | Beskrivelse |
+|---|---|---|
+| id | string (PK) | |
+| tur_id | string (FK) | |
+| navn | string | |
+| bruger_type | enum | `ejer` / `konto` / `gæst_token` |
+| bruger_id | string | Reference (kun for `ejer`/`konto`) |
+| gæst_token | string | Bearer-token (kun for `gæst_token`) |
+| overnatning | enum | Hvis turen er `blandet` |
+| personligt_gear | string[] | Item-referencer |
+| bærer_delt | string[] | Delt gear denne person bærer |
+| oprettet | timestamp | |
+ 
+### Budget-linje
+ 
+En post på turens budget.
+ 
+| Felt | Type | Beskrivelse |
+|---|---|---|
+| id | string (PK) | |
+| tur_id | string (FK) | |
+| kategori | string | `gear` / `forplejning` / `transport` / custom |
+| beskrivelse | string | fx "Shelter-leje" |
+| forventet_kr | int | |
+| faktisk_kr | int | Rettet efter turen |
+| oprettet | timestamp | |
+ 
+### Relationer
+ 
+```
+Item }o--o{ Gruppe : "medlem af"
+Gruppe }o--o{ Tur : "brugt på"
+Item }o--o{ Tur : "løst valg"
+Tur ||--o{ Deltager : "har"
+Deltager }o--o{ Item : "bærer (personligt + delt)"
+Tur ||--o{ Budget_linje : "har"
+```
+ 
+---
+ 
+## 6. Kerne-koncepter
+ 
+### Grupper (erstatter kategorier)
+ 
+Grupper er den primære måde inventaret organiseres på. Brugeren definerer selv navne, tags og indhold. Et item kan være i flere grupper. Eksempler fra Emils inventar:
+ 
+- **Hængekøje-sommer** (tags: sommer, hængekøje, solo)
+- **Køkken personligt** (tags: solo, varm mad)
+- **Gruppekokning bål** (tags: gruppe, bål)
+- **Bushcraft-værktøj** (tags: bushcraft, værktøj)
+- **Telt-vinter** (tags: vinter, telt)
+Ingen faste kategorier — brugeren har fuld frihed.
+ 
+### Tags
+ 
+Fritekst med **hybrid autocomplete**: appen foreslår tags mens man skriver (baseret på hvad man og andre har brugt), men man kan altid oprette nye.
+ 
+Tags bruges tre steder:
+1. På items (til søgning og filtrering)
+2. På grupper (til smart-motorens forslag)
+3. På ture (implicit via valgte grupper)
+### Kompatibilitet
+ 
+To niveauer på hvert item:
+ 
+**Kræver** — hårde afhængigheder. Fx MSR Pocket Rocket kræver `skruegevind-gas`. Hvis noget der `kræver` X er på turen uden noget der leverer X → **rød advarsel**.
+ 
+**Komplementer** — bløde forslag. Fx TTTM hængekøje komplementerer `regnbeskyttelse`, `isolation-over`. Mangler noget → **gul advarsel**.
+ 
+**Alternativer / duplikater** — når to items har overlappende tags (fx to sovesystemer valgt) → **grå info**.
+ 
+**Vigtigt:** Advarsler er aldrig blokerende. Brugeren beslutter selv. Farvekodningen er:
+- Rød = kritisk hul
+- Gul = bør ses på
+- Grå = information
+Kompatibilitets-tjek kører to steder:
+1. Når man bygger en gruppe (komplement-hints)
+2. Når man planlægger en tur (helhedstjek)
+### Delt gear
+ 
+Toggle på hvert item. Betyder "kan bæres af én, bruges af flere".
+ 
+**På tur:**
+- Personligt item × 7 personer = tælles 7 gange
+- Delt item = tælles én gang, bæres af én person, kan vises som "÷ personer" for fair-fordelt vægt
+**Bærer-tildeling:**
+- Standard: hver person bærer det de selv tilføjer
+- Auto-forslag: hvis en person bærer meget mindre end andre, foreslår appen at flytte delt gear
+- Manuel: kan altid omfordeles
+På solo-tur regnes delt gear som personligt (ingen at dele med).
+ 
+---
+ 
+## 7. Smart-motor
+ 
+**Input-variabler:**
+- Temperatur (min/max fra vejr-API eller manuel)
+- Nedbør
+- Antal personer
+- Nætter
+- Overnatningstype
+- Aktivitet
+- Terræn
+- Bæreafstand
+- Erfaringsniveau
+**Output:**
+- Foreslår grupper hvis tags matcher turparametre
+- Beregner vand (3.5 L/person/dag sommer, 2.5 L vinter — tunable)
+- Beregner mad (600 g tørkost/person/dag — tunable)
+- Beregner gas (~25 g/person/dag — tunable)
+- Driver kompatibilitets-advarsler
+**Læring over tid** (baseret på pak-af-tjek):
+- Personlige mønstre: "Du har haft X med 12 gange, brugt den 0 gange"
+- Vejrmæssig læring: "Sidste gang med regn tog du ikke ekstra sokker med — vil du?"
+- Gruppekombinationer: "Du tilføjer altid A sammen med B — lav samlet skabelon?"
+Alle forslag er **rådgivning, aldrig automatiske ændringer**.
+ 
+---
+ 
+## 8. Tur-livscyklus
+ 
+Turen har fire tilstande, altid manuelt skifte + automatiske påmindelser:
+ 
+| Tilstand | Adfærd |
+|---|---|
+| **Kladde** | Alt kan redigeres |
+| **Klar** | Let redigering, fokus på sidste tjek |
+| **Aktiv** | Offline-fokus, tjek af items, GPS senere |
+| **Afsluttet** | Læsetilstand + pak-af-tjek |
+ 
+**Automatiske påmindelser:**
+- Dagen før startdato: "Er turen klar?"
+- Dagen efter slutdato: "Husk pak-af-tjek"
+**Pak-af-tjek** har to niveauer (valgbar i indstillinger):
+ 
+*Let (hurtig):* for hvert item: brugt / ubrugt / gik i stykker. 30 sek arbejde.
+ 
+*Grundig:* ovenstående + pr. kategori: tilstrækkeligt / for meget / for lidt + noter.
+ 
+Data fra pak-af-tjek går tilbage til smart-motoren.
+ 
+---
+ 
+## 9. Badges & notifikationer
+ 
+Seks badge-typer:
+ 
+| Type | Farve | Betydning | Push standard |
+|---|---|---|---|
+| Info | Grå | Neutral fakta | Nej |
+| Handling | Blå | Ikke hastende | Nej |
+| Advarsel | Gul | Bør ses på snart | Nej |
+| Vigtig | Orange | Denne uge | Ja |
+| Kritisk | Rød | Handles nu | Ja |
+| Positiv | Grøn | Fejring/afslutning | Ja |
+ 
+**Placering:**
+- På bundnav/sidebar-ikoner (badge-tællere)
+- På listepunkter (små mærker/farvet baggrund)
+- På dashboardet (fulde handlingskort)
+**Dashboard viser top 3** af aktuelle badges. "Vis alle X" giver fuld liste.
+ 
+**Triggers (kurateret startsæt i v1):**
+ 
+*Gear-relaterede:*
+- Nyt item mangler kvittering efter 7 dage
+- Garanti udløber (30/14/3 dage)
+- Item ikke brugt de sidste 5 ture
+- Item markeret "gik i stykker"
+*Tur-relaterede:*
+- Vejrprognose ændret markant
+- Kompatibilitets-advarsel
+- 3 dage til turstart, status stadig Kladde
+- Turen slut, ingen pak-af-tjek
+- Ny gæst har tilføjet gear
+*Overvejer-relaterede:*
+- Dup-detection fandt match i inventar
+- Pris ændret på gemt link
+**Custom triggers (simpel model i v1):**
+- "Mind mig om [item/gruppe] hver [tidsinterval]"
+- "Advar hvis vejret på [tur] viser mere end [X] mm regn"
+- "Notér når [item] er over [X] år"
+Avanceret regelbygger i v2.
+ 
+**Rolig-tilstand:** kun Kritisk vises, resten gemmes.
+ 
+**Delingsmodel:**
+- Konto-brugere får push
+- Gæster uden konto: badges vises kun når de aktivt åbner turen
+---
+ 
+## 10. Deling & gæster
+ 
+**Sådan virker det:**
+1. Ejer åbner turen → klik "Del" → link + QR-kode genereres
+2. Gæst åbner linket i sin browser
+3. Gæst ser preview af turen (billede, info, deltagere, delt pakkeliste)
+4. Gæst kan klikke "Ja, jeg deltager" → skriv navn + vælg overnatning + tilføj eget gear
+5. Gæstens data gemmes i browseren (IndexedDB)
+6. Gæst kan når som helst opgradere til konto — deres data migreres
+**Persistensmodel for gæster:** data lever på tværs af delte ture med samme link-oprindelse, kan ryddes af gæsten når som helst.
+ 
+**Rettighedsmodel:**
+- Kun ejer redigerer turen (info, billeder, parametre, sted, dato)
+- Gæster og andre deltagere: kun deres eget gear
+**Fuld synlighed:** alle deltageres personlige gear vises til alle. Ikke privat data.
+ 
+---
+ 
+## 11. Statistik
+ 
+**Layout:** Grid af widgets
+- Mobil: vertikal stack
+- PC: 2-kolonne grid, enkelte widgets kan spænde over begge
+**Widgets kan tilføjes/fjernes** via + i toppen. **Adjustments-knap** til rækkefølge/styring.
+ 
+**Tidsperiode:** Global vælger øverst (I år / Sidste år / Alt). Pr. widget override via tre-prikker menu.
+ 
+**Interaktive grafer** (chart-lib): hover for detaljer, klik for at drille ned.
+ 
+**Sammenligninger** vs. sidste år: "+21%" osv. indbygget i widgets.
+ 
+**Widget-katalog (v1):**
+- Samlet inventarværdi
+- Ture i år (månedligt søjlediagram)
+- Ubrugte items (fremhævet gul baggrund + antal + værdi + vægt + link til liste)
+- Mest brugte gear (top 5 med ture)
+- Fordeling pr. gruppe (stacked bar + liste)
+- Årsbudget friluftsliv
+- Sæson-mønstre (heatmap over året)
+- Gear-alder
+- Gennemsnitlig vægt pr. tur
+- Kilometer båret
+Widgets tilføjes løbende efter behov.
+ 
+---
+ 
+## 12. Budget-modul
+ 
+**Standard-kategorier:**
+- Gear (køb + leje)
+- Forplejning (mad, drikke)
+- Transport (benzin, tog, færge, parkering)
+**Custom-kategorier:** brugeren kan tilføje egne.
+ 
+**Forventet vs. faktisk:** hver post har begge felter.
+ 
+**Skabeloner:** appen gemmer tidligere turers priser og foreslår som udgangspunkt for nye ture.
+ 
+**V1:** eget budget
+**V2:** deling af udgifter mellem deltagere (hvem skylder hvem)
+ 
+---
+ 
+## 13. Skærme
+ 
+Alle skærme er tegnet som wireframes i mobil + PC-versioner.
+ 
+### Dashboard
+Startskærm når appen åbnes fra lukket tilstand. Husker sidste skærm ved almindeligt skift.
+ 
+**Sektioner (fast rækkefølge):**
+1. Næste tur (hvis planlagt < 30 dage) — satellitbillede, status, nøgletal, én advarsel + "Åbn tur"
+2. Handlinger (top 3 badges) — farvede kort med begrundelse
+3. Statistik (2-4 valgte widgets)
+4. Sidst tilføjet (3 seneste items)
+**Handlinger på mobil:** FAB (rund + knap) i nederste højre hjørne → menu.
+**Handlinger på PC:** "+ Nyt item" og "+ Ny tur" som knapper i topbaren.
+ 
+**Redigering:** widget-indhold valgbart, sektionsrækkefølge fast.
+ 
+### Inventar-liste
+Alt gear i én liste. Ejer/Overvejer som tabs øverst.
+ 
+**Mobil:** filter-chips + søgning + sortering. Rund + til nyt item.
+**PC:** foldbart filter-panel øverst. Sortér/Kolonner/Eksportér toolbar. Kolonner: Navn, Kategori (via gruppe), Vægt, Pris, Sidst brugt.
+ 
+**Farvekodning i listen:** røde/gule bagrunde for items med advarsler.
+ 
+**Toppen viser:** antal items + total værdi (ikke total vægt — det er ligegyldigt).
+ 
+### Item-detalje
+Dyb visning af et enkelt item.
+ 
+**Hverdagsfelter redigerbare inline.** Farlige handlinger (Slet) i tre-prikker menu øverst.
+ 
+**Sektioner:**
+1. Navn + status-segment (Ejer/Overvejer/Solgt)
+2. Grundfelter (vægt, pris, dimensioner, antal)
+3. Delt gear-toggle med forklaring
+4. Købsinfo (købt hos, dato, kvittering-thumbnail, link, ordrenummer)
+5. Garanti (foldet som standard)
+6. Tags
+7. Kompatibilitet (Kræver + Komplementer)
+8. Brugsstatistik (fremhævet — antal ture + senest brugt + link til alle)
+9. Medlem af grupper
+10. Sidste ture (PC)
+11. Systemadvarsler (PC)
+12. Noter
+**Overvejer-tilstand:** "Købsinfo" udskiftes med "Wishlist-info" (link, prishistorik, dup-detektion). Resten forbliver.
+ 
+**Åbning på PC:** side-panel glider ind fra højre.
+**Åbning på mobil:** fuld skærm.
+ 
+### Grupper-liste
+Alle grupper som liste (konsistent med Inventar).
+ 
+Hver række viser: navn, tags, item-preview (4 første items + "+X mere"), items · vægt · ture · sidst brugt, tre-prikker menu.
+ 
+"Aldrig brugt" markeres med muted italic.
+ 
+### Tur-detalje
+Den mest komplekse skærm.
+ 
+**Statuspille øverst** (Kladde/Klar/Aktiv/Afsluttet) — skifter tekst på handlingsknappen (fx "Markér som klar" → "Start tur" → "Afslut tur" → "Vis pak-af-tjek").
+ 
+**Mobil layout — foldbare sektioner:**
+- Åbne som standard: Turparametre, Advarsler, Pakkeliste, Vægt
+- Foldet som standard: Grundinfo, Vejrudsigt, Deltagere, Budget
+**PC layout — to kolonner:**
+- Venstre (~65%): Pakkeliste med filter-chips + view-mode selector (Efter gruppe / Efter tag / Efter person)
+- Højre (~35%) sidekar: Turparametre, Vejrudsigt, Advarsler, Vægt-oversigt, Deltagere, Budget-preview
+**Vejrudsigt (variant B — udvidet):**
+- Vejrikoner
+- Vindhastighed
+- Solopgang/solnedgang som bundlinje
+- Nøgleobservationer (auto-genererede: "Vådeste dag: lørdag", "Total nedbør: 10 mm")
+**Advarsler flettet i selve pakkelisten OG i sidekar** (dobbelt visning på PC).
+ 
+**Wizard vs. avanceret:**
+- Standard: wizard ved oprettelse
+- I indstillinger: slå "avanceret" til → én lang side
+### Gæsteview
+Tur set af en gæst uden konto.
+ 
+**Layout — respektfuld preview + valgfri deltagelse:**
+ 
+1. Topbar: Feltbogen-brand, "Delt af Emil", Log ind, Jeg deltager
+2. Hero-billede (160-260px): satellit fra open-meteo/mapbox, klikbart "Åbn i kort", koordinater
+3. Galleri-strimmel: uploadede fotos af ejer (skjult for gæst hvis tom)
+4. Turnavn + parametre
+5. Vejrudsigt
+6. Deltagere som chips
+7. Delt pakkeliste (foldet)
+8. Samlet vægt
+9. Praktisk info (parking, booking, madordning)
+10. "Fra Emil"-besked (personlig hilsen fra ejer)
+11. "Jeg deltager"-knap (bund)
+12. Info-linje
+**Efter "Jeg deltager":** navn + overnatning + tilføj eget gear. Data gemmes i browseren.
+ 
+### Statistik
+Widget-grid.
+ 
+Se sektion 11.
+ 
+### Indstillinger
+Struktur: hovedmenu → undersider.
+ 
+**Sektioner:**
+- Konto (log ind / opret / log ud / slet)
+- App: Dashboard / Notifikationer / Tur-oprettelse (wizard vs. avanceret) / Tags-ordbog
+- Data: Sync / Eksport & import
+- Enhed: Sprog / Enheder (metric, DKK)
+- Om: version, ændringslog, licenser
+**Farlige handlinger** (Slet konto, Ryd alt) i slutningen af "Data" med tydelig advarsel + bekræftelse.
+ 
+### Onboarding
+1. Velkomstskærm: app-ikon, kort intro, tre valg (Tilføj mit første item [anbefalet] / Opret min første tur / Importér fra fil), "Spring over"-link, info-linje ("Alt gemmes lokalt · Ingen konto påkrævet"), "Har du konto? Log ind"
+2. Efter valg: du kommer til den relevante skærm med tooltip-hjælp
+3. Tooltips: pulserende prik + tekstboks med pil, tæller "1 af 4", "Spring hjælp over"
+4. Konto tilbydes ikke aktivt under onboarding — kun i indstillinger eller når det giver naturlig værdi
+---
+ 
+## 14. V1 vs. V2
+ 
+### V1 (denne udgave)
+ 
+Alt beskrevet i dokumentet.
+ 
+### V2 (bevidst udskudt)
+ 
+- OCR for kvitteringer (auto-udfyld pris/dato/forhandler)
+- Deling af budget-udgifter mellem deltagere
+- Kort-visning på lister (Inventar, Grupper) som alternativ til liste
+- Kolonne-presets (gemte view-opsætninger)
+- Bookenshelter.dk-integration (auto-hent billeder)
+- Grupper der indeholder grupper (indlejring)
+- Time-for-time vejr-forecast
+- UV-index, fugtighed, månefase i vejr
+- Handlingsforslag koblet direkte til gear ("Tilføj regntøj?")
+- Rute-planlægning med GPX
+- Avanceret regelbygger til custom triggers
+- Fuld drag-and-drop af dashboard-sektioner
+- Deling af badges/push til gæster
+- Delte statistik-widgets
+- Native iOS/Android-apps (hvis PWA ikke er nok)
+---
+ 
+## 15. Nøglebeslutninger med begrundelser
+ 
+### Hvorfor PWA og ikke native?
+Én kodebase, virker overalt, ingen App Store, ingen udviklergebyrer. iOS understøtter PWA fuldt siden 16.4. Udviklertid halveres.
+ 
+### Hvorfor grupper i stedet for kategorier?
+Kategorier er stive og prædefinerede. Grupper er brugerens egen struktur, som kan gøres til mere end blot organisering — de kan udgøre "gear pakker" der matcher turtyper.
+ 
+### Hvorfor smart-motor som rådgiver, ikke automat?
+Brugeren beslutter altid selv. Automatik ville skabe mistillid ("hvorfor ændrede appen min pakkeliste?"). Forslag med begrundelse skaber tillid.
+ 
+### Hvorfor advarsler aldrig blokerer?
+Der er altid legitime grunde til at fravige regler (fx en sovepose ekstra til en gæst). Rødt kort med begrundelse er nok — brugeren har konteksten.
+ 
+### Hvorfor ingen konto påkrævet?
+Sænker friktion. Data gemmes lokalt fra dag ét. Konto er værdifuld når man vil have sync eller deling, men ikke inden.
+ 
+### Hvorfor gæste-data i browseren i stedet for konto?
+Gæster har måske kun én tur med denne gruppe. At tvinge konto = friktion. Browser-lagring virker, kan opgraderes.
+ 
+### Hvorfor foldbart filter-panel på PC?
+Fast sidebar stjæler 220px permanent. Foldet ligger listen med fuld bredde. Bedste af begge verdener.
+ 
+### Hvorfor Slet i tre-prikker menu, ikke som knap?
+Bundnavigation ligger tæt på. Fejlklik er farligt. To bevidste handlinger (åbn menu → klik → bekræft) fjerner problemet.
+ 
+### Hvorfor dashboard fast rækkefølge?
+Dashboardet er "kendt". For meget frihed = altid rodet. Widget-frihed er der hvor det gør en forskel.
+ 
+### Hvorfor pak-af-tjek?
+Uden data lærer smart-motoren intet. Med data kan appen sige "du har haft dette med 12 gange, aldrig brugt". Det er guld for gear-hygiejne.
+ 
+---
+ 
+## 16. Næste skridt (udvikling)
+ 
+**Forudsætninger:**
+1. Node.js installeret på Emils computer
+2. Git og GitHub-konto
+3. VS Code eller anden editor
+4. Grundlæggende komfort med terminal
+**Rækkefølge for bygning:**
+ 
+1. **Opsæt udviklingsmiljø** — projektstruktur, framework, TypeScript, ESLint, tailwind eller lignende
+2. **Byg datalag** — IndexedDB-schema, kernefunktioner (opret, læs, ret, slet)
+3. **Byg første skærm: Inventar-liste + Item-detalje** — den enklest afsluttede loop, kan bruges i praksis
+4. **Sæt PWA op** — service worker, manifest, installerbar på iPhone
+5. **Test på iPhone** — installer, tilføj items, mærk hvordan det er
+6. **Byg Grupper**
+7. **Byg Ture (uden smart-motor endnu)**
+8. **Byg smart-motor** — vejr-API, forslag, advarsler
+9. **Byg deling** — PocketBase setup, delelinks, gæste-flow
+10. **Byg Statistik**
+11. **Byg Dashboard** — samler alt
+12. **Onboarding + indstillinger**
+13. **Polering og fejlretning**
+**Estimeret tid:** 100-150 timer over 4-6 måneder ved 2-4 timer/uge.
+ 
+**Hosting-omkostninger v1:** ~500-1000 kr første år (domænenavn + billig VPS).
+ 
+---
+ 
+## 17. Åbne beslutninger
+ 
+Ting der ikke er låst endnu og skal afklares under udvikling:
+ 
+- **Visuel identitet:** farvepalet, typografi, ikonstil, karakter. Wireframes er neutrale.
+- **Domæne:** feltbogen.dk foreslået, skal reserveres hos dk-hostmaster.dk eller dansk domæne-udbyder.
+- **Præcise vejr-tærskler:** hvornår er nedbør "meget", hvornår er vind "farlig"?
+- **Præcis smart-motor kalibrering:** justering af forslag baseret på virkelig brug.
+- **Ikoner:** skal bruges konsistent — vælg bibliotek (Tabler foreslået).
+---
+ 
+## Bilag: Emils inventar (referencedata)
+ 
+*Til brug for testdata under udvikling. Vægte er skøn og skal verificeres.*
+ 
+### Søvn & shelter
+- TTTM hængekøje m. Moonstraps — 900 g, delt
+- TTTM Full Moon Tarp — 720 g, delt
+- Moonquilt PRO 850 — 780 g (~2.790 kr)
+- Thermarest NeoAir — 410 g
+- Thermarest Questar Long — 1180 g
+- Aeros pude — 80 g
+- Gormsson −2 Curve sovepose — 1400 g
+- Oppland 3 telt + footprint — 3200 g, delt
+### Værktøj
+- Fiskars X7 økse — 640 g, delt
+- Opinel No. 7 — 40 g
+- CF økse, Robens lille økse
+### Køkken — personligt
+- Toaks 1L gryde — 155 g
+- MSR Pocket Rocket — 73 g
+- Stanley Camp Mug — 180 g
+- Emaljekrus 350 ml (6 stk: 2 sort, 2 blå, 2 grøn) — 180 g/stk, delt
+- Emaljetallerken 24 cm (6 stk) — 260 g/stk, delt
+- Sea to Summit Spork (4 stk) — 11 g/stk, delt
+- Stanley Classic lommelærke 0,23 L — 130 g
+- Wilderness Wash 100 ml (2 stk) — 110 g/stk, delt
+- Camp Kitchen Clean-Up Kit — 340 g, delt
+### Køkken — gruppe
+- Petromax Dutch Oven FT9 — 8100 g, delt (715 kr, Friluftslageret.dk)
+### Ild & lys
+- Ildstål — 60 g
+- Pandelampe — 90 g
+### Diverse
+- Paracord 30 m — 210 g
+- Førstehjælpstaske — 300 g
+- Sandberg Solar Charger 30W — 700 g
+**Endnu ikke i inventar:**
+- Petromax FT9-tilbehør: lågløfter, fire gloves, utensils, grill grate, carry bag
+- Bags & taske-kategori mangler
+- Overvejer: RAW RAWDH8 dehydrator, Helle Mândra knife, Petromax FP30 skillet
+---
+ 
+*Dokument version 1.0 — 21. juli 2026*
+*Klar til udviklingsstart.*
