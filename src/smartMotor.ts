@@ -9,13 +9,13 @@ export interface VejrDag {
   vejrkode: number;
   sol_op: string;
   sol_ned: string;
-}
+} 
 
 export interface VejrData {
   dage: VejrDag[];
   observationer: string[];
   hentet: string;
-}
+} 
 
 export async function hentVejr(
   lat: number,
