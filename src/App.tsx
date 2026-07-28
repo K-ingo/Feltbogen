@@ -8,6 +8,7 @@ import TureListe from './TureListe';
 import BundNav from './BundNav';
 import type { Fane } from './BundNav';
 import { Knap, Kort, Chip, layout } from './ui';
+import StatistikSide from './StatistikSide';
 
 function App() {
   const [fane, setFane] = useState<Fane>('inventar');
@@ -68,6 +69,15 @@ function App() {
     return (
       <>
         <TureListe />
+        <BundNav aktiv={fane} skift={setFane} />
+      </>
+    );
+  }
+
+  if (fane === 'statistik') {
+    return (
+      <>
+        <StatistikSide />
         <BundNav aktiv={fane} skift={setFane} />
       </>
     );

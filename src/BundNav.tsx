@@ -1,4 +1,4 @@
-type Fane = 'inventar' | 'grupper' | 'ture';
+type Fane = 'inventar' | 'grupper' | 'ture' | 'statistik';
 
 interface Props {
   aktiv: Fane;
@@ -47,6 +47,7 @@ function BundNav({ aktiv, skift }: Props) {
       {knap('inventar', 'Inventar')}
       {knap('grupper', 'Grupper')}
       {knap('ture', 'Ture')}
+      {knap('statistik', 'Statistik')}
     </div>
   );
 }
