@@ -1,13 +1,11 @@
 :root {
   color-scheme: light dark;
 
-  /* Skovgrøn accent */
   --accent: #5d6b3a;
   --accent-tekst: #f9f5eb;
   --accent-bg: #eef0e0;
   --accent-border: #b8c690;
 
-  /* Advarsler */
   --advarsel: #a06000;
   --advarsel-bg: #fff4e0;
   --advarsel-border: #f0d090;
@@ -18,7 +16,6 @@
 
   --succes: #4a7040;
 
-  /* Lys tilstand */
   --bg: #f5efe4;
   --bg-forhoejet: #f9f5eb;
   --bg-topbar: #ede4d1;
