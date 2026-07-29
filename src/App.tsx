@@ -1,8 +1,9 @@
-import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import AuthSide from './AuthSide';
 import { useAuth } from './useAuth';
+import { useEffect, useState } from 'react';
+import { migrerHvisNoedvendigt, hentFraPocketBase } from './sync';
 import type { Item } from './db';
 import ItemDetalje from './ItemDetalje';
 import GrupperListe from './GrupperListe';
@@ -14,6 +15,17 @@ import StatistikSide from './StatistikSide';
 
 function App() {
   const { erLoggetInd } = useAuth();
+  const [synkroniserer, setSynkroniserer] = useState(false);
+
+  useEffect(() => {
+    if (!erLoggetInd) return;
+    setSynkroniserer(true);
+    (async () => {
+      await migrerHvisNoedvendigt();
+      await hentFraPocketBase();
+      setSynkroniserer(false);
+    })();
+  }, [erLoggetInd]);
   const [fane, setFane] = useState<Fane>('inventar');
   const [navn, setNavn] = useState('');
   const [vaegt, setVaegt] = useState('');
@@ -53,7 +65,7 @@ function App() {
   if (!erLoggetInd) {
     return <AuthSide onLoggetInd={() => window.location.reload()} />;
   }
-  
+
   if (valgtItemId !== null) {
     return (
       <>
