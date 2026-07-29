@@ -15,7 +15,7 @@ import StatistikSide from './StatistikSide';
 
 function App() {
   const { erLoggetInd } = useAuth();
-  const [setSynkroniserer] = useState(false);
+  const [, setSynkroniserer] = useState(false);
 
   useEffect(() => {
     if (!erLoggetInd) return;
