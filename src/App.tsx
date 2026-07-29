@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
+import AuthSide from './AuthSide';
+import { useAuth } from './useAuth';
 import type { Item } from './db';
 import ItemDetalje from './ItemDetalje';
 import GrupperListe from './GrupperListe';
@@ -11,6 +13,7 @@ import { Knap, Kort, Chip, layout } from './ui';
 import StatistikSide from './StatistikSide';
 
 function App() {
+  const { erLoggetInd } = useAuth();
   const [fane, setFane] = useState<Fane>('inventar');
   const [navn, setNavn] = useState('');
   const [vaegt, setVaegt] = useState('');
@@ -47,6 +50,10 @@ function App() {
     setPris('');
   };
 
+  if (!erLoggetInd) {
+    return <AuthSide onLoggetInd={() => window.location.reload()} />;
+  }
+  
   if (valgtItemId !== null) {
     return (
       <>
