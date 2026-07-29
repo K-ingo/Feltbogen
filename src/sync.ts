@@ -2,22 +2,15 @@ import { db } from './db';
 import { pb, nuvaerendeBruger } from './pb';
 import type { Item, Gruppe, Tur } from './db';
 
-const MIGRATIONS_NOEGLE = 'feltbogen_migreret_v1';
-
 interface MedPbId {
   pb_id?: string;
 }
 
-// Uploader alle eksisterende items/grupper/ture til PocketBase
-// Kaldes én gang efter første login
-export async function migrerHvisNoedvendigt(): Promise<{ migreret: boolean; antal?: number }> {
+// Uploader alle items/grupper/ture uden pb_id til PocketBase.
+// Kører hver gang appen starter — henter alt der endnu ikke er sendt op.
+export async function migrerHvisNoedvendigt(): Promise<{ migreret: boolean; antal?: number; fejl?: number }> {
   const bruger = nuvaerendeBruger();
   if (!bruger) return { migreret: false };
-
-  const noegle = `${MIGRATIONS_NOEGLE}_${bruger.id}`;
-  if (localStorage.getItem(noegle)) {
-    return { migreret: false };
-  }
 
   const items = await db.items.toArray();
   const grupper = await db.grupper.toArray();
@@ -28,15 +21,12 @@ export async function migrerHvisNoedvendigt(): Promise<{ migreret: boolean; anta
   const tureUdenPbId = ture.filter((t) => !(t as any).pb_id);
 
   const total = itemsUdenPbId.length + grupperUdenPbId.length + tureUdenPbId.length;
-  if (total === 0) {
-    localStorage.setItem(noegle, new Date().toISOString());
-    return { migreret: false };
-  }
+  if (total === 0) return { migreret: false };
 
-  console.log(`Migrerer ${total} records til PocketBase...`);
+  console.log(`Sender ${total} records til PocketBase (${itemsUdenPbId.length} items, ${grupperUdenPbId.length} grupper, ${tureUdenPbId.length} ture)...`);
 
-  const idMapItem = new Map<number, string>();
-  const idMapGruppe = new Map<number, string>();
+  let ok = 0;
+  let fejl = 0;
 
   for (const item of itemsUdenPbId) {
     try {
@@ -59,12 +49,11 @@ export async function migrerHvisNoedvendigt(): Promise<{ migreret: boolean; anta
         garanti: item.garanti,
         noter: item.noter
       });
-      if (item.id) {
-        await db.items.update(item.id, { pb_id: skabt.id } as any);
-        idMapItem.set(item.id, skabt.id);
-      }
-    } catch (e) {
-      console.error('Migration fejlede for item:', item.navn, e);
+      if (item.id) await db.items.update(item.id, { pb_id: skabt.id } as any);
+      ok++;
+    } catch (e: any) {
+      fejl++;
+      console.error(`❌ Item "${item.navn}" fejlede:`, e?.response?.data ?? e?.data ?? e);
     }
   }
 
@@ -77,12 +66,11 @@ export async function migrerHvisNoedvendigt(): Promise<{ migreret: boolean; anta
         item_ids: gruppe.item_ids.map(String),
         noter: gruppe.noter
       });
-      if (gruppe.id) {
-        await db.grupper.update(gruppe.id, { pb_id: skabt.id } as any);
-        idMapGruppe.set(gruppe.id, skabt.id);
-      }
-    } catch (e) {
-      console.error('Migration fejlede for gruppe:', gruppe.navn, e);
+      if (gruppe.id) await db.grupper.update(gruppe.id, { pb_id: skabt.id } as any);
+      ok++;
+    } catch (e: any) {
+      fejl++;
+      console.error(`❌ Gruppe "${gruppe.navn}" fejlede:`, e?.response?.data ?? e?.data ?? e);
     }
   }
 
@@ -111,21 +99,19 @@ export async function migrerHvisNoedvendigt(): Promise<{ migreret: boolean; anta
         noter: tur.noter,
         vejrsnapshot: tur.vejrsnapshot
       });
-      if (tur.id) {
-        await db.ture.update(tur.id, { pb_id: skabt.id } as any);
-      }
-    } catch (e) {
-      console.error('Migration fejlede for tur:', tur.navn, e);
+      if (tur.id) await db.ture.update(tur.id, { pb_id: skabt.id } as any);
+      ok++;
+    } catch (e: any) {
+      fejl++;
+      console.error(`❌ Tur "${tur.navn}" fejlede:`, e?.response?.data ?? e?.data ?? e);
     }
   }
 
-  localStorage.setItem(noegle, new Date().toISOString());
-  console.log('Migration færdig');
-  return { migreret: true, antal: total };
+  console.log(`✅ Sync færdig: ${ok} lykkedes, ${fejl} fejlede`);
+  return { migreret: ok > 0, antal: ok, fejl };
 }
 
 // Hent alle data fra PocketBase og synkroniser til lokal db
-// Kaldes ved opstart hvis brugeren er logget ind
 export async function hentFraPocketBase(): Promise<void> {
   const bruger = nuvaerendeBruger();
   if (!bruger) return;
@@ -147,7 +133,7 @@ export async function hentFraPocketBase(): Promise<void> {
 
     for (const pbItem of pbItems) {
       if (lokalItemPbIds.has(pbItem.id)) continue;
-      const nytItem = {
+      await db.items.add({
         pb_id: pbItem.id,
         navn: pbItem.navn,
         vaegt_g: pbItem.vaegt_g || 0,
@@ -167,13 +153,12 @@ export async function hentFraPocketBase(): Promise<void> {
         noter: pbItem.noter || '',
         oprettet: new Date(pbItem.created),
         aendret: new Date(pbItem.updated)
-      } as Item & MedPbId;
-      await db.items.add(nytItem as any);
+      } as Item & MedPbId as any);
     }
 
     for (const pbGruppe of pbGrupper) {
       if (lokalGruppePbIds.has(pbGruppe.id)) continue;
-      const nyGruppe = {
+      await db.grupper.add({
         pb_id: pbGruppe.id,
         navn: pbGruppe.navn,
         tags: pbGruppe.tags || [],
@@ -181,13 +166,12 @@ export async function hentFraPocketBase(): Promise<void> {
         noter: pbGruppe.noter || '',
         oprettet: new Date(pbGruppe.created),
         aendret: new Date(pbGruppe.updated)
-      } as Gruppe & MedPbId;
-      await db.grupper.add(nyGruppe as any);
+      } as Gruppe & MedPbId as any);
     }
 
     for (const pbTur of pbTure) {
       if (lokalTurPbIds.has(pbTur.id)) continue;
-      const nyTur = {
+      await db.ture.add({
         pb_id: pbTur.id,
         navn: pbTur.navn,
         sted: pbTur.sted || '',
@@ -211,8 +195,7 @@ export async function hentFraPocketBase(): Promise<void> {
         vejrsnapshot: pbTur.vejrsnapshot || '',
         oprettet: new Date(pbTur.created),
         aendret: new Date(pbTur.updated)
-      } as Tur & MedPbId;
-      await db.ture.add(nyTur as any);
+      } as Tur & MedPbId as any);
     }
   } catch (e) {
     console.error('Sync fejlede:', e);
