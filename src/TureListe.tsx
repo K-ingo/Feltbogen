@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import type { Tur } from './db';
+import { opretTur } from './sync';
 import TurDetalje from './TurDetalje';
 import { Knap, Kort, Badge, layout } from './ui';
 
@@ -15,7 +16,7 @@ function TureListe() {
     if (!nytNavn.trim()) return;
     const nu = new Date();
     const idag = nu.toISOString().slice(0, 10);
-    await db.ture.add({
+    await opretTur({
       navn: nytNavn.trim(),
       sted: '',
       koordinater: null,

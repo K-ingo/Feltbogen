@@ -3,6 +3,7 @@ import { db } from './db';
 import type { Item, ItemStatus, Garanti } from './db';
 import TagsInput from './TagsInput';
 import {Felt, Kort, layout, SektionsTitel } from './ui';
+import { sletItem, opdaterItem } from './sync';
 
 interface Props {
   itemId: number;
@@ -34,7 +35,7 @@ function ItemDetalje({ itemId, tilbage }: Props) {
   const opdater = async (aendringer: Partial<Item>) => {
     if (!item?.id) return;
     const nytItem = { ...item, ...aendringer, aendret: new Date() };
-    await db.items.update(item.id, aendringer);
+    await opdaterItem(item.id, aendringer);
     setItem(nytItem);
   };
 
@@ -52,7 +53,7 @@ function ItemDetalje({ itemId, tilbage }: Props) {
   const slet = async () => {
     if (!item?.id) return;
     if (confirm(`Slet "${item.navn}"?`)) {
-      await db.items.delete(item.id);
+      await sletItem(item.id);
       tilbage();
     }
   };

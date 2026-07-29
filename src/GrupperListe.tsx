@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import type { Gruppe } from './db';
+import { opretGruppe } from './sync';
 import GruppeDetalje from './GruppeDetalje';
 import { Knap, Kort, Chip, layout } from './ui';
 
@@ -15,7 +16,7 @@ function GrupperListe() {
   const opret = async () => {
     if (!nytNavn.trim()) return;
     const nu = new Date();
-    await db.grupper.add({
+    await opretGruppe({
       navn: nytNavn.trim(),
       tags: [],
       item_ids: [],

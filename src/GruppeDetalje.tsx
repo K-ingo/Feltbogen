@@ -4,6 +4,7 @@ import { db } from './db';
 import type { Gruppe } from './db';
 import TagsInput from './TagsInput';
 import { Kort, layout, SektionsTitel } from './ui';
+import { sletGruppe, opdaterGruppe } from './sync';
 
 interface Props {
   gruppeId: number;
@@ -24,14 +25,14 @@ function GruppeDetalje({ gruppeId, tilbage }: Props) {
   const opdater = async (aendringer: Partial<Gruppe>) => {
     if (!gruppe?.id) return;
     const nyGruppe = { ...gruppe, ...aendringer, aendret: new Date() };
-    await db.grupper.update(gruppe.id, aendringer);
+    await opdaterGruppe(gruppe.id, aendringer);
     setGruppe(nyGruppe);
   };
 
   const slet = async () => {
     if (!gruppe?.id) return;
     if (confirm(`Slet gruppen "${gruppe.navn}"?`)) {
-      await db.grupper.delete(gruppe.id);
+      await sletGruppe(gruppe.id);
       tilbage();
     }
   };

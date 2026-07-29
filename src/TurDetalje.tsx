@@ -5,6 +5,7 @@ import type { Tur, TurStatus, Overnatning, Aktivitet, Terraen, Erfaring, Deltage
 import { hentVejr, vejrIkonKode, beregnForbrug, findAdvarsler, foreslaaGrupper, soegSted } from './smartMotor';
 import type { VejrData, StedForslag } from './smartMotor';
 import { Knap, Felt, Dropdown, Kort, layout, SektionsTitel } from './ui';
+import { sletTur, opdaterTur } from './sync';
 
 interface Props {
   turId: number;
@@ -45,7 +46,7 @@ function TurDetalje({ turId, tilbage }: Props) {
   const opdater = async (aendringer: Partial<Tur>) => {
     if (!tur?.id) return;
     const nyTur = { ...tur, ...aendringer, aendret: new Date() };
-    await db.ture.update(tur.id, aendringer);
+    await opdaterTur(tur.id, aendringer);
     setTur(nyTur);
   };
 
@@ -125,7 +126,7 @@ function TurDetalje({ turId, tilbage }: Props) {
   const slet = async () => {
     if (!tur?.id) return;
     if (confirm(`Slet turen "${tur.navn}"?`)) {
-      await db.ture.delete(tur.id);
+      await sletTur(tur.id);
       tilbage();
     }
   };

@@ -3,7 +3,7 @@ import { db } from './db';
 import AuthSide from './AuthSide';
 import { useAuth } from './useAuth';
 import { useEffect, useState } from 'react';
-import { migrerHvisNoedvendigt, hentFraPocketBase } from './sync';
+import { migrerHvisNoedvendigt, hentFraPocketBase, opretItem } from './sync';
 import type { Item } from './db';
 import ItemDetalje from './ItemDetalje';
 import GrupperListe from './GrupperListe';
@@ -37,7 +37,7 @@ function App() {
 
   const tilfoej = async () => {
     if (!navn) return;
-    await db.items.add({
+    await opretItem({
       navn,
       vaegt_g: Number(vaegt) || 0,
       pris_kr: Number(pris) || 0,
