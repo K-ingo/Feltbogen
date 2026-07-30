@@ -7,7 +7,9 @@ import {
   tureFordeltPrMaaned,
   mestBrugte,
   ubrugteItems,
-  fordelingPrGruppe
+  fordelingPrGruppe,
+  sidstBrugtPrItem,
+  grupperPrItem
 } from './statistik';
 import { lavItem, lavGruppe, lavTur } from './test/data';
 
@@ -166,5 +168,45 @@ describe('fordelingPrGruppe', () => {
 
   it('returnerer tom liste når der ikke er nogen vægt', () => {
     expect(fordelingPrGruppe([], [lavGruppe()])).toEqual([]);
+  });
+});
+
+describe('sidstBrugtPrItem', () => {
+  it('tager den seneste tur et item har været med på', () => {
+    const gruppe = lavGruppe({ uid: 'g1', item_ids: ['i-gryde'] });
+    const ture = [
+      lavTur({ startdato: '2026-03-01', gruppe_ids: ['g1'] }),
+      lavTur({ startdato: '2026-07-21', gruppe_ids: ['g1'] }),
+      lavTur({ startdato: '2026-05-10', loese_item_ids: ['i-oekse'] })
+    ];
+
+    const sidst = sidstBrugtPrItem(ture, [gruppe]);
+
+    expect(sidst.get('i-gryde')).toBe('2026-07-21');
+    expect(sidst.get('i-oekse')).toBe('2026-05-10');
+  });
+
+  it('har ingen post for gear der aldrig har været med', () => {
+    expect(sidstBrugtPrItem([], []).get('i1')).toBeUndefined();
+  });
+
+  it('ignorerer ture uden startdato', () => {
+    const ture = [lavTur({ startdato: '', loese_item_ids: ['i1'] })];
+    expect(sidstBrugtPrItem(ture, []).size).toBe(0);
+  });
+});
+
+describe('grupperPrItem', () => {
+  it('samler gruppenavnene pr. item', () => {
+    const grupper = [
+      lavGruppe({ navn: 'Køkken', item_ids: ['i-gryde', 'i-braender'] }),
+      lavGruppe({ navn: 'Solo', item_ids: ['i-gryde'] })
+    ];
+
+    const pr = grupperPrItem(grupper);
+
+    expect(pr.get('i-gryde')).toEqual(['Køkken', 'Solo']);
+    expect(pr.get('i-braender')).toEqual(['Køkken']);
+    expect(pr.get('i-ukendt')).toBeUndefined();
   });
 });

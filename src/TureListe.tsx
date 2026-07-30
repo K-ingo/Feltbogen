@@ -4,8 +4,9 @@ import { db } from './db';
 import type { TurStatus } from './db';
 import { opretTur } from './sync';
 import TurDetalje from './TurDetalje';
-import { Knap, Kort, Badge, ListeRaekke, TomListe } from './ui';
-import { layout } from './layout';
+import { Skal } from './Skal';
+import type { Fane } from './Skal';
+import { Knap, Kort, Badge, ListeRaekke, TomListe, Label } from './ui';
 
 // Farven signalerer hvor turen er i sit livsforløb.
 const STATUS_NIVEAU: Record<TurStatus, 'info' | 'accent' | 'advarsel'> = {
@@ -15,18 +16,68 @@ const STATUS_NIVEAU: Record<TurStatus, 'info' | 'accent' | 'advarsel'> = {
   afsluttet: 'info'
 };
 
-function TureListe() {
-  const [nytNavn, setNytNavn] = useState('');
+interface Props {
+  fane: Fane;
+  skift: (f: Fane) => void;
+}
+
+function TureListe({ fane, skift }: Props) {
   const [valgtTurId, setValgtTurId] = useState<number | null>(null);
+  const [opretAaben, setOpretAaben] = useState(false);
 
   const ture = useLiveQuery(() => db.ture.orderBy('startdato').reverse().toArray());
 
-  const opret = async () => {
-    if (!nytNavn.trim()) return;
+  if (valgtTurId !== null) {
+    return (
+      <Skal fane={fane} skift={skift}>
+        <TurDetalje turId={valgtTurId} tilbage={() => setValgtTurId(null)} />
+      </Skal>
+    );
+  }
+
+  return (
+    <Skal
+      fane={fane}
+      skift={skift}
+      titel="Ture"
+      undertitel={`${ture?.length ?? 0} ture`}
+      handlinger={<Knap variant="primaer" onClick={() => setOpretAaben(!opretAaben)}>+ Ny tur</Knap>}
+      fab={() => setOpretAaben(true)}
+    >
+      {opretAaben && <OpretTur luk={() => setOpretAaben(false)} />}
+
+      {ture?.length === 0 && <TomListe>Ingen ture endnu. Opret din første.</TomListe>}
+      {ture?.map((t) => (
+        <ListeRaekke
+          key={t.uid}
+          onClick={() => t.id !== undefined && setValgtTurId(t.id)}
+          titel={
+            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {t.navn}
+              <Badge niveau={STATUS_NIVEAU[t.status]}>{t.status}</Badge>
+            </span>
+          }
+          detalje={
+            <>
+              {t.sted || 'Intet sted'} · {t.startdato}
+              {t.personer > 1 && ` · ${t.personer} personer`}
+            </>
+          }
+        />
+      ))}
+    </Skal>
+  );
+}
+
+function OpretTur({ luk }: { luk: () => void }) {
+  const [navn, setNavn] = useState('');
+
+  const gem = async () => {
+    if (!navn.trim()) return;
     const nu = new Date();
     const idag = nu.toISOString().slice(0, 10);
     await opretTur({
-      navn: nytNavn.trim(),
+      navn: navn.trim(),
       sted: '',
       koordinater: null,
       startdato: idag,
@@ -49,55 +100,33 @@ function TureListe() {
       oprettet: nu,
       aendret: nu
     });
-    setNytNavn('');
+    luk();
   };
 
-  if (valgtTurId !== null) {
-    return <TurDetalje turId={valgtTurId} tilbage={() => setValgtTurId(null)} />;
-  }
-
   return (
-    <div style={layout.container}>
-      <h1>Feltbogen</h1>
-      <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginBottom: '20px' }}>
-        Ture · {ture?.length ?? 0}
+    <Kort fremhaevet style={{ marginBottom: '16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <Label>Ny tur</Label>
+        <button
+          onClick={luk}
+          aria-label="Luk"
+          style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '16px', color: 'var(--tekst-dæmpet)' }}
+        >
+          ×
+        </button>
       </div>
-
-      <Kort fremhaevet style={{ marginBottom: '20px' }}>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <input
-            placeholder="Ny tur (fx Uge 32 — Øghaven)"
-            value={nytNavn}
-            onChange={(e) => setNytNavn(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && opret()}
-            style={{ flex: 1 }}
-          />
-          <Knap variant="primaer" onClick={opret}>Opret</Knap>
-        </div>
-      </Kort>
-
-      <div>
-        {ture?.length === 0 && <TomListe>Ingen ture endnu. Opret din første ovenfor.</TomListe>}
-        {ture?.map((t) => (
-          <ListeRaekke
-            key={t.id}
-            onClick={() => t.id !== undefined && setValgtTurId(t.id)}
-            titel={
-              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {t.navn}
-                <Badge niveau={STATUS_NIVEAU[t.status]}>{t.status}</Badge>
-              </span>
-            }
-            detalje={
-              <>
-                {t.sted || 'Intet sted'} · {t.startdato}
-                {t.personer > 1 && ` · ${t.personer} personer`}
-              </>
-            }
-          />
-        ))}
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <input
+          autoFocus
+          placeholder="fx Uge 32 — Øghaven"
+          value={navn}
+          onChange={(e) => setNavn(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && gem()}
+          style={{ flex: 1 }}
+        />
+        <Knap variant="primaer" onClick={gem}>Opret</Knap>
       </div>
-    </div>
+    </Kort>
   );
 }
 
