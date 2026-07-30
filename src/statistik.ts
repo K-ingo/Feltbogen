@@ -1,5 +1,5 @@
 import type { Item, Tur, Gruppe } from './db';
-import { itemIdsPaaTur } from './smartMotor';
+import { itemUidsPaaTur } from './smartMotor';
 
 export type Periode = 'i_aar' | 'sidste_aar' | 'alt';
 
@@ -52,15 +52,15 @@ interface ItemBrugSum {
 }
 
 export function mestBrugte(items: Item[], ture: Tur[], grupper: Gruppe[], topN: number = 5): ItemBrugSum[] {
-  const taeller = new Map<number, number>();
+  const taeller = new Map<string, number>();
 
   ture.forEach((t) => {
-    itemIdsPaaTur(t, grupper).forEach((id) => taeller.set(id, (taeller.get(id) ?? 0) + 1));
+    itemUidsPaaTur(t, grupper).forEach((uid) => taeller.set(uid, (taeller.get(uid) ?? 0) + 1));
   });
 
   return Array.from(taeller.entries())
-    .map(([id, antalTure]) => ({
-      item: items.find((i) => i.id === id),
+    .map(([uid, antalTure]) => ({
+      item: items.find((i) => i.uid === uid),
       antalTure
     }))
     .filter((x): x is ItemBrugSum => x.item !== undefined)
@@ -76,17 +76,17 @@ interface UbrugtInfo {
 }
 
 export function ubrugteItems(items: Item[], ture: Tur[], grupper: Gruppe[]): UbrugtInfo {
-  const brugte = new Set<number>();
+  const brugte = new Set<string>();
   const nu = new Date();
   const etAarSiden = new Date(nu.getFullYear() - 1, nu.getMonth(), nu.getDate());
 
   ture.forEach((t) => {
     if (!t.startdato) return;
     if (new Date(t.startdato) < etAarSiden) return;
-    itemIdsPaaTur(t, grupper).forEach((id) => brugte.add(id));
+    itemUidsPaaTur(t, grupper).forEach((uid) => brugte.add(uid));
   });
 
-  const ubrugte = items.filter((i) => i.status === 'ejer' && i.id !== undefined && !brugte.has(i.id));
+  const ubrugte = items.filter((i) => i.status === 'ejer' && !brugte.has(i.uid));
 
   return {
     antal: ubrugte.length,
@@ -108,7 +108,7 @@ export function fordelingPrGruppe(items: Item[], grupper: Gruppe[]): GruppeForde
 
   return grupper
     .map((g) => {
-      const gItems = items.filter((i) => i.id && g.item_ids.includes(i.id));
+      const gItems = items.filter((i) => g.item_ids.includes(i.uid));
       const vaegt = gItems.reduce((s, i) => s + i.vaegt_g * i.antal, 0);
       return {
         navn: g.navn,

@@ -33,7 +33,7 @@ function GrupperListe() {
   }
 
   const beregnInfo = (g: Gruppe) => {
-    const gItems = items?.filter((i) => i.id !== undefined && g.item_ids.includes(i.id)) ?? [];
+    const gItems = items?.filter((i) => g.item_ids.includes(i.uid)) ?? [];
     return { antal: gItems.length, vaegt: gItems.reduce((s, i) => s + i.vaegt_g, 0) };
   };
 

@@ -1,11 +1,13 @@
 import type { Item, Gruppe, Tur } from '../db';
 
 // Fabrikker til testdata. Kun det en test bryder sig om angives; resten får
-// harmløse standardværdier.
+// harmløse standardværdier. Hver post får et uid, ligesom opret() ville give
+// den — referencer mellem poster bruger uid, ikke lokale id'er.
 
 export function lavItem(felter: Partial<Item> = {}): Item {
   const nu = new Date('2026-07-01T12:00:00Z');
   return {
+    uid: crypto.randomUUID(),
     navn: 'Testitem',
     vaegt_g: 100,
     pris_kr: 200,
@@ -31,6 +33,7 @@ export function lavItem(felter: Partial<Item> = {}): Item {
 export function lavGruppe(felter: Partial<Gruppe> = {}): Gruppe {
   const nu = new Date('2026-07-01T12:00:00Z');
   return {
+    uid: crypto.randomUUID(),
     navn: 'Testgruppe',
     tags: [],
     item_ids: [],
@@ -44,6 +47,7 @@ export function lavGruppe(felter: Partial<Gruppe> = {}): Gruppe {
 export function lavTur(felter: Partial<Tur> = {}): Tur {
   const nu = new Date('2026-07-01T12:00:00Z');
   return {
+    uid: crypto.randomUUID(),
     navn: 'Testtur',
     sted: '',
     koordinater: null,

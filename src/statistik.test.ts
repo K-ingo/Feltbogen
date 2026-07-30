@@ -83,14 +83,14 @@ describe('tureFordeltPrMaaned', () => {
 
 describe('mestBrugte', () => {
   it('tæller hvor mange ture hvert item har været på, og sorterer', () => {
-    const gryde = lavItem({ id: 1, navn: 'Gryde' });
-    const oekse = lavItem({ id: 2, navn: 'Økse' });
-    const gruppe = lavGruppe({ id: 1, item_ids: [1] });
+    const gryde = lavItem({ uid: 'i-gryde', navn: 'Gryde' });
+    const oekse = lavItem({ uid: 'i-oekse', navn: 'Økse' });
+    const gruppe = lavGruppe({ uid: 'g1', item_ids: ['i-gryde'] });
 
     const ture = [
-      lavTur({ gruppe_ids: [1] }),                       // gryde
-      lavTur({ gruppe_ids: [1], loese_item_ids: [2] }),   // gryde + økse
-      lavTur({ gruppe_ids: [1] })                        // gryde
+      lavTur({ gruppe_ids: ['g1'] }),                              // gryde
+      lavTur({ gruppe_ids: ['g1'], loese_item_ids: ['i-oekse'] }),  // gryde + økse
+      lavTur({ gruppe_ids: ['g1'] })                               // gryde
     ];
 
     const top = mestBrugte([gryde, oekse], ture, [gruppe]);
@@ -99,13 +99,13 @@ describe('mestBrugte', () => {
   });
 
   it('udelader items der er slettet fra inventaret', () => {
-    const ture = [lavTur({ loese_item_ids: [99] })];
+    const ture = [lavTur({ loese_item_ids: ['findes-ikke'] })];
     expect(mestBrugte([], ture, [])).toEqual([]);
   });
 
   it('respekterer topN', () => {
-    const items = [1, 2, 3].map((id) => lavItem({ id, navn: `Item ${id}` }));
-    const ture = [lavTur({ loese_item_ids: [1, 2, 3] })];
+    const items = [1, 2, 3].map((n) => lavItem({ uid: `i${n}`, navn: `Item ${n}` }));
+    const ture = [lavTur({ loese_item_ids: ['i1', 'i2', 'i3'] })];
 
     expect(mestBrugte(items, ture, [], 2)).toHaveLength(2);
   });
@@ -113,9 +113,9 @@ describe('mestBrugte', () => {
 
 describe('ubrugteItems', () => {
   it('finder items der ikke har været på tur det seneste år', () => {
-    const brugt = lavItem({ id: 1, navn: 'Brugt', pris_kr: 100, vaegt_g: 500 });
-    const ubrugt = lavItem({ id: 2, navn: 'Ubrugt', pris_kr: 700, vaegt_g: 900, antal: 2 });
-    const ture = [lavTur({ startdato: '2026-05-01', loese_item_ids: [1] })];
+    const brugt = lavItem({ uid: 'i-brugt', navn: 'Brugt', pris_kr: 100, vaegt_g: 500 });
+    const ubrugt = lavItem({ uid: 'i-ubrugt', navn: 'Ubrugt', pris_kr: 700, vaegt_g: 900, antal: 2 });
+    const ture = [lavTur({ startdato: '2026-05-01', loese_item_ids: ['i-brugt'] })];
 
     const resultat = ubrugteItems([brugt, ubrugt], ture, []);
 
@@ -126,25 +126,25 @@ describe('ubrugteItems', () => {
   });
 
   it('regner et item som ubrugt hvis turen er mere end et år gammel', () => {
-    const item = lavItem({ id: 1 });
-    const gammelTur = lavTur({ startdato: '2024-01-01', loese_item_ids: [1] });
+    const item = lavItem({ uid: 'i1' });
+    const gammelTur = lavTur({ startdato: '2024-01-01', loese_item_ids: ['i1'] });
 
     expect(ubrugteItems([item], [gammelTur], []).antal).toBe(1);
   });
 
   it('medregner ikke items man ikke ejer', () => {
-    const overvejer = lavItem({ id: 1, status: 'overvejer' });
+    const overvejer = lavItem({ uid: 'i1', status: 'overvejer' });
     expect(ubrugteItems([overvejer], [], []).antal).toBe(0);
   });
 });
 
 describe('fordelingPrGruppe', () => {
   it('regner vægt og procent pr. gruppe, tungeste først', () => {
-    const let_ = lavItem({ id: 1, vaegt_g: 250 });
-    const tung = lavItem({ id: 2, vaegt_g: 750 });
+    const let_ = lavItem({ uid: 'i-let', vaegt_g: 250 });
+    const tung = lavItem({ uid: 'i-tung', vaegt_g: 750 });
     const grupper = [
-      lavGruppe({ id: 1, navn: 'Let', item_ids: [1] }),
-      lavGruppe({ id: 2, navn: 'Tung', item_ids: [2] })
+      lavGruppe({ navn: 'Let', item_ids: ['i-let'] }),
+      lavGruppe({ navn: 'Tung', item_ids: ['i-tung'] })
     ];
 
     const fordeling = fordelingPrGruppe([let_, tung], grupper);
@@ -155,16 +155,16 @@ describe('fordelingPrGruppe', () => {
   });
 
   it('udelader tomme grupper', () => {
-    const item = lavItem({ id: 1, vaegt_g: 100 });
+    const item = lavItem({ uid: 'i1', vaegt_g: 100 });
     const grupper = [
-      lavGruppe({ id: 1, navn: 'Med', item_ids: [1] }),
-      lavGruppe({ id: 2, navn: 'Tom', item_ids: [] })
+      lavGruppe({ navn: 'Med', item_ids: ['i1'] }),
+      lavGruppe({ navn: 'Tom', item_ids: [] })
     ];
 
     expect(fordelingPrGruppe([item], grupper).map((g) => g.navn)).toEqual(['Med']);
   });
 
   it('returnerer tom liste når der ikke er nogen vægt', () => {
-    expect(fordelingPrGruppe([], [lavGruppe({ id: 1 })])).toEqual([]);
+    expect(fordelingPrGruppe([], [lavGruppe()])).toEqual([]);
   });
 });
