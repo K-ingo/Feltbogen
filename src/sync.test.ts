@@ -4,16 +4,20 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 vi.mock('./pb', () => import('./test/pbMock'));
 
 import { db } from './db';
-import { pbMock } from './test/pbMock';
+import { pbMock, blokerNaesteUpdate } from './test/pbMock';
 import {
   opretItem,
   opdaterItem,
   sletItem,
   opretGruppe,
   sendAltUsendt,
+  sendAfventende,
   hentFraPocketBase
 } from './sync';
 import { lavItem, lavGruppe } from './test/data';
+
+// Opdateringer samles i 800 ms før de sendes.
+const FORSINKELSE = 800;
 
 beforeEach(async () => {
   await db.items.clear();
@@ -24,6 +28,8 @@ beforeEach(async () => {
   vi.spyOn(console, 'error').mockImplementation(() => {});
   vi.spyOn(console, 'log').mockImplementation(() => {});
 });
+
+const pbKald = (metode: string) => pbMock.kald.filter((k) => k.metode === metode).length;
 
 describe('opret', () => {
   it('skriver lokalt og sender til PocketBase', async () => {
@@ -52,6 +58,7 @@ describe('opdater', () => {
     const foer = await db.items.get(id);
 
     await opdaterItem(id, { navn: 'Efter', vaegt_g: 155 });
+    await sendAfventende();
 
     const efter = await db.items.get(id);
     expect(efter?.navn).toBe('Efter');
@@ -65,9 +72,124 @@ describe('opdater', () => {
     pbMock.offline = false;
 
     await opdaterItem(id, { vaegt_g: 200 });
+    await sendAfventende();
 
     expect((await db.items.get(id))?.pb_id).toBe('pb1');
     expect(pbMock.ids('items')).toEqual(['pb1']);
+  });
+});
+
+// Uden dette bliver hvert tastetryk i et felt sin egen HTTP-request.
+describe('opdateringer samles før de sendes', () => {
+  it('skriver lokalt med det samme, uden at vente på serveren', async () => {
+    const id = await opretItem(lavItem({ navn: 'Start' }));
+    const kaldFoer = pbKald('update');
+
+    await opdaterItem(id, { navn: 'Ændret' });
+
+    // Lokalt er det på plads …
+    expect((await db.items.get(id))?.navn).toBe('Ændret');
+    // … men serveren er endnu ikke kontaktet.
+    expect(pbKald('update')).toBe(kaldFoer);
+  });
+
+  it('samler en hel indtastning til én request', async () => {
+    const id = await opretItem(lavItem({ navn: '' }));
+    const kaldFoer = pbKald('update');
+
+    for (const navn of ['T', 'To', 'Toa', 'Toak', 'Toaks']) {
+      await opdaterItem(id, { navn });
+    }
+    await sendAfventende();
+
+    expect(pbKald('update') - kaldFoer).toBe(1);
+    // Og det er den sidste værdi der nåede op.
+    expect(pbMock.records.get('items')?.get('pb1')?.navn).toBe('Toaks');
+  });
+
+  it('holder poster hver for sig', async () => {
+    const et = await opretItem(lavItem({ navn: 'Et' }));
+    const to = await opretItem(lavItem({ navn: 'To' }));
+    const kaldFoer = pbKald('update');
+
+    await opdaterItem(et, { vaegt_g: 1 });
+    await opdaterItem(to, { vaegt_g: 2 });
+    await sendAfventende();
+
+    expect(pbKald('update') - kaldFoer).toBe(2);
+  });
+
+  it('sender af sig selv når man holder pause', async () => {
+    const id = await opretItem(lavItem({ navn: 'Uden flush' }));
+    const kaldFoer = pbKald('update');
+
+    await opdaterItem(id, { navn: 'Sendt af timeren' });
+    await new Promise((klar) => setTimeout(klar, FORSINKELSE + 200));
+
+    expect(pbKald('update') - kaldFoer).toBe(1);
+    expect(pbMock.records.get('items')?.get('pb1')?.navn).toBe('Sendt af timeren');
+  });
+});
+
+// Debouncing udskyder sync, så en ændring kan mangle at nå op hvis appen
+// lukkes. Flaget gør at den bliver prøvet igen.
+describe('uafsendte ændringer prøves igen', () => {
+  it('markerer posten indtil serveren har kvitteret', async () => {
+    const id = await opretItem(lavItem({ navn: 'Start' }));
+
+    await opdaterItem(id, { navn: 'Venter' });
+    expect((await db.items.get(id))?.usendt_aendring).toBe(true);
+
+    await sendAfventende();
+    expect((await db.items.get(id))?.usendt_aendring).toBe(false);
+  });
+
+  it('beholder markeringen når sync fejler', async () => {
+    const id = await opretItem(lavItem({ navn: 'Start' }));
+    pbMock.offline = true;
+
+    await opdaterItem(id, { navn: 'Nåede ikke op' });
+    await sendAfventende();
+
+    expect((await db.items.get(id))?.usendt_aendring).toBe(true);
+  });
+
+  it('sender ændringen ved næste opstart', async () => {
+    const id = await opretItem(lavItem({ navn: 'Start' }));
+    pbMock.offline = true;
+    await opdaterItem(id, { navn: 'Efter genstart' });
+    await sendAfventende();
+
+    // Appen åbnes igen, nu med forbindelse.
+    pbMock.offline = false;
+    const resultat = await sendAltUsendt();
+
+    expect(resultat).toEqual({ antal: 1, fejl: 0 });
+    expect(pbMock.records.get('items')?.get('pb1')?.navn).toBe('Efter genstart');
+    expect((await db.items.get(id))?.usendt_aendring).toBe(false);
+  });
+
+  it('rydder ikke markeringen hvis posten blev redigeret igen undervejs', async () => {
+    const id = await opretItem(lavItem({ navn: 'Start' }));
+    await opdaterItem(id, { navn: 'Første' });
+
+    // Hold serveren i luften, så vi med sikkerhed rammer vinduet mellem
+    // "kaldet er sendt" og "svaret er kommet".
+    const { naaet, slip } = blokerNaesteUpdate();
+    const foerste = sendAfventende();
+    await naaet;
+
+    // Ny redigering netop nu må ikke få flaget ryddet af det første svar.
+    await opdaterItem(id, { navn: 'Anden' });
+    slip();
+    await foerste;
+
+    expect((await db.items.get(id))?.usendt_aendring).toBe(true);
+
+    // Og den anden ændring kommer op bagefter.
+    await sendAfventende();
+    expect(pbMock.records.get('items')?.get('pb1')?.navn).toBe('Anden');
+    expect((await db.items.get(id))?.usendt_aendring).toBe(false);
   });
 });
 

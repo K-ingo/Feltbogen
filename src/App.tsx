@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import AuthSide from './AuthSide';
 import { useAuth } from './useAuth';
-import { sendAltUsendt, hentFraPocketBase, opretItem } from './sync';
+import { sendAltUsendt, sendAfventende, hentFraPocketBase, opretItem } from './sync';
 import ItemDetalje from './ItemDetalje';
 import GrupperListe from './GrupperListe';
 import TureListe from './TureListe';
@@ -26,6 +26,16 @@ function App() {
       await hentFraPocketBase();
     })();
   }, [erLoggetInd]);
+
+  // Redigeringer samles i en kort kø før de sendes. Skjules appen, sendes køen
+  // med det samme, så en ændring ikke først går op ved næste opstart.
+  useEffect(() => {
+    const naarSkjult = () => {
+      if (document.visibilityState === 'hidden') void sendAfventende();
+    };
+    document.addEventListener('visibilitychange', naarSkjult);
+    return () => document.removeEventListener('visibilitychange', naarSkjult);
+  }, []);
 
   if (!erLoggetInd) {
     // useAuth lytter på authStore, så skærmen skifter af sig selv ved login.

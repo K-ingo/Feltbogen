@@ -33,6 +33,7 @@ export const pbMock: PbMock = {
     this.offline = false;
     this.kald = [];
     naesteId = 1;
+    blokering = null;
   },
 
   seed(samling, id, data = {}) {
@@ -55,6 +56,20 @@ function kraevOnline() {
     fejl.status = 0;
     throw fejl;
   }
+}
+
+// Holder næste update-kald i luften, så en test kan ramme vinduet hvor
+// serveren er kontaktet men endnu ikke har svaret — uden at gætte på timing.
+let blokering: { naaetFrem: () => void; slippet: Promise<void> } | null = null;
+
+export function blokerNaesteUpdate() {
+  let naaetFrem!: () => void;
+  let slip!: () => void;
+  const naaet = new Promise<void>((klar) => { naaetFrem = klar; });
+  const slippet = new Promise<void>((klar) => { slip = klar; });
+
+  blokering = { naaetFrem, slippet };
+  return { naaet, slip };
 }
 
 export const pb = {
@@ -82,6 +97,14 @@ export const pb = {
     async update(id: string, data: Record<string, unknown>) {
       pbMock.kald.push({ metode: 'update', samling: navn, id });
       kraevOnline();
+
+      if (blokering) {
+        const denne = blokering;
+        blokering = null;
+        denne.naaetFrem();
+        await denne.slippet;
+      }
+
       const eksisterende = samlingAf(pbMock, navn).get(id);
       if (!eksisterende) throw ikkeFundet();
       const record = { ...eksisterende, ...data, id };
