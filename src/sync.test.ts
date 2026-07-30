@@ -12,7 +12,8 @@ import {
   opretGruppe,
   sendAltUsendt,
   sendAfventende,
-  hentFraPocketBase
+  hentFraPocketBase,
+  afstemMedServer
 } from './sync';
 import { lavItem, lavGruppe } from './test/data';
 
@@ -370,6 +371,57 @@ describe('hentFraPocketBase', () => {
 
     await hentFraPocketBase();
 
+    expect(await db.items.count()).toBe(1);
+  });
+});
+
+// Kaldes ved opstart og når forbindelsen kommer tilbage midt i en session.
+describe('afstemMedServer', () => {
+  it('sender det usendte op og henter det vi mangler ned', async () => {
+    pbMock.offline = true;
+    await opretItem(lavItem({ navn: 'Lavet i skoven' }));
+    pbMock.offline = false;
+    pbMock.seed('items', 'pbAndenEnhed', { navn: 'Lavet på pc', antal: 1 });
+
+    await afstemMedServer();
+
+    const navne = (await db.items.toArray()).map((i) => i.navn).sort();
+    expect(navne).toEqual(['Lavet i skoven', 'Lavet på pc']);
+    // Den offline-oprettede har nu et pb_id.
+    expect((await db.items.where('navn').equals('Lavet i skoven').first())?.pb_id).toBeTruthy();
+  });
+
+  it('lægger samtidige kørsler sammen, så en post ikke oprettes to gange', async () => {
+    pbMock.offline = true;
+    await opretItem(lavItem({ navn: 'Kun én gang' }));
+    pbMock.offline = false;
+    const kaldFoer = pbKald('create');
+
+    // Flakkende forbindelse kan udløse online-eventet flere gange i samme tick.
+    const foerste = afstemMedServer();
+    const anden = afstemMedServer();
+
+    expect(anden).toBe(foerste);
+    await Promise.all([foerste, anden]);
+
+    expect(pbKald('create') - kaldFoer).toBe(1);
+    expect(pbMock.ids('items')).toHaveLength(1);
+  });
+
+  it('starter en ny kørsel når den forrige er færdig', async () => {
+    const foerste = afstemMedServer();
+    await foerste;
+
+    const anden = afstemMedServer();
+    expect(anden).not.toBe(foerste);
+    await anden;
+  });
+
+  it('fejler ikke selvom serveren er utilgængelig', async () => {
+    await opretItem(lavItem({ navn: 'Findes lokalt' }));
+    pbMock.offline = true;
+
+    await expect(afstemMedServer()).resolves.toBeUndefined();
     expect(await db.items.count()).toBe(1);
   });
 });

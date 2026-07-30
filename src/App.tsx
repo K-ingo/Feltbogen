@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import AuthSide from './AuthSide';
 import { useAuth } from './useAuth';
-import { sendAltUsendt, sendAfventende, hentFraPocketBase, opretItem } from './sync';
+import { afstemMedServer, sendAfventende, opretItem } from './sync';
 import ItemDetalje from './ItemDetalje';
 import GrupperListe from './GrupperListe';
 import TureListe from './TureListe';
@@ -18,13 +18,16 @@ function App() {
   const [fane, setFane] = useState<Fane>('inventar');
   const [valgtItemId, setValgtItemId] = useState<number | null>(null);
 
-  // Send det der blev oprettet offline op, og hent det vi ikke har lokalt.
+  // Afstem med serveren ved opstart — og igen når forbindelsen kommer tilbage.
+  // En tur kan vare timer uden dækning med appen åben hele tiden; uden
+  // online-lytteren ville det usendte først gå op ved næste opstart.
   useEffect(() => {
     if (!erLoggetInd) return;
-    (async () => {
-      await sendAltUsendt();
-      await hentFraPocketBase();
-    })();
+    void afstemMedServer();
+
+    const naarOnline = () => void afstemMedServer();
+    window.addEventListener('online', naarOnline);
+    return () => window.removeEventListener('online', naarOnline);
   }, [erLoggetInd]);
 
   // Redigeringer samles i en kort kø før de sendes. Skjules appen, sendes køen
