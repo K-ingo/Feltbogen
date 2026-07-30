@@ -149,3 +149,19 @@ export function grupperPrItem(grupper: Gruppe[]): Map<Reference, string[]> {
 
   return pr;
 }
+
+// Turene et item har været med på, nyeste først. Bruges til brugsstatistikken
+// på item-detaljen: hvor mange gange, og hvornår sidst.
+export function turePrItem(ture: Tur[], grupper: Gruppe[]): Map<Reference, Tur[]> {
+  const pr = new Map<Reference, Tur[]>();
+
+  ture.forEach((tur) => {
+    itemUidsPaaTur(tur, grupper).forEach((uid) => {
+      pr.set(uid, [...(pr.get(uid) ?? []), tur]);
+    });
+  });
+
+  // Ture uden startdato ryger bagerst — de kan ikke placeres i tid.
+  pr.forEach((liste) => liste.sort((a, b) => (b.startdato || '').localeCompare(a.startdato || '')));
+  return pr;
+}

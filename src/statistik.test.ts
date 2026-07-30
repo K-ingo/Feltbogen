@@ -9,7 +9,8 @@ import {
   ubrugteItems,
   fordelingPrGruppe,
   sidstBrugtPrItem,
-  grupperPrItem
+  grupperPrItem,
+  turePrItem
 } from './statistik';
 import { lavItem, lavGruppe, lavTur } from './test/data';
 
@@ -208,5 +209,33 @@ describe('grupperPrItem', () => {
     expect(pr.get('i-gryde')).toEqual(['Køkken', 'Solo']);
     expect(pr.get('i-braender')).toEqual(['Køkken']);
     expect(pr.get('i-ukendt')).toBeUndefined();
+  });
+});
+
+describe('turePrItem', () => {
+  it('samler turene pr. item med nyeste først', () => {
+    const gruppe = lavGruppe({ uid: 'g1', item_ids: ['i-gryde'] });
+    const ture = [
+      lavTur({ navn: 'Marts', startdato: '2026-03-01', gruppe_ids: ['g1'] }),
+      lavTur({ navn: 'Juli', startdato: '2026-07-21', gruppe_ids: ['g1'] }),
+      lavTur({ navn: 'Maj', startdato: '2026-05-10', gruppe_ids: ['g1'] })
+    ];
+
+    const paaGryden = turePrItem(ture, [gruppe]).get('i-gryde') ?? [];
+
+    expect(paaGryden.map((t) => t.navn)).toEqual(['Juli', 'Maj', 'Marts']);
+  });
+
+  it('lægger ture uden dato bagerst', () => {
+    const ture = [
+      lavTur({ navn: 'Uden dato', startdato: '', loese_item_ids: ['i1'] }),
+      lavTur({ navn: 'Med dato', startdato: '2026-05-10', loese_item_ids: ['i1'] })
+    ];
+
+    expect((turePrItem(ture, []).get('i1') ?? []).map((t) => t.navn)).toEqual(['Med dato', 'Uden dato']);
+  });
+
+  it('har ingen post for gear der aldrig har været med', () => {
+    expect(turePrItem([], []).get('i1')).toBeUndefined();
   });
 });

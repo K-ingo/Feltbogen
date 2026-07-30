@@ -342,3 +342,46 @@ async function hentDawa<T>(url: string): Promise<T[]> {
     return [];
   }
 }
+
+// ─────────────────────────────────────────────
+// Systemadvarsler på et enkelt item
+// Wireframet viser flere slags; her er kun garanti, som er den eneste der kan
+// afgøres af data appen allerede har. Resten hører til badge-motoren.
+// ─────────────────────────────────────────────
+
+// Garantidatoen er et fritekstfelt med formatet DD/MM/ÅÅÅÅ.
+export function laesDanskDato(tekst: string): Date | null {
+  const dele = tekst.trim().split('/');
+  if (dele.length !== 3) return null;
+
+  const [dag, maaned, aar] = dele.map(Number);
+  if (!Number.isFinite(dag) || !Number.isFinite(maaned) || !Number.isFinite(aar)) return null;
+
+  const dato = new Date(aar, maaned - 1, dag);
+  // Fanger fx 31/02, hvor Date ellers ruller videre til marts.
+  if (dato.getDate() !== dag || dato.getMonth() !== maaned - 1) return null;
+  return dato;
+}
+
+export function dageTil(dato: Date, fra: Date = new Date()): number {
+  const enDag = 1000 * 60 * 60 * 24;
+  const start = new Date(fra.getFullYear(), fra.getMonth(), fra.getDate());
+  const slut = new Date(dato.getFullYear(), dato.getMonth(), dato.getDate());
+  return Math.round((slut.getTime() - start.getTime()) / enDag);
+}
+
+// Returnerer en besked hvis garantien er tæt på at udløbe eller allerede er
+// udløbet — ellers null. Påmindelsesvinduet sættes pr. item.
+export function garantiAdvarsel(item: Item, nu: Date = new Date()): string | null {
+  const udloeber = item.garanti?.udloeber_dato ? laesDanskDato(item.garanti.udloeber_dato) : null;
+  if (!udloeber) return null;
+
+  const dage = dageTil(udloeber, nu);
+  // Ordlyden følger wireframet: korte statuslinjer, ikke hele sætninger.
+  if (dage < 0) return `Garanti udløb for ${Math.abs(dage)} dage siden`;
+  if (dage === 0) return 'Garanti udløber i dag';
+
+  const vindue = item.garanti?.paamindelse_dage || 30;
+  if (dage > vindue) return null;
+  return `Garanti udløber om ${dage} ${dage === 1 ? 'dag' : 'dage'}`;
+}
