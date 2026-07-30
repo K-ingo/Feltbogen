@@ -10,6 +10,17 @@ export const AKTIVITET = ['bushcraft', 'vandretur', 'kano', 'andet'] as const;
 export const TERRAEN = ['skov', 'kyst', 'fjeld', 'mix'] as const;
 export const ERFARING = ['begynder', 'oevet', 'erfaren'] as const;
 
+// Værdierne gemmes uden æ/ø/å, så de er stabile som nøgler og i PocketBase.
+// Til visning skrives de ud på dansk.
+const ETIKETTER: Record<string, string> = {
+  haengekoeje: 'hængekøje',
+  oevet: 'øvet'
+};
+
+export function etiket(vaerdi: string): string {
+  return ETIKETTER[vaerdi] ?? vaerdi;
+}
+
 export type ItemStatus = (typeof ITEM_STATUS)[number];
 export type TurStatus = (typeof TUR_STATUS)[number];
 export type Overnatning = (typeof OVERNATNING)[number];

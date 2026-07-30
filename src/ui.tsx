@@ -170,9 +170,11 @@ interface DropdownProps {
   value: string;
   onChange: (v: string) => void;
   options: readonly string[];
+  // Uden formater vises værdien som den er gemt.
+  formater?: (v: string) => string;
 }
 
-export function Dropdown({ label, value, onChange, options }: DropdownProps) {
+export function Dropdown({ label, value, onChange, options, formater }: DropdownProps) {
   return (
     <div>
       <Label>{label}</Label>
@@ -182,7 +184,7 @@ export function Dropdown({ label, value, onChange, options }: DropdownProps) {
         style={{ width: '100%', fontSize: '14px', textTransform: 'capitalize' }}
       >
         {options.map((o) => (
-          <option key={o} value={o}>{o}</option>
+          <option key={o} value={o}>{formater ? formater(o) : o}</option>
         ))}
       </select>
     </div>
