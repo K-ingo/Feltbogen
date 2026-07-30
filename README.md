@@ -58,6 +58,23 @@ sletningen igen ved næste opstart.
 hukommelsesbaseret udgave, der kan sættes `offline` for at teste at data
 overlever manglende forbindelse.
 
+## PWA
+
+Appen er installerbar og kan startes uden netværk. `vite-plugin-pwa` genererer
+service worker og manifest ved build; skallen precaches, og Google Fonts hentes
+`CacheFirst`, så typografien også holder offline.
+
+`registerType: 'autoUpdate'` betyder at en ny version tages i brug ved næste
+indlæsning. Det er forsvarligt, fordi redigeringer skrives til IndexedDB med det
+samme og markeres `usendt_aendring` — en genindlæsning kan ikke tabe data.
+
+Ikonerne i `public/` er **pladsholdere**: visuel identitet er stadig en åben
+beslutning (fundament §17). `icon.svg` og `icon-maskable.svg` er kilderne, og
+PNG-varianterne er rasteriseret fra dem.
+
+Der er ingen service worker under `npm run dev`. Test offline med
+`npm run build && npm run preview`.
+
 ## Eksterne tjenester
 
 - **PocketBase** — sync og konti. URL sættes med `VITE_PB_URL` (se `.env.example`).

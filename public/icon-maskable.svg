@@ -1,18 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <!-- Pladsholder-ikon. Visuel identitet er en åben beslutning (fundament §17):
-       formerne er bevidst neutrale, og farverne er hentet fra src/index.css. -->
-  <rect width="512" height="512" rx="112" fill="#5d6b3a"/>
+  <!-- Maskable-variant: baggrunden går til kanten, og motivet holdes inden for
+       den sikre zone (midterste 80%), så Android kan beskære til vilkårlig form. -->
+  <rect width="512" height="512" fill="#5d6b3a"/>
 
-  <!-- Feltbogen: en notesbog man tager med ud. -->
-  <g>
+  <!-- Samme motiv som icon.svg, skaleret til 72% og centreret. -->
+  <g transform="translate(256 256) scale(0.72) translate(-256 -256)">
     <rect x="136" y="104" width="240" height="304" rx="18" fill="#f5efe4"/>
-    <!-- Ryg -->
     <path d="M136 122a18 18 0 0 1 18-18h30v304h-30a18 18 0 0 1-18-18z" fill="#3d3527" opacity="0.82"/>
-    <!-- Linjer -->
     <rect x="212" y="168" width="76" height="12" rx="6" fill="#c8bda4"/>
     <rect x="212" y="216" width="132" height="12" rx="6" fill="#c8bda4"/>
     <rect x="212" y="264" width="88" height="12" rx="6" fill="#c8bda4"/>
-    <!-- Bogmærke -->
     <path d="M300 104h40v104l-20-20-20 20z" fill="#a06000"/>
   </g>
 </svg>
