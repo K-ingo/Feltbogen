@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   tjek:
-    name: Lint og build
+    name: Lint, test og build
     runs-on: ubuntu-latest
 
     steps:
@@ -28,6 +28,9 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Test
+        run: npm test
 
       # Kører tsc -b først, så typefejl også fanges her.
       - name: Build

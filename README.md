@@ -11,10 +11,14 @@ datamodel, skærme, kerne-koncepter og de beslutninger der ligger bag.
 
 ```bash
 npm install
-npm run dev      # udviklingsserver
-npm run build    # typecheck + produktionsbuild
-npm run lint     # eslint
+npm run dev        # udviklingsserver
+npm run build      # typecheck + produktionsbuild
+npm run lint       # eslint
+npm test           # vitest, én kørsel
+npm run test:watch # vitest i watch-tilstand
 ```
+
+Lint, test og build kører automatisk på alle pull requests.
 
 ## Arkitektur
 
@@ -34,6 +38,19 @@ appen starter.
 
 Hver post har et `pb_id`: er det sat, findes posten i PocketBase; er det tomt,
 er den kun lokal endnu.
+
+Sletninger bruger tabellen `slettede` som spor. Kan PocketBase ikke nås når man
+sletter, bliver postens `pb_id` liggende der, indtil serveren har bekræftet
+sletningen. Sporet gør to ting: det holder posten ude af `hentFraPocketBase()`,
+så den ikke bliver hentet tilbage, og det får `sendAltUsendt()` til at prøve
+sletningen igen ved næste opstart.
+
+### Tests
+
+`npm test` kører uden browser og uden server. Dexie får et IndexedDB af
+`fake-indexeddb`, og `src/test/pbMock.ts` erstatter PocketBase med en
+hukommelsesbaseret udgave, der kan sættes `offline` for at teste at data
+overlever manglende forbindelse.
 
 ## Eksterne tjenester
 

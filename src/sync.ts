@@ -282,12 +282,55 @@ async function slet<T extends Post>(samling: Samling<T>, id: number): Promise<vo
   const post = await samling.tabel.get(id);
   await samling.tabel.delete(id);
 
+  // Nåede posten aldrig op i PocketBase, er der intet at gøre deroppe.
   if (!post?.pb_id) return;
-  try {
-    await pb.collection(samling.pbNavn).delete(post.pb_id);
-  } catch (e) {
-    console.error(`Kunne ikke slette ${samling.pbNavn} "${post.navn}" i PocketBase:`, fejlDetaljer(e));
+
+  // Sporet lægges før forsøget, så sletningen ikke kan gå tabt hvis appen
+  // lukkes midt i kaldet.
+  const sporId = await db.slettede.add({
+    samling: samling.pbNavn,
+    pb_id: post.pb_id,
+    slettet: new Date()
+  });
+
+  if (await sletIPb(samling.pbNavn, post.pb_id)) {
+    await db.slettede.delete(sporId);
   }
+}
+
+// Returnerer om posten nu er væk i PocketBase. En 404 tæller som succes —
+// så er den slettet et andet sted, og sporet skal ikke blive liggende.
+async function sletIPb(pbNavn: string, pbId: string): Promise<boolean> {
+  try {
+    await pb.collection(pbNavn).delete(pbId);
+    return true;
+  } catch (e) {
+    if (erIkkeFundet(e)) return true;
+    console.error(`Kunne ikke slette ${pbNavn} ${pbId} i PocketBase:`, fejlDetaljer(e));
+    return false;
+  }
+}
+
+function erIkkeFundet(e: unknown): boolean {
+  return typeof (e as { status?: unknown } | null)?.status === 'number'
+    && (e as { status: number }).status === 404;
+}
+
+// Prøver de sletninger igen, der ikke nåede serveren.
+async function sendUsendteSletninger(): Promise<{ ok: number; fejl: number }> {
+  const spor = await db.slettede.toArray();
+
+  let ok = 0;
+  let fejl = 0;
+  for (const s of spor) {
+    if (await sletIPb(s.samling, s.pb_id)) {
+      if (s.id !== undefined) await db.slettede.delete(s.id);
+      ok++;
+    } else {
+      fejl++;
+    }
+  }
+  return { ok, fejl };
 }
 
 // Henter de records vi ikke har lokalt endnu.
@@ -301,7 +344,15 @@ async function hent<T extends Post>(samling: Samling<T>, brugerId: string): Prom
   const lokale = await samling.tabel.toArray();
   const kendte = new Set(lokale.map((p) => p.pb_id).filter(Boolean));
 
-  const nye = records.filter((r) => !kendte.has(r.id)).map((r) => samling.fraPb(r));
+  // Poster vi har slettet lokalt må ikke hentes tilbage, selvom de stadig
+  // ligger på serveren fordi sletningen ikke er nået op endnu.
+  const slettede = await db.slettede.where('samling').equals(samling.pbNavn).toArray();
+  const slettedePbIds = new Set(slettede.map((s) => s.pb_id));
+
+  const nye = records
+    .filter((r) => !kendte.has(r.id) && !slettedePbIds.has(r.id))
+    .map((r) => samling.fraPb(r));
+
   if (nye.length > 0) await samling.tabel.bulkAdd(nye);
 }
 
@@ -333,15 +384,17 @@ export const opretTur = (tur: Omit<Tur, 'id'>) => opret(turSamling, tur);
 export const opdaterTur = (id: number, aendringer: Partial<Tur>) => opdater(turSamling, id, aendringer);
 export const sletTur = (id: number) => slet(turSamling, id);
 
-// Sender alt der endnu ikke har nået PocketBase. Kaldes ved appstart, så
-// poster oprettet offline kommer op så snart der er forbindelse igen.
+// Sender alt der endnu ikke har nået PocketBase — både nye poster og
+// sletninger. Kaldes ved appstart, så det man lavede offline kommer op så
+// snart der er forbindelse igen.
 export async function sendAltUsendt(): Promise<{ antal: number; fejl: number }> {
   if (!nuvaerendeBruger()) return { antal: 0, fejl: 0 };
 
   const resultater = [
     await sendUsendte(itemSamling),
     await sendUsendte(gruppeSamling),
-    await sendUsendte(turSamling)
+    await sendUsendte(turSamling),
+    await sendUsendteSletninger()
   ];
 
   const antal = resultater.reduce((s, r) => s + r.ok, 0);
