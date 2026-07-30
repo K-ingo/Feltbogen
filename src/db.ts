@@ -103,11 +103,22 @@ export interface Tur extends Synkroniserbar {
   aendret: Date;
 }
 
+// En post der er slettet lokalt, men endnu ikke i PocketBase — typisk fordi
+// man var offline. Uden dette spor ville hentFraPocketBase() hente posten
+// tilbage næste gang appen startede.
+export interface Slettet {
+  id?: number;
+  samling: string;
+  pb_id: string;
+  slettet: Date;
+}
+
 export class FeltbogenDB extends Dexie {
   // Nøgletypen er number (++id), så get/add/update slipper for id-casts.
   items!: Table<Item, number>;
   grupper!: Table<Gruppe, number>;
   ture!: Table<Tur, number>;
+  slettede!: Table<Slettet, number>;
 
   constructor() {
     super('FeltbogenDB');
@@ -122,6 +133,12 @@ export class FeltbogenDB extends Dexie {
       items: '++id, navn, status, oprettet',
       grupper: '++id, navn, oprettet',
       ture: '++id, navn, startdato, status, oprettet'
+    });
+    this.version(4).stores({
+      items: '++id, navn, status, oprettet',
+      grupper: '++id, navn, oprettet',
+      ture: '++id, navn, startdato, status, oprettet',
+      slettede: '++id, samling, pb_id, [samling+pb_id]'
     });
   }
 }
