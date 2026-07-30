@@ -1,4 +1,4 @@
-import type { Item, Tur, Gruppe } from './db';
+import type { Item, Tur, Gruppe, Reference } from './db';
 import { itemUidsPaaTur } from './smartMotor';
 
 export type Periode = 'i_aar' | 'sidste_aar' | 'alt';
@@ -119,4 +119,33 @@ export function fordelingPrGruppe(items: Item[], grupper: Gruppe[]): GruppeForde
     .filter((g) => g.vaegt > 0)
     .sort((a, b) => b.vaegt - a.vaegt)
     .slice(0, 5);
+}
+// Seneste turdato pr. item, til kolonnen "Sidst brugt". Items der aldrig har
+// været med, står ikke i kortet.
+export function sidstBrugtPrItem(ture: Tur[], grupper: Gruppe[]): Map<Reference, string> {
+  const sidst = new Map<Reference, string>();
+
+  ture.forEach((tur) => {
+    if (!tur.startdato) return;
+    itemUidsPaaTur(tur, grupper).forEach((uid) => {
+      const kendt = sidst.get(uid);
+      if (!kendt || tur.startdato > kendt) sidst.set(uid, tur.startdato);
+    });
+  });
+
+  return sidst;
+}
+
+// Gruppenavne pr. item. Grupper står i stedet for kategorier i datamodellen,
+// så det er dem kolonnen "Kategori" viser.
+export function grupperPrItem(grupper: Gruppe[]): Map<Reference, string[]> {
+  const pr = new Map<Reference, string[]>();
+
+  grupper.forEach((gruppe) => {
+    gruppe.item_ids.forEach((uid) => {
+      pr.set(uid, [...(pr.get(uid) ?? []), gruppe.navn]);
+    });
+  });
+
+  return pr;
 }

@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import { Kort, SektionsTitel, Segment } from './ui';
-import { layout } from './layout';
+import { Skal } from './Skal';
+import type { Fane } from './Skal';
 import {
   filtrererTure,
   samletInventarvaerdi,
@@ -32,7 +33,12 @@ const widgetTitelStil = {
   letterSpacing: '0.5px'
 } as const;
 
-function StatistikSide() {
+interface Props {
+  fane: Fane;
+  skift: (f: Fane) => void;
+}
+
+function StatistikSide({ fane, skift }: Props) {
   const [periode, setPeriode] = useState<Periode>('i_aar');
 
   const items = useLiveQuery(() => db.items.toArray()) ?? [];
@@ -51,12 +57,7 @@ function StatistikSide() {
   const gruppeFordeling = fordelingPrGruppe(items, grupper);
 
   return (
-    <div style={layout.container}>
-      <h1>Feltbogen</h1>
-      <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginBottom: '20px' }}>
-        Statistik
-      </div>
-
+    <Skal fane={fane} skift={skift} titel="Statistik">
       <div style={{ marginBottom: '20px' }}>
         <Segment
           vaerdier={PERIODER}
@@ -193,7 +194,7 @@ function StatistikSide() {
         )}
 
       </div>
-    </div>
+    </Skal>
   );
 }
 
