@@ -482,3 +482,23 @@ export async function hentFraPocketBase(): Promise<void> {
     console.error('Kunne ikke hente data fra PocketBase:', fejlDetaljer(e));
   }
 }
+
+let igangvaerendeAfstemning: Promise<void> | null = null;
+
+// Bringer lokalt og server-side på linje: send det usendte op, hent det vi
+// mangler ned. Kaldes ved appstart og når forbindelsen kommer tilbage.
+export function afstemMedServer(): Promise<void> {
+  // Flakkende forbindelse kan udløse online-eventet flere gange lige efter
+  // hinanden. Uden at lægge kørslerne sammen kunne to samtidige afstemninger
+  // oprette samme post to gange i PocketBase.
+  igangvaerendeAfstemning ??= (async () => {
+    try {
+      await sendAltUsendt();
+      await hentFraPocketBase();
+    } finally {
+      igangvaerendeAfstemning = null;
+    }
+  })();
+
+  return igangvaerendeAfstemning;
+}

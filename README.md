@@ -42,14 +42,20 @@ er den kun lokal endnu.
 Redigeringer skrives til IndexedDB ved hvert tastetryk, men sync udskydes
 800 ms, så en hel indtastning bliver én request i stedet for én pr. tegn.
 `usendt_aendring` markerer poster hvor serveren ikke har kvitteret endnu — så
-bliver de prøvet igen ved næste opstart, hvis appen lukkes inden køen er tømt.
+bliver de prøvet igen, hvis appen lukkes inden køen er tømt.
 `sendAfventende()` tømmer køen med det samme, og kaldes når appen skjules.
 
 Sletninger bruger tabellen `slettede` som spor. Kan PocketBase ikke nås når man
 sletter, bliver postens `pb_id` liggende der, indtil serveren har bekræftet
 sletningen. Sporet gør to ting: det holder posten ude af `hentFraPocketBase()`,
 så den ikke bliver hentet tilbage, og det får `sendAltUsendt()` til at prøve
-sletningen igen ved næste opstart.
+sletningen igen.
+
+`afstemMedServer()` samler de to retninger — send det usendte op, hent det vi
+mangler ned — og kaldes ved opstart og på browserens `online`-event, så en tur
+uden dækning ikke skal afsluttes med en genstart for at data går op. Samtidige
+kald lægges sammen til én kørsel, ellers kunne to `online`-events i træk oprette
+samme post to gange.
 
 ### Tests
 
