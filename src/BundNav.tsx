@@ -42,6 +42,8 @@ function BundNav({ aktiv, skift }: Props) {
       borderTop: '1px solid var(--border)',
       boxShadow: '0 -4px 12px var(--skygge)',
       backdropFilter: 'blur(8px)',
+      // Holder knapperne fri af home-baren når appen kører installeret på iOS.
+      paddingBottom: 'env(safe-area-inset-bottom)',
       zIndex: 20
     }}>
       {knap('inventar', 'Inventar')}
