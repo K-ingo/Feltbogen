@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# En ny push til samme gren afløser det igangværende run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tjek:
+    name: Lint og build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installér afhængigheder
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      # Kører tsc -b først, så typefejl også fanges her.
+      - name: Build
+        run: npm run build
