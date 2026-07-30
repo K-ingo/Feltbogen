@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
-import { Chip } from './ui';
+import { Chip, Label } from './ui';
 
 interface Props {
   tags: string[];
@@ -69,10 +69,7 @@ function TagsInput({ tags, onChange, label, hjaelpetekst, farve = 'default' }: P
 
   return (
     <div>
-      <label style={{ display: 'block', fontSize: '11px', color: 'var(--tekst-dæmpet)', marginBottom: '5px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-        {visLabel}
-        {hjaelpetekst && <span style={{ color: 'var(--tekst-svag)', marginLeft: '8px', textTransform: 'none', letterSpacing: 0, fontWeight: 400 }}>· {hjaelpetekst}</span>}
-      </label>
+      <Label hjaelp={hjaelpetekst}>{visLabel}</Label>
       <div style={{
         display: 'flex',
         flexWrap: 'wrap',

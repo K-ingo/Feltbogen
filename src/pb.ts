@@ -1,6 +1,8 @@
 import PocketBase from 'pocketbase';
 
-const PB_URL = 'https://pocketbase-production-6188.up.railway.app';
+// Overstyres med VITE_PB_URL i .env — fallback er den nuværende Railway-instans,
+// så appen virker uden opsætning indtil vi flytter til egen server.
+const PB_URL = import.meta.env.VITE_PB_URL ?? 'https://pocketbase-production-6188.up.railway.app';
 
 export const pb = new PocketBase(PB_URL);
 

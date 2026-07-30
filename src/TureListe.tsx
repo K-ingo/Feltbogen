@@ -1,10 +1,19 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
-import type { Tur } from './db';
+import type { TurStatus } from './db';
 import { opretTur } from './sync';
 import TurDetalje from './TurDetalje';
-import { Knap, Kort, Badge, layout } from './ui';
+import { Knap, Kort, Badge, ListeRaekke, TomListe } from './ui';
+import { layout } from './layout';
+
+// Farven signalerer hvor turen er i sit livsforløb.
+const STATUS_NIVEAU: Record<TurStatus, 'info' | 'accent' | 'advarsel'> = {
+  kladde: 'info',
+  klar: 'accent',
+  aktiv: 'advarsel',
+  afsluttet: 'info'
+};
 
 function TureListe() {
   const [nytNavn, setNytNavn] = useState('');
@@ -47,16 +56,6 @@ function TureListe() {
     return <TurDetalje turId={valgtTurId} tilbage={() => setValgtTurId(null)} />;
   }
 
-  const badgeNiveau = (status: string): 'info' | 'accent' | 'advarsel' | 'succes' => {
-    switch (status) {
-      case 'kladde': return 'info';
-      case 'klar': return 'accent';
-      case 'aktiv': return 'advarsel';
-      case 'afsluttet': return 'info';
-      default: return 'info';
-    }
-  };
-
   return (
     <div style={layout.container}>
       <h1>Feltbogen</h1>
@@ -78,36 +77,24 @@ function TureListe() {
       </Kort>
 
       <div>
-        {ture?.length === 0 && (
-          <div style={{ padding: '30px 20px', textAlign: 'center', color: 'var(--tekst-svag)' }}>
-            Ingen ture endnu. Opret din første ovenfor.
-          </div>
-        )}
-        {ture?.map((t: Tur) => (
-          <div
+        {ture?.length === 0 && <TomListe>Ingen ture endnu. Opret din første ovenfor.</TomListe>}
+        {ture?.map((t) => (
+          <ListeRaekke
             key={t.id}
-            onClick={() => t.id && setValgtTurId(t.id)}
-            style={{
-              padding: '14px 4px',
-              borderBottom: '1px solid var(--border-svag)',
-              cursor: 'pointer',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}
-          >
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
-                <span style={{ fontWeight: 500, color: 'var(--tekst)', fontSize: '14px' }}>{t.navn}</span>
-                <Badge niveau={badgeNiveau(t.status)}>{t.status}</Badge>
-              </div>
-              <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)' }}>
+            onClick={() => t.id !== undefined && setValgtTurId(t.id)}
+            titel={
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {t.navn}
+                <Badge niveau={STATUS_NIVEAU[t.status]}>{t.status}</Badge>
+              </span>
+            }
+            detalje={
+              <>
                 {t.sted || 'Intet sted'} · {t.startdato}
                 {t.personer > 1 && ` · ${t.personer} personer`}
-              </div>
-            </div>
-            <div style={{ color: 'var(--tekst-svag)', fontSize: '18px' }}>›</div>
-          </div>
+              </>
+            }
+          />
         ))}
       </div>
     </div>

@@ -1,4 +1,40 @@
+import { useState } from 'react';
 import type { ReactNode, CSSProperties } from 'react';
+
+// Fælles stilarter der bruges af flere komponenter herunder.
+const labelStil: CSSProperties = {
+  display: 'block',
+  fontSize: '11px',
+  color: 'var(--tekst-dæmpet)',
+  marginBottom: '5px',
+  fontWeight: 500,
+  textTransform: 'uppercase',
+  letterSpacing: '0.5px'
+};
+
+// Hjælpetekst og fejl står i forlængelse af labelen, men uden dens versaler.
+const tilfoejelseStil: CSSProperties = {
+  marginLeft: '8px',
+  textTransform: 'none',
+  letterSpacing: 0,
+  fontWeight: 400
+};
+
+interface LabelProps {
+  children: ReactNode;
+  hjaelp?: string;
+  fejl?: string;
+}
+
+export function Label({ children, hjaelp, fejl }: LabelProps) {
+  return (
+    <label style={labelStil}>
+      {children}
+      {hjaelp && <span style={{ ...tilfoejelseStil, color: 'var(--tekst-svag)' }}>· {hjaelp}</span>}
+      {fejl && <span style={{ ...tilfoejelseStil, color: 'var(--fejl)' }}>· {fejl}</span>}
+    </label>
+  );
+}
 
 interface KnapProps {
   children: ReactNode;
@@ -94,11 +130,7 @@ interface FeltProps {
 export function Felt({ label, value, onChange, type = 'text', placeholder, hjaelp, fejl }: FeltProps) {
   return (
     <div>
-      <label style={{ display: 'block', fontSize: '11px', color: 'var(--tekst-dæmpet)', marginBottom: '5px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-        {label}
-        {hjaelp && <span style={{ color: 'var(--tekst-svag)', marginLeft: '8px', textTransform: 'none', letterSpacing: 0, fontWeight: 400 }}>· {hjaelp}</span>}
-        {fejl && <span style={{ color: 'var(--fejl)', marginLeft: '8px', textTransform: 'none', letterSpacing: 0, fontWeight: 400 }}>· {fejl}</span>}
-      </label>
+      <Label hjaelp={hjaelp} fejl={fejl}>{label}</Label>
       <input
         type={type}
         value={value}
@@ -110,19 +142,40 @@ export function Felt({ label, value, onChange, type = 'text', placeholder, hjael
   );
 }
 
+interface TekstomraadeProps {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  raekker?: number;
+  placeholder?: string;
+}
+
+export function Tekstomraade({ label, value, onChange, raekker = 2, placeholder }: TekstomraadeProps) {
+  return (
+    <div>
+      <Label>{label}</Label>
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={raekker}
+        placeholder={placeholder}
+        style={{ width: '100%', resize: 'vertical', fontFamily: 'inherit' }}
+      />
+    </div>
+  );
+}
+
 interface DropdownProps {
   label: string;
   value: string;
   onChange: (v: string) => void;
-  options: string[];
+  options: readonly string[];
 }
 
 export function Dropdown({ label, value, onChange, options }: DropdownProps) {
   return (
     <div>
-      <label style={{ display: 'block', fontSize: '11px', color: 'var(--tekst-dæmpet)', marginBottom: '5px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-        {label}
-      </label>
+      <Label>{label}</Label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -132,6 +185,44 @@ export function Dropdown({ label, value, onChange, options }: DropdownProps) {
           <option key={o} value={o}>{o}</option>
         ))}
       </select>
+    </div>
+  );
+}
+
+interface SegmentProps<T extends string> {
+  vaerdier: readonly T[];
+  valgt: T;
+  vaelg: (v: T) => void;
+  // Uden formater vises værdien direkte med stort begyndelsesbogstav.
+  formater?: (v: T) => string;
+  kompakt?: boolean;
+}
+
+export function Segment<T extends string>({ vaerdier, valgt, vaelg, formater, kompakt }: SegmentProps<T>) {
+  return (
+    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+      {vaerdier.map((v) => {
+        const erAktiv = v === valgt;
+        return (
+          <button
+            key={v}
+            onClick={() => vaelg(v)}
+            style={{
+              padding: kompakt ? '5px 12px' : '6px 14px',
+              fontSize: kompakt ? '11px' : '12px',
+              background: erAktiv ? 'var(--accent)' : 'transparent',
+              color: erAktiv ? 'var(--accent-tekst)' : 'var(--tekst-dæmpet)',
+              border: `1px solid ${erAktiv ? 'var(--accent)' : 'var(--border)'}`,
+              borderRadius: '16px',
+              cursor: 'pointer',
+              textTransform: formater ? 'none' : 'capitalize',
+              fontWeight: 500
+            }}
+          >
+            {formater ? formater(v) : v}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -188,6 +279,21 @@ export function Chip({ children, onFjern, farve = 'default', storrelse = 'normal
   );
 }
 
+// Viser de første `maks` tags, og resten som en tæller.
+export function TagChips({ tags, maks = 4 }: { tags: string[]; maks?: number }) {
+  if (tags.length === 0) return null;
+  const resten = tags.length - maks;
+
+  return (
+    <div style={{ display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap' }}>
+      {tags.slice(0, maks).map((tag) => (
+        <Chip key={tag} storrelse="lille">{tag}</Chip>
+      ))}
+      {resten > 0 && <Chip storrelse="lille">+{resten}</Chip>}
+    </div>
+  );
+}
+
 interface BadgeProps {
   children: ReactNode;
   niveau: 'info' | 'accent' | 'advarsel' | 'fejl' | 'succes';
@@ -216,11 +322,7 @@ export function Badge({ children, niveau }: BadgeProps) {
   );
 }
 
-interface SektionsTitelProps {
-  children: ReactNode;
-}
-
-export function SektionsTitel({ children }: SektionsTitelProps) {
+export function SektionsTitel({ children }: { children: ReactNode }) {
   return (
     <div style={{
       fontSize: '11px',
@@ -235,16 +337,134 @@ export function SektionsTitel({ children }: SektionsTitelProps) {
   );
 }
 
-export const layout = {
-  container: {
-    padding: '20px',
-    maxWidth: '640px',
-    margin: '0 auto',
-    paddingBottom: '90px'
-  } as CSSProperties,
-  raek: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px'
-  } as CSSProperties
-};
+interface ListeRaekkeProps {
+  titel: ReactNode;
+  detalje?: ReactNode;
+  onClick?: () => void;
+  // Ekstra indhold under detaljelinjen, fx tag-chips.
+  children?: ReactNode;
+}
+
+export function ListeRaekke({ titel, detalje, onClick, children }: ListeRaekkeProps) {
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        padding: '14px 4px',
+        borderBottom: '1px solid var(--border-svag)',
+        cursor: onClick ? 'pointer' : 'default',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}
+    >
+      <div style={{ flex: 1 }}>
+        <div style={{ fontWeight: 500, color: 'var(--tekst)', fontSize: '14px' }}>{titel}</div>
+        {detalje && (
+          <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
+            {detalje}
+          </div>
+        )}
+        {children}
+      </div>
+      <div style={{ color: 'var(--tekst-svag)', fontSize: '18px' }}>›</div>
+    </div>
+  );
+}
+
+// Vises når en liste er tom — enten fordi der ikke er data, eller fordi
+// søgningen ikke gav noget.
+export function TomListe({ children }: { children: ReactNode }) {
+  return (
+    <div style={{ padding: '30px 20px', textAlign: 'center', color: 'var(--tekst-svag)' }}>
+      {children}
+    </div>
+  );
+}
+
+// Navnet på en post, redigerbart direkte i overskriften.
+export function TitelInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <input
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      style={{
+        fontFamily: "'Fraunces', Georgia, serif",
+        fontSize: '26px',
+        fontWeight: 400,
+        border: 'none',
+        background: 'transparent',
+        padding: '4px 0',
+        width: '100%',
+        marginBottom: '14px',
+        color: 'var(--tekst)'
+      }}
+    />
+  );
+}
+
+interface DetaljeHeaderProps {
+  tilbage: () => void;
+  sletLabel: string;
+  slet: () => void;
+}
+
+// Toppen af de tre detaljeskærme. Slet ligger i tre-prikker menuen, så et
+// fejlklik tæt på bundnavigationen ikke kan slette noget.
+export function DetaljeHeader({ tilbage, sletLabel, slet }: DetaljeHeaderProps) {
+  const [menuAaben, setMenuAaben] = useState(false);
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+      <button
+        onClick={tilbage}
+        style={{ background: 'transparent', border: 'none', fontSize: '14px', cursor: 'pointer', color: 'var(--tekst-dæmpet)', padding: '4px 0' }}
+      >
+        ‹ Tilbage
+      </button>
+      <div style={{ position: 'relative' }}>
+        <button
+          onClick={() => setMenuAaben(!menuAaben)}
+          style={{ background: 'transparent', border: 'none', fontSize: '18px', cursor: 'pointer', padding: '4px 12px', color: 'var(--tekst-dæmpet)' }}
+        >
+          ⋯
+        </button>
+        {menuAaben && (
+          <div style={{
+            position: 'absolute',
+            right: 0,
+            top: '100%',
+            background: 'var(--bg-forhoejet)',
+            border: '1px solid var(--border)',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px var(--skygge)',
+            minWidth: '140px',
+            zIndex: 10,
+            overflow: 'hidden'
+          }}>
+            <button
+              onClick={() => { setMenuAaben(false); slet(); }}
+              style={{
+                display: 'block',
+                width: '100%',
+                padding: '10px 14px',
+                background: 'transparent',
+                border: 'none',
+                textAlign: 'left',
+                cursor: 'pointer',
+                color: 'var(--fejl)',
+                fontSize: '13px'
+              }}
+            >
+              {sletLabel}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function Indlaeser() {
+  return <div style={{ padding: '20px', color: 'var(--tekst-dæmpet)' }}>Indlæser...</div>;
+}

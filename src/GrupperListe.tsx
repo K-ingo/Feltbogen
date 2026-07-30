@@ -4,7 +4,8 @@ import { db } from './db';
 import type { Gruppe } from './db';
 import { opretGruppe } from './sync';
 import GruppeDetalje from './GruppeDetalje';
-import { Knap, Kort, Chip, layout } from './ui';
+import { Knap, Kort, TagChips, ListeRaekke, TomListe } from './ui';
+import { layout } from './layout';
 
 function GrupperListe() {
   const [nytNavn, setNytNavn] = useState('');
@@ -32,8 +33,7 @@ function GrupperListe() {
   }
 
   const beregnInfo = (g: Gruppe) => {
-    if (!items) return { antal: 0, vaegt: 0 };
-    const gItems = items.filter((i) => i.id && g.item_ids.includes(i.id));
+    const gItems = items?.filter((i) => i.id !== undefined && g.item_ids.includes(i.id)) ?? [];
     return { antal: gItems.length, vaegt: gItems.reduce((s, i) => s + i.vaegt_g, 0) };
   };
 
@@ -58,41 +58,18 @@ function GrupperListe() {
       </Kort>
 
       <div>
-        {grupper?.length === 0 && (
-          <div style={{ padding: '30px 20px', textAlign: 'center', color: 'var(--tekst-svag)' }}>
-            Ingen grupper endnu. Opret din første ovenfor.
-          </div>
-        )}
+        {grupper?.length === 0 && <TomListe>Ingen grupper endnu. Opret din første ovenfor.</TomListe>}
         {grupper?.map((g) => {
           const info = beregnInfo(g);
           return (
-            <div
+            <ListeRaekke
               key={g.id}
-              onClick={() => g.id && setValgtGruppeId(g.id)}
-              style={{
-                padding: '14px 4px',
-                borderBottom: '1px solid var(--border-svag)',
-                cursor: 'pointer',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}
+              titel={g.navn}
+              detalje={`${info.antal} items · ${(info.vaegt / 1000).toFixed(1)} kg`}
+              onClick={() => g.id !== undefined && setValgtGruppeId(g.id)}
             >
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 500, color: 'var(--tekst)', fontSize: '14px' }}>{g.navn}</div>
-                <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
-                  {info.antal} items · {(info.vaegt / 1000).toFixed(1)} kg
-                </div>
-                {g.tags.length > 0 && (
-                  <div style={{ display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap' }}>
-                    {g.tags.slice(0, 5).map((tag) => (
-                      <Chip key={tag} storrelse="lille">{tag}</Chip>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div style={{ color: 'var(--tekst-svag)', fontSize: '18px' }}>›</div>
-            </div>
+              <TagChips tags={g.tags} maks={5} />
+            </ListeRaekke>
           );
         })}
       </div>

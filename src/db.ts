@@ -1,12 +1,21 @@
 import Dexie from 'dexie';
 import type { Table } from 'dexie';
 
-export type ItemStatus = 'ejer' | 'overvejer' | 'solgt';
-export type TurStatus = 'kladde' | 'klar' | 'aktiv' | 'afsluttet';
-export type Overnatning = 'haengekoeje' | 'telt' | 'shelter' | 'blandet';
-export type Aktivitet = 'bushcraft' | 'vandretur' | 'kano' | 'andet';
-export type Terraen = 'skov' | 'kyst' | 'fjeld' | 'mix';
-export type Erfaring = 'begynder' | 'oevet' | 'erfaren';
+// Værdilisterne er kilden til både typerne og de knapper/dropdowns der viser
+// dem, så en ny mulighed kun skal tilføjes ét sted.
+export const ITEM_STATUS = ['ejer', 'overvejer', 'solgt'] as const;
+export const TUR_STATUS = ['kladde', 'klar', 'aktiv', 'afsluttet'] as const;
+export const OVERNATNING = ['haengekoeje', 'telt', 'shelter', 'blandet'] as const;
+export const AKTIVITET = ['bushcraft', 'vandretur', 'kano', 'andet'] as const;
+export const TERRAEN = ['skov', 'kyst', 'fjeld', 'mix'] as const;
+export const ERFARING = ['begynder', 'oevet', 'erfaren'] as const;
+
+export type ItemStatus = (typeof ITEM_STATUS)[number];
+export type TurStatus = (typeof TUR_STATUS)[number];
+export type Overnatning = (typeof OVERNATNING)[number];
+export type Aktivitet = (typeof AKTIVITET)[number];
+export type Terraen = (typeof TERRAEN)[number];
+export type Erfaring = (typeof ERFARING)[number];
 
 export interface Garanti {
   laengde_aar: number;
@@ -14,7 +23,13 @@ export interface Garanti {
   paamindelse_dage: number;
 }
 
-export interface Item {
+// Alle poster lever lokalt først. pb_id sættes når posten er nået op i
+// PocketBase — er den tom, er posten kun i IndexedDB endnu.
+export interface Synkroniserbar {
+  pb_id?: string;
+}
+
+export interface Item extends Synkroniserbar {
   id?: number;
   navn: string;
   vaegt_g: number;
@@ -36,7 +51,7 @@ export interface Item {
   aendret: Date;
 }
 
-export interface Gruppe {
+export interface Gruppe extends Synkroniserbar {
   id?: number;
   navn: string;
   tags: string[];
@@ -62,7 +77,7 @@ export interface BudgetLinje {
   faktisk_kr: number;
 }
 
-export interface Tur {
+export interface Tur extends Synkroniserbar {
   id?: number;
   navn: string;
   sted: string;
@@ -87,10 +102,12 @@ export interface Tur {
   oprettet: Date;
   aendret: Date;
 }
+
 export class FeltbogenDB extends Dexie {
-  items!: Table<Item>;
-  grupper!: Table<Gruppe>;
-  ture!: Table<Tur>;
+  // Nøgletypen er number (++id), så get/add/update slipper for id-casts.
+  items!: Table<Item, number>;
+  grupper!: Table<Gruppe, number>;
+  ture!: Table<Tur, number>;
 
   constructor() {
     super('FeltbogenDB');

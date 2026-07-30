@@ -1,75 +1,48 @@
-# React + TypeScript + Vite
+# Feltbogen
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Dansk friluftsapp der holder styr på gear-inventar, planlægger ture med smarte
+forslag, og lærer over tid. Offline-first — nettet bruges kun til vejrudsigt,
+sync og deling.
 
-Currently, two official plugins are available:
+Se [`feltbogen_fundament`](./feltbogen_fundament) for den fulde specifikation:
+datamodel, skærme, kerne-koncepter og de beslutninger der ligger bag.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Kom i gang
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+npm install
+npm run dev      # udviklingsserver
+npm run build    # typecheck + produktionsbuild
+npm run lint     # eslint
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Arkitektur
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Offline-first: alt skrives til IndexedDB først, og synkroniseres derefter til
+PocketBase. Fejler netværket, står dataen stadig lokalt og sendes op næste gang
+appen starter.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+| Lag | Fil | Ansvar |
+|---|---|---|
+| Datamodel | `src/db.ts` | Dexie-schema og typerne `Item`, `Gruppe`, `Tur` |
+| Sync | `src/sync.ts` | CRUD mod IndexedDB + PocketBase, og oprydning af det der ikke nåede op |
+| Auth | `src/pb.ts`, `src/useAuth.ts` | PocketBase-klient og login-tilstand |
+| Domænelogik | `src/smartMotor.ts` | Vejr, forbrugsberegning, kompatibilitets-advarsler, gruppeforslag, stedsøgning |
+| Statistik | `src/statistik.ts` | Aggregeringer over inventar og ture |
+| UI-primitiver | `src/ui.tsx`, `src/layout.ts` | Knap, Kort, Felt, Chip, Badge, listerækker, detalje-header |
+| Skærme | `src/App.tsx` m.fl. | Inventar, Grupper, Ture, Statistik |
 
-```
+Hver post har et `pb_id`: er det sat, findes posten i PocketBase; er det tomt,
+er den kun lokal endnu.
+
+## Eksterne tjenester
+
+- **PocketBase** — sync og konti. URL sættes med `VITE_PB_URL` (se `.env.example`).
+- **open-meteo.com** — vejrudsigt og geocoding. Gratis, ingen nøgle.
+- **api.dataforsyningen.dk (DAWA)** — danske adresser og stednavne. Gratis, ingen nøgle.
+
+## Status
+
+V1 under udvikling. Bygget: inventar, grupper, ture med smart-motor, statistik.
+Endnu ikke bygget: PWA-opsætning (service worker + manifest), deling og
+gæsteview, dashboard, badges/notifikationer, pak-af-tjek, indstillinger.
