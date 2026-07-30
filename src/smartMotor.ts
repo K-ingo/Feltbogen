@@ -17,6 +17,20 @@ export interface VejrData {
   hentet: string;
 } 
 
+// open-meteo udelader værdier den ikke har for en given dag, derfor `| null`.
+interface OpenMeteoForecast {
+  daily?: {
+    time: string[];
+    temperature_2m_min: (number | null)[];
+    temperature_2m_max: (number | null)[];
+    precipitation_sum: (number | null)[];
+    windspeed_10m_max: (number | null)[];
+    weathercode: (number | null)[];
+    sunrise: (string | null)[];
+    sunset: (string | null)[];
+  };
+}
+
 export async function hentVejr(
   lat: number,
   lng: number,
@@ -27,18 +41,20 @@ export async function hentVejr(
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max,weathercode,sunrise,sunset&timezone=Europe/Copenhagen&start_date=${startdato}&end_date=${slutdato}`;
     const svar = await fetch(url);
     if (!svar.ok) return null;
-    const data = await svar.json();
-    if (!data.daily) return null;
 
-    const dage: VejrDag[] = data.daily.time.map((dato: string, i: number) => ({
+    const data: OpenMeteoForecast = await svar.json();
+    const daglig = data.daily;
+    if (!daglig) return null;
+
+    const dage: VejrDag[] = daglig.time.map((dato, i) => ({
       dato,
-      temp_min: Math.round(data.daily.temperature_2m_min[i]),
-      temp_max: Math.round(data.daily.temperature_2m_max[i]),
-      nedboer_mm: Math.round(data.daily.precipitation_sum[i]),
-      vind_ms: Math.round(data.daily.windspeed_10m_max[i] / 3.6),
-      vejrkode: data.daily.weathercode[i],
-      sol_op: data.daily.sunrise[i]?.slice(11, 16) ?? '',
-      sol_ned: data.daily.sunset[i]?.slice(11, 16) ?? ''
+      temp_min: Math.round(daglig.temperature_2m_min[i] ?? 0),
+      temp_max: Math.round(daglig.temperature_2m_max[i] ?? 0),
+      nedboer_mm: Math.round(daglig.precipitation_sum[i] ?? 0),
+      vind_ms: Math.round((daglig.windspeed_10m_max[i] ?? 0) / 3.6),
+      vejrkode: daglig.weathercode[i] ?? 0,
+      sol_op: daglig.sunrise[i]?.slice(11, 16) ?? '',
+      sol_ned: daglig.sunset[i]?.slice(11, 16) ?? ''
     }));
 
     return {
@@ -157,6 +173,24 @@ export function findAdvarsler(pakItems: Item[]): Advarsel[] {
   return advarsler;
 }
 
+// Items kommer på en tur ad to veje: via en valgt gruppe, eller som løst valg.
+// Bruges både til pakkelisten og til statistikken over hvad der faktisk er brugt.
+export function itemIdsPaaTur(tur: Tur, grupper: Gruppe[]): Set<number> {
+  const ids = new Set<number>(tur.loese_item_ids);
+
+  tur.gruppe_ids.forEach((gruppeId) => {
+    const gruppe = grupper.find((g) => g.id === gruppeId);
+    gruppe?.item_ids.forEach((id) => ids.add(id));
+  });
+
+  return ids;
+}
+
+export function itemsPaaTur(tur: Tur, grupper: Gruppe[], items: Item[]): Item[] {
+  const ids = itemIdsPaaTur(tur, grupper);
+  return items.filter((i) => i.id !== undefined && ids.has(i.id));
+}
+
 export function foreslaaGrupper(tur: Tur, grupper: Gruppe[]): Gruppe[] {
   const turTags = new Set<string>();
   turTags.add(tur.overnatning);
@@ -176,108 +210,135 @@ export function foreslaaGrupper(tur: Tur, grupper: Gruppe[]): Gruppe[] {
     .slice(0, 3)
     .map((x) => x.gruppe);
 }
+
+// ─────────────────────────────────────────────
+// Stedsøgning
+// DAWA dækker danske adresser og stednavne, open-meteo resten af verden.
+// DAWA-resultater vises først, da turene typisk ligger i Danmark.
+// ─────────────────────────────────────────────
+
 export interface StedForslag {
-    navn: string;
-    detalje: string;
-    lat: number;
-    lng: number;
+  navn: string;
+  detalje: string;
+  lat: number;
+  lng: number;
+}
+
+export async function soegSted(soegning: string): Promise<StedForslag[]> {
+  const q = soegning.trim();
+  if (q.length < 2) return [];
+
+  const [dawaResultater, openMeteoResultater] = await Promise.all([
+    soegDawa(q),
+    soegOpenMeteo(q)
+  ]);
+
+  // Samme sted kan komme fra begge kilder — behold det første pr. koordinat.
+  const set = new Set<string>();
+  const unikke: StedForslag[] = [];
+  for (const forslag of [...dawaResultater, ...openMeteoResultater]) {
+    const noegle = `${forslag.lat.toFixed(3)},${forslag.lng.toFixed(3)}`;
+    if (set.has(noegle)) continue;
+    set.add(noegle);
+    unikke.push(forslag);
   }
-  
-  export async function soegSted(soegning: string): Promise<StedForslag[]> {
-    const q = soegning.trim();
-    if (q.length < 2) return [];
-  
-    const [openMeteoResultater, dawaResultater] = await Promise.all([
-      soegOpenMeteo(q),
-      soegDawa(q)
-    ]);
-  
-    const alle = [...dawaResultater, ...openMeteoResultater];
-  
-    const seen = new Set<string>();
-    const unikke: StedForslag[] = [];
-    alle.forEach((r) => {
-      const noegle = `${r.lat.toFixed(3)},${r.lng.toFixed(3)}`;
-      if (!seen.has(noegle)) {
-        seen.add(noegle);
-        unikke.push(r);
-      }
-    });
-  
-    return unikke.slice(0, 8);
-  }
-  
-  async function soegOpenMeteo(soegning: string): Promise<StedForslag[]> {
-    try {
-      const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(soegning)}&count=5&language=da&format=json`;
-      const svar = await fetch(url);
-      if (!svar.ok) return [];
-      const data = await svar.json();
-      if (!data.results) return [];
-  
-      return data.results.map((r: any) => ({
-        navn: r.name,
+
+  return unikke.slice(0, 8);
+}
+
+interface GeocodingSvar {
+  results?: {
+    name?: string;
+    admin1?: string;
+    admin2?: string;
+    country?: string;
+    latitude?: number;
+    longitude?: number;
+  }[];
+}
+
+async function soegOpenMeteo(soegning: string): Promise<StedForslag[]> {
+  try {
+    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(soegning)}&count=5&language=da&format=json`;
+    const svar = await fetch(url);
+    if (!svar.ok) return [];
+
+    const data: GeocodingSvar = await svar.json();
+    return (data.results ?? []).flatMap((r) => {
+      if (typeof r.latitude !== 'number' || typeof r.longitude !== 'number') return [];
+      return [{
+        navn: r.name ?? 'Ukendt sted',
         detalje: [r.admin2, r.admin1, r.country].filter(Boolean).join(', '),
         lat: r.latitude,
         lng: r.longitude
-      }));
-    } catch (e) {
-      console.error('Open-Meteo sted-søgning fejl:', e);
-      return [];
-    }
+      }];
+    });
+  } catch (e) {
+    console.error('Open-Meteo sted-søgning fejl:', e);
+    return [];
   }
-  
-  async function soegDawa(soegning: string): Promise<StedForslag[]> {
-    try {
-      const [adresser, stednavne] = await Promise.all([
-        hentDawaAdresser(soegning),
-        hentDawaStednavne(soegning)
-      ]);
-      return [...stednavne, ...adresser];
-    } catch (e) {
-      console.error('DAWA sted-søgning fejl:', e);
-      return [];
-    }
+}
+
+async function soegDawa(soegning: string): Promise<StedForslag[]> {
+  const [stednavne, adresser] = await Promise.all([
+    hentDawaStednavne(soegning),
+    hentDawaAdresser(soegning)
+  ]);
+  return [...stednavne, ...adresser];
+}
+
+interface DawaAdresse {
+  tekst?: string;
+  adresse?: { x?: number; y?: number };
+}
+
+async function hentDawaAdresser(soegning: string): Promise<StedForslag[]> {
+  const data = await hentDawa<DawaAdresse>(
+    `https://api.dataforsyningen.dk/adresser/autocomplete?q=${encodeURIComponent(soegning)}&per_side=5`
+  );
+
+  return data.flatMap((r) => {
+    // DAWA angiver x som længdegrad og y som breddegrad.
+    const lng = r.adresse?.x;
+    const lat = r.adresse?.y;
+    if (typeof lat !== 'number' || typeof lng !== 'number') return [];
+    return [{ navn: r.tekst ?? 'Ukendt adresse', detalje: '', lat, lng }];
+  });
+}
+
+interface DawaStednavn {
+  navn?: string;
+  skrivemaade?: string;
+  undertype?: string;
+  hovedtype?: string;
+  visueltcenter?: number[];
+}
+
+async function hentDawaStednavne(soegning: string): Promise<StedForslag[]> {
+  const data = await hentDawa<DawaStednavn>(
+    `https://api.dataforsyningen.dk/stednavne2?q=${encodeURIComponent(soegning)}*&per_side=5`
+  );
+
+  return data.flatMap((r) => {
+    const [lng, lat] = r.visueltcenter ?? [];
+    if (typeof lat !== 'number' || typeof lng !== 'number') return [];
+    return [{
+      navn: r.navn ?? r.skrivemaade ?? 'Ukendt sted',
+      detalje: r.undertype ?? r.hovedtype ?? '',
+      lat,
+      lng
+    }];
+  });
+}
+
+async function hentDawa<T>(url: string): Promise<T[]> {
+  try {
+    const svar = await fetch(url);
+    if (!svar.ok) return [];
+    const data: unknown = await svar.json();
+    return Array.isArray(data) ? (data as T[]) : [];
+  } catch (e) {
+    console.error('DAWA sted-søgning fejl:', e);
+    return [];
   }
-  
-  async function hentDawaAdresser(soegning: string): Promise<StedForslag[]> {
-    try {
-      const url = `https://api.dataforsyningen.dk/adresser/autocomplete?q=${encodeURIComponent(soegning)}&per_side=5`;
-      const svar = await fetch(url);
-      if (!svar.ok) return [];
-      const data = await svar.json();
-      if (!Array.isArray(data)) return [];
-  
-      return data
-        .filter((r: any) => r.adresse?.x && r.adresse?.y)
-        .map((r: any) => ({
-          navn: r.tekst,
-          detalje: '',
-          lat: r.adresse.y,
-          lng: r.adresse.x
-        }));
-    } catch {
-      return [];
-    }
-  }
-  
-  async function hentDawaStednavne(soegning: string): Promise<StedForslag[]> {
-    try {
-      const url = `https://api.dataforsyningen.dk/stednavne2?q=${encodeURIComponent(soegning)}*&per_side=5`;
-      const svar = await fetch(url);
-      if (!svar.ok) return [];
-      const data = await svar.json();
-      if (!Array.isArray(data)) return [];
-  
-      return data
-        .filter((r: any) => r.visueltcenter && Array.isArray(r.visueltcenter) && r.visueltcenter.length === 2)
-        .map((r: any) => ({
-          navn: r.navn || r.skrivemaade || 'Ukendt sted',
-          detalje: r.undertype || r.hovedtype || '',
-          lat: r.visueltcenter[1],
-          lng: r.visueltcenter[0]
-        }));
-    } catch {
-      return [];
-    }
-  }
+}

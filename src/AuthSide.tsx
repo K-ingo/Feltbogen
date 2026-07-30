@@ -1,12 +1,22 @@
 import { useState } from 'react';
 import { opretKonto, logInd } from './pb';
-import { Knap, layout } from './ui';
+import { Knap, Label } from './ui';
+import { layout } from './layout';
 
-interface Props {
-  onLoggetInd: () => void;
+// Oversætter PocketBase-fejl til noget en bruger kan handle på.
+function fejlBesked(e: unknown): string {
+  const raa = e as { data?: { message?: string }; message?: string } | null;
+  const besked = raa?.data?.message || raa?.message || 'Der skete en fejl';
+  const lav = besked.toLowerCase();
+
+  if (lav.includes('failed to authenticate')) return 'Forkert email eller password';
+  if (lav.includes('already in use') || lav.includes('already exists')) {
+    return 'Email er allerede registreret';
+  }
+  return besked;
 }
 
-function AuthSide({ onLoggetInd }: Props) {
+function AuthSide() {
   const [tilstand, setTilstand] = useState<'login' | 'opret'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -31,16 +41,8 @@ function AuthSide({ onLoggetInd }: Props) {
       } else {
         await logInd(email.trim(), password);
       }
-      onLoggetInd();
-    } catch (e: any) {
-      const besked = e?.data?.message || e?.message || 'Der skete en fejl';
-      if (besked.toLowerCase().includes('failed to authenticate')) {
-        setFejl('Forkert email eller password');
-      } else if (besked.toLowerCase().includes('already in use') || besked.toLowerCase().includes('already exists')) {
-        setFejl('Email er allerede registreret');
-      } else {
-        setFejl(besked);
-      }
+    } catch (e) {
+      setFejl(fejlBesked(e));
     }
     setIndlaeser(false);
   };
@@ -63,9 +65,7 @@ function AuthSide({ onLoggetInd }: Props) {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '360px', margin: '0 auto', width: '100%' }}>
         <div>
-          <label style={{ display: 'block', fontSize: '11px', color: 'var(--tekst-dæmpet)', marginBottom: '5px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Email
-          </label>
+          <Label>Email</Label>
           <input
             type="email"
             value={email}
@@ -77,9 +77,7 @@ function AuthSide({ onLoggetInd }: Props) {
         </div>
 
         <div>
-          <label style={{ display: 'block', fontSize: '11px', color: 'var(--tekst-dæmpet)', marginBottom: '5px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Password
-          </label>
+          <Label>Password</Label>
           <input
             type="password"
             value={password}

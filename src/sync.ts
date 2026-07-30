@@ -1,387 +1,368 @@
-import { db } from './db';
+import type { Table } from 'dexie';
+import type { RecordModel } from 'pocketbase';
+import { db, OVERNATNING, ITEM_STATUS, TUR_STATUS, AKTIVITET, TERRAEN, ERFARING } from './db';
 import { pb, nuvaerendeBruger } from './pb';
-import type { Item, Gruppe, Tur } from './db';
+import type { Item, Gruppe, Tur, Synkroniserbar, Garanti, Deltager, BudgetLinje } from './db';
 
-interface MedPbId {
-  pb_id?: string;
+// Offline-first: alt skrives til IndexedDB først og sendes derefter til
+// PocketBase. Fejler netværket, bliver posten liggende uden pb_id og forsøges
+// igen ved næste appstart via sendAltUsendt().
+
+// ─────────────────────────────────────────────
+// Læsning af PocketBase-records
+// Serveren kan i princippet sende hvad som helst, så felter der er typet som
+// tal eller enum i db.ts køres gennem disse coercere på vej ind.
+// ─────────────────────────────────────────────
+
+function tekst(v: unknown, standard = ''): string {
+  return typeof v === 'string' ? v : standard;
 }
 
-// Uploader alle items/grupper/ture uden pb_id til PocketBase.
-// Kører hver gang appen starter — henter alt der endnu ikke er sendt op.
-export async function migrerHvisNoedvendigt(): Promise<{ migreret: boolean; antal?: number; fejl?: number }> {
+function tal(v: unknown, standard = 0): number {
+  return typeof v === 'number' && Number.isFinite(v) ? v : standard;
+}
+
+function dato(v: unknown): Date {
+  const d = new Date(tekst(v));
+  return Number.isNaN(d.getTime()) ? new Date() : d;
+}
+
+function tags(v: unknown): string[] {
+  return Array.isArray(v) ? v.map(String) : [];
+}
+
+// Item-referencer sendes som strenge til PocketBase, men er lokale Dexie-ids.
+function lokaleIds(v: unknown): number[] {
+  return Array.isArray(v) ? v.map(Number).filter((n) => Number.isFinite(n)) : [];
+}
+
+function enumVaerdi<T extends string>(v: unknown, tilladte: readonly T[], standard: T): T {
+  return tilladte.includes(v as T) ? (v as T) : standard;
+}
+
+function garanti(v: unknown): Garanti | null {
+  if (!v || typeof v !== 'object') return null;
+  const g = v as Record<string, unknown>;
+  return {
+    laengde_aar: tal(g.laengde_aar),
+    udloeber_dato: tekst(g.udloeber_dato),
+    paamindelse_dage: tal(g.paamindelse_dage, 30)
+  };
+}
+
+function koordinater(v: unknown): { lat: number; lng: number } | null {
+  if (!v || typeof v !== 'object') return null;
+  const k = v as Record<string, unknown>;
+  if (typeof k.lat !== 'number' || typeof k.lng !== 'number') return null;
+  return { lat: k.lat, lng: k.lng };
+}
+
+function deltagere(v: unknown): Deltager[] {
+  if (!Array.isArray(v)) return [];
+  return v.map((raa) => {
+    const d = (raa ?? {}) as Record<string, unknown>;
+    return {
+      id: tekst(d.id) || crypto.randomUUID(),
+      navn: tekst(d.navn),
+      overnatning: OVERNATNING.includes(d.overnatning as Deltager['overnatning'] & string)
+        ? (d.overnatning as Deltager['overnatning'])
+        : null,
+      personligt_gear_ids: lokaleIds(d.personligt_gear_ids),
+      baerer_delt_ids: lokaleIds(d.baerer_delt_ids)
+    };
+  });
+}
+
+function budgetLinjer(v: unknown): BudgetLinje[] {
+  if (!Array.isArray(v)) return [];
+  return v.map((raa) => {
+    const l = (raa ?? {}) as Record<string, unknown>;
+    return {
+      id: tekst(l.id) || crypto.randomUUID(),
+      kategori: tekst(l.kategori, 'gear'),
+      beskrivelse: tekst(l.beskrivelse),
+      forventet_kr: tal(l.forventet_kr),
+      faktisk_kr: tal(l.faktisk_kr)
+    };
+  });
+}
+
+// PocketBase-fejl bærer detaljerne i response.data — resten er støj.
+function fejlDetaljer(e: unknown): unknown {
+  if (e && typeof e === 'object') {
+    const fejl = e as { response?: { data?: unknown }; data?: unknown };
+    return fejl.response?.data ?? fejl.data ?? e;
+  }
+  return e;
+}
+
+// ─────────────────────────────────────────────
+// Samlinger
+// Én beskrivelse pr. posttype af hvordan den oversættes i begge retninger.
+// ─────────────────────────────────────────────
+
+type Post = Synkroniserbar & { id?: number; navn: string; aendret: Date };
+
+interface Samling<T extends Post> {
+  pbNavn: string;
+  tabel: Table<T, number>;
+  tilPb(post: T, brugerId: string): Record<string, unknown>;
+  fraPb(record: RecordModel): T;
+}
+
+const itemSamling: Samling<Item> = {
+  pbNavn: 'items',
+  tabel: db.items,
+  tilPb: (i, user) => ({
+    user,
+    navn: i.navn,
+    vaegt_g: i.vaegt_g,
+    pris_kr: i.pris_kr,
+    dimensioner: i.dimensioner,
+    antal: i.antal,
+    delt: i.delt,
+    status: i.status,
+    tags: i.tags,
+    kraever: i.kraever,
+    komplementer: i.komplementer,
+    koebt_hos: i.koebt_hos,
+    koebsdato: i.koebsdato,
+    koebslink: i.koebslink,
+    ordrenummer: i.ordrenummer,
+    garanti: i.garanti,
+    noter: i.noter
+  }),
+  fraPb: (r) => ({
+    pb_id: r.id,
+    navn: tekst(r.navn),
+    vaegt_g: tal(r.vaegt_g),
+    pris_kr: tal(r.pris_kr),
+    dimensioner: tekst(r.dimensioner),
+    antal: tal(r.antal, 1),
+    delt: r.delt === true,
+    status: enumVaerdi(r.status, ITEM_STATUS, 'ejer'),
+    tags: tags(r.tags),
+    kraever: tags(r.kraever),
+    komplementer: tags(r.komplementer),
+    koebt_hos: tekst(r.koebt_hos),
+    koebsdato: tekst(r.koebsdato),
+    koebslink: tekst(r.koebslink),
+    ordrenummer: tekst(r.ordrenummer),
+    garanti: garanti(r.garanti),
+    noter: tekst(r.noter),
+    oprettet: dato(r.created),
+    aendret: dato(r.updated)
+  })
+};
+
+const gruppeSamling: Samling<Gruppe> = {
+  pbNavn: 'grupper',
+  tabel: db.grupper,
+  tilPb: (g, user) => ({
+    user,
+    navn: g.navn,
+    tags: g.tags,
+    item_ids: g.item_ids.map(String),
+    noter: g.noter
+  }),
+  fraPb: (r) => ({
+    pb_id: r.id,
+    navn: tekst(r.navn),
+    tags: tags(r.tags),
+    item_ids: lokaleIds(r.item_ids),
+    noter: tekst(r.noter),
+    oprettet: dato(r.created),
+    aendret: dato(r.updated)
+  })
+};
+
+const turSamling: Samling<Tur> = {
+  pbNavn: 'ture',
+  tabel: db.ture,
+  tilPb: (t, user) => ({
+    user,
+    navn: t.navn,
+    sted: t.sted,
+    koordinater: t.koordinater,
+    startdato: t.startdato,
+    slutdato: t.slutdato,
+    naetter: t.naetter,
+    personer: t.personer,
+    overnatning: t.overnatning,
+    aktivitet: t.aktivitet,
+    terraen: t.terraen,
+    baereafstand_km: t.baereafstand_km,
+    erfaring: t.erfaring,
+    status: t.status,
+    gruppe_ids: t.gruppe_ids.map(String),
+    loese_item_ids: t.loese_item_ids.map(String),
+    deltagere: t.deltagere,
+    budget_linjer: t.budget_linjer,
+    besked_fra_ejer: t.besked_fra_ejer,
+    noter: t.noter,
+    vejrsnapshot: t.vejrsnapshot
+  }),
+  fraPb: (r) => ({
+    pb_id: r.id,
+    navn: tekst(r.navn),
+    sted: tekst(r.sted),
+    koordinater: koordinater(r.koordinater),
+    startdato: tekst(r.startdato),
+    slutdato: tekst(r.slutdato),
+    naetter: tal(r.naetter),
+    personer: tal(r.personer, 1),
+    overnatning: enumVaerdi(r.overnatning, OVERNATNING, 'shelter'),
+    aktivitet: enumVaerdi(r.aktivitet, AKTIVITET, 'bushcraft'),
+    terraen: enumVaerdi(r.terraen, TERRAEN, 'skov'),
+    baereafstand_km: tal(r.baereafstand_km),
+    erfaring: enumVaerdi(r.erfaring, ERFARING, 'oevet'),
+    status: enumVaerdi(r.status, TUR_STATUS, 'kladde'),
+    gruppe_ids: lokaleIds(r.gruppe_ids),
+    loese_item_ids: lokaleIds(r.loese_item_ids),
+    deltagere: deltagere(r.deltagere),
+    budget_linjer: budgetLinjer(r.budget_linjer),
+    besked_fra_ejer: tekst(r.besked_fra_ejer),
+    noter: tekst(r.noter),
+    vejrsnapshot: tekst(r.vejrsnapshot),
+    oprettet: dato(r.created),
+    aendret: dato(r.updated)
+  })
+};
+
+// ─────────────────────────────────────────────
+// Generiske operationer
+// ─────────────────────────────────────────────
+
+// Sender én post op: opdaterer hvis den kendes i PocketBase, opretter ellers.
+// Returnerer om den nu ligger deroppe.
+async function synkroniser<T extends Post>(samling: Samling<T>, id: number): Promise<boolean> {
   const bruger = nuvaerendeBruger();
-  if (!bruger) return { migreret: false };
+  if (!bruger) return false;
 
-  const items = await db.items.toArray();
-  const grupper = await db.grupper.toArray();
-  const ture = await db.ture.toArray();
+  const post = await samling.tabel.get(id);
+  if (!post) return false;
 
-  const itemsUdenPbId = items.filter((i) => !(i as any).pb_id);
-  const grupperUdenPbId = grupper.filter((g) => !(g as any).pb_id);
-  const tureUdenPbId = ture.filter((t) => !(t as any).pb_id);
+  try {
+    const payload = samling.tilPb(post, bruger.id);
+    if (post.pb_id) {
+      await pb.collection(samling.pbNavn).update(post.pb_id, payload);
+    } else {
+      const skabt = await pb.collection(samling.pbNavn).create(payload);
+      // Kun pb_id skrives, så en samtidig redigering af posten ikke overskrives.
+      await samling.tabel.update(id, (post) => {
+        post.pb_id = skabt.id;
+      });
+    }
+    return true;
+  } catch (e) {
+    console.error(`Kunne ikke synkronisere ${samling.pbNavn} "${post.navn}":`, fejlDetaljer(e));
+    return false;
+  }
+}
 
-  const total = itemsUdenPbId.length + grupperUdenPbId.length + tureUdenPbId.length;
-  if (total === 0) return { migreret: false };
+async function opret<T extends Post>(samling: Samling<T>, post: Omit<T, 'id'>): Promise<number> {
+  const id = await samling.tabel.add(post as T);
+  await synkroniser(samling, id);
+  return id;
+}
 
-  console.log(`Sender ${total} records til PocketBase (${itemsUdenPbId.length} items, ${grupperUdenPbId.length} grupper, ${tureUdenPbId.length} ture)...`);
+async function opdater<T extends Post>(
+  samling: Samling<T>,
+  id: number,
+  aendringer: Partial<T>
+): Promise<void> {
+  await samling.tabel.update(id, (post) => {
+    Object.assign(post, aendringer);
+    post.aendret = new Date();
+  });
+  await synkroniser(samling, id);
+}
+
+async function slet<T extends Post>(samling: Samling<T>, id: number): Promise<void> {
+  const post = await samling.tabel.get(id);
+  await samling.tabel.delete(id);
+
+  if (!post?.pb_id) return;
+  try {
+    await pb.collection(samling.pbNavn).delete(post.pb_id);
+  } catch (e) {
+    console.error(`Kunne ikke slette ${samling.pbNavn} "${post.navn}" i PocketBase:`, fejlDetaljer(e));
+  }
+}
+
+// Henter de records vi ikke har lokalt endnu.
+// Bemærk: poster vi allerede kender springes over, så ændringer lavet på en
+// anden enhed hentes ikke ned. Tovejs-sync mangler stadig.
+async function hent<T extends Post>(samling: Samling<T>, brugerId: string): Promise<void> {
+  const records = await pb.collection(samling.pbNavn).getFullList({
+    filter: pb.filter('user = {:bruger}', { bruger: brugerId })
+  });
+
+  const lokale = await samling.tabel.toArray();
+  const kendte = new Set(lokale.map((p) => p.pb_id).filter(Boolean));
+
+  const nye = records.filter((r) => !kendte.has(r.id)).map((r) => samling.fraPb(r));
+  if (nye.length > 0) await samling.tabel.bulkAdd(nye);
+}
+
+async function sendUsendte<T extends Post>(samling: Samling<T>): Promise<{ ok: number; fejl: number }> {
+  const usendte = (await samling.tabel.toArray()).filter((p) => !p.pb_id && p.id !== undefined);
 
   let ok = 0;
   let fejl = 0;
-
-  for (const item of itemsUdenPbId) {
-    try {
-      const skabt = await pb.collection('items').create({
-        user: bruger.id,
-        navn: item.navn,
-        vaegt_g: item.vaegt_g,
-        pris_kr: item.pris_kr,
-        dimensioner: item.dimensioner,
-        antal: item.antal,
-        delt: item.delt,
-        status: item.status,
-        tags: item.tags,
-        kraever: item.kraever,
-        komplementer: item.komplementer,
-        koebt_hos: item.koebt_hos,
-        koebsdato: item.koebsdato,
-        koebslink: item.koebslink,
-        ordrenummer: item.ordrenummer,
-        garanti: item.garanti,
-        noter: item.noter
-      });
-      if (item.id) await db.items.update(item.id, { pb_id: skabt.id } as any);
-      ok++;
-    } catch (e: any) {
-      fejl++;
-      console.error(`❌ Item "${item.navn}" fejlede:`, e?.response?.data ?? e?.data ?? e);
-    }
+  for (const post of usendte) {
+    if (await synkroniser(samling, post.id as number)) ok++;
+    else fejl++;
   }
-
-  for (const gruppe of grupperUdenPbId) {
-    try {
-      const skabt = await pb.collection('grupper').create({
-        user: bruger.id,
-        navn: gruppe.navn,
-        tags: gruppe.tags,
-        item_ids: gruppe.item_ids.map(String),
-        noter: gruppe.noter
-      });
-      if (gruppe.id) await db.grupper.update(gruppe.id, { pb_id: skabt.id } as any);
-      ok++;
-    } catch (e: any) {
-      fejl++;
-      console.error(`❌ Gruppe "${gruppe.navn}" fejlede:`, e?.response?.data ?? e?.data ?? e);
-    }
-  }
-
-  for (const tur of tureUdenPbId) {
-    try {
-      const skabt = await pb.collection('ture').create({
-        user: bruger.id,
-        navn: tur.navn,
-        sted: tur.sted,
-        koordinater: tur.koordinater,
-        startdato: tur.startdato,
-        slutdato: tur.slutdato,
-        naetter: tur.naetter,
-        personer: tur.personer,
-        overnatning: tur.overnatning,
-        aktivitet: tur.aktivitet,
-        terraen: tur.terraen,
-        baereafstand_km: tur.baereafstand_km,
-        erfaring: tur.erfaring,
-        status: tur.status,
-        gruppe_ids: tur.gruppe_ids.map(String),
-        loese_item_ids: tur.loese_item_ids.map(String),
-        deltagere: tur.deltagere,
-        budget_linjer: tur.budget_linjer,
-        besked_fra_ejer: tur.besked_fra_ejer,
-        noter: tur.noter,
-        vejrsnapshot: tur.vejrsnapshot
-      });
-      if (tur.id) await db.ture.update(tur.id, { pb_id: skabt.id } as any);
-      ok++;
-    } catch (e: any) {
-      fejl++;
-      console.error(`❌ Tur "${tur.navn}" fejlede:`, e?.response?.data ?? e?.data ?? e);
-    }
-  }
-
-  console.log(`✅ Sync færdig: ${ok} lykkedes, ${fejl} fejlede`);
-  return { migreret: ok > 0, antal: ok, fejl };
+  return { ok, fejl };
 }
 
-// Hent alle data fra PocketBase og synkroniser til lokal db
+// ─────────────────────────────────────────────
+// Offentligt API
+// ─────────────────────────────────────────────
+
+export const opretItem = (item: Omit<Item, 'id'>) => opret(itemSamling, item);
+export const opdaterItem = (id: number, aendringer: Partial<Item>) => opdater(itemSamling, id, aendringer);
+export const sletItem = (id: number) => slet(itemSamling, id);
+
+export const opretGruppe = (gruppe: Omit<Gruppe, 'id'>) => opret(gruppeSamling, gruppe);
+export const opdaterGruppe = (id: number, aendringer: Partial<Gruppe>) => opdater(gruppeSamling, id, aendringer);
+export const sletGruppe = (id: number) => slet(gruppeSamling, id);
+
+export const opretTur = (tur: Omit<Tur, 'id'>) => opret(turSamling, tur);
+export const opdaterTur = (id: number, aendringer: Partial<Tur>) => opdater(turSamling, id, aendringer);
+export const sletTur = (id: number) => slet(turSamling, id);
+
+// Sender alt der endnu ikke har nået PocketBase. Kaldes ved appstart, så
+// poster oprettet offline kommer op så snart der er forbindelse igen.
+export async function sendAltUsendt(): Promise<{ antal: number; fejl: number }> {
+  if (!nuvaerendeBruger()) return { antal: 0, fejl: 0 };
+
+  const resultater = [
+    await sendUsendte(itemSamling),
+    await sendUsendte(gruppeSamling),
+    await sendUsendte(turSamling)
+  ];
+
+  const antal = resultater.reduce((s, r) => s + r.ok, 0);
+  const fejl = resultater.reduce((s, r) => s + r.fejl, 0);
+  if (antal + fejl > 0) {
+    console.log(`Sync: ${antal} sendt til PocketBase, ${fejl} fejlede`);
+  }
+  return { antal, fejl };
+}
+
 export async function hentFraPocketBase(): Promise<void> {
   const bruger = nuvaerendeBruger();
   if (!bruger) return;
 
   try {
-    const [pbItems, pbGrupper, pbTure] = await Promise.all([
-      pb.collection('items').getFullList({ filter: `user = "${bruger.id}"` }),
-      pb.collection('grupper').getFullList({ filter: `user = "${bruger.id}"` }),
-      pb.collection('ture').getFullList({ filter: `user = "${bruger.id}"` })
+    await Promise.all([
+      hent(itemSamling, bruger.id),
+      hent(gruppeSamling, bruger.id),
+      hent(turSamling, bruger.id)
     ]);
-
-    const lokaleItems = await db.items.toArray();
-    const lokaleGrupper = await db.grupper.toArray();
-    const lokaleTure = await db.ture.toArray();
-
-    const lokalItemPbIds = new Set(lokaleItems.map((i) => (i as any).pb_id).filter(Boolean));
-    const lokalGruppePbIds = new Set(lokaleGrupper.map((g) => (g as any).pb_id).filter(Boolean));
-    const lokalTurPbIds = new Set(lokaleTure.map((t) => (t as any).pb_id).filter(Boolean));
-
-    for (const pbItem of pbItems) {
-      if (lokalItemPbIds.has(pbItem.id)) continue;
-      await db.items.add({
-        pb_id: pbItem.id,
-        navn: pbItem.navn,
-        vaegt_g: pbItem.vaegt_g || 0,
-        pris_kr: pbItem.pris_kr || 0,
-        dimensioner: pbItem.dimensioner || '',
-        antal: pbItem.antal || 1,
-        delt: pbItem.delt || false,
-        status: pbItem.status || 'ejer',
-        tags: pbItem.tags || [],
-        kraever: pbItem.kraever || [],
-        komplementer: pbItem.komplementer || [],
-        koebt_hos: pbItem.koebt_hos || '',
-        koebsdato: pbItem.koebsdato || '',
-        koebslink: pbItem.koebslink || '',
-        ordrenummer: pbItem.ordrenummer || '',
-        garanti: pbItem.garanti || null,
-        noter: pbItem.noter || '',
-        oprettet: new Date(pbItem.created),
-        aendret: new Date(pbItem.updated)
-      } as Item & MedPbId as any);
-    }
-
-    for (const pbGruppe of pbGrupper) {
-      if (lokalGruppePbIds.has(pbGruppe.id)) continue;
-      await db.grupper.add({
-        pb_id: pbGruppe.id,
-        navn: pbGruppe.navn,
-        tags: pbGruppe.tags || [],
-        item_ids: (pbGruppe.item_ids || []).map(Number).filter((n: number) => !isNaN(n)),
-        noter: pbGruppe.noter || '',
-        oprettet: new Date(pbGruppe.created),
-        aendret: new Date(pbGruppe.updated)
-      } as Gruppe & MedPbId as any);
-    }
-
-    for (const pbTur of pbTure) {
-      if (lokalTurPbIds.has(pbTur.id)) continue;
-      await db.ture.add({
-        pb_id: pbTur.id,
-        navn: pbTur.navn,
-        sted: pbTur.sted || '',
-        koordinater: pbTur.koordinater || null,
-        startdato: pbTur.startdato || '',
-        slutdato: pbTur.slutdato || '',
-        naetter: pbTur.naetter || 0,
-        personer: pbTur.personer || 1,
-        overnatning: pbTur.overnatning || 'shelter',
-        aktivitet: pbTur.aktivitet || 'bushcraft',
-        terraen: pbTur.terraen || 'skov',
-        baereafstand_km: pbTur.baereafstand_km || 0,
-        erfaring: pbTur.erfaring || 'oevet',
-        status: pbTur.status || 'kladde',
-        gruppe_ids: (pbTur.gruppe_ids || []).map(Number).filter((n: number) => !isNaN(n)),
-        loese_item_ids: (pbTur.loese_item_ids || []).map(Number).filter((n: number) => !isNaN(n)),
-        deltagere: pbTur.deltagere || [],
-        budget_linjer: pbTur.budget_linjer || [],
-        besked_fra_ejer: pbTur.besked_fra_ejer || '',
-        noter: pbTur.noter || '',
-        vejrsnapshot: pbTur.vejrsnapshot || '',
-        oprettet: new Date(pbTur.created),
-        aendret: new Date(pbTur.updated)
-      } as Tur & MedPbId as any);
-    }
   } catch (e) {
-    console.error('Sync fejlede:', e);
+    console.error('Kunne ikke hente data fra PocketBase:', fejlDetaljer(e));
   }
 }
-
-// ─────────────────────────────────────────────
-// Slet-helpers: rammer både IndexedDB og PocketBase
-// ─────────────────────────────────────────────
-
-export async function sletItem(id: number): Promise<void> {
-    const item = await db.items.get(id);
-    await db.items.delete(id);
-    const pbId = (item as any)?.pb_id;
-    if (pbId) {
-      try {
-        await pb.collection('items').delete(pbId);
-      } catch (e) {
-        console.error('❌ Kunne ikke slette item i PocketBase:', e);
-      }
-    }
-  }
-  
-  export async function sletGruppe(id: number): Promise<void> {
-    const gruppe = await db.grupper.get(id);
-    await db.grupper.delete(id);
-    const pbId = (gruppe as any)?.pb_id;
-    if (pbId) {
-      try {
-        await pb.collection('grupper').delete(pbId);
-      } catch (e) {
-        console.error('❌ Kunne ikke slette gruppe i PocketBase:', e);
-      }
-    }
-  }
-  
-  export async function sletTur(id: number): Promise<void> {
-    const tur = await db.ture.get(id);
-    await db.ture.delete(id);
-    const pbId = (tur as any)?.pb_id;
-    if (pbId) {
-      try {
-        await pb.collection('ture').delete(pbId);
-      } catch (e) {
-        console.error('❌ Kunne ikke slette tur i PocketBase:', e);
-      }
-    }
-  }
-  
-  // ─────────────────────────────────────────────
-  // Opdatér-helpers: rammer både IndexedDB og PocketBase
-  // Hvis noget endnu ikke har pb_id (fx offline-oprettet), oprettes det i PB
-  // ─────────────────────────────────────────────
-  
-  export async function opdaterItem(id: number, aendringer: Partial<Item>): Promise<void> {
-    const nu = new Date();
-    await db.items.update(id, { ...aendringer, aendret: nu } as any);
-    const bruger = nuvaerendeBruger();
-    if (!bruger) return;
-  
-    const item = await db.items.get(id);
-    if (!item) return;
-    const pbId = (item as any)?.pb_id;
-  
-    const payload = {
-      user: bruger.id,
-      navn: item.navn,
-      vaegt_g: item.vaegt_g,
-      pris_kr: item.pris_kr,
-      dimensioner: item.dimensioner,
-      antal: item.antal,
-      delt: item.delt,
-      status: item.status,
-      tags: item.tags,
-      kraever: item.kraever,
-      komplementer: item.komplementer,
-      koebt_hos: item.koebt_hos,
-      koebsdato: item.koebsdato,
-      koebslink: item.koebslink,
-      ordrenummer: item.ordrenummer,
-      garanti: item.garanti,
-      noter: item.noter
-    };
-  
-    try {
-      if (pbId) {
-        await pb.collection('items').update(pbId, payload);
-      } else {
-        const skabt = await pb.collection('items').create(payload);
-        await db.items.update(id, { pb_id: skabt.id } as any);
-      }
-    } catch (e) {
-      console.error('❌ Kunne ikke synkronisere item:', e);
-    }
-  }
-  
-  export async function opdaterGruppe(id: number, aendringer: Partial<Gruppe>): Promise<void> {
-    const nu = new Date();
-    await db.grupper.update(id, { ...aendringer, aendret: nu } as any);
-    const bruger = nuvaerendeBruger();
-    if (!bruger) return;
-  
-    const gruppe = await db.grupper.get(id);
-    if (!gruppe) return;
-    const pbId = (gruppe as any)?.pb_id;
-  
-    const payload = {
-      user: bruger.id,
-      navn: gruppe.navn,
-      tags: gruppe.tags,
-      item_ids: gruppe.item_ids.map(String),
-      noter: gruppe.noter
-    };
-  
-    try {
-      if (pbId) {
-        await pb.collection('grupper').update(pbId, payload);
-      } else {
-        const skabt = await pb.collection('grupper').create(payload);
-        await db.grupper.update(id, { pb_id: skabt.id } as any);
-      }
-    } catch (e) {
-      console.error('❌ Kunne ikke synkronisere gruppe:', e);
-    }
-  }
-  
-  export async function opdaterTur(id: number, aendringer: Partial<Tur>): Promise<void> {
-    const nu = new Date();
-    await db.ture.update(id, { ...aendringer, aendret: nu } as any);
-    const bruger = nuvaerendeBruger();
-    if (!bruger) return;
-  
-    const tur = await db.ture.get(id);
-    if (!tur) return;
-    const pbId = (tur as any)?.pb_id;
-  
-    const payload = {
-      user: bruger.id,
-      navn: tur.navn,
-      sted: tur.sted,
-      koordinater: tur.koordinater,
-      startdato: tur.startdato,
-      slutdato: tur.slutdato,
-      naetter: tur.naetter,
-      personer: tur.personer,
-      overnatning: tur.overnatning,
-      aktivitet: tur.aktivitet,
-      terraen: tur.terraen,
-      baereafstand_km: tur.baereafstand_km,
-      erfaring: tur.erfaring,
-      status: tur.status,
-      gruppe_ids: tur.gruppe_ids.map(String),
-      loese_item_ids: tur.loese_item_ids.map(String),
-      deltagere: tur.deltagere,
-      budget_linjer: tur.budget_linjer,
-      besked_fra_ejer: tur.besked_fra_ejer,
-      noter: tur.noter,
-      vejrsnapshot: tur.vejrsnapshot
-    };
-  
-    try {
-      if (pbId) {
-        await pb.collection('ture').update(pbId, payload);
-      } else {
-        const skabt = await pb.collection('ture').create(payload);
-        await db.ture.update(id, { pb_id: skabt.id } as any);
-      }
-    } catch (e) {
-      console.error('❌ Kunne ikke synkronisere tur:', e);
-    }
-  }
-
-  export async function opretGruppe(gruppe: Omit<Gruppe, 'id'>): Promise<number> {
-    const id = await db.grupper.add(gruppe as any) as number;
-    await opdaterGruppe(id, {});  // trigger sync til PB
-    return id;
-  }
-  
-  export async function opretItem(item: Omit<Item, 'id'>): Promise<number> {
-    const id = await db.items.add(item as any) as number;
-    await opdaterItem(id, {});
-    return id;
-  }
-  
-  export async function opretTur(tur: Omit<Tur, 'id'>): Promise<number> {
-    const id = await db.ture.add(tur as any) as number;
-    await opdaterTur(id, {});
-    return id;
-  }

@@ -1,44 +1,71 @@
+import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import AuthSide from './AuthSide';
 import { useAuth } from './useAuth';
-import { useEffect, useState } from 'react';
-import { migrerHvisNoedvendigt, hentFraPocketBase, opretItem } from './sync';
-import type { Item } from './db';
+import { sendAltUsendt, hentFraPocketBase, opretItem } from './sync';
 import ItemDetalje from './ItemDetalje';
 import GrupperListe from './GrupperListe';
 import TureListe from './TureListe';
+import StatistikSide from './StatistikSide';
 import BundNav from './BundNav';
 import type { Fane } from './BundNav';
-import { Knap, Kort, Chip, layout } from './ui';
-import StatistikSide from './StatistikSide';
+import { Knap, Kort, TagChips, ListeRaekke, TomListe } from './ui';
+import { layout } from './layout';
 
 function App() {
   const { erLoggetInd } = useAuth();
-  const [, setSynkroniserer] = useState(false);
+  const [fane, setFane] = useState<Fane>('inventar');
+  const [valgtItemId, setValgtItemId] = useState<number | null>(null);
 
+  // Send det der blev oprettet offline op, og hent det vi ikke har lokalt.
   useEffect(() => {
     if (!erLoggetInd) return;
-    setSynkroniserer(true);
     (async () => {
-      await migrerHvisNoedvendigt();
+      await sendAltUsendt();
       await hentFraPocketBase();
-      setSynkroniserer(false);
     })();
   }, [erLoggetInd]);
-  const [fane, setFane] = useState<Fane>('inventar');
+
+  if (!erLoggetInd) {
+    // useAuth lytter på authStore, så skærmen skifter af sig selv ved login.
+    return <AuthSide />;
+  }
+
+  // Et åbent item lægger sig over den valgte fane, indtil man går tilbage.
+  const skaerm = () => {
+    if (valgtItemId !== null) {
+      return <ItemDetalje itemId={valgtItemId} tilbage={() => setValgtItemId(null)} />;
+    }
+    switch (fane) {
+      case 'grupper': return <GrupperListe />;
+      case 'ture': return <TureListe />;
+      case 'statistik': return <StatistikSide />;
+      case 'inventar': return <Inventar aabnItem={setValgtItemId} />;
+    }
+  };
+
+  return (
+    <>
+      {skaerm()}
+      <BundNav aktiv={fane} skift={setFane} />
+    </>
+  );
+}
+
+function Inventar({ aabnItem }: { aabnItem: (id: number) => void }) {
   const [navn, setNavn] = useState('');
   const [vaegt, setVaegt] = useState('');
   const [pris, setPris] = useState('');
-  const [valgtItemId, setValgtItemId] = useState<number | null>(null);
   const [soegning, setSoegning] = useState('');
 
   const items = useLiveQuery(() => db.items.toArray());
 
   const tilfoej = async () => {
-    if (!navn) return;
+    if (!navn.trim()) return;
+    const nu = new Date();
     await opretItem({
-      navn,
+      navn: navn.trim(),
       vaegt_g: Number(vaegt) || 0,
       pris_kr: Number(pris) || 0,
       dimensioner: '',
@@ -54,150 +81,74 @@ function App() {
       ordrenummer: '',
       garanti: null,
       noter: '',
-      oprettet: new Date(),
-      aendret: new Date()
+      oprettet: nu,
+      aendret: nu
     });
     setNavn('');
     setVaegt('');
     setPris('');
   };
 
-  if (!erLoggetInd) {
-    return <AuthSide onLoggetInd={() => window.location.reload()} />;
-  }
-
-  if (valgtItemId !== null) {
-    return (
-      <>
-        <ItemDetalje itemId={valgtItemId} tilbage={() => setValgtItemId(null)} />
-        <BundNav aktiv={fane} skift={setFane} />
-      </>
-    );
-  }
-
-  if (fane === 'grupper') {
-    return (
-      <>
-        <GrupperListe />
-        <BundNav aktiv={fane} skift={setFane} />
-      </>
-    );
-  }
-
-  if (fane === 'ture') {
-    return (
-      <>
-        <TureListe />
-        <BundNav aktiv={fane} skift={setFane} />
-      </>
-    );
-  }
-
-  if (fane === 'statistik') {
-    return (
-      <>
-        <StatistikSide />
-        <BundNav aktiv={fane} skift={setFane} />
-      </>
-    );
-  }
-
+  const q = soegning.trim().toLowerCase();
   const filtreret = items?.filter((i) =>
-    soegning === '' || i.navn.toLowerCase().includes(soegning.toLowerCase()) ||
-    i.tags.some((t) => t.toLowerCase().includes(soegning.toLowerCase()))
+    q === '' || i.navn.toLowerCase().includes(q) || i.tags.some((t) => t.toLowerCase().includes(q))
   );
 
   const totalVaerdi = items?.reduce((sum, i) => sum + i.pris_kr, 0) ?? 0;
   const antalEjer = items?.filter((i) => i.status === 'ejer').length ?? 0;
 
   return (
-    <>
-      <div style={layout.container}>
-        <h1>Feltbogen</h1>
-        <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginBottom: '20px' }}>
-          Inventar · {antalEjer} items · {totalVaerdi.toLocaleString('da-DK')} kr
-        </div>
-
-        <Kort fremhaevet style={{ marginBottom: '20px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <input
-              placeholder="Navn (fx Toaks 1L gryde)"
-              value={navn}
-              onChange={(e) => setNavn(e.target.value)}
-            />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              <input
-                placeholder="Vægt (gram)"
-                type="number"
-                value={vaegt}
-                onChange={(e) => setVaegt(e.target.value)}
-              />
-              <input
-                placeholder="Pris (kr)"
-                type="number"
-                value={pris}
-                onChange={(e) => setPris(e.target.value)}
-              />
-            </div>
-            <Knap variant="primaer" onClick={tilfoej}>
-              + Tilføj item
-            </Knap>
-          </div>
-        </Kort>
-
-        <input
-          placeholder="Søg items eller tags..."
-          value={soegning}
-          onChange={(e) => setSoegning(e.target.value)}
-          style={{ width: '100%', marginBottom: '16px' }}
-        />
-
-        <div>
-          {filtreret?.length === 0 && (
-            <div style={{ padding: '30px 20px', textAlign: 'center', color: 'var(--tekst-svag)' }}>
-              {soegning ? 'Ingen matches.' : 'Ingen items endnu. Tilføj dit første ovenfor.'}
-            </div>
-          )}
-          {filtreret?.map((item: Item) => (
-            <div
-              key={item.id}
-              onClick={() => item.id && setValgtItemId(item.id)}
-              style={{
-                padding: '14px 4px',
-                borderBottom: '1px solid var(--border-svag)',
-                cursor: 'pointer',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}
-            >
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 500, color: 'var(--tekst)', fontSize: '14px' }}>
-                  {item.navn}
-                </div>
-                <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
-                  {item.vaegt_g} g · {item.pris_kr} kr
-                  {item.delt && ' · delt'}
-                  {item.status !== 'ejer' && ` · ${item.status}`}
-                </div>
-                {item.tags.length > 0 && (
-                  <div style={{ display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap' }}>
-                    {item.tags.slice(0, 4).map((tag) => (
-                      <Chip key={tag} storrelse="lille">{tag}</Chip>
-                    ))}
-                    {item.tags.length > 4 && (
-                      <Chip storrelse="lille">+{item.tags.length - 4}</Chip>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div style={{ color: 'var(--tekst-svag)', fontSize: '18px' }}>›</div>
-            </div>
-          ))}
-        </div>
+    <div style={layout.container}>
+      <h1>Feltbogen</h1>
+      <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginBottom: '20px' }}>
+        Inventar · {antalEjer} items · {totalVaerdi.toLocaleString('da-DK')} kr
       </div>
-      <BundNav aktiv={fane} skift={setFane} />
-    </>
+
+      <Kort fremhaevet style={{ marginBottom: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <input
+            placeholder="Navn (fx Toaks 1L gryde)"
+            value={navn}
+            onChange={(e) => setNavn(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && tilfoej()}
+          />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            <input placeholder="Vægt (gram)" type="number" value={vaegt} onChange={(e) => setVaegt(e.target.value)} />
+            <input placeholder="Pris (kr)" type="number" value={pris} onChange={(e) => setPris(e.target.value)} />
+          </div>
+          <Knap variant="primaer" onClick={tilfoej}>+ Tilføj item</Knap>
+        </div>
+      </Kort>
+
+      <input
+        placeholder="Søg items eller tags..."
+        value={soegning}
+        onChange={(e) => setSoegning(e.target.value)}
+        style={{ width: '100%', marginBottom: '16px' }}
+      />
+
+      <div>
+        {filtreret?.length === 0 && (
+          <TomListe>{soegning ? 'Ingen matches.' : 'Ingen items endnu. Tilføj dit første ovenfor.'}</TomListe>
+        )}
+        {filtreret?.map((item) => (
+          <ListeRaekke
+            key={item.id}
+            titel={item.navn}
+            detalje={
+              <>
+                {item.vaegt_g} g · {item.pris_kr} kr
+                {item.delt && ' · delt'}
+                {item.status !== 'ejer' && ` · ${item.status}`}
+              </>
+            }
+            onClick={() => item.id !== undefined && aabnItem(item.id)}
+          >
+            <TagChips tags={item.tags} />
+          </ListeRaekke>
+        ))}
+      </div>
+    </div>
   );
 }
 

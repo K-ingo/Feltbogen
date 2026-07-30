@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
-import { Kort, layout, SektionsTitel } from './ui';
+import { Kort, SektionsTitel, Segment } from './ui';
+import { layout } from './layout';
 import {
   filtrererTure,
   samletInventarvaerdi,
@@ -13,6 +14,23 @@ import {
   fordelingPrGruppe
 } from './statistik';
 import type { Periode } from './statistik';
+
+const PERIODER: readonly Periode[] = ['i_aar', 'sidste_aar', 'alt'];
+const PERIODE_LABEL: Record<Periode, string> = {
+  i_aar: 'I år',
+  sidste_aar: 'Sidste år',
+  alt: 'Alt'
+};
+
+const MAANEDER = ['Jan', 'Feb', 'Mar', 'Apr', 'Maj', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec'];
+
+// Genbruges af de widgets der har en lille overskrift over et nøgletal.
+const widgetTitelStil = {
+  fontSize: '11px',
+  color: 'var(--tekst-dæmpet)',
+  textTransform: 'uppercase',
+  letterSpacing: '0.5px'
+} as const;
 
 function StatistikSide() {
   const [periode, setPeriode] = useState<Periode>('i_aar');
@@ -32,12 +50,6 @@ function StatistikSide() {
   const ubrugt = ubrugteItems(items, alleTure, grupper);
   const gruppeFordeling = fordelingPrGruppe(items, grupper);
 
-  const perioder: { id: Periode; label: string }[] = [
-    { id: 'i_aar', label: 'I år' },
-    { id: 'sidste_aar', label: 'Sidste år' },
-    { id: 'alt', label: 'Alt' }
-  ];
-
   return (
     <div style={layout.container}>
       <h1>Feltbogen</h1>
@@ -45,36 +57,19 @@ function StatistikSide() {
         Statistik
       </div>
 
-      <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', flexWrap: 'wrap' }}>
-        {perioder.map((p) => {
-          const erAktiv = periode === p.id;
-          return (
-            <button
-              key={p.id}
-              onClick={() => setPeriode(p.id)}
-              style={{
-                padding: '6px 14px',
-                fontSize: '12px',
-                background: erAktiv ? 'var(--accent)' : 'transparent',
-                color: erAktiv ? 'var(--accent-tekst)' : 'var(--tekst-dæmpet)',
-                border: `1px solid ${erAktiv ? 'var(--accent)' : 'var(--border)'}`,
-                borderRadius: '16px',
-                cursor: 'pointer',
-                fontWeight: 500
-              }}
-            >
-              {p.label}
-            </button>
-          );
-        })}
+      <div style={{ marginBottom: '20px' }}>
+        <Segment
+          vaerdier={PERIODER}
+          valgt={periode}
+          vaelg={(p) => setPeriode(p)}
+          formater={(p) => PERIODE_LABEL[p]}
+        />
       </div>
 
       <div style={{ display: 'grid', gap: '14px' }}>
 
         <Kort fremhaevet>
-          <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
-            Samlet inventarværdi
-          </div>
+          <div style={{ ...widgetTitelStil, marginBottom: '6px' }}>Samlet inventarværdi</div>
           <div style={{ fontSize: '28px', fontWeight: 500, fontFamily: "'Fraunces', Georgia, serif" }}>
             {inventarvaerdi.toLocaleString('da-DK')} <span style={{ fontSize: '16px', color: 'var(--tekst-dæmpet)' }}>kr</span>
           </div>
@@ -85,9 +80,7 @@ function StatistikSide() {
 
         <Kort fremhaevet>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '10px' }}>
-            <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Ture
-            </div>
+            <div style={widgetTitelStil}>Ture</div>
             <div style={{ fontSize: '22px', fontWeight: 500, fontFamily: "'Fraunces', Georgia, serif" }}>
               {ture.length}
             </div>
@@ -103,7 +96,7 @@ function StatistikSide() {
                   borderRadius: '2px',
                   transition: 'height 0.2s'
                 }}
-                title={`${['Jan', 'Feb', 'Mar', 'Apr', 'Maj', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec'][i]}: ${antal}`}
+                title={`${MAANEDER[i]}: ${antal}`}
               />
             ))}
           </div>
@@ -123,7 +116,7 @@ function StatistikSide() {
             border: '1px solid var(--advarsel-border)',
             borderRadius: '12px'
           }}>
-            <div style={{ fontSize: '11px', color: 'var(--advarsel)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', fontWeight: 600 }}>
+            <div style={{ ...widgetTitelStil, color: 'var(--advarsel)', marginBottom: '6px', fontWeight: 600 }}>
               Ubrugte items
             </div>
             <div style={{ fontSize: '22px', fontWeight: 500, fontFamily: "'Fraunces', Georgia, serif", color: 'var(--advarsel)' }}>

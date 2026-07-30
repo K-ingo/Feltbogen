@@ -1,4 +1,5 @@
 import type { Item, Tur, Gruppe } from './db';
+import { itemIdsPaaTur } from './smartMotor';
 
 export type Periode = 'i_aar' | 'sidste_aar' | 'alt';
 
@@ -54,13 +55,7 @@ export function mestBrugte(items: Item[], ture: Tur[], grupper: Gruppe[], topN: 
   const taeller = new Map<number, number>();
 
   ture.forEach((t) => {
-    const itemIds = new Set<number>();
-    t.loese_item_ids.forEach((id) => itemIds.add(id));
-    t.gruppe_ids.forEach((gId) => {
-      const g = grupper.find((x) => x.id === gId);
-      if (g) g.item_ids.forEach((id) => itemIds.add(id));
-    });
-    itemIds.forEach((id) => taeller.set(id, (taeller.get(id) ?? 0) + 1));
+    itemIdsPaaTur(t, grupper).forEach((id) => taeller.set(id, (taeller.get(id) ?? 0) + 1));
   });
 
   return Array.from(taeller.entries())
@@ -87,17 +82,11 @@ export function ubrugteItems(items: Item[], ture: Tur[], grupper: Gruppe[]): Ubr
 
   ture.forEach((t) => {
     if (!t.startdato) return;
-    const d = new Date(t.startdato);
-    if (d < etAarSiden) return;
-
-    t.loese_item_ids.forEach((id) => brugte.add(id));
-    t.gruppe_ids.forEach((gId) => {
-      const g = grupper.find((x) => x.id === gId);
-      if (g) g.item_ids.forEach((id) => brugte.add(id));
-    });
+    if (new Date(t.startdato) < etAarSiden) return;
+    itemIdsPaaTur(t, grupper).forEach((id) => brugte.add(id));
   });
 
-  const ubrugte = items.filter((i) => i.status === 'ejer' && i.id && !brugte.has(i.id));
+  const ubrugte = items.filter((i) => i.status === 'ejer' && i.id !== undefined && !brugte.has(i.id));
 
   return {
     antal: ubrugte.length,

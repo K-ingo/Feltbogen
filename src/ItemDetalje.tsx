@@ -1,153 +1,75 @@
-import { useState, useEffect } from 'react';
-import { db } from './db';
-import type { Item, ItemStatus, Garanti } from './db';
+import { useState } from 'react';
+import { db, ITEM_STATUS } from './db';
+import type { Item, Garanti } from './db';
 import TagsInput from './TagsInput';
-import {Felt, Kort, layout, SektionsTitel } from './ui';
+import {
+  Felt,
+  Kort,
+  SektionsTitel,
+  Segment,
+  Tekstomraade,
+  TitelInput,
+  DetaljeHeader,
+  Indlaeser
+} from './ui';
+import { layout } from './layout';
 import { sletItem, opdaterItem } from './sync';
+import { useRedigerbar } from './useRedigerbar';
 
 interface Props {
   itemId: number;
   tilbage: () => void;
 }
 
+// Felter tilføjet efter de første items blev oprettet kan mangle på gamle poster.
+function medStandardfelter(item: Item): Item {
+  return {
+    ...item,
+    kraever: item.kraever ?? [],
+    komplementer: item.komplementer ?? [],
+    koebslink: item.koebslink ?? '',
+    ordrenummer: item.ordrenummer ?? '',
+    garanti: item.garanti ?? null
+  };
+}
+
 function ItemDetalje({ itemId, tilbage }: Props) {
-  const [item, setItem] = useState<Item | null>(null);
-  const [menuAaben, setMenuAaben] = useState(false);
   const [garantiAaben, setGarantiAaben] = useState(false);
 
-  useEffect(() => {
-    db.items.get(itemId).then((fundet) => {
-      if (fundet) {
-        setItem({
-          ...fundet,
-          kraever: fundet.kraever ?? [],
-          komplementer: fundet.komplementer ?? [],
-          koebslink: fundet.koebslink ?? '',
-          ordrenummer: fundet.ordrenummer ?? '',
-          garanti: fundet.garanti ?? null
-        });
-      } else {
-        setItem(null);
-      }
-    });
-  }, [itemId]);
-
-  const opdater = async (aendringer: Partial<Item>) => {
-    if (!item?.id) return;
-    const nytItem = { ...item, ...aendringer, aendret: new Date() };
-    await opdaterItem(item.id, aendringer);
-    setItem(nytItem);
-  };
+  const { post: item, opdater } = useRedigerbar(db.items, itemId, opdaterItem, {
+    normaliser: medStandardfelter
+  });
 
   const opdaterGaranti = async (aendringer: Partial<Garanti>) => {
     if (!item) return;
-    const nyGaranti: Garanti = {
-      laengde_aar: item.garanti?.laengde_aar ?? 0,
-      udloeber_dato: item.garanti?.udloeber_dato ?? '',
-      paamindelse_dage: item.garanti?.paamindelse_dage ?? 30,
-      ...aendringer
-    };
-    await opdater({ garanti: nyGaranti });
+    await opdater({
+      garanti: {
+        laengde_aar: item.garanti?.laengde_aar ?? 0,
+        udloeber_dato: item.garanti?.udloeber_dato ?? '',
+        paamindelse_dage: item.garanti?.paamindelse_dage ?? 30,
+        ...aendringer
+      }
+    });
   };
 
   const slet = async () => {
-    if (!item?.id) return;
+    if (item?.id === undefined) return;
     if (confirm(`Slet "${item.navn}"?`)) {
       await sletItem(item.id);
       tilbage();
     }
   };
 
-  if (!item) {
-    return <div style={{ padding: '20px', color: 'var(--tekst-dæmpet)' }}>Indlæser...</div>;
-  }
+  if (!item) return <Indlaeser />;
 
   return (
     <div style={layout.container}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-        <button
-          onClick={tilbage}
-          style={{ background: 'transparent', border: 'none', fontSize: '14px', cursor: 'pointer', color: 'var(--tekst-dæmpet)', padding: '4px 0' }}
-        >
-          ‹ Tilbage
-        </button>
-        <div style={{ position: 'relative' }}>
-          <button
-            onClick={() => setMenuAaben(!menuAaben)}
-            style={{ background: 'transparent', border: 'none', fontSize: '18px', cursor: 'pointer', padding: '4px 12px', color: 'var(--tekst-dæmpet)' }}
-          >
-            ⋯
-          </button>
-          {menuAaben && (
-            <div style={{
-              position: 'absolute',
-              right: 0,
-              top: '100%',
-              background: 'var(--bg-forhoejet)',
-              border: '1px solid var(--border)',
-              borderRadius: '8px',
-              boxShadow: '0 4px 12px var(--skygge)',
-              minWidth: '140px',
-              zIndex: 10,
-              overflow: 'hidden'
-            }}>
-              <button
-                onClick={() => { setMenuAaben(false); slet(); }}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  padding: '10px 14px',
-                  background: 'transparent',
-                  border: 'none',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  color: 'var(--fejl)',
-                  fontSize: '13px'
-                }}
-              >
-                Slet
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+      <DetaljeHeader tilbage={tilbage} sletLabel="Slet" slet={slet} />
 
-      <input
-        value={item.navn}
-        onChange={(e) => opdater({ navn: e.target.value })}
-        style={{
-          fontFamily: "'Fraunces', Georgia, serif",
-          fontSize: '26px',
-          fontWeight: 400,
-          border: 'none',
-          background: 'transparent',
-          padding: '4px 0',
-          width: '100%',
-          marginBottom: '14px',
-          color: 'var(--tekst)'
-        }}
-      />
+      <TitelInput value={item.navn} onChange={(v) => opdater({ navn: v })} />
 
-      <div style={{ display: 'flex', gap: '4px', marginBottom: '24px' }}>
-        {(['ejer', 'overvejer', 'solgt'] as ItemStatus[]).map((s) => (
-          <button
-            key={s}
-            onClick={() => opdater({ status: s })}
-            style={{
-              padding: '6px 14px',
-              fontSize: '12px',
-              background: item.status === s ? 'var(--accent)' : 'transparent',
-              color: item.status === s ? 'var(--accent-tekst)' : 'var(--tekst-dæmpet)',
-              border: `1px solid ${item.status === s ? 'var(--accent)' : 'var(--border)'}`,
-              borderRadius: '18px',
-              cursor: 'pointer',
-              textTransform: 'capitalize',
-              fontWeight: 500
-            }}
-          >
-            {s}
-          </button>
-        ))}
+      <div style={{ marginBottom: '24px' }}>
+        <Segment vaerdier={ITEM_STATUS} valgt={item.status} vaelg={(s) => opdater({ status: s })} />
       </div>
 
       <div style={{ display: 'grid', gap: '14px' }}>
@@ -257,17 +179,7 @@ function ItemDetalje({ itemId, tilbage }: Props) {
           )}
         </Kort>
 
-        <div>
-          <label style={{ display: 'block', fontSize: '11px', color: 'var(--tekst-dæmpet)', marginBottom: '5px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Noter
-          </label>
-          <textarea
-            value={item.noter}
-            onChange={(e) => opdater({ noter: e.target.value })}
-            rows={3}
-            style={{ width: '100%', resize: 'vertical', fontFamily: 'inherit' }}
-          />
-        </div>
+        <Tekstomraade label="Noter" value={item.noter} onChange={(v) => opdater({ noter: v })} raekker={3} />
       </div>
 
       <div style={{ marginTop: '30px', fontSize: '11px', color: 'var(--tekst-svag)', textAlign: 'center' }}>
