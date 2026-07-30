@@ -39,6 +39,12 @@ appen starter.
 Hver post har et `pb_id`: er det sat, findes posten i PocketBase; er det tomt,
 er den kun lokal endnu.
 
+Redigeringer skrives til IndexedDB ved hvert tastetryk, men sync udskydes
+800 ms, så en hel indtastning bliver én request i stedet for én pr. tegn.
+`usendt_aendring` markerer poster hvor serveren ikke har kvitteret endnu — så
+bliver de prøvet igen ved næste opstart, hvis appen lukkes inden køen er tømt.
+`sendAfventende()` tømmer køen med det samme, og kaldes når appen skjules.
+
 Sletninger bruger tabellen `slettede` som spor. Kan PocketBase ikke nås når man
 sletter, bliver postens `pb_id` liggende der, indtil serveren har bekræftet
 sletningen. Sporet gør to ting: det holder posten ude af `hentFraPocketBase()`,

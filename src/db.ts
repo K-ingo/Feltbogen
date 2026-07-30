@@ -27,6 +27,9 @@ export interface Garanti {
 // PocketBase — er den tom, er posten kun i IndexedDB endnu.
 export interface Synkroniserbar {
   pb_id?: string;
+  // Sat mens der er lokale ændringer serveren ikke har kvitteret. Overlever en
+  // genstart, så en redigering der aldrig nåede op bliver prøvet igen.
+  usendt_aendring?: boolean;
 }
 
 export interface Item extends Synkroniserbar {

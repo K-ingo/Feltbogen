@@ -244,20 +244,74 @@ async function synkroniser<T extends Post>(samling: Samling<T>, id: number): Pro
 
   try {
     const payload = samling.tilPb(post, bruger.id);
+    let nytPbId: string | undefined;
+
     if (post.pb_id) {
       await pb.collection(samling.pbNavn).update(post.pb_id, payload);
     } else {
-      const skabt = await pb.collection(samling.pbNavn).create(payload);
-      // Kun pb_id skrives, så en samtidig redigering af posten ikke overskrives.
-      await samling.tabel.update(id, (post) => {
-        post.pb_id = skabt.id;
-      });
+      nytPbId = (await pb.collection(samling.pbNavn).create(payload)).id;
     }
+
+    // Er posten redigeret igen mens kaldet var i luften, står der en ny sync i
+    // køen, og så skal flaget blive — ellers ville den ændring kunne tabes.
+    const nyereAendring = afventende.has(koeNoegle(samling, id));
+
+    // Kun sync-felterne skrives, så en samtidig redigering ikke overskrives.
+    await samling.tabel.update(id, (gemt) => {
+      if (nytPbId) gemt.pb_id = nytPbId;
+      if (!nyereAendring) gemt.usendt_aendring = false;
+    });
     return true;
   } catch (e) {
     console.error(`Kunne ikke synkronisere ${samling.pbNavn} "${post.navn}":`, fejlDetaljer(e));
     return false;
   }
+}
+
+// ─────────────────────────────────────────────
+// Samling af udgående opdateringer
+// Hvert tastetryk skal skrives lokalt med det samme, men det ville give én
+// request pr. tegn. Sync udskydes derfor til man holder pause, så en hel
+// indtastning bliver ét kald.
+// ─────────────────────────────────────────────
+
+const SYNC_FORSINKELSE_MS = 800;
+
+interface Afventende {
+  timer: ReturnType<typeof setTimeout>;
+  synk: () => Promise<boolean>;
+}
+
+const afventende = new Map<string, Afventende>();
+
+function koeNoegle<T extends Post>(samling: Samling<T>, id: number): string {
+  return `${samling.pbNavn}:${id}`;
+}
+
+function planlaegSync<T extends Post>(samling: Samling<T>, id: number): void {
+  const noegle = koeNoegle(samling, id);
+
+  // Ny ændring på samme post nulstiller ventetiden.
+  const igang = afventende.get(noegle);
+  if (igang) clearTimeout(igang.timer);
+
+  const synk = () => synkroniser(samling, id);
+  const timer = setTimeout(() => {
+    afventende.delete(noegle);
+    void synk();
+  }, SYNC_FORSINKELSE_MS);
+
+  afventende.set(noegle, { timer, synk });
+}
+
+// Sender det der venter med det samme, uden at vente forsinkelsen ud. Kaldes
+// når appen skjules, og inden der hentes fra serveren.
+export async function sendAfventende(): Promise<void> {
+  const ventende = [...afventende.values()];
+  afventende.clear();
+  ventende.forEach((v) => clearTimeout(v.timer));
+
+  await Promise.all(ventende.map((v) => v.synk()));
 }
 
 async function opret<T extends Post>(samling: Samling<T>, post: Omit<T, 'id'>): Promise<number> {
@@ -266,6 +320,8 @@ async function opret<T extends Post>(samling: Samling<T>, post: Omit<T, 'id'>): 
   return id;
 }
 
+// Skriver lokalt med det samme og planlægger sync. Den returnerede Promise
+// venter kun på IndexedDB, så indtastning ikke afhænger af netværket.
 async function opdater<T extends Post>(
   samling: Samling<T>,
   id: number,
@@ -274,8 +330,9 @@ async function opdater<T extends Post>(
   await samling.tabel.update(id, (post) => {
     Object.assign(post, aendringer);
     post.aendret = new Date();
+    post.usendt_aendring = true;
   });
-  await synkroniser(samling, id);
+  planlaegSync(samling, id);
 }
 
 async function slet<T extends Post>(samling: Samling<T>, id: number): Promise<void> {
@@ -357,7 +414,10 @@ async function hent<T extends Post>(samling: Samling<T>, brugerId: string): Prom
 }
 
 async function sendUsendte<T extends Post>(samling: Samling<T>): Promise<{ ok: number; fejl: number }> {
-  const usendte = (await samling.tabel.toArray()).filter((p) => !p.pb_id && p.id !== undefined);
+  // Både poster der aldrig nåede op, og poster hvis redigering ikke blev
+  // kvitteret — fx fordi appen blev lukket inden sync løb.
+  const usendte = (await samling.tabel.toArray())
+    .filter((p) => p.id !== undefined && (!p.pb_id || p.usendt_aendring));
 
   let ok = 0;
   let fejl = 0;
@@ -389,6 +449,9 @@ export const sletTur = (id: number) => slet(turSamling, id);
 // snart der er forbindelse igen.
 export async function sendAltUsendt(): Promise<{ antal: number; fejl: number }> {
   if (!nuvaerendeBruger()) return { antal: 0, fejl: 0 };
+
+  // Tøm køen først, så en igangværende redigering ikke tælles som usendt.
+  await sendAfventende();
 
   const resultater = [
     await sendUsendte(itemSamling),
