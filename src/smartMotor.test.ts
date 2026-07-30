@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   beregnForbrug,
   findAdvarsler,
-  itemIdsPaaTur,
+  itemUidsPaaTur,
   itemsPaaTur,
   foreslaaGrupper,
   vejrIkonKode
@@ -65,40 +65,51 @@ describe('findAdvarsler', () => {
   });
 });
 
-describe('itemIdsPaaTur', () => {
+describe('itemUidsPaaTur', () => {
   it('samler items fra både grupper og løse valg', () => {
-    const gruppe = lavGruppe({ id: 1, item_ids: [10, 11] });
-    const tur = lavTur({ gruppe_ids: [1], loese_item_ids: [12] });
+    const gruppe = lavGruppe({ uid: 'g1', item_ids: ['i10', 'i11'] });
+    const tur = lavTur({ gruppe_ids: ['g1'], loese_item_ids: ['i12'] });
 
-    expect([...itemIdsPaaTur(tur, [gruppe])].sort()).toEqual([10, 11, 12]);
+    expect([...itemUidsPaaTur(tur, [gruppe])].sort()).toEqual(['i10', 'i11', 'i12']);
   });
 
   it('tæller et item én gang selvom det både er løst og i en gruppe', () => {
-    const gruppe = lavGruppe({ id: 1, item_ids: [10] });
-    const tur = lavTur({ gruppe_ids: [1], loese_item_ids: [10] });
+    const gruppe = lavGruppe({ uid: 'g1', item_ids: ['i10'] });
+    const tur = lavTur({ gruppe_ids: ['g1'], loese_item_ids: ['i10'] });
 
-    expect([...itemIdsPaaTur(tur, [gruppe])]).toEqual([10]);
+    expect([...itemUidsPaaTur(tur, [gruppe])]).toEqual(['i10']);
   });
 
   it('ignorerer grupper der ikke findes længere', () => {
-    const tur = lavTur({ gruppe_ids: [99], loese_item_ids: [10] });
-    expect([...itemIdsPaaTur(tur, [])]).toEqual([10]);
+    const tur = lavTur({ gruppe_ids: ['findes-ikke'], loese_item_ids: ['i10'] });
+    expect([...itemUidsPaaTur(tur, [])]).toEqual(['i10']);
   });
 
-  it('itemsPaaTur slår id\'erne op i inventaret', () => {
-    const gryde = lavItem({ id: 10, navn: 'Toaks 1L' });
-    const oekse = lavItem({ id: 11, navn: 'Fiskars X7' });
-    const tur = lavTur({ loese_item_ids: [10] });
+  it('itemsPaaTur slår referencerne op i inventaret', () => {
+    const gryde = lavItem({ uid: 'i10', navn: 'Toaks 1L' });
+    const oekse = lavItem({ uid: 'i11', navn: 'Fiskars X7' });
+    const tur = lavTur({ loese_item_ids: ['i10'] });
 
     expect(itemsPaaTur(tur, [], [gryde, oekse]).map((i) => i.navn)).toEqual(['Toaks 1L']);
+  });
+
+  // Kernen i hvorfor referencer er uid og ikke Dexies ++id: to enheder tæller
+  // deres lokale id'er op hver for sig.
+  it('rammer det rigtige item selvom lokale id\'er er forskellige', () => {
+    const oekse = lavItem({ id: 7, uid: 'i-oekse', navn: 'Fiskars X7 økse' });
+    const gryde = lavItem({ id: 1, uid: 'i-gryde', navn: 'Toaks 1L gryde' });
+    const gruppe = lavGruppe({ uid: 'g1', item_ids: ['i-oekse'] });
+    const tur = lavTur({ gruppe_ids: ['g1'] });
+
+    expect(itemsPaaTur(tur, [gruppe], [gryde, oekse]).map((i) => i.navn)).toEqual(['Fiskars X7 økse']);
   });
 });
 
 describe('foreslaaGrupper', () => {
   it('foreslår grupper hvis tags matcher turen, bedste match først', () => {
-    const traeffer2 = lavGruppe({ id: 1, navn: 'Hængekøje-skov', tags: ['haengekoeje', 'skov'] });
-    const traeffer1 = lavGruppe({ id: 2, navn: 'Kun skov', tags: ['skov'] });
-    const traeffer0 = lavGruppe({ id: 3, navn: 'Vinter', tags: ['vinter'] });
+    const traeffer2 = lavGruppe({ navn: 'Hængekøje-skov', tags: ['haengekoeje', 'skov'] });
+    const traeffer1 = lavGruppe({ navn: 'Kun skov', tags: ['skov'] });
+    const traeffer0 = lavGruppe({ navn: 'Vinter', tags: ['vinter'] });
     const tur = lavTur({ overnatning: 'haengekoeje', terraen: 'skov' });
 
     const forslag = foreslaaGrupper(tur, [traeffer1, traeffer0, traeffer2]);
@@ -107,15 +118,15 @@ describe('foreslaaGrupper', () => {
   });
 
   it('foreslår ikke grupper der allerede er valgt', () => {
-    const gruppe = lavGruppe({ id: 1, tags: ['skov'] });
-    const tur = lavTur({ terraen: 'skov', gruppe_ids: [1] });
+    const gruppe = lavGruppe({ uid: 'g1', tags: ['skov'] });
+    const tur = lavTur({ terraen: 'skov', gruppe_ids: ['g1'] });
 
     expect(foreslaaGrupper(tur, [gruppe])).toEqual([]);
   });
 
   it('matcher solo mod gruppe alt efter antal personer', () => {
-    const solo = lavGruppe({ id: 1, navn: 'Solo', tags: ['solo'] });
-    const flere = lavGruppe({ id: 2, navn: 'Gruppe', tags: ['gruppe'] });
+    const solo = lavGruppe({ navn: 'Solo', tags: ['solo'] });
+    const flere = lavGruppe({ navn: 'Gruppe', tags: ['gruppe'] });
 
     expect(foreslaaGrupper(lavTur({ personer: 1 }), [solo, flere]).map((g) => g.navn)).toEqual(['Solo']);
     expect(foreslaaGrupper(lavTur({ personer: 4 }), [solo, flere]).map((g) => g.navn)).toEqual(['Gruppe']);

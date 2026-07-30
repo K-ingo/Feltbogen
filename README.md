@@ -36,8 +36,19 @@ appen starter.
 | UI-primitiver | `src/ui.tsx`, `src/layout.ts` | Knap, Kort, Felt, Chip, Badge, listerækker, detalje-header |
 | Skærme | `src/App.tsx` m.fl. | Inventar, Grupper, Ture, Statistik |
 
-Hver post har et `pb_id`: er det sat, findes posten i PocketBase; er det tomt,
-er den kun lokal endnu.
+Hver post har et `uid` — dens identitet på tværs af enheder. Det tildeles ved
+oprettelse, så det også findes offline, og alle referencer mellem poster
+(`item_ids`, `gruppe_ids`, `loese_item_ids`, deltagernes gear) bruger `uid`.
+Dexies `++id` kan ikke bruges til det: den tælles op pr. enhed, så id 1 betyder
+noget forskelligt to steder.
+
+> **PocketBase-samlingerne skal have et tekstfelt `uid`** på `items`, `grupper`
+> og `ture`. Uden det dropper serveren feltet, og to enheder kan ikke blive
+> enige om hvilken post der er hvilken. Appen skriver en advarsel i konsollen
+> hvis den opdager det.
+
+Hver post har også et `pb_id`: er det sat, findes posten i PocketBase; er det
+tomt, er den kun lokal endnu.
 
 Redigeringer skrives til IndexedDB ved hvert tastetryk, men sync udskydes
 800 ms, så en hel indtastning bliver én request i stedet for én pr. tegn.

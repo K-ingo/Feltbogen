@@ -1,4 +1,4 @@
-import type { Item, Tur, Gruppe } from './db';
+import type { Item, Tur, Gruppe, Reference } from './db';
 
 export interface VejrDag {
   dato: string;
@@ -175,20 +175,20 @@ export function findAdvarsler(pakItems: Item[]): Advarsel[] {
 
 // Items kommer på en tur ad to veje: via en valgt gruppe, eller som løst valg.
 // Bruges både til pakkelisten og til statistikken over hvad der faktisk er brugt.
-export function itemIdsPaaTur(tur: Tur, grupper: Gruppe[]): Set<number> {
-  const ids = new Set<number>(tur.loese_item_ids);
+export function itemUidsPaaTur(tur: Tur, grupper: Gruppe[]): Set<Reference> {
+  const uids = new Set<Reference>(tur.loese_item_ids);
 
-  tur.gruppe_ids.forEach((gruppeId) => {
-    const gruppe = grupper.find((g) => g.id === gruppeId);
-    gruppe?.item_ids.forEach((id) => ids.add(id));
+  tur.gruppe_ids.forEach((gruppeUid) => {
+    const gruppe = grupper.find((g) => g.uid === gruppeUid);
+    gruppe?.item_ids.forEach((uid) => uids.add(uid));
   });
 
-  return ids;
+  return uids;
 }
 
 export function itemsPaaTur(tur: Tur, grupper: Gruppe[], items: Item[]): Item[] {
-  const ids = itemIdsPaaTur(tur, grupper);
-  return items.filter((i) => i.id !== undefined && ids.has(i.id));
+  const uids = itemUidsPaaTur(tur, grupper);
+  return items.filter((i) => uids.has(i.uid));
 }
 
 export function foreslaaGrupper(tur: Tur, grupper: Gruppe[]): Gruppe[] {
@@ -200,7 +200,7 @@ export function foreslaaGrupper(tur: Tur, grupper: Gruppe[]): Gruppe[] {
   else turTags.add('solo');
 
   return grupper
-    .filter((g) => g.id && !tur.gruppe_ids.includes(g.id))
+    .filter((g) => !tur.gruppe_ids.includes(g.uid))
     .map((g) => ({
       gruppe: g,
       score: g.tags.filter((t) => turTags.has(t)).length

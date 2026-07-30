@@ -8,7 +8,7 @@ import {
   beregnForbrug,
   findAdvarsler,
   foreslaaGrupper,
-  itemIdsPaaTur,
+  itemUidsPaaTur,
   soegSted
 } from './smartMotor';
 import type { VejrData, StedForslag } from './smartMotor';
@@ -137,14 +137,14 @@ function TurDetalje({ turId, tilbage }: Props) {
     }
   };
 
-  const toggleGruppe = async (gruppeId: number) => {
+  const toggleGruppe = async (gruppeUid: string) => {
     if (!tur) return;
-    await opdater({ gruppe_ids: vekslet(tur.gruppe_ids, gruppeId) });
+    await opdater({ gruppe_ids: vekslet(tur.gruppe_ids, gruppeUid) });
   };
 
-  const toggleLoestItem = async (itemId: number) => {
+  const toggleLoestItem = async (itemUid: string) => {
     if (!tur) return;
-    await opdater({ loese_item_ids: vekslet(tur.loese_item_ids, itemId) });
+    await opdater({ loese_item_ids: vekslet(tur.loese_item_ids, itemUid) });
   };
 
   const tilfoejDeltager = async () => {
@@ -193,8 +193,8 @@ function TurDetalje({ turId, tilbage }: Props) {
 
   if (!tur) return <Indlaeser />;
 
-  const itemIdsPaaDenneTur = itemIdsPaaTur(tur, grupper ?? []);
-  const pakItems = items?.filter((i) => i.id !== undefined && itemIdsPaaDenneTur.has(i.id)) ?? [];
+  const itemUidsPaaDenneTur = itemUidsPaaTur(tur, grupper ?? []);
+  const pakItems = items?.filter((i) => itemUidsPaaDenneTur.has(i.uid)) ?? [];
 
   const vaegtDelt = pakItems.filter((i) => i.delt).reduce((s, i) => s + i.vaegt_g, 0);
   const vaegtPersonligt = pakItems.filter((i) => !i.delt).reduce((s, i) => s + i.vaegt_g, 0);
@@ -423,8 +423,8 @@ function TurDetalje({ turId, tilbage }: Props) {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                 {gruppeForslag.map((g) => (
                   <button
-                    key={g.id}
-                    onClick={() => g.id !== undefined && toggleGruppe(g.id)}
+                    key={g.uid}
+                    onClick={() => toggleGruppe(g.uid)}
                     style={{ padding: '5px 12px', fontSize: '12px', background: 'var(--bg-forhoejet)', color: 'var(--accent)', border: '1px solid var(--accent-border)', borderRadius: '14px', cursor: 'pointer', fontWeight: 500 }}
                   >
                     + {g.navn}
@@ -439,8 +439,8 @@ function TurDetalje({ turId, tilbage }: Props) {
             <div style={{ fontSize: '13px', color: 'var(--tekst-svag)', padding: '10px 0' }}>Ingen grupper endnu.</div>
           )}
           {grupper?.map((g) => {
-            const erMed = g.id !== undefined && tur.gruppe_ids.includes(g.id);
-            const gItems = items?.filter((i) => i.id !== undefined && g.item_ids.includes(i.id)) ?? [];
+            const erMed = tur.gruppe_ids.includes(g.uid);
+            const gItems = items?.filter((i) => g.item_ids.includes(i.uid)) ?? [];
             const gVaegt = gItems.reduce((s, i) => s + i.vaegt_g, 0);
             return (
               <Vaelgerraekke
@@ -448,7 +448,7 @@ function TurDetalje({ turId, tilbage }: Props) {
                 titel={g.navn}
                 detalje={`${gItems.length} items · ${(gVaegt / 1000).toFixed(2)} kg`}
                 valgt={erMed}
-                toggle={() => g.id !== undefined && toggleGruppe(g.id)}
+                toggle={() => toggleGruppe(g.uid)}
               />
             );
           })}
@@ -456,9 +456,9 @@ function TurDetalje({ turId, tilbage }: Props) {
           <div style={{ marginTop: '20px' }}>
             <SektionsTitel>Løse items</SektionsTitel>
             {items?.filter((i) => i.status === 'ejer').map((item) => {
-              const valgtLoest = item.id !== undefined && tur.loese_item_ids.includes(item.id);
+              const valgtLoest = tur.loese_item_ids.includes(item.uid);
               // Items der allerede kommer via en gruppe kan ikke fravælges her.
-              const viaGruppe = item.id !== undefined && itemIdsPaaDenneTur.has(item.id) && !valgtLoest;
+              const viaGruppe = itemUidsPaaDenneTur.has(item.uid) && !valgtLoest;
               return (
                 <Vaelgerraekke
                   key={item.id}
@@ -466,7 +466,7 @@ function TurDetalje({ turId, tilbage }: Props) {
                   detalje={`${item.vaegt_g} g${item.delt ? ' · delt' : ''}${viaGruppe ? ' · via gruppe' : ''}`}
                   valgt={valgtLoest || viaGruppe}
                   laast={viaGruppe}
-                  toggle={() => item.id !== undefined && toggleLoestItem(item.id)}
+                  toggle={() => toggleLoestItem(item.uid)}
                 />
               );
             })}
@@ -602,9 +602,9 @@ function laesKoordinater(tekst: string): { lat: number; lng: number } | null {
   return { lat, lng };
 }
 
-// Slår et id til eller fra i en liste.
-function vekslet(ids: number[], id: number): number[] {
-  return ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id];
+// Slår en reference til eller fra i en liste.
+function vekslet(uids: string[], uid: string): string[] {
+  return uids.includes(uid) ? uids.filter((x) => x !== uid) : [...uids, uid];
 }
 
 function formatterDag(dato: string): string {

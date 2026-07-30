@@ -33,17 +33,17 @@ function GruppeDetalje({ gruppeId, tilbage }: Props) {
     }
   };
 
-  const toggleItem = async (itemId: number) => {
+  const toggleItem = async (itemUid: string) => {
     if (!gruppe) return;
-    const nyeIds = gruppe.item_ids.includes(itemId)
-      ? gruppe.item_ids.filter((id) => id !== itemId)
-      : [...gruppe.item_ids, itemId];
-    await opdater({ item_ids: nyeIds });
+    const nye = gruppe.item_ids.includes(itemUid)
+      ? gruppe.item_ids.filter((uid) => uid !== itemUid)
+      : [...gruppe.item_ids, itemUid];
+    await opdater({ item_ids: nye });
   };
 
   if (!gruppe) return <Indlaeser />;
 
-  const valgteItems = items?.filter((i) => i.id !== undefined && gruppe.item_ids.includes(i.id)) ?? [];
+  const valgteItems = items?.filter((i) => gruppe.item_ids.includes(i.uid)) ?? [];
   const totalVaegt = valgteItems.reduce((sum, i) => sum + i.vaegt_g, 0);
   const totalPris = valgteItems.reduce((sum, i) => sum + i.pris_kr, 0);
 
@@ -91,7 +91,7 @@ function GruppeDetalje({ gruppeId, tilbage }: Props) {
           </div>
         )}
         {tilgaengeligeItems.map((item) => {
-          const erMed = item.id !== undefined && gruppe.item_ids.includes(item.id);
+          const erMed = gruppe.item_ids.includes(item.uid);
           return (
             <label
               key={item.id}
@@ -110,7 +110,7 @@ function GruppeDetalje({ gruppeId, tilbage }: Props) {
               <input
                 type="checkbox"
                 checked={erMed}
-                onChange={() => item.id !== undefined && toggleItem(item.id)}
+                onChange={() => toggleItem(item.uid)}
                 style={{ width: 'auto' }}
               />
               <div style={{ flex: 1 }}>

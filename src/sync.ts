@@ -2,7 +2,7 @@ import type { Table } from 'dexie';
 import type { RecordModel } from 'pocketbase';
 import { db, OVERNATNING, ITEM_STATUS, TUR_STATUS, AKTIVITET, TERRAEN, ERFARING } from './db';
 import { pb, nuvaerendeBruger } from './pb';
-import type { Item, Gruppe, Tur, Synkroniserbar, Garanti, Deltager, BudgetLinje } from './db';
+import type { Item, Gruppe, Tur, Synkroniserbar, Reference, Garanti, Deltager, BudgetLinje } from './db';
 
 // Offline-first: alt skrives til IndexedDB først og sendes derefter til
 // PocketBase. Fejler netværket, bliver posten liggende uden pb_id og forsøges
@@ -31,9 +31,16 @@ function tags(v: unknown): string[] {
   return Array.isArray(v) ? v.map(String) : [];
 }
 
-// Item-referencer sendes som strenge til PocketBase, men er lokale Dexie-ids.
-function lokaleIds(v: unknown): number[] {
-  return Array.isArray(v) ? v.map(Number).filter((n) => Number.isFinite(n)) : [];
+// Referencer mellem poster er uid'er — enhedsuafhængige, i modsætning til
+// Dexies ++id.
+function referencer(v: unknown): Reference[] {
+  return Array.isArray(v) ? v.map(String).filter(Boolean) : [];
+}
+
+// Postens uid. Mangler feltet på serveren, falder vi tilbage til record-id'et:
+// det er også globalt unikt, så alle enheder når frem til samme værdi.
+function uid(r: RecordModel): string {
+  return tekst(r.uid) || r.id;
 }
 
 function enumVaerdi<T extends string>(v: unknown, tilladte: readonly T[], standard: T): T {
@@ -67,8 +74,8 @@ function deltagere(v: unknown): Deltager[] {
       overnatning: OVERNATNING.includes(d.overnatning as Deltager['overnatning'] & string)
         ? (d.overnatning as Deltager['overnatning'])
         : null,
-      personligt_gear_ids: lokaleIds(d.personligt_gear_ids),
-      baerer_delt_ids: lokaleIds(d.baerer_delt_ids)
+      personligt_gear_ids: referencer(d.personligt_gear_ids),
+      baerer_delt_ids: referencer(d.baerer_delt_ids)
     };
   });
 }
@@ -85,6 +92,20 @@ function budgetLinjer(v: unknown): BudgetLinje[] {
       faktisk_kr: tal(l.faktisk_kr)
     };
   });
+}
+
+// PocketBase dropper lydløst felter der ikke findes i samlingens skema. Uden
+// et uid-felt kan to enheder ikke blive enige om hvilken post der er hvilken,
+// og det er værd at opdage med det samme frem for når data er rodet sammen.
+let harAdvaretOmUid = false;
+function advarHvisUidTabt(skabt: RecordModel, forventet: string, pbNavn: string): void {
+  if (harAdvaretOmUid || skabt.uid === forventet) return;
+  harAdvaretOmUid = true;
+  console.warn(
+    `PocketBase gemte ikke feltet "uid" på samlingen "${pbNavn}". Tilføj et ` +
+    'tekstfelt "uid" til samlingen — uden det peger grupper og pakkelister på ' +
+    'forkert gear når appen bruges fra mere end én enhed.'
+  );
 }
 
 // PocketBase-fejl bærer detaljerne i response.data — resten er støj.
@@ -115,6 +136,7 @@ const itemSamling: Samling<Item> = {
   tabel: db.items,
   tilPb: (i, user) => ({
     user,
+    uid: i.uid,
     navn: i.navn,
     vaegt_g: i.vaegt_g,
     pris_kr: i.pris_kr,
@@ -133,6 +155,7 @@ const itemSamling: Samling<Item> = {
     noter: i.noter
   }),
   fraPb: (r) => ({
+    uid: uid(r),
     pb_id: r.id,
     navn: tekst(r.navn),
     vaegt_g: tal(r.vaegt_g),
@@ -160,16 +183,18 @@ const gruppeSamling: Samling<Gruppe> = {
   tabel: db.grupper,
   tilPb: (g, user) => ({
     user,
+    uid: g.uid,
     navn: g.navn,
     tags: g.tags,
-    item_ids: g.item_ids.map(String),
+    item_ids: g.item_ids,
     noter: g.noter
   }),
   fraPb: (r) => ({
+    uid: uid(r),
     pb_id: r.id,
     navn: tekst(r.navn),
     tags: tags(r.tags),
-    item_ids: lokaleIds(r.item_ids),
+    item_ids: referencer(r.item_ids),
     noter: tekst(r.noter),
     oprettet: dato(r.created),
     aendret: dato(r.updated)
@@ -181,6 +206,7 @@ const turSamling: Samling<Tur> = {
   tabel: db.ture,
   tilPb: (t, user) => ({
     user,
+    uid: t.uid,
     navn: t.navn,
     sted: t.sted,
     koordinater: t.koordinater,
@@ -194,8 +220,8 @@ const turSamling: Samling<Tur> = {
     baereafstand_km: t.baereafstand_km,
     erfaring: t.erfaring,
     status: t.status,
-    gruppe_ids: t.gruppe_ids.map(String),
-    loese_item_ids: t.loese_item_ids.map(String),
+    gruppe_ids: t.gruppe_ids,
+    loese_item_ids: t.loese_item_ids,
     deltagere: t.deltagere,
     budget_linjer: t.budget_linjer,
     besked_fra_ejer: t.besked_fra_ejer,
@@ -203,6 +229,7 @@ const turSamling: Samling<Tur> = {
     vejrsnapshot: t.vejrsnapshot
   }),
   fraPb: (r) => ({
+    uid: uid(r),
     pb_id: r.id,
     navn: tekst(r.navn),
     sted: tekst(r.sted),
@@ -217,8 +244,8 @@ const turSamling: Samling<Tur> = {
     baereafstand_km: tal(r.baereafstand_km),
     erfaring: enumVaerdi(r.erfaring, ERFARING, 'oevet'),
     status: enumVaerdi(r.status, TUR_STATUS, 'kladde'),
-    gruppe_ids: lokaleIds(r.gruppe_ids),
-    loese_item_ids: lokaleIds(r.loese_item_ids),
+    gruppe_ids: referencer(r.gruppe_ids),
+    loese_item_ids: referencer(r.loese_item_ids),
     deltagere: deltagere(r.deltagere),
     budget_linjer: budgetLinjer(r.budget_linjer),
     besked_fra_ejer: tekst(r.besked_fra_ejer),
@@ -249,7 +276,9 @@ async function synkroniser<T extends Post>(samling: Samling<T>, id: number): Pro
     if (post.pb_id) {
       await pb.collection(samling.pbNavn).update(post.pb_id, payload);
     } else {
-      nytPbId = (await pb.collection(samling.pbNavn).create(payload)).id;
+      const skabt = await pb.collection(samling.pbNavn).create(payload);
+      nytPbId = skabt.id;
+      advarHvisUidTabt(skabt, post.uid, samling.pbNavn);
     }
 
     // Er posten redigeret igen mens kaldet var i luften, står der en ny sync i
@@ -314,8 +343,13 @@ export async function sendAfventende(): Promise<void> {
   await Promise.all(ventende.map((v) => v.synk()));
 }
 
-async function opret<T extends Post>(samling: Samling<T>, post: Omit<T, 'id'>): Promise<number> {
-  const id = await samling.tabel.add(post as T);
+// uid tildeles her frem for hos kalderen, så identiteten altid findes fra
+// postens fødsel — også når den oprettes uden forbindelse.
+async function opret<T extends Post>(
+  samling: Samling<T>,
+  post: Omit<T, 'id' | 'uid'>
+): Promise<number> {
+  const id = await samling.tabel.add({ ...post, uid: crypto.randomUUID() } as T);
   await synkroniser(samling, id);
   return id;
 }
@@ -399,7 +433,9 @@ async function hent<T extends Post>(samling: Samling<T>, brugerId: string): Prom
   });
 
   const lokale = await samling.tabel.toArray();
-  const kendte = new Set(lokale.map((p) => p.pb_id).filter(Boolean));
+  // uid er postens identitet. Bruger vi pb_id, ville en post oprettet offline
+  // og allerede sendt op blive hentet ned igen som en dublet.
+  const kendte = new Set(lokale.map((p) => p.uid));
 
   // Poster vi har slettet lokalt må ikke hentes tilbage, selvom de stadig
   // ligger på serveren fordi sletningen ikke er nået op endnu.
@@ -407,8 +443,8 @@ async function hent<T extends Post>(samling: Samling<T>, brugerId: string): Prom
   const slettedePbIds = new Set(slettede.map((s) => s.pb_id));
 
   const nye = records
-    .filter((r) => !kendte.has(r.id) && !slettedePbIds.has(r.id))
-    .map((r) => samling.fraPb(r));
+    .map((r) => samling.fraPb(r))
+    .filter((p) => !kendte.has(p.uid) && !slettedePbIds.has(p.pb_id as string));
 
   if (nye.length > 0) await samling.tabel.bulkAdd(nye);
 }
@@ -432,15 +468,15 @@ async function sendUsendte<T extends Post>(samling: Samling<T>): Promise<{ ok: n
 // Offentligt API
 // ─────────────────────────────────────────────
 
-export const opretItem = (item: Omit<Item, 'id'>) => opret(itemSamling, item);
+export const opretItem = (item: Omit<Item, 'id' | 'uid'>) => opret(itemSamling, item);
 export const opdaterItem = (id: number, aendringer: Partial<Item>) => opdater(itemSamling, id, aendringer);
 export const sletItem = (id: number) => slet(itemSamling, id);
 
-export const opretGruppe = (gruppe: Omit<Gruppe, 'id'>) => opret(gruppeSamling, gruppe);
+export const opretGruppe = (gruppe: Omit<Gruppe, 'id' | 'uid'>) => opret(gruppeSamling, gruppe);
 export const opdaterGruppe = (id: number, aendringer: Partial<Gruppe>) => opdater(gruppeSamling, id, aendringer);
 export const sletGruppe = (id: number) => slet(gruppeSamling, id);
 
-export const opretTur = (tur: Omit<Tur, 'id'>) => opret(turSamling, tur);
+export const opretTur = (tur: Omit<Tur, 'id' | 'uid'>) => opret(turSamling, tur);
 export const opdaterTur = (id: number, aendringer: Partial<Tur>) => opdater(turSamling, id, aendringer);
 export const sletTur = (id: number) => slet(turSamling, id);
 
