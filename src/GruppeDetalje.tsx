@@ -17,9 +17,11 @@ import { useRedigerbar } from './useRedigerbar';
 interface Props {
   gruppeId: number;
   tilbage: () => void;
+  // Sat når gruppen netop er oprettet, så en navnløs post kan ryddes væk igen.
+  nyOprettet?: boolean;
 }
 
-function GruppeDetalje({ gruppeId, tilbage }: Props) {
+function GruppeDetalje({ gruppeId, tilbage, nyOprettet }: Props) {
   const [soegning, setSoegning] = useState('');
 
   const items = useLiveQuery(() => db.items.toArray());
@@ -31,6 +33,15 @@ function GruppeDetalje({ gruppeId, tilbage }: Props) {
       await sletGruppe(gruppe.id);
       tilbage();
     }
+  };
+
+  // En navnløs gruppe kan ikke findes igen, så en netop oprettet post man
+  // forlader uden navn, ryddes væk. Eksisterende grupper røres aldrig.
+  const gaaTilbage = async () => {
+    if (nyOprettet && gruppe?.id !== undefined && !gruppe.navn.trim()) {
+      await sletGruppe(gruppe.id);
+    }
+    tilbage();
   };
 
   const toggleItem = async (itemUid: string) => {
@@ -54,9 +65,14 @@ function GruppeDetalje({ gruppeId, tilbage }: Props) {
 
   return (
     <div style={layout.container}>
-      <DetaljeHeader tilbage={tilbage} sletLabel="Slet gruppe" slet={slet} />
+      <DetaljeHeader tilbage={gaaTilbage} sletLabel="Slet gruppe" slet={slet} />
 
-      <TitelInput value={gruppe.navn} onChange={(v) => opdater({ navn: v })} />
+      <TitelInput
+        value={gruppe.navn}
+        onChange={(v) => opdater({ navn: v })}
+        placeholder="Navn på gruppe"
+        autoFokus={nyOprettet}
+      />
 
       <div style={{ display: 'grid', gap: '14px', marginBottom: '24px' }}>
         <TagsInput

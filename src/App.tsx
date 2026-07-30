@@ -13,7 +13,10 @@ import type { Fane } from './Skal';
 function App() {
   const { erLoggetInd } = useAuth();
   const [fane, setFane] = useState<Fane>('inventar');
-  const [valgtItemId, setValgtItemId] = useState<number | null>(null);
+  // nyOprettet følger med, så ItemDetalje kan rydde en navnløs post væk igen
+  // hvis man fortryder.
+  const [valgtItem, setValgtItem] = useState<{ id: number; ny: boolean } | null>(null);
+  const aabnItem = (id: number, ny = false) => setValgtItem({ id, ny });
 
   // Afstem med serveren ved opstart — og igen når forbindelsen kommer tilbage.
   // En tur kan vare timer uden dækning med appen åben hele tiden; uden
@@ -44,10 +47,14 @@ function App() {
 
   // Et åbent item lægger sig over den valgte fane, indtil man går tilbage.
   // Detaljeskærme har deres egen header, så Skal får ingen titel her.
-  if (valgtItemId !== null) {
+  if (valgtItem !== null) {
     return (
       <Skal fane={fane} skift={setFane}>
-        <ItemDetalje itemId={valgtItemId} tilbage={() => setValgtItemId(null)} />
+        <ItemDetalje
+          itemId={valgtItem.id}
+          nyOprettet={valgtItem.ny}
+          tilbage={() => setValgtItem(null)}
+        />
       </Skal>
     );
   }
@@ -56,7 +63,7 @@ function App() {
     case 'grupper': return <GrupperListe fane={fane} skift={setFane} />;
     case 'ture': return <TureListe fane={fane} skift={setFane} />;
     case 'statistik': return <StatistikSide fane={fane} skift={setFane} />;
-    case 'inventar': return <InventarSide fane={fane} skift={setFane} aabnItem={setValgtItemId} />;
+    case 'inventar': return <InventarSide fane={fane} skift={setFane} aabnItem={aabnItem} />;
   }
 }
 

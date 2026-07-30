@@ -19,6 +19,9 @@ import { useRedigerbar } from './useRedigerbar';
 interface Props {
   itemId: number;
   tilbage: () => void;
+  // Sat når posten netop er oprettet fra listen, så den kan ryddes væk igen
+  // hvis man fortryder uden at give den navn.
+  nyOprettet?: boolean;
 }
 
 // Felter tilføjet efter de første items blev oprettet kan mangle på gamle poster.
@@ -33,7 +36,7 @@ function medStandardfelter(item: Item): Item {
   };
 }
 
-function ItemDetalje({ itemId, tilbage }: Props) {
+function ItemDetalje({ itemId, tilbage, nyOprettet }: Props) {
   const [garantiAaben, setGarantiAaben] = useState(false);
 
   const { post: item, opdater } = useRedigerbar(db.items, itemId, opdaterItem, {
@@ -60,13 +63,28 @@ function ItemDetalje({ itemId, tilbage }: Props) {
     }
   };
 
+  // Et navnløst item kan hverken findes eller bruges, så en netop oprettet
+  // post man forlader uden at navngive, ryddes væk igen. Gælder kun poster
+  // oprettet i denne omgang — et eksisterende item slettes aldrig af sig selv.
+  const gaaTilbage = async () => {
+    if (nyOprettet && item?.id !== undefined && !item.navn.trim()) {
+      await sletItem(item.id);
+    }
+    tilbage();
+  };
+
   if (!item) return <Indlaeser />;
 
   return (
     <div style={layout.container}>
-      <DetaljeHeader tilbage={tilbage} sletLabel="Slet" slet={slet} />
+      <DetaljeHeader tilbage={gaaTilbage} sletLabel="Slet" slet={slet} />
 
-      <TitelInput value={item.navn} onChange={(v) => opdater({ navn: v })} />
+      <TitelInput
+        value={item.navn}
+        onChange={(v) => opdater({ navn: v })}
+        placeholder="Navn på gear"
+        autoFokus={nyOprettet}
+      />
 
       <div style={{ marginBottom: '24px' }}>
         <Segment vaerdier={ITEM_STATUS} valgt={item.status} vaelg={(s) => opdater({ status: s })} />

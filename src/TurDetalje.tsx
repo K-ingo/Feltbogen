@@ -32,12 +32,14 @@ import { useRedigerbar } from './useRedigerbar';
 interface Props {
   turId: number;
   tilbage: () => void;
+  // Sat når turen netop er oprettet, så en navnløs post kan ryddes væk igen.
+  nyOprettet?: boolean;
 }
 
 type Sektion = 'oversigt' | 'pakkeliste' | 'deltagere' | 'budget';
 const SEKTIONER: readonly Sektion[] = ['oversigt', 'pakkeliste', 'deltagere', 'budget'];
 
-function TurDetalje({ turId, tilbage }: Props) {
+function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   const [aktivSektion, setAktivSektion] = useState<Sektion>('oversigt');
   const [vejrData, setVejrData] = useState<VejrData | null>(null);
   const [vejrHentes, setVejrHentes] = useState(false);
@@ -137,6 +139,15 @@ function TurDetalje({ turId, tilbage }: Props) {
     }
   };
 
+  // En navnløs tur kan ikke findes igen, så en netop oprettet post man
+  // forlader uden navn, ryddes væk. Eksisterende ture røres aldrig.
+  const gaaTilbage = async () => {
+    if (nyOprettet && tur?.id !== undefined && !tur.navn.trim()) {
+      await sletTur(tur.id);
+    }
+    tilbage();
+  };
+
   const toggleGruppe = async (gruppeUid: string) => {
     if (!tur) return;
     await opdater({ gruppe_ids: vekslet(tur.gruppe_ids, gruppeUid) });
@@ -212,9 +223,14 @@ function TurDetalje({ turId, tilbage }: Props) {
 
   return (
     <div style={layout.container}>
-      <DetaljeHeader tilbage={tilbage} sletLabel="Slet tur" slet={slet} />
+      <DetaljeHeader tilbage={gaaTilbage} sletLabel="Slet tur" slet={slet} />
 
-      <TitelInput value={tur.navn} onChange={(v) => opdater({ navn: v })} />
+      <TitelInput
+        value={tur.navn}
+        onChange={(v) => opdater({ navn: v })}
+        placeholder="Navn på tur"
+        autoFokus={nyOprettet}
+      />
 
       <div style={{ marginBottom: '20px' }}>
         <Segment vaerdier={TUR_STATUS} valgt={tur.status} vaelg={(s) => opdater({ status: s })} kompakt />
