@@ -4,7 +4,7 @@ vi.mock('./pb', () => import('./test/pbMock'));
 
 import { db } from './db';
 import { pbMock } from './test/pbMock';
-import { opretItem, opretGruppe, hentFraPocketBase, sendAltUsendt } from './sync';
+import { opretItem, opretGruppe, hentFraPocketBase, sendAltUsendt, fjernDubletter } from './sync';
 import { itemsPaaTur } from './smartMotor';
 import { lavItem, lavGruppe, lavTur } from './test/data';
 
@@ -139,5 +139,127 @@ describe('uid tildeles ved oprettelse', () => {
 
     const gemt = (await db.ture.toArray())[0];
     expect(gemt.deltagere[0].personligt_gear_ids).toEqual(['uid-sovepose']);
+  });
+});
+
+// PocketBase dropper lydløst felter der ikke findes i samlingens skema. Har
+// samlingen intet uid-felt, kom posten tilbage med et andet uid end det
+// lokale — og blev hentet ned igen som en dublet ved hver opstart.
+describe('samling uden uid-felt i PocketBase', () => {
+  it('henter ikke sine egne poster ned igen som dubletter', async () => {
+    pbMock.udenUidFelt = true;
+
+    await opretItem(lavItem({ navn: 'Test1' }));
+    await opretItem(lavItem({ navn: 'Test2' }));
+    await opretItem(lavItem({ navn: 'Test3' }));
+
+    await hentFraPocketBase();
+
+    const navne = (await db.items.toArray()).map((i) => i.navn).sort();
+    expect(navne).toEqual(['Test1', 'Test2', 'Test3']);
+  });
+
+  it('dubler heller ikke ved gentagne opstarter', async () => {
+    pbMock.udenUidFelt = true;
+    await opretItem(lavItem({ navn: 'Kun én' }));
+
+    await hentFraPocketBase();
+    await hentFraPocketBase();
+    await hentFraPocketBase();
+
+    expect(await db.items.count()).toBe(1);
+  });
+
+  it('gælder også ture og grupper', async () => {
+    pbMock.udenUidFelt = true;
+    await opretGruppe(lavGruppe({ navn: 'Køkken' }));
+
+    await hentFraPocketBase();
+
+    expect(await db.grupper.count()).toBe(1);
+  });
+});
+
+// Dubletterne der allerede er opstået skal ryddes op, uden at originalen på
+// serveren forsvinder: begge lokale poster peger på samme record.
+describe('oprydning af eksisterende dubletter', () => {
+  it('fjerner dubletten lokalt og beholder den ældste', async () => {
+    pbMock.udenUidFelt = true;
+    await opretItem(lavItem({ navn: 'Test1' }));
+    const original = (await db.items.toArray())[0];
+
+    // Sådan så basen ud efter fejlen: samme pb_id, andet uid.
+    await db.items.add(lavItem({ navn: 'Test1', uid: original.pb_id!, pb_id: original.pb_id }));
+    expect(await db.items.count()).toBe(2);
+
+    const fjernet = await fjernDubletter();
+
+    expect(fjernet).toBe(1);
+    const tilbage = await db.items.toArray();
+    expect(tilbage).toHaveLength(1);
+    expect(tilbage[0].uid).toBe(original.uid);
+  });
+
+  it('rører ikke posten i PocketBase', async () => {
+    pbMock.udenUidFelt = true;
+    await opretItem(lavItem({ navn: 'Test1' }));
+    const original = (await db.items.toArray())[0];
+    await db.items.add(lavItem({ navn: 'Test1', uid: original.pb_id!, pb_id: original.pb_id }));
+
+    await fjernDubletter();
+
+    // Begge lokale poster pegede på samme record — den skal stadig være der.
+    expect(pbMock.ids('items')).toEqual([original.pb_id]);
+    expect(await db.slettede.count()).toBe(0);
+  });
+
+  it('flytter gruppens reference over på den post der blev beholdt', async () => {
+    pbMock.udenUidFelt = true;
+    await opretItem(lavItem({ navn: 'Gryde' }));
+    const original = (await db.items.toArray())[0];
+    const dubletUid = original.pb_id!;
+    await db.items.add(lavItem({ navn: 'Gryde', uid: dubletUid, pb_id: original.pb_id }));
+
+    // Gruppen kom til at pege på dubletten.
+    await db.grupper.add(lavGruppe({ navn: 'Køkken', item_ids: [dubletUid] }));
+
+    await fjernDubletter();
+
+    const gruppe = (await db.grupper.toArray())[0];
+    expect(gruppe.item_ids).toEqual([original.uid]);
+  });
+
+  it('flytter også turens referencer og deltagernes gear', async () => {
+    pbMock.udenUidFelt = true;
+    await opretItem(lavItem({ navn: 'Sovepose' }));
+    const original = (await db.items.toArray())[0];
+    const dubletUid = original.pb_id!;
+    await db.items.add(lavItem({ navn: 'Sovepose', uid: dubletUid, pb_id: original.pb_id }));
+
+    await db.ture.add(lavTur({
+      loese_item_ids: [dubletUid],
+      deltagere: [{ id: 'd1', navn: 'Emil', overnatning: null, personligt_gear_ids: [dubletUid], baerer_delt_ids: [] }]
+    }));
+
+    await fjernDubletter();
+
+    const tur = (await db.ture.toArray())[0];
+    expect(tur.loese_item_ids).toEqual([original.uid]);
+    expect(tur.deltagere[0].personligt_gear_ids).toEqual([original.uid]);
+  });
+
+  it('gør ingenting når der ikke er dubletter', async () => {
+    await opretItem(lavItem({ navn: 'Alene' }));
+    expect(await fjernDubletter()).toBe(0);
+    expect(await db.items.count()).toBe(1);
+  });
+
+  it('rører ikke poster der kun findes lokalt', async () => {
+    pbMock.offline = true;
+    await opretItem(lavItem({ navn: 'Uden pb_id A' }));
+    await opretItem(lavItem({ navn: 'Uden pb_id B' }));
+
+    expect(await fjernDubletter()).toBe(0);
+    expect(await db.items.count()).toBe(2);
   });
 });

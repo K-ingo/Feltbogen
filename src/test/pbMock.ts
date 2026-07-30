@@ -6,6 +6,9 @@ import { vi } from 'vitest';
 export interface PbMock {
   records: Map<string, Map<string, Record<string, unknown>>>;
   offline: boolean;
+  // Efterligner en samling uden uid-felt i skemaet: PocketBase dropper
+  // lydløst felter den ikke kender.
+  udenUidFelt: boolean;
   kald: { metode: string; samling: string; id?: string }[];
   reset(): void;
   seed(samling: string, id: string, data?: Record<string, unknown>): void;
@@ -26,11 +29,13 @@ function samlingAf(mock: PbMock, navn: string) {
 export const pbMock: PbMock = {
   records: new Map(),
   offline: false,
+  udenUidFelt: false,
   kald: [],
 
   reset() {
     this.records = new Map();
     this.offline = false;
+    this.udenUidFelt = false;
     this.kald = [];
     naesteId = 1;
     blokering = null;
@@ -89,7 +94,7 @@ export const pb = {
       pbMock.kald.push({ metode: 'create', samling: navn });
       kraevOnline();
       const id = `pb${naesteId++}`;
-      const record = { id, created: '2026-07-01 10:00:00Z', updated: '2026-07-01 10:00:00Z', ...data };
+      const record = { id, created: '2026-07-01 10:00:00Z', updated: '2026-07-01 10:00:00Z', ...gemtData(data) };
       samlingAf(pbMock, navn).set(id, record);
       return record;
     },
@@ -107,7 +112,7 @@ export const pb = {
 
       const eksisterende = samlingAf(pbMock, navn).get(id);
       if (!eksisterende) throw ikkeFundet();
-      const record = { ...eksisterende, ...data, id };
+      const record = { ...eksisterende, ...gemtData(data), id };
       samlingAf(pbMock, navn).set(id, record);
       return record;
     },
@@ -121,6 +126,14 @@ export const pb = {
     }
   })
 };
+
+// Felter uden for skemaet forsvinder, præcis som i PocketBase.
+function gemtData(data: Record<string, unknown>): Record<string, unknown> {
+  if (!pbMock.udenUidFelt) return data;
+  const { uid, ...resten } = data;
+  void uid;
+  return resten;
+}
 
 function ikkeFundet() {
   const fejl = new Error("The requested resource wasn't found.") as Error & { status: number };

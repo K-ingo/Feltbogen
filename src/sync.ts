@@ -433,9 +433,16 @@ async function hent<T extends Post>(samling: Samling<T>, brugerId: string): Prom
   });
 
   const lokale = await samling.tabel.toArray();
-  // uid er postens identitet. Bruger vi pb_id, ville en post oprettet offline
-  // og allerede sendt op blive hentet ned igen som en dublet.
-  const kendte = new Set(lokale.map((p) => p.uid));
+
+  // En post kendes på to måder, og begge skal tælle.
+  //
+  // uid er identiteten på tværs af enheder. Men mangler uid-feltet i
+  // PocketBase-skemaet, dropper serveren det lydløst, og posten kommer retur
+  // med record-id'et som uid — et andet end det lokale. Uden også at matche
+  // på pb_id blev ens egne poster derfor hentet ned igen som dubletter ved
+  // hver opstart.
+  const kendteUid = new Set(lokale.map((p) => p.uid));
+  const kendtePbId = new Set(lokale.map((p) => p.pb_id).filter(Boolean));
 
   // Poster vi har slettet lokalt må ikke hentes tilbage, selvom de stadig
   // ligger på serveren fordi sletningen ikke er nået op endnu.
@@ -443,8 +450,9 @@ async function hent<T extends Post>(samling: Samling<T>, brugerId: string): Prom
   const slettedePbIds = new Set(slettede.map((s) => s.pb_id));
 
   const nye = records
+    .filter((r) => !kendtePbId.has(r.id) && !slettedePbIds.has(r.id))
     .map((r) => samling.fraPb(r))
-    .filter((p) => !kendte.has(p.uid) && !slettedePbIds.has(p.pb_id as string));
+    .filter((p) => !kendteUid.has(p.uid));
 
   if (nye.length > 0) await samling.tabel.bulkAdd(nye);
 }
@@ -519,6 +527,94 @@ export async function hentFraPocketBase(): Promise<void> {
   }
 }
 
+// ─────────────────────────────────────────────
+// Oprydning efter dublet-fejlen
+// Manglede uid-feltet i PocketBase-skemaet, blev ens egne poster hentet ned
+// igen med et andet uid. Resultatet er to lokale poster der peger på samme
+// record deroppe. Den ældste beholdes, og referencer flyttes med.
+// ─────────────────────────────────────────────
+
+async function fjernDubletterI<T extends Post>(samling: Samling<T>): Promise<Map<Reference, Reference>> {
+  const efterPbId = new Map<string, T[]>();
+  for (const post of await samling.tabel.toArray()) {
+    if (!post.pb_id) continue;
+    efterPbId.set(post.pb_id, [...(efterPbId.get(post.pb_id) ?? []), post]);
+  }
+
+  const omdoeb = new Map<Reference, Reference>();
+  const slettes: number[] = [];
+
+  for (const poster of efterPbId.values()) {
+    if (poster.length < 2) continue;
+
+    // Lavest lokalt id er den man selv oprettede; resten er kopier hentet ned.
+    const [beholdt, ...dubletter] = [...poster].sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
+    for (const dublet of dubletter) {
+      if (dublet.id !== undefined) slettes.push(dublet.id);
+      omdoeb.set(dublet.uid, beholdt.uid);
+    }
+  }
+
+  // Kun lokalt. Begge poster peger på samme record i PocketBase, så en
+  // sletning deroppe ville fjerne originalen.
+  if (slettes.length > 0) await samling.tabel.bulkDelete(slettes);
+  return omdoeb;
+}
+
+// Flytter referencer fra en fjernet dublet over på den post der blev beholdt,
+// så en gruppe ikke ender med at pege på gear der ikke findes mere.
+async function flytReferencer(omdoeb: Map<Reference, Reference>): Promise<void> {
+  if (omdoeb.size === 0) return;
+  const flyt = (uids: Reference[]) => uids.map((u) => omdoeb.get(u) ?? u);
+  const aendret = (foer: Reference[], efter: Reference[]) => foer.some((u, i) => u !== efter[i]);
+
+  for (const gruppe of await db.grupper.toArray()) {
+    const nye = flyt(gruppe.item_ids);
+    if (gruppe.id !== undefined && aendret(gruppe.item_ids, nye)) {
+      await db.grupper.update(gruppe.id, { item_ids: nye });
+    }
+  }
+
+  for (const tur of await db.ture.toArray()) {
+    const grupper = flyt(tur.gruppe_ids);
+    const loese = flyt(tur.loese_item_ids);
+    const deltagere = tur.deltagere.map((d) => ({
+      ...d,
+      personligt_gear_ids: flyt(d.personligt_gear_ids),
+      baerer_delt_ids: flyt(d.baerer_delt_ids)
+    }));
+
+    const roert = aendret(tur.gruppe_ids, grupper)
+      || aendret(tur.loese_item_ids, loese)
+      || tur.deltagere.some((d, i) =>
+        aendret(d.personligt_gear_ids, deltagere[i].personligt_gear_ids)
+        || aendret(d.baerer_delt_ids, deltagere[i].baerer_delt_ids));
+
+    if (tur.id !== undefined && roert) {
+      await db.ture.update(tur.id, { gruppe_ids: grupper, loese_item_ids: loese, deltagere });
+    }
+  }
+}
+
+// Kører ved hver afstemning. Er der ingen dubletter, gør den ingenting.
+export async function fjernDubletter(): Promise<number> {
+  const omdoeb = new Map<Reference, Reference>();
+  let fjernet = 0;
+
+  for (const kort of [
+    await fjernDubletterI(itemSamling),
+    await fjernDubletterI(gruppeSamling),
+    await fjernDubletterI(turSamling)
+  ]) {
+    fjernet += kort.size;
+    kort.forEach((til, fra) => omdoeb.set(fra, til));
+  }
+
+  await flytReferencer(omdoeb);
+  if (fjernet > 0) console.log(`Ryddede ${fjernet} dubletter op`);
+  return fjernet;
+}
+
 let igangvaerendeAfstemning: Promise<void> | null = null;
 
 // Bringer lokalt og server-side på linje: send det usendte op, hent det vi
@@ -529,6 +625,7 @@ export function afstemMedServer(): Promise<void> {
   // oprette samme post to gange i PocketBase.
   igangvaerendeAfstemning ??= (async () => {
     try {
+      await fjernDubletter();
       await sendAltUsendt();
       await hentFraPocketBase();
     } finally {
