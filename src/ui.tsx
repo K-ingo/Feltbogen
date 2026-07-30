@@ -382,6 +382,77 @@ export function TomListe({ children }: { children: ReactNode }) {
   );
 }
 
+interface FeltkortProps {
+  label: string;
+  value: string | number;
+  onChange: (v: string) => void;
+  type?: string;
+  // Vises efter værdien, fx "g" eller "kr".
+  enhed?: string;
+  placeholder?: string;
+}
+
+// Et felt vist som kort med etiketten over værdien. Værdien er stadig et
+// input — hverdagsfelter redigeres inline, jf. fundamentets §13.
+export function Feltkort({ label, value, onChange, type = 'text', enhed, placeholder }: FeltkortProps) {
+  return (
+    <div style={{
+      border: '1px solid var(--border-svag)',
+      borderRadius: '10px',
+      padding: '10px 12px',
+      background: 'var(--bg-forhoejet)'
+    }}>
+      <div style={{ ...feltkortEtiket }}>{label}</div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px' }}>
+        <input
+          type={type}
+          value={value}
+          placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)}
+          style={{
+            border: 'none',
+            background: 'transparent',
+            padding: 0,
+            fontSize: '16px',
+            width: '100%',
+            minWidth: 0,
+            color: 'var(--tekst)'
+          }}
+        />
+        {enhed && <span style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)' }}>{enhed}</span>}
+      </div>
+    </div>
+  );
+}
+
+const feltkortEtiket: CSSProperties = {
+  fontSize: '10px',
+  color: 'var(--tekst-dæmpet)',
+  textTransform: 'uppercase',
+  letterSpacing: '0.6px',
+  fontWeight: 600,
+  marginBottom: '3px'
+};
+
+// Kort med en overskrift og frit indhold — købsinfo, brugsstatistik osv.
+export function Infokort({ label, fremhaevet, children }: {
+  label: string;
+  fremhaevet?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div style={{
+      border: `1px solid ${fremhaevet ? 'var(--accent-border)' : 'var(--border-svag)'}`,
+      borderRadius: '10px',
+      padding: '12px',
+      background: fremhaevet ? 'var(--accent-bg)' : 'var(--bg-forhoejet)'
+    }}>
+      <div style={feltkortEtiket}>{label}</div>
+      {children}
+    </div>
+  );
+}
+
 interface TitelInputProps {
   value: string;
   onChange: (v: string) => void;

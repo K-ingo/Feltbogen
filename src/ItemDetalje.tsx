@@ -1,9 +1,14 @@
 import { useState } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { db, ITEM_STATUS } from './db';
-import type { Item, Garanti } from './db';
+import type { Item, Tur, Garanti } from './db';
 import TagsInput from './TagsInput';
+import { turePrItem } from './statistik';
+import { garantiAdvarsel } from './smartMotor';
 import {
   Felt,
+  Feltkort,
+  Infokort,
   Kort,
   SektionsTitel,
   Segment,
@@ -43,6 +48,9 @@ function ItemDetalje({ itemId, tilbage, nyOprettet }: Props) {
     normaliser: medStandardfelter
   });
 
+  const ture = useLiveQuery(() => db.ture.toArray()) ?? [];
+  const grupper = useLiveQuery(() => db.grupper.toArray()) ?? [];
+
   const opdaterGaranti = async (aendringer: Partial<Garanti>) => {
     if (!item) return;
     await opdater({
@@ -75,6 +83,9 @@ function ItemDetalje({ itemId, tilbage, nyOprettet }: Props) {
 
   if (!item) return <Indlaeser />;
 
+  const turePaaItem = turePrItem(ture, grupper).get(item.uid) ?? [];
+  const advarsel = garantiAdvarsel(item);
+
   return (
     <div style={layout.container}>
       <DetaljeHeader tilbage={gaaTilbage} sletLabel="Slet" slet={slet} />
@@ -90,30 +101,32 @@ function ItemDetalje({ itemId, tilbage, nyOprettet }: Props) {
         <Segment vaerdier={ITEM_STATUS} valgt={item.status} vaelg={(s) => opdater({ status: s })} />
       </div>
 
-      <div style={{ display: 'grid', gap: '14px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-          <Felt label="Vægt (gram)" type="number" value={item.vaegt_g} onChange={(v) => opdater({ vaegt_g: Number(v) || 0 })} />
-          <Felt label="Pris (kr)" type="number" value={item.pris_kr} onChange={(v) => opdater({ pris_kr: Number(v) || 0 })} />
+      {advarsel && (
+        <div style={{
+          padding: '10px 12px',
+          marginBottom: '14px',
+          background: 'var(--advarsel-bg)',
+          border: '1px solid var(--advarsel-border)',
+          borderRadius: '10px',
+          fontSize: '12px',
+          color: 'var(--advarsel)',
+          fontWeight: 500
+        }}>
+          ⚠ {advarsel}
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-          <Felt label="Antal" type="number" value={item.antal} onChange={(v) => opdater({ antal: Number(v) || 1 })} />
-          <Felt label="Dimensioner" value={item.dimensioner} onChange={(v) => opdater({ dimensioner: v })} placeholder="ø 33 × 15 cm" />
+      )}
+
+      <div style={{ display: 'grid', gap: '14px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
+          <Feltkort label="Vægt" type="number" enhed="g" value={item.vaegt_g} onChange={(v) => opdater({ vaegt_g: Number(v) || 0 })} />
+          <Feltkort label="Pris" type="number" enhed="kr" value={item.pris_kr} onChange={(v) => opdater({ pris_kr: Number(v) || 0 })} />
+          <Feltkort label="Antal" type="number" value={item.antal} onChange={(v) => opdater({ antal: Number(v) || 1 })} />
+          <DeltKort delt={item.delt} skift={(v) => opdater({ delt: v })} />
         </div>
 
-        <Kort fremhaevet style={{ padding: '12px 14px' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={item.delt}
-              onChange={(e) => opdater({ delt: e.target.checked })}
-              style={{ width: 'auto' }}
-            />
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: 500 }}>Delt gear</div>
-              <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>Bæres af én, bruges af flere</div>
-            </div>
-          </label>
-        </Kort>
+        <Feltkort label="Dimensioner" value={item.dimensioner} onChange={(v) => opdater({ dimensioner: v })} placeholder="ø 33 × 15 cm" />
+
+        <Brugsstatistik ture={turePaaItem} />
 
         <div style={{ height: '4px' }} />
         <SektionsTitel>Kompatibilitet</SektionsTitel>
@@ -205,6 +218,80 @@ function ItemDetalje({ itemId, tilbage, nyOprettet }: Props) {
       </div>
     </div>
   );
+}
+
+// Delt gear er et ja/nej, ikke et tal — men det hører hjemme i samme række
+// kort som vægt og pris, så det får samme form.
+function DeltKort({ delt, skift }: { delt: boolean; skift: (v: boolean) => void }) {
+  return (
+    <div style={{
+      border: '1px solid var(--border-svag)',
+      borderRadius: '10px',
+      padding: '10px 12px',
+      background: 'var(--bg-forhoejet)'
+    }}>
+      <div style={{ fontSize: '10px', color: 'var(--tekst-dæmpet)', textTransform: 'uppercase', letterSpacing: '0.6px', fontWeight: 600, marginBottom: '3px' }}>
+        Delt?
+      </div>
+      <button
+        onClick={() => skift(!delt)}
+        title="Delt gear bæres af én, men bruges af flere"
+        style={{
+          border: 'none',
+          background: 'transparent',
+          padding: 0,
+          fontSize: '16px',
+          cursor: 'pointer',
+          color: delt ? 'var(--accent)' : 'var(--tekst)',
+          fontWeight: delt ? 600 : 400
+        }}
+      >
+        {delt ? 'Ja' : 'Nej'}
+      </button>
+    </div>
+  );
+}
+
+// Hvor meget gearet reelt bliver brugt. Uden turhistorik står der ingenting at
+// bygge på, så kortet siger det ligeud frem for at vise nuller.
+function Brugsstatistik({ ture }: { ture: Tur[] }) {
+  const seneste = ture.find((t) => t.startdato);
+
+  return (
+    <Infokort label="Brugsstatistik" fremhaevet={ture.length > 0}>
+      {ture.length === 0 ? (
+        <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)' }}>
+          Har ikke været med på en tur endnu.
+        </div>
+      ) : (
+        <>
+          <div style={{ fontSize: '15px', color: 'var(--tekst)' }}>
+            <strong>{ture.length} {ture.length === 1 ? 'tur' : 'ture'}</strong>
+            {seneste && ` · senest ${formatterDato(seneste.startdato)}`}
+          </div>
+          <div style={{ marginTop: '8px', display: 'grid', gap: '4px' }}>
+            {ture.slice(0, 3).map((t) => (
+              <div key={t.uid} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--tekst-dæmpet)' }}>
+                <span>{t.navn || 'Uden navn'}</span>
+                <span>{t.startdato ? formatterDato(t.startdato) : '—'}</span>
+              </div>
+            ))}
+            {ture.length > 3 && (
+              <div style={{ fontSize: '11px', color: 'var(--tekst-svag)' }}>
+                + {ture.length - 3} tidligere
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </Infokort>
+  );
+}
+
+function formatterDato(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString('da-DK', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 export default ItemDetalje;
