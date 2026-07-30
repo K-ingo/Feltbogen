@@ -382,12 +382,22 @@ export function TomListe({ children }: { children: ReactNode }) {
   );
 }
 
+interface TitelInputProps {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  // Sættes når posten lige er oprettet, så man kan skrive med det samme.
+  autoFokus?: boolean;
+}
+
 // Navnet på en post, redigerbart direkte i overskriften.
-export function TitelInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+export function TitelInput({ value, onChange, placeholder, autoFokus }: TitelInputProps) {
   return (
     <input
       value={value}
       onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      autoFocus={autoFokus}
       style={{
         fontFamily: "'Fraunces', Georgia, serif",
         fontSize: '26px',

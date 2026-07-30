@@ -7,12 +7,12 @@ import { sidstBrugtPrItem, grupperPrItem } from './statistik';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
 import { useErDesktop } from './useMedie';
-import { Knap, Kort, TagChips, ListeRaekke, TomListe, Label } from './ui';
+import { Knap, TagChips, ListeRaekke, TomListe } from './ui';
 
 interface Props {
   fane: Fane;
   skift: (f: Fane) => void;
-  aabnItem: (id: number) => void;
+  aabnItem: (id: number, nyOprettet?: boolean) => void;
 }
 
 // Ejer og Overvejer er to forskellige lister i hovedet på brugeren, så de er
@@ -33,7 +33,6 @@ function InventarSide({ fane, skift, aabnItem }: Props) {
   const [soegning, setSoegning] = useState('');
   const [valgtTag, setValgtTag] = useState<string | null>(null);
   const [alleTagsVist, setAlleTagsVist] = useState(false);
-  const [opretAaben, setOpretAaben] = useState(false);
 
   const items = useLiveQuery(() => db.items.toArray()) ?? [];
   const grupper = useLiveQuery(() => db.grupper.toArray()) ?? [];
@@ -65,26 +64,42 @@ function InventarSide({ fane, skift, aabnItem }: Props) {
     setValgtTag(null);
   };
 
+  // Opretter et tomt item og går direkte ind i det, så al redigering sker ét
+  // sted. Forlader man det uden navn, rydder ItemDetalje det væk igen.
+  const nytItem = async () => {
+    const nu = new Date();
+    const id = await opretItem({
+      navn: '',
+      vaegt_g: 0,
+      pris_kr: 0,
+      dimensioner: '',
+      antal: 1,
+      delt: false,
+      status: valgtStatus,
+      tags: [],
+      kraever: [],
+      komplementer: [],
+      koebt_hos: '',
+      koebsdato: '',
+      koebslink: '',
+      ordrenummer: '',
+      garanti: null,
+      noter: '',
+      oprettet: nu,
+      aendret: nu
+    });
+    aabnItem(id, true);
+  };
+
   return (
     <Skal
       fane={fane}
       skift={skift}
       titel="Inventar"
       undertitel={`${iStatus.length} items · ${vaerdiIStatus.toLocaleString('da-DK')} kr`}
-      handlinger={
-        <Knap variant="primaer" onClick={() => setOpretAaben(!opretAaben)}>
-          + Nyt item
-        </Knap>
-      }
-      fab={() => setOpretAaben(true)}
+      handlinger={<Knap variant="primaer" onClick={nytItem}>+ Nyt item</Knap>}
+      fab={nytItem}
     >
-      {opretAaben && (
-        <OpretItem
-          luk={() => setOpretAaben(false)}
-          status={valgtStatus}
-        />
-      )}
-
       <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
         {FANEBLADE.map(({ status, label }) => (
           <button
@@ -283,67 +298,6 @@ function formatterDato(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
   return d.toLocaleDateString('da-DK', { day: 'numeric', month: 'short' });
-}
-
-function OpretItem({ luk, status }: { luk: () => void; status: ItemStatus }) {
-  const [navn, setNavn] = useState('');
-  const [vaegt, setVaegt] = useState('');
-  const [pris, setPris] = useState('');
-
-  const gem = async () => {
-    if (!navn.trim()) return;
-    const nu = new Date();
-    await opretItem({
-      navn: navn.trim(),
-      vaegt_g: Number(vaegt) || 0,
-      pris_kr: Number(pris) || 0,
-      dimensioner: '',
-      antal: 1,
-      delt: false,
-      status,
-      tags: [],
-      kraever: [],
-      komplementer: [],
-      koebt_hos: '',
-      koebsdato: '',
-      koebslink: '',
-      ordrenummer: '',
-      garanti: null,
-      noter: '',
-      oprettet: nu,
-      aendret: nu
-    });
-    luk();
-  };
-
-  return (
-    <Kort fremhaevet style={{ marginBottom: '16px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-        <Label>Nyt item</Label>
-        <button
-          onClick={luk}
-          aria-label="Luk"
-          style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '16px', color: 'var(--tekst-dæmpet)' }}
-        >
-          ×
-        </button>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <input
-          autoFocus
-          placeholder="Navn (fx Toaks 1L gryde)"
-          value={navn}
-          onChange={(e) => setNavn(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && gem()}
-        />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-          <input placeholder="Vægt (gram)" type="number" value={vaegt} onChange={(e) => setVaegt(e.target.value)} />
-          <input placeholder="Pris (kr)" type="number" value={pris} onChange={(e) => setPris(e.target.value)} />
-        </div>
-        <Knap variant="primaer" onClick={gem}>Tilføj</Knap>
-      </div>
-    </Kort>
-  );
 }
 
 export default InventarSide;
