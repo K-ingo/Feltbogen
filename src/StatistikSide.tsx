@@ -1,20 +1,29 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
-import { Kort, SektionsTitel, Segment } from './ui';
+import type { Item } from './db';
+import { Segment } from './ui';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
+import { useErDesktop } from './useMedie';
 import {
   filtrererTure,
   samletInventarvaerdi,
   samletVaegt,
-  antalItems,
+  antalPrStatus,
+  vaerditilvaekst,
   tureFordeltPrMaaned,
   mestBrugte,
   ubrugteItems,
   fordelingPrGruppe
 } from './statistik';
 import type { Periode } from './statistik';
+
+interface Props {
+  fane: Fane;
+  skift: (f: Fane) => void;
+  aabnItem: (id: number, nyOprettet?: boolean) => void;
+}
 
 const PERIODER: readonly Periode[] = ['i_aar', 'sidste_aar', 'alt'];
 const PERIODE_LABEL: Record<Periode, string> = {
@@ -23,179 +32,360 @@ const PERIODE_LABEL: Record<Periode, string> = {
   alt: 'Alt'
 };
 
-const MAANEDER = ['Jan', 'Feb', 'Mar', 'Apr', 'Maj', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec'];
+const MAANEDER = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+// Kun hver tredje måned får en etiket — tolv navne under en søjlegraf på en
+// telefon bliver til grød.
+const MAANED_ETIKETTER = [0, 3, 6, 9, 11];
 
-// Genbruges af de widgets der har en lille overskrift over et nøgletal.
-const widgetTitelStil = {
-  fontSize: '11px',
-  color: 'var(--tekst-dæmpet)',
-  textTransform: 'uppercase',
-  letterSpacing: '0.5px'
-} as const;
+const MAKS_MEST_BRUGTE = 5;
 
-interface Props {
-  fane: Fane;
-  skift: (f: Fane) => void;
-}
-
-function StatistikSide({ fane, skift }: Props) {
+function StatistikSide({ fane, skift, aabnItem }: Props) {
+  const erDesktop = useErDesktop();
   const [periode, setPeriode] = useState<Periode>('i_aar');
 
   const items = useLiveQuery(() => db.items.toArray()) ?? [];
   const alleTure = useLiveQuery(() => db.ture.toArray()) ?? [];
   const grupper = useLiveQuery(() => db.grupper.toArray()) ?? [];
 
+  const nu = new Date();
   const ture = filtrererTure(alleTure, periode);
 
-  const inventarvaerdi = samletInventarvaerdi(items);
-  const totalVaegt = samletVaegt(items);
-  const totalItems = antalItems(items);
-  const tureMaaneder = tureFordeltPrMaaned(ture);
-  const maxMaaned = Math.max(...tureMaaneder, 1);
-  const topBrugt = mestBrugte(items, ture, grupper, 5);
+  const antal = antalPrStatus(items);
+  const topBrugt = mestBrugte(items, ture, grupper, MAKS_MEST_BRUGTE);
+  // Ubrugt måles altid mod hele turhistorikken — et snævrere vindue ville
+  // udråbe gear som ubrugt bare fordi man kigger på et enkelt år.
   const ubrugt = ubrugteItems(items, alleTure, grupper);
   const gruppeFordeling = fordelingPrGruppe(items, grupper);
 
+  // "I år" sammenlignes med sidste år, "sidste år" med året før. Under "alt"
+  // er der ikke noget at sammenligne med.
+  const aar = periode === 'sidste_aar' ? nu.getFullYear() - 1 : nu.getFullYear();
+  const tilvaekst = periode === 'alt' ? null : vaerditilvaekst(items, aar);
+
+  if (items.length === 0 && alleTure.length === 0) {
+    return (
+      <Skal fane={fane} skift={skift} titel="Statistik">
+        <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--tekst-svag)', fontSize: '13px' }}>
+          Ingen tal endnu. Tilføj gear under Inventar, så begynder det at fylde her.
+        </div>
+      </Skal>
+    );
+  }
+
   return (
-    <Skal fane={fane} skift={skift} titel="Statistik">
-      <div style={{ marginBottom: '20px' }}>
-        <Segment
-          vaerdier={PERIODER}
-          valgt={periode}
-          vaelg={(p) => setPeriode(p)}
-          formater={(p) => PERIODE_LABEL[p]}
-        />
-      </div>
+    <Skal
+      fane={fane}
+      skift={skift}
+      titel="Statistik"
+      handlinger={
+        <Segment vaerdier={PERIODER} valgt={periode} vaelg={(p) => setPeriode(p)} formater={(p) => PERIODE_LABEL[p]} kompakt />
+      }
+    >
+      {!erDesktop && (
+        <div style={{ marginBottom: '14px' }}>
+          <Segment vaerdier={PERIODER} valgt={periode} vaelg={(p) => setPeriode(p)} formater={(p) => PERIODE_LABEL[p]} kompakt />
+        </div>
+      )}
 
-      <div style={{ display: 'grid', gap: '14px' }}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: erDesktop ? 'repeat(2, minmax(0, 1fr))' : '1fr',
+        gap: '10px',
+        alignItems: 'start'
+      }}>
+        <Widget titel={`Ture ${PERIODE_LABEL[periode].toLowerCase()} — månedligt`} bred={erDesktop}>
+          <Maanedsgraf
+            maaneder={tureFordeltPrMaaned(ture)}
+            // Måneder der ikke er kommet endnu står dæmpet, så en tom søjle
+            // ikke ser ud som en måned man ikke kom afsted i.
+            fremtidFra={periode === 'i_aar' ? nu.getMonth() + 1 : 12}
+            antal={ture.length}
+          />
+        </Widget>
 
-        <Kort fremhaevet>
-          <div style={{ ...widgetTitelStil, marginBottom: '6px' }}>Samlet inventarværdi</div>
-          <div style={{ fontSize: '28px', fontWeight: 500, fontFamily: "'Fraunces', Georgia, serif" }}>
-            {inventarvaerdi.toLocaleString('da-DK')} <span style={{ fontSize: '16px', color: 'var(--tekst-dæmpet)' }}>kr</span>
-          </div>
-          <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginTop: '4px' }}>
-            {totalItems} items · {(totalVaegt / 1000).toFixed(2)} kg
-          </div>
-        </Kort>
+        <Widget titel="Inventarværdi">
+          <Tal vaerdi={kroner(samletInventarvaerdi(items))} enhed="kr" />
+          <Undertekst>{tilvaekstTekst(tilvaekst, periode, samletVaegt(items))}</Undertekst>
+        </Widget>
 
-        <Kort fremhaevet>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '10px' }}>
-            <div style={widgetTitelStil}>Ture</div>
-            <div style={{ fontSize: '22px', fontWeight: 500, fontFamily: "'Fraunces', Georgia, serif" }}>
-              {ture.length}
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'end', gap: '3px', height: '40px', marginTop: '8px' }}>
-            {tureMaaneder.map((antal, i) => (
-              <div
-                key={i}
-                style={{
-                  flex: 1,
-                  height: antal > 0 ? `${Math.max((antal / maxMaaned) * 100, 15)}%` : '2px',
-                  background: antal > 0 ? 'var(--accent)' : 'var(--border-svag)',
-                  borderRadius: '2px',
-                  transition: 'height 0.2s'
-                }}
-                title={`${MAANEDER[i]}: ${antal}`}
-              />
-            ))}
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: 'var(--tekst-svag)', marginTop: '4px' }}>
-            <span>Jan</span>
-            <span>Apr</span>
-            <span>Jul</span>
-            <span>Okt</span>
-            <span>Dec</span>
-          </div>
-        </Kort>
+        <Widget titel="Antal items">
+          {/* Solgt gear tælles ikke med — det er ikke længere en del af
+              inventaret, og står for sig selv under Inventar. */}
+          <Tal vaerdi={`${antal.ejer + antal.overvejer}`} />
+          <Undertekst>{antal.ejer} ejer · {antal.overvejer} overvejer</Undertekst>
+        </Widget>
 
         {ubrugt.antal > 0 && (
-          <div style={{
-            padding: '14px',
-            background: 'var(--advarsel-bg)',
-            border: '1px solid var(--advarsel-border)',
-            borderRadius: '12px'
-          }}>
-            <div style={{ ...widgetTitelStil, color: 'var(--advarsel)', marginBottom: '6px', fontWeight: 600 }}>
-              Ubrugte items
-            </div>
-            <div style={{ fontSize: '22px', fontWeight: 500, fontFamily: "'Fraunces', Georgia, serif", color: 'var(--advarsel)' }}>
-              {ubrugt.antal} <span style={{ fontSize: '14px' }}>items</span>
-            </div>
-            <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', marginTop: '4px' }}>
-              Ikke brugt i sidste år · {ubrugt.vaerdi.toLocaleString('da-DK')} kr · {(ubrugt.vaegt / 1000).toFixed(1)} kg
-            </div>
-          </div>
-        )}
-
-        {topBrugt.length > 0 && (
-          <Kort fremhaevet>
-            <SektionsTitel>Mest brugte gear</SektionsTitel>
-            <div style={{ display: 'grid', gap: '8px', marginTop: '4px' }}>
-              {topBrugt.map((x, i) => (
-                <div key={x.item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'baseline' }}>
-                    <span style={{ fontSize: '11px', color: 'var(--tekst-svag)', width: '16px' }}>{i + 1}</span>
-                    <span style={{ fontSize: '13px', color: 'var(--tekst)' }}>{x.item.navn}</span>
-                  </div>
-                  <span style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)' }}>
-                    {x.antalTure} {x.antalTure === 1 ? 'tur' : 'ture'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </Kort>
+          <Widget titel="Ubrugte items" advarsel>
+            <Tal vaerdi={`${ubrugt.antal}`} enhed={ubrugt.antal === 1 ? 'item' : 'items'} advarsel />
+            <Undertekst>
+              {(ubrugt.vaegt / 1000).toFixed(1)} kg · {kroner(ubrugt.vaerdi)} kr · ikke med det seneste år
+            </Undertekst>
+            <Udfoldelig items={ubrugt.items} aabn={aabnItem} />
+          </Widget>
         )}
 
         {gruppeFordeling.length > 0 && (
-          <Kort fremhaevet>
-            <SektionsTitel>Fordeling pr. gruppe</SektionsTitel>
-            <div style={{ display: 'flex', height: '8px', borderRadius: '4px', overflow: 'hidden', marginTop: '4px', marginBottom: '12px', background: 'var(--border-svag)' }}>
-              {gruppeFordeling.map((g, i) => (
-                <div
-                  key={i}
+          <Widget titel="Fordeling pr. gruppe">
+            <Fordeling fordeling={gruppeFordeling} />
+          </Widget>
+        )}
+
+        {topBrugt.length > 0 && (
+          <Widget titel="Mest brugte gear">
+            <div style={{ display: 'grid', gap: '7px' }}>
+              {topBrugt.map((x, i) => (
+                <button
+                  key={x.item.uid}
+                  onClick={() => x.item.id !== undefined && aabnItem(x.item.id)}
                   style={{
-                    width: `${g.procent}%`,
-                    background: 'var(--accent)',
-                    opacity: 1 - (i * 0.15),
-                    borderRight: i < gruppeFordeling.length - 1 ? '1px solid var(--bg)' : 'none'
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'baseline',
+                    gap: '10px',
+                    background: 'transparent',
+                    border: 'none',
+                    padding: 0,
+                    cursor: 'pointer',
+                    textAlign: 'left'
                   }}
-                  title={`${g.navn}: ${g.procent.toFixed(0)}%`}
-                />
-              ))}
-            </div>
-            <div style={{ display: 'grid', gap: '6px' }}>
-              {gruppeFordeling.map((g, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <div style={{
-                      width: '10px',
-                      height: '10px',
-                      borderRadius: '2px',
-                      background: 'var(--accent)',
-                      opacity: 1 - (i * 0.15)
-                    }} />
-                    <span style={{ fontSize: '13px', color: 'var(--tekst)' }}>{g.navn}</span>
-                  </div>
-                  <span style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)' }}>
-                    {(g.vaegt / 1000).toFixed(1)} kg · {g.procent.toFixed(0)}%
+                >
+                  <span style={{ display: 'flex', gap: '10px', alignItems: 'baseline', minWidth: 0 }}>
+                    <span style={{ fontSize: '11px', color: 'var(--tekst-svag)' }}>{i + 1}.</span>
+                    <span style={{ fontSize: '13px', color: 'var(--tekst)' }}>{x.item.navn || 'Uden navn'}</span>
                   </span>
-                </div>
+                  <span style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>
+                    {x.antalTure} {x.antalTure === 1 ? 'tur' : 'ture'}
+                  </span>
+                </button>
               ))}
             </div>
-          </Kort>
+          </Widget>
         )}
-
-        {items.length === 0 && (
-          <div style={{ padding: '30px 20px', textAlign: 'center', color: 'var(--tekst-svag)', fontSize: '13px' }}>
-            Ingen items endnu. Tilføj gear under Inventar for at se statistik.
-          </div>
-        )}
-
       </div>
     </Skal>
   );
+}
+
+// ─────────────────────────────────────────────
+// Widgets
+// ─────────────────────────────────────────────
+
+function Widget({ titel, children, bred, advarsel }: {
+  titel: string;
+  children: React.ReactNode;
+  // Spænder over begge kolonner på PC.
+  bred?: boolean;
+  advarsel?: boolean;
+}) {
+  return (
+    <div style={{
+      gridColumn: bred ? '1 / -1' : 'auto',
+      border: `1px solid ${advarsel ? 'var(--advarsel-border)' : 'var(--border-svag)'}`,
+      borderRadius: '10px',
+      padding: '13px 14px',
+      background: advarsel ? 'var(--advarsel-bg)' : 'var(--bg-forhoejet)'
+    }}>
+      <div style={{
+        fontSize: '10px',
+        color: advarsel ? 'var(--advarsel)' : 'var(--tekst-dæmpet)',
+        textTransform: 'uppercase',
+        letterSpacing: '0.6px',
+        fontWeight: 600,
+        marginBottom: '8px'
+      }}>
+        {advarsel && '⚠ '}{titel}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function Tal({ vaerdi, enhed, advarsel }: { vaerdi: string; enhed?: string; advarsel?: boolean }) {
+  return (
+    <div style={{
+      fontSize: '26px',
+      fontWeight: 500,
+      fontFamily: "'Fraunces', Georgia, serif",
+      color: advarsel ? 'var(--advarsel)' : 'var(--tekst)'
+    }}>
+      {vaerdi}
+      {enhed && <span style={{ fontSize: '14px', color: 'var(--tekst-dæmpet)' }}> {enhed}</span>}
+    </div>
+  );
+}
+
+function Undertekst({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginTop: '4px' }}>{children}</div>
+  );
+}
+
+function Maanedsgraf({ maaneder, fremtidFra, antal }: {
+  maaneder: number[];
+  fremtidFra: number;
+  antal: number;
+}) {
+  const maks = Math.max(...maaneder, 1);
+
+  return (
+    <div>
+      <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginBottom: '10px' }}>
+        {antal} {antal === 1 ? 'tur' : 'ture'}
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: '72px' }}>
+        {maaneder.map((n, i) => (
+          <div
+            key={i}
+            title={`${MAANEDER[i]}: ${n} ${n === 1 ? 'tur' : 'ture'}`}
+            style={{
+              flex: 1,
+              height: n > 0 ? `${Math.max((n / maks) * 100, 6)}%` : '2px',
+              borderRadius: '3px 3px 0 0',
+              background: n > 0 ? 'var(--accent)' : 'var(--border-svag)',
+              opacity: i >= fremtidFra ? 0.35 : 1
+            }}
+          />
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', gap: '4px', marginTop: '5px' }}>
+        {maaneder.map((_, i) => (
+          <div key={i} style={{ flex: 1, fontSize: '9px', color: 'var(--tekst-svag)', textAlign: 'center' }}>
+            {MAANED_ETIKETTER.includes(i) ? MAANEDER[i] : ''}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Fordeling({ fordeling }: { fordeling: { navn: string; vaegt: number; procent: number }[] }) {
+  // Resten af søjlen er gear uden for de viste grupper. Uden den linje står en
+  // fjerdedel af grafen grå og uforklaret. Et item kan ligge i flere grupper,
+  // så summen kan overstige 100 — og så er der ingen rest at vise.
+  const daekket = fordeling.reduce((s, g) => s + g.procent, 0);
+  const rest = 100 - daekket;
+
+  return (
+    <div>
+      <div style={{ display: 'flex', height: '8px', borderRadius: '4px', overflow: 'hidden', marginBottom: '11px', background: 'var(--border-svag)' }}>
+        {fordeling.map((g, i) => (
+          <div
+            key={g.navn}
+            title={`${g.navn}: ${g.procent.toFixed(0)}%`}
+            style={{
+              width: `${g.procent}%`,
+              background: 'var(--accent)',
+              opacity: 1 - i * 0.15,
+              borderRight: i < fordeling.length - 1 ? '1px solid var(--bg-forhoejet)' : 'none'
+            }}
+          />
+        ))}
+      </div>
+
+      <div style={{ display: 'grid', gap: '6px' }}>
+        {fordeling.map((g, i) => (
+          <div key={g.navn} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '10px' }}>
+            <span style={{ display: 'flex', gap: '8px', alignItems: 'center', minWidth: 0 }}>
+              <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: 'var(--accent)', opacity: 1 - i * 0.15, flexShrink: 0 }} />
+              <span style={{ fontSize: '13px', color: 'var(--tekst)' }}>{g.navn}</span>
+            </span>
+            <span style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>
+              {(g.vaegt / 1000).toFixed(1)} kg · {g.procent.toFixed(0)}%
+            </span>
+          </div>
+        ))}
+
+        {rest >= 0.5 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '10px' }}>
+            <span style={{ display: 'flex', gap: '8px', alignItems: 'center', minWidth: 0 }}>
+              <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: 'var(--border-svag)', flexShrink: 0 }} />
+              <span style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)' }}>Uden for grupperne</span>
+            </span>
+            <span style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>
+              {rest.toFixed(0)}%
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// "Vis liste" folder de ubrugte items ud i stedet for at sende brugeren
+// videre — der er ingen skærm der viser præcis dette udvalg.
+function Udfoldelig({ items, aabn }: { items: Item[]; aabn: (id: number) => void }) {
+  const [aaben, setAaben] = useState(false);
+
+  return (
+    <div style={{ marginTop: '10px' }}>
+      <button
+        onClick={() => setAaben(!aaben)}
+        style={{
+          background: 'transparent',
+          border: 'none',
+          padding: 0,
+          cursor: 'pointer',
+          fontSize: '12px',
+          fontWeight: 500,
+          color: 'var(--advarsel)'
+        }}
+      >
+        {aaben ? 'Skjul liste' : 'Vis liste →'}
+      </button>
+
+      {aaben && (
+        <div style={{ display: 'grid', gap: '5px', marginTop: '9px' }}>
+          {items.map((item) => (
+            <button
+              key={item.uid}
+              onClick={() => item.id !== undefined && aabn(item.id)}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: '10px',
+                background: 'transparent',
+                border: 'none',
+                padding: 0,
+                cursor: 'pointer',
+                textAlign: 'left',
+                fontSize: '12px',
+                color: 'var(--tekst)'
+              }}
+            >
+              <span>{item.navn || 'Uden navn'}</span>
+              <span style={{ color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>
+                {item.vaegt_g} g
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Hjælpere
+// ─────────────────────────────────────────────
+
+// Linjen under inventarværdien: hvor meget der kom til i perioden. Under
+// "alt" er der ingen periode at måle tilvæksten i, og så siger vægten mere.
+function tilvaekstTekst(tilvaekst: number | null, periode: Periode, vaegt: number): string {
+  if (tilvaekst === null) return `${(vaegt / 1000).toFixed(1)} kg i alt`;
+
+  const label = periode === 'sidste_aar' ? 'vs. året før' : 'vs. sidste år';
+  // Uden en købsdato kan et stykke gear ikke placeres i et år. Er der ingen
+  // daterede køb, er nul ikke det samme som "du købte ikke noget".
+  if (tilvaekst === 0) return 'Ingen daterede køb i perioden';
+
+  return `+${kroner(tilvaekst)} kr ${label}`;
+}
+
+function kroner(beloeb: number): string {
+  return Math.round(beloeb).toLocaleString('da-DK');
 }
 
 export default StatistikSide;

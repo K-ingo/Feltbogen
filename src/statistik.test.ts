@@ -10,7 +10,10 @@ import {
   fordelingPrGruppe,
   sidstBrugtPrItem,
   grupperPrItem,
-  turePrItem
+  turePrItem,
+  antalPrStatus,
+  koebsaar,
+  vaerditilvaekst
 } from './statistik';
 import { lavItem, lavGruppe, lavTur } from './test/data';
 
@@ -237,5 +240,67 @@ describe('turePrItem', () => {
 
   it('har ingen post for gear der aldrig har været med', () => {
     expect(turePrItem([], []).get('i1')).toBeUndefined();
+  });
+});
+
+describe('antalPrStatus', () => {
+  it('tæller hver status for sig', () => {
+    const items = [
+      lavItem({ status: 'ejer' }),
+      lavItem({ status: 'ejer' }),
+      lavItem({ status: 'overvejer' }),
+      lavItem({ status: 'solgt' })
+    ];
+
+    expect(antalPrStatus(items)).toEqual({ ejer: 2, overvejer: 1, solgt: 1 });
+  });
+
+  it('giver nul hele vejen rundt uden items', () => {
+    expect(antalPrStatus([])).toEqual({ ejer: 0, overvejer: 0, solgt: 0 });
+  });
+});
+
+describe('koebsaar', () => {
+  it('læser året ud af MM/ÅÅÅÅ', () => {
+    expect(koebsaar('01/2025')).toBe(2025);
+    expect(koebsaar('12/2019')).toBe(2019);
+    expect(koebsaar('3/2024')).toBe(2024);
+  });
+
+  it('afviser en måned der ikke findes', () => {
+    expect(koebsaar('00/2025')).toBeNull();
+    expect(koebsaar('13/2025')).toBeNull();
+  });
+
+  it('afviser tomt og volapyk', () => {
+    expect(koebsaar('')).toBeNull();
+    expect(koebsaar('2025')).toBeNull();
+    expect(koebsaar('januar 2025')).toBeNull();
+    expect(koebsaar('01/25')).toBeNull();
+  });
+});
+
+describe('vaerditilvaekst', () => {
+  it('lægger sammen hvad der kom til i året', () => {
+    const items = [
+      lavItem({ pris_kr: 2000, koebsdato: '01/2026' }),
+      lavItem({ pris_kr: 500, koebsdato: '06/2026', antal: 2 }),
+      lavItem({ pris_kr: 900, koebsdato: '11/2025' })
+    ];
+
+    expect(vaerditilvaekst(items, 2026)).toBe(3000);
+    expect(vaerditilvaekst(items, 2025)).toBe(900);
+  });
+
+  // Ellers ville gammelt gear lande i det år man tilfældigvis oprettede det.
+  it('tæller ikke gear uden købsdato med', () => {
+    expect(vaerditilvaekst([lavItem({ pris_kr: 2000, koebsdato: '' })], 2026)).toBe(0);
+  });
+
+  it('tæller ikke solgt gear med', () => {
+    const solgt = lavItem({ pris_kr: 2000, koebsdato: '01/2026', status: 'solgt' });
+    const overvejer = lavItem({ pris_kr: 300, koebsdato: '01/2026', status: 'overvejer' });
+
+    expect(vaerditilvaekst([solgt, overvejer], 2026)).toBe(300);
   });
 });

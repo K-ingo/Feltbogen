@@ -34,6 +34,40 @@ export function antalItems(items: Item[]): number {
   return items.filter((i) => i.status === 'ejer').length;
 }
 
+export interface AntalFordeling {
+  ejer: number;
+  overvejer: number;
+  solgt: number;
+}
+
+export function antalPrStatus(items: Item[]): AntalFordeling {
+  return {
+    ejer: items.filter((i) => i.status === 'ejer').length,
+    overvejer: items.filter((i) => i.status === 'overvejer').length,
+    solgt: items.filter((i) => i.status === 'solgt').length
+  };
+}
+
+// Købsdatoen skrives som MM/ÅÅÅÅ. Alt andet er ikke til at regne på, og et
+// tomt felt er det normale — de fleste kender ikke datoen på gammelt gear.
+export function koebsaar(koebsdato: string): number | null {
+  const traef = /^(\d{1,2})\/(\d{4})$/.exec(koebsdato.trim());
+  if (!traef) return null;
+
+  const maaned = Number(traef[1]);
+  if (maaned < 1 || maaned > 12) return null;
+
+  return Number(traef[2]);
+}
+
+// Hvor meget værdi der kom til i et bestemt år. Gear uden købsdato tæller
+// ikke med — det ville ellers lande i det år man tilfældigvis oprettede det.
+export function vaerditilvaekst(items: Item[], aar: number): number {
+  return items
+    .filter((i) => i.status !== 'solgt' && koebsaar(i.koebsdato) === aar)
+    .reduce((sum, i) => sum + i.pris_kr * i.antal, 0);
+}
+
 export function tureFordeltPrMaaned(ture: Tur[]): number[] {
   const maaneder = new Array(12).fill(0);
   ture.forEach((t) => {
