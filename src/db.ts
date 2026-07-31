@@ -46,6 +46,11 @@ export interface Synkroniserbar {
   // Sat mens der er lokale ændringer serveren ikke har kvitteret. Overlever en
   // genstart, så en redigering der aldrig nåede op bliver prøvet igen.
   usendt_aendring?: boolean;
+  // Serverens `updated` som den så ud sidst vi var enige med den. Er den en
+  // anden nu, har nogen rørt posten et andet sted. Uden dette felt måtte
+  // spørgsmålet afgøres ved at sammenligne serverens ur med enhedens — og de
+  // går ikke ens.
+  server_aendret?: string;
 }
 
 // Poster refererer til hinanden med uid, aldrig med lokale id'er.

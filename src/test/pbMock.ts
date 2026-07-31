@@ -12,10 +12,19 @@ export interface PbMock {
   kald: { metode: string; samling: string; id?: string }[];
   reset(): void;
   seed(samling: string, id: string, data?: Record<string, unknown>): void;
+  roer(samling: string, id: string, aendringer: Record<string, unknown>): void;
   ids(samling: string): string[];
 }
 
 let naesteId = 1;
+
+// PocketBase sætter `updated` ved hvert skriv. Uret rykker et sekund pr.
+// skrivning, så to ændringer kan skelnes uden at en test skal vente.
+let ur = Date.parse('2026-07-01T10:00:00Z');
+function tik(): string {
+  ur += 1000;
+  return new Date(ur).toISOString().replace('T', ' ').replace('.000Z', 'Z');
+}
 
 function samlingAf(mock: PbMock, navn: string) {
   let s = mock.records.get(navn);
@@ -38,16 +47,20 @@ export const pbMock: PbMock = {
     this.udenUidFelt = false;
     this.kald = [];
     naesteId = 1;
+    ur = Date.parse('2026-07-01T10:00:00Z');
     blokering = null;
   },
 
   seed(samling, id, data = {}) {
-    samlingAf(this, samling).set(id, {
-      id,
-      created: '2026-07-01 10:00:00Z',
-      updated: '2026-07-01 10:00:00Z',
-      ...data
-    });
+    const nu = tik();
+    samlingAf(this, samling).set(id, { id, created: nu, updated: nu, ...data });
+  },
+
+  // En anden enhed har rettet posten: felterne ændres, og `updated` rykker.
+  roer(samling, id, aendringer) {
+    const eksisterende = samlingAf(this, samling).get(id);
+    if (!eksisterende) throw new Error(`Ukendt record ${samling}/${id}`);
+    samlingAf(this, samling).set(id, { ...eksisterende, ...aendringer, id, updated: tik() });
   },
 
   ids(samling) {
@@ -94,7 +107,8 @@ export const pb = {
       pbMock.kald.push({ metode: 'create', samling: navn });
       kraevOnline();
       const id = `pb${naesteId++}`;
-      const record = { id, created: '2026-07-01 10:00:00Z', updated: '2026-07-01 10:00:00Z', ...gemtData(data) };
+      const nu = tik();
+      const record = { id, created: nu, updated: nu, ...gemtData(data) };
       samlingAf(pbMock, navn).set(id, record);
       return record;
     },
@@ -112,7 +126,7 @@ export const pb = {
 
       const eksisterende = samlingAf(pbMock, navn).get(id);
       if (!eksisterende) throw ikkeFundet();
-      const record = { ...eksisterende, ...gemtData(data), id };
+      const record = { ...eksisterende, ...gemtData(data), id, updated: tik() };
       samlingAf(pbMock, navn).set(id, record);
       return record;
     },
