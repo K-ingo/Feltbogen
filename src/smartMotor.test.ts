@@ -5,6 +5,9 @@ import {
   itemUidsPaaTur,
   itemsPaaTur,
   foreslaaGrupper,
+  advarslerPrItem,
+  pakkelisteEfterGruppe,
+  pakkelisteEfterTag,
   vejrIkonKode
 } from './smartMotor';
 import { lavItem, lavGruppe, lavTur } from './test/data';
@@ -140,5 +143,92 @@ describe('vejrIkonKode', () => {
     expect(vejrIkonKode(61)).toBe('🌧');  // regn
     expect(vejrIkonKode(71)).toBe('❄');   // sne
     expect(vejrIkonKode(95)).toBe('⛈');  // tordenvejr
+  });
+});
+
+describe('advarslerPrItem', () => {
+  it('slår advarslerne op på det item de hænger på', () => {
+    const braender = lavItem({ uid: 'u-braender', navn: 'MSR', kraever: ['gas'], komplementer: ['tændstål'] });
+    const gryde = lavItem({ uid: 'u-gryde', navn: 'Toaks' });
+
+    const pr = advarslerPrItem(findAdvarsler([braender, gryde]));
+
+    expect(pr.get('u-braender')?.map((a) => a.mangler)).toEqual(['gas', 'tændstål']);
+    expect(pr.get('u-gryde')).toBeUndefined();
+  });
+});
+
+describe('pakkelisteEfterGruppe', () => {
+  const tarp = lavItem({ uid: 'u-tarp', navn: 'Tarp', vaegt_g: 720 });
+  const koeje = lavItem({ uid: 'u-koeje', navn: 'Hængekøje', vaegt_g: 900 });
+  const kniv = lavItem({ uid: 'u-kniv', navn: 'Opinel', vaegt_g: 40 });
+
+  it('laver et afsnit pr. valgt gruppe, tungeste item først', () => {
+    const gruppe = lavGruppe({ uid: 'g1', navn: 'Hængekøje-setup', item_ids: ['u-tarp', 'u-koeje'] });
+    const tur = lavTur({ gruppe_ids: ['g1'] });
+
+    const afsnit = pakkelisteEfterGruppe(tur, [gruppe], [tarp, koeje]);
+
+    expect(afsnit).toHaveLength(1);
+    expect(afsnit[0].titel).toBe('Hængekøje-setup');
+    expect(afsnit[0].items.map((i) => i.navn)).toEqual(['Hængekøje', 'Tarp']);
+  });
+
+  it('samler alt uden for grupperne under "Løse items"', () => {
+    const gruppe = lavGruppe({ uid: 'g1', navn: 'Setup', item_ids: ['u-tarp'] });
+    const tur = lavTur({ gruppe_ids: ['g1'], loese_item_ids: ['u-kniv'] });
+
+    const afsnit = pakkelisteEfterGruppe(tur, [gruppe], [tarp, kniv]);
+
+    expect(afsnit.map((a) => a.titel)).toEqual(['Setup', 'Løse items']);
+    expect(afsnit[1].items.map((i) => i.navn)).toEqual(['Opinel']);
+  });
+
+  it('viser et item én gang, selvom to valgte grupper indeholder det', () => {
+    const a = lavGruppe({ uid: 'g1', navn: 'A', item_ids: ['u-tarp'] });
+    const b = lavGruppe({ uid: 'g2', navn: 'B', item_ids: ['u-tarp'] });
+    const tur = lavTur({ gruppe_ids: ['g1', 'g2'] });
+
+    const afsnit = pakkelisteEfterGruppe(tur, [a, b], [tarp]);
+
+    expect(afsnit.map((s) => s.titel)).toEqual(['A']);
+  });
+
+  it('springer tomme grupper over', () => {
+    const tom = lavGruppe({ uid: 'g1', navn: 'Tom', item_ids: [] });
+    const tur = lavTur({ gruppe_ids: ['g1'] });
+
+    expect(pakkelisteEfterGruppe(tur, [tom], [])).toEqual([]);
+  });
+});
+
+describe('pakkelisteEfterTag', () => {
+  it('sorterer afsnittene alfabetisk på dansk', () => {
+    const items = [
+      lavItem({ uid: 'u1', navn: 'Økse', tags: ['økse'] }),
+      lavItem({ uid: 'u2', navn: 'Sovepose', tags: ['søvn'] }),
+      lavItem({ uid: 'u3', navn: 'Bål', tags: ['bål'] })
+    ];
+
+    // Æ, Ø og Å står sidst i det danske alfabet.
+    expect(pakkelisteEfterTag(items).map((a) => a.titel)).toEqual(['bål', 'søvn', 'økse']);
+  });
+
+  it('viser et item under hvert af sine tags', () => {
+    const dyne = lavItem({ uid: 'u1', navn: 'Moonquilt', tags: ['søvn', 'vinter'] });
+
+    const afsnit = pakkelisteEfterTag([dyne]);
+
+    expect(afsnit.map((a) => a.titel)).toEqual(['søvn', 'vinter']);
+    expect(afsnit.every((a) => a.items[0].navn === 'Moonquilt')).toBe(true);
+  });
+
+  it('lægger items uden tags til sidst', () => {
+    const items = [
+      lavItem({ uid: 'u1', navn: 'Uden', tags: [] }),
+      lavItem({ uid: 'u2', navn: 'Med', tags: ['bål'] })
+    ];
+
+    expect(pakkelisteEfterTag(items).map((a) => a.titel)).toEqual(['bål', 'Uden tag']);
   });
 });

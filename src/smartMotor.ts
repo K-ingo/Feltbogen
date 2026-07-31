@@ -140,6 +140,11 @@ export interface Advarsel {
   niveau: 'roed' | 'gul';
   besked: string;
   detalje: string;
+  // Hvilket item advarslen hænger på, så den kan vises på selve rækken i
+  // pakkelisten og ikke kun i en samlet liste.
+  itemUid: Reference;
+  // Det manglende tag — kort nok til en chip ved siden af navnet.
+  mangler: string;
 }
 
 export function findAdvarsler(pakItems: Item[]): Advarsel[] {
@@ -154,7 +159,9 @@ export function findAdvarsler(pakItems: Item[]): Advarsel[] {
         advarsler.push({
           niveau: 'roed',
           besked: `${item.navn} kræver "${krav}"`,
-          detalje: 'Ingen items på turen leverer dette. Tilføj et item med tagget.'
+          detalje: 'Ingen items på turen leverer dette. Tilføj et item med tagget.',
+          itemUid: item.uid,
+          mangler: krav
         });
       }
     });
@@ -164,13 +171,23 @@ export function findAdvarsler(pakItems: Item[]): Advarsel[] {
         advarsler.push({
           niveau: 'gul',
           besked: `${item.navn} komplementerer "${komp}"`,
-          detalje: 'Ingen items på turen leverer dette. Overvej at tilføje.'
+          detalje: 'Ingen items på turen leverer dette. Overvej at tilføje.',
+          itemUid: item.uid,
+          mangler: komp
         });
       }
     });
   });
 
   return advarsler;
+}
+
+// Advarsler slået op pr. item, så pakkelisten kan mærke den række der mangler
+// noget frem for kun at vise en samlet liste.
+export function advarslerPrItem(advarsler: Advarsel[]): Map<Reference, Advarsel[]> {
+  const pr = new Map<Reference, Advarsel[]>();
+  advarsler.forEach((a) => pr.set(a.itemUid, [...(pr.get(a.itemUid) ?? []), a]));
+  return pr;
 }
 
 // Items kommer på en tur ad to veje: via en valgt gruppe, eller som løst valg.
@@ -384,4 +401,62 @@ export function garantiAdvarsel(item: Item, nu: Date = new Date()): string | nul
   const vindue = item.garanti?.paamindelse_dage || 30;
   if (dage > vindue) return null;
   return `Garanti udløber om ${dage} ${dage === 1 ? 'dag' : 'dage'}`;
+}
+
+// ─────────────────────────────────────────────
+// Pakkelisten grupperet
+// Wireframet viser pakkelisten opdelt med overskrifter frem for som én lang
+// liste. "Efter person" mangler, fordi der endnu ikke er en måde at tildele
+// gear til en deltager på.
+// ─────────────────────────────────────────────
+
+export interface PakkelisteAfsnit {
+  titel: string;
+  items: Item[];
+}
+
+const efterVaegt = (a: Item, b: Item) => b.vaegt_g - a.vaegt_g;
+
+export function pakkelisteEfterGruppe(tur: Tur, grupper: Gruppe[], pakItems: Item[]): PakkelisteAfsnit[] {
+  const afsnit: PakkelisteAfsnit[] = [];
+  const brugt = new Set<Reference>();
+
+  tur.gruppe_ids.forEach((gruppeUid) => {
+    const gruppe = grupper.find((g) => g.uid === gruppeUid);
+    if (!gruppe) return;
+
+    // Ligger et item i to valgte grupper, hører det til under den første. Ellers
+    // stod det to steder på listen, og afsnitsvægtene talte det med to gange.
+    const items = pakItems.filter((i) => !brugt.has(i.uid) && gruppe.item_ids.includes(i.uid));
+    items.forEach((i) => brugt.add(i.uid));
+    if (items.length > 0) afsnit.push({ titel: gruppe.navn, items: [...items].sort(efterVaegt) });
+  });
+
+  // Alt der ikke kom med via en gruppe står for sig selv.
+  const loese = pakItems.filter((i) => !brugt.has(i.uid));
+  if (loese.length > 0) afsnit.push({ titel: 'Løse items', items: [...loese].sort(efterVaegt) });
+
+  return afsnit;
+}
+
+export function pakkelisteEfterTag(pakItems: Item[]): PakkelisteAfsnit[] {
+  const efterTag = new Map<string, Item[]>();
+  const utaggede: Item[] = [];
+
+  pakItems.forEach((item) => {
+    if (item.tags.length === 0) {
+      utaggede.push(item);
+      return;
+    }
+    // Et item med flere tags optræder under hvert af dem — det er sådan man
+    // leder efter det.
+    item.tags.forEach((tag) => efterTag.set(tag, [...(efterTag.get(tag) ?? []), item]));
+  });
+
+  const afsnit = [...efterTag.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0], 'da'))
+    .map(([titel, items]) => ({ titel, items: [...items].sort(efterVaegt) }));
+
+  if (utaggede.length > 0) afsnit.push({ titel: 'Uden tag', items: [...utaggede].sort(efterVaegt) });
+  return afsnit;
 }

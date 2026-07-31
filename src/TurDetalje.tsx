@@ -1,23 +1,39 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, TUR_STATUS, OVERNATNING, AKTIVITET, TERRAEN, ERFARING } from './db';
-import type { Overnatning, Aktivitet, Terraen, Erfaring, Deltager, BudgetLinje } from './db';
+import { db, etiket, TUR_STATUS, OVERNATNING, AKTIVITET, TERRAEN, ERFARING } from './db';
+import type {
+  Item,
+  Gruppe,
+  Tur,
+  TurStatus,
+  Overnatning,
+  Aktivitet,
+  Terraen,
+  Erfaring,
+  Deltager,
+  BudgetLinje,
+  Reference
+} from './db';
 import {
   hentVejr,
   vejrIkonKode,
   beregnForbrug,
   findAdvarsler,
+  advarslerPrItem,
   foreslaaGrupper,
   itemUidsPaaTur,
+  pakkelisteEfterGruppe,
+  pakkelisteEfterTag,
   soegSted
 } from './smartMotor';
-import type { VejrData, StedForslag } from './smartMotor';
+import type { VejrData, StedForslag, Advarsel, PakkelisteAfsnit, Beregninger } from './smartMotor';
 import {
   Knap,
   Felt,
   Label,
+  Chip,
   Dropdown,
-  Kort,
+  Infokort,
   Segment,
   Tekstomraade,
   TitelInput,
@@ -26,6 +42,7 @@ import {
   SektionsTitel
 } from './ui';
 import { layout } from './layout';
+import { useErDesktop } from './useMedie';
 import { sletTur, opdaterTur } from './sync';
 import { useRedigerbar } from './useRedigerbar';
 
@@ -36,11 +53,22 @@ interface Props {
   nyOprettet?: boolean;
 }
 
-type Sektion = 'oversigt' | 'pakkeliste' | 'deltagere' | 'budget';
-const SEKTIONER: readonly Sektion[] = ['oversigt', 'pakkeliste', 'deltagere', 'budget'];
+// Turen har fire tilstande, og handlingsknappen fører til den næste.
+// "afsluttet" har ingen næste: pak-af-tjekket fra fundamentets §8 findes ikke.
+const NAESTE_TILSTAND: Record<TurStatus, { label: string; naeste: TurStatus } | null> = {
+  kladde: { label: 'Markér som klar', naeste: 'klar' },
+  klar: { label: 'Start tur', naeste: 'aktiv' },
+  aktiv: { label: 'Afslut tur', naeste: 'afsluttet' },
+  afsluttet: null
+};
+
+// Pakkelisten kan grupperes på to måder. Wireframets "efter person" mangler,
+// fordi der endnu ikke er en måde at tildele gear til en deltager på.
+type Visning = 'gruppe' | 'tag';
 
 function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
-  const [aktivSektion, setAktivSektion] = useState<Sektion>('oversigt');
+  const erDesktop = useErDesktop();
+  const [visning, setVisning] = useState<Visning>('gruppe');
   const [vejrData, setVejrData] = useState<VejrData | null>(null);
   const [vejrHentes, setVejrHentes] = useState(false);
   const [vejrFejl, setVejrFejl] = useState('');
@@ -148,12 +176,12 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
     tilbage();
   };
 
-  const toggleGruppe = async (gruppeUid: string) => {
+  const toggleGruppe = async (gruppeUid: Reference) => {
     if (!tur) return;
     await opdater({ gruppe_ids: vekslet(tur.gruppe_ids, gruppeUid) });
   };
 
-  const toggleLoestItem = async (itemUid: string) => {
+  const toggleLoestItem = async (itemUid: Reference) => {
     if (!tur) return;
     await opdater({ loese_item_ids: vekslet(tur.loese_item_ids, itemUid) });
   };
@@ -218,348 +246,652 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   const totalFaktisk = tur.budget_linjer.reduce((s, l) => s + l.faktisk_kr, 0);
 
   const advarsler = findAdvarsler(pakItems);
+  const perItem = advarslerPrItem(advarsler);
   const beregninger = beregnForbrug(tur);
   const gruppeForslag = grupper ? foreslaaGrupper(tur, grupper) : [];
 
+  const afsnit = visning === 'gruppe'
+    ? pakkelisteEfterGruppe(tur, grupper ?? [], pakItems)
+    : pakkelisteEfterTag(pakItems);
+
+  const handling = NAESTE_TILSTAND[tur.status];
+
+  // Sektionerne er de samme på begge layouts — kun rammen om dem er forskellig.
+  const parametre = (
+    <Turparametre
+      tur={tur}
+      opdater={opdater}
+      skiftDato={skiftDato}
+      koordinatTekst={koordinatTekst}
+      koordinatFejl={koordinatFejl}
+      opdaterKoordinater={opdaterKoordinater}
+      soegPaaSted={soegPaaSted}
+      stedSoeger={stedSoeger}
+      stedForslag={stedForslag}
+      vaelgSted={vaelgSted}
+      beregninger={beregninger}
+    />
+  );
+
+  const pakkeliste = (
+    <Pakkeliste
+      afsnit={afsnit}
+      perItem={perItem}
+      visning={visning}
+      setVisning={setVisning}
+      antal={pakItems.length}
+    />
+  );
+
+  const valgAfIndhold = (
+    <Indholdsvalg
+      grupper={grupper ?? []}
+      items={items ?? []}
+      tur={tur}
+      paaTuren={itemUidsPaaDenneTur}
+      gruppeForslag={gruppeForslag}
+      toggleGruppe={toggleGruppe}
+      toggleLoestItem={toggleLoestItem}
+    />
+  );
+
+  const vejr = (
+    <Vejrudsigt data={vejrData} hentes={vejrHentes} fejl={vejrFejl} hent={hentVejrForTur} />
+  );
+
+  const deltagere = (
+    <Deltagere deltagere={tur.deltagere} tilfoej={tilfoejDeltager} fjern={fjernDeltager} />
+  );
+
+  const budget = (
+    <Budget
+      linjer={tur.budget_linjer}
+      tilfoej={tilfoejBudgetLinje}
+      opdater={opdaterBudgetLinje}
+      fjern={fjernBudgetLinje}
+    />
+  );
+
+  const noter = (
+    <div style={{ display: 'grid', gap: '12px' }}>
+      <Tekstomraade
+        label="Besked til gæster"
+        value={tur.besked_fra_ejer}
+        onChange={(v) => opdater({ besked_fra_ejer: v })}
+        placeholder="fx Vi mødes ved P kl. 15"
+      />
+      <Tekstomraade label="Noter" value={tur.noter} onChange={(v) => opdater({ noter: v })} />
+    </div>
+  );
+
+  // Resuméerne står altid fremme, så en foldet sektion stadig kan aflæses.
+  const parametreResume = [
+    `${tur.naetter} ${tur.naetter === 1 ? 'nat' : 'nætter'}`,
+    `${tur.personer} pers`,
+    etiket(tur.overnatning),
+    tur.baereafstand_km > 0 ? `${tur.baereafstand_km} km bæreafstand` : null
+  ].filter(Boolean).join(' · ');
+
+  const titelblok = (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <TitelInput
+          value={tur.navn}
+          onChange={(v) => opdater({ navn: v })}
+          placeholder="Navn på tur"
+          autoFokus={nyOprettet}
+        />
+        <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', marginTop: '-8px', marginBottom: '10px' }}>
+          {[formatterPeriode(tur.startdato, tur.slutdato), tur.sted].filter(Boolean).join(' · ') || 'Ingen datoer valgt'}
+        </div>
+        <Segment vaerdier={TUR_STATUS} valgt={tur.status} vaelg={(s) => opdater({ status: s })} kompakt />
+      </div>
+      {erDesktop && handling && (
+        <Knap variant="primaer" onClick={() => opdater({ status: handling.naeste })}>
+          {handling.label}
+        </Knap>
+      )}
+    </div>
+  );
+
+  if (erDesktop) {
+    return (
+      <div>
+        <DetaljeHeader tilbage={gaaTilbage} sletLabel="Slet tur" slet={slet} />
+        {titelblok}
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1.9fr) minmax(300px, 1fr)',
+          gap: '24px',
+          alignItems: 'start',
+          marginTop: '22px'
+        }}>
+          <div style={{ display: 'grid', gap: '10px' }}>
+            {pakkeliste}
+            <Foldbar titel="Vælg gear">{valgAfIndhold}</Foldbar>
+          </div>
+
+          <div style={{ display: 'grid', gap: '10px' }}>
+            <Foldbar titel="Turparametre" resume={parametreResume}>{parametre}</Foldbar>
+            <Foldbar titel="Vejrudsigt" resume={vejrResume(vejrData)}>{vejr}</Foldbar>
+            {advarsler.length > 0 && <Advarsler advarsler={advarsler} />}
+            <Vaegt prPerson={vaegtPrPerson} delt={vaegtDelt} personligt={vaegtPersonligt} personer={tur.personer} />
+            <Foldbar
+              titel={`Deltagere (${tur.deltagere.length})`}
+              resume={tur.deltagere.map((d) => d.navn).join(', ')}
+            >
+              {deltagere}
+            </Foldbar>
+            <Foldbar titel="Budget" resume={`${totalFaktisk} / ${totalForventet} kr`}>{budget}</Foldbar>
+            <Foldbar titel="Noter">{noter}</Foldbar>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Foldetilstandene følger fundamentets §13: det man har brug for under
+  // planlægningen står åbent, resten er foldet sammen.
   return (
     <div style={layout.container}>
       <DetaljeHeader tilbage={gaaTilbage} sletLabel="Slet tur" slet={slet} />
+      {titelblok}
 
-      <TitelInput
-        value={tur.navn}
-        onChange={(v) => opdater({ navn: v })}
-        placeholder="Navn på tur"
-        autoFokus={nyOprettet}
-      />
+      {handling && (
+        <Knap
+          variant="primaer"
+          onClick={() => opdater({ status: handling.naeste })}
+          style={{ width: '100%', marginTop: '14px', padding: '11px' }}
+        >
+          {handling.label}
+        </Knap>
+      )}
 
-      <div style={{ marginBottom: '20px' }}>
-        <Segment vaerdier={TUR_STATUS} valgt={tur.status} vaelg={(s) => opdater({ status: s })} kompakt />
+      <div style={{ display: 'grid', gap: '8px', marginTop: '16px' }}>
+        <Foldbar titel="Turparametre" resume={parametreResume}>{parametre}</Foldbar>
+        {advarsler.length > 0 && (
+          <Foldbar titel={`Advarsler (${advarsler.length})`} advarsel aabenFra>
+            <Advarselsliste advarsler={advarsler} />
+          </Foldbar>
+        )}
+        <Foldbar titel={`Pakkeliste (${pakItems.length})`} aabenFra>{pakkeliste}</Foldbar>
+        <Foldbar titel="Vægt" resume={`${kg(vaegtPrPerson)} kg${tur.personer > 1 ? ' / pers' : ''}`}>
+          <Vaegt prPerson={vaegtPrPerson} delt={vaegtDelt} personligt={vaegtPersonligt} personer={tur.personer} />
+        </Foldbar>
+        <Foldbar titel="Vælg gear">{valgAfIndhold}</Foldbar>
+        <Foldbar titel="Vejrudsigt" resume={vejrResume(vejrData)}>{vejr}</Foldbar>
+        <Foldbar
+          titel={`Deltagere (${tur.deltagere.length})`}
+          resume={tur.deltagere.map((d) => d.navn).join(', ')}
+        >
+          {deltagere}
+        </Foldbar>
+        <Foldbar titel="Budget" resume={`${totalFaktisk} / ${totalForventet} kr`}>{budget}</Foldbar>
+        <Foldbar titel="Noter">{noter}</Foldbar>
       </div>
+    </div>
+  );
+}
 
-      {advarsler.length > 0 && (
-        <div style={{ marginBottom: '20px', display: 'grid', gap: '6px' }}>
-          {advarsler.map((a, i) => {
-            const erRoed = a.niveau === 'roed';
-            return (
-              <div
-                key={i}
-                style={{
-                  padding: '10px 12px',
-                  background: erRoed ? 'var(--fejl-bg)' : 'var(--advarsel-bg)',
-                  borderLeft: `3px solid ${erRoed ? 'var(--fejl)' : 'var(--advarsel)'}`,
-                  borderRadius: '4px',
-                  fontSize: '12px'
-                }}
-              >
-                <div style={{ fontWeight: 500, color: erRoed ? 'var(--fejl)' : 'var(--advarsel)' }}>{a.besked}</div>
-                <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>{a.detalje}</div>
-              </div>
-            );
-          })}
+// ─────────────────────────────────────────────
+// Rammer
+// ─────────────────────────────────────────────
+
+// En sektion man kan folde ud. Resuméet står fremme uanset foldetilstand, så
+// man kan aflæse turen uden at åbne alt.
+function Foldbar({ titel, resume, children, aabenFra, advarsel }: {
+  titel: string;
+  resume?: string;
+  children: React.ReactNode;
+  aabenFra?: boolean;
+  advarsel?: boolean;
+}) {
+  const [aaben, setAaben] = useState(!!aabenFra);
+
+  return (
+    <div style={{
+      border: `1px solid ${advarsel ? 'var(--advarsel-border)' : 'var(--border-svag)'}`,
+      borderRadius: '10px',
+      overflow: 'hidden',
+      background: advarsel ? 'var(--advarsel-bg)' : 'var(--bg-forhoejet)'
+    }}>
+      <button
+        onClick={() => setAaben(!aaben)}
+        style={{
+          width: '100%',
+          padding: resume ? '11px 14px 4px' : '11px 14px',
+          background: 'transparent',
+          border: 'none',
+          textAlign: 'left',
+          cursor: 'pointer',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '10px',
+          fontWeight: 600,
+          textTransform: 'uppercase',
+          letterSpacing: '0.6px',
+          color: advarsel ? 'var(--advarsel)' : 'var(--tekst-dæmpet)'
+        }}
+      >
+        <span>{advarsel && '⚠ '}{titel}</span>
+        <span style={{ fontSize: '11px' }}>{aaben ? '▾' : '▸'}</span>
+      </button>
+
+      {resume && (
+        <div style={{ padding: '0 14px 11px', fontSize: '13px', color: 'var(--tekst)', lineHeight: 1.4 }}>
+          {resume}
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: '2px', marginBottom: '20px', borderBottom: '1px solid var(--border-svag)' }}>
-        {SEKTIONER.map((sek) => (
-          <button
-            key={sek}
-            onClick={() => setAktivSektion(sek)}
-            style={{
-              flex: 1,
-              padding: '10px 4px',
-              background: 'transparent',
-              border: 'none',
-              borderBottom: aktivSektion === sek ? '2px solid var(--accent)' : '2px solid transparent',
-              cursor: 'pointer',
-              fontSize: '11px',
-              color: aktivSektion === sek ? 'var(--accent)' : 'var(--tekst-dæmpet)',
-              fontWeight: aktivSektion === sek ? 600 : 500,
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-              marginBottom: '-1px'
-            }}
-          >
-            {sek}
-          </button>
-        ))}
-      </div>
-
-      {aktivSektion === 'oversigt' && (
-        <div style={{ display: 'grid', gap: '14px' }}>
-          <div>
-            <Label>Sted</Label>
-            <div style={{ display: 'flex', gap: '6px' }}>
-              <input
-                value={tur.sted}
-                onChange={(e) => opdater({ sted: e.target.value })}
-                placeholder="fx Palnatokesvej 22, Odense"
-                style={{ flex: 1 }}
-              />
-              <Knap onClick={soegPaaSted} disabled={stedSoeger || !tur.sted.trim()} variant="primaer">
-                {stedSoeger ? 'Søger...' : 'Find'}
-              </Knap>
-            </div>
-            {stedForslag.length > 0 && (
-              <div style={{ marginTop: '6px', background: 'var(--bg-forhoejet)', border: '1px solid var(--border-svag)', borderRadius: '8px', overflow: 'hidden' }}>
-                {stedForslag.map((f, i) => (
-                  <button
-                    key={`${f.lat},${f.lng}`}
-                    onClick={() => vaelgSted(f)}
-                    style={{
-                      display: 'block',
-                      width: '100%',
-                      padding: '10px 12px',
-                      background: 'transparent',
-                      border: 'none',
-                      borderBottom: i < stedForslag.length - 1 ? '1px solid var(--border-svag)' : 'none',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      color: 'var(--tekst)'
-                    }}
-                  >
-                    <div style={{ fontSize: '13px', fontWeight: 500 }}>{f.navn}</div>
-                    {f.detalje && <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)' }}>{f.detalje}</div>}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div>
-            <Label fejl={koordinatFejl || undefined}>Koordinater</Label>
-            <input
-              type="text"
-              value={koordinatTekst}
-              onChange={(e) => opdaterKoordinater(e.target.value)}
-              placeholder="55.66, 10.05"
-              style={{ width: '100%' }}
-            />
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            <Felt label="Startdato" type="date" value={tur.startdato} onChange={(v) => skiftDato({ startdato: v })} />
-            <Felt label="Slutdato" type="date" value={tur.slutdato} onChange={(v) => skiftDato({ slutdato: v })} />
-          </div>
-
-          <Kort fremhaevet>
-            <div style={{ fontSize: '13px', color: 'var(--tekst)' }}>
-              {tur.naetter} {tur.naetter === 1 ? 'nat' : 'nætter'}
-            </div>
-          </Kort>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            <Felt label="Personer" type="number" value={tur.personer} onChange={(v) => opdater({ personer: Number(v) || 1 })} />
-            <Felt label="Bæreafstand (km)" type="number" value={tur.baereafstand_km} onChange={(v) => opdater({ baereafstand_km: Number(v) || 0 })} />
-          </div>
-
-          <Dropdown label="Overnatning" value={tur.overnatning} onChange={(v) => opdater({ overnatning: v as Overnatning })} options={OVERNATNING} />
-          <Dropdown label="Aktivitet" value={tur.aktivitet} onChange={(v) => opdater({ aktivitet: v as Aktivitet })} options={AKTIVITET} />
-          <Dropdown label="Terræn" value={tur.terraen} onChange={(v) => opdater({ terraen: v as Terraen })} options={TERRAEN} />
-          <Dropdown label="Erfaring" value={tur.erfaring} onChange={(v) => opdater({ erfaring: v as Erfaring })} options={ERFARING} />
-
-          <div style={{ height: '4px' }} />
-          <SektionsTitel>Beregninger</SektionsTitel>
-          <Kort fremhaevet>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', textAlign: 'center' }}>
-              <Noegletal vaerdi={`${beregninger.vand_liter} L`} label="Vand" />
-              <Noegletal vaerdi={`${beregninger.mad_kg} kg`} label="Mad" />
-              <Noegletal vaerdi={`${beregninger.gas_g} g`} label="Gas" />
-            </div>
-          </Kort>
-
-          <div style={{ height: '4px' }} />
-          <SektionsTitel>Vejrudsigt</SektionsTitel>
-          <Kort fremhaevet>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
-              <Knap onClick={hentVejrForTur} disabled={vejrHentes} variant="primaer" style={{ padding: '5px 12px', fontSize: '11px' }}>
-                {vejrHentes ? 'Henter...' : vejrData ? 'Opdater' : 'Hent vejr'}
-              </Knap>
-            </div>
-
-            {vejrFejl && <div style={{ fontSize: '12px', color: 'var(--fejl)', marginBottom: '8px' }}>{vejrFejl}</div>}
-
-            {vejrData ? (
-              <>
-                <div style={{ display: 'grid', gap: '6px', fontSize: '13px' }}>
-                  {vejrData.dage.map((d) => (
-                    <div key={d.dato} style={{ display: 'grid', gridTemplateColumns: '60px 24px 1fr 60px 50px', gap: '8px', alignItems: 'center', padding: '4px 0' }}>
-                      <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '11px' }}>{formatterDag(d.dato)}</span>
-                      <span style={{ fontSize: '16px' }}>{vejrIkonKode(d.vejrkode)}</span>
-                      <span>{d.temp_min}–{d.temp_max}°C</span>
-                      <span style={{ color: 'var(--tekst-svag)', fontSize: '11px' }}>{d.vind_ms} m/s</span>
-                      <span style={{ color: d.nedboer_mm > 0 ? 'var(--advarsel)' : 'var(--tekst-svag)', fontSize: '11px', textAlign: 'right' }}>
-                        {d.nedboer_mm > 0 ? `${d.nedboer_mm} mm` : '—'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                {vejrData.dage[0] && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--tekst-dæmpet)', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--border-svag)' }}>
-                    <span>Sol op {vejrData.dage[0].sol_op}</span>
-                    <span>Sol ned {vejrData.dage[0].sol_ned}</span>
-                  </div>
-                )}
-                {vejrData.observationer.length > 0 && (
-                  <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid var(--border-svag)' }}>
-                    {vejrData.observationer.map((obs, i) => (
-                      <div key={i} style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginBottom: '3px' }}>· {obs}</div>
-                    ))}
-                  </div>
-                )}
-              </>
-            ) : !vejrFejl && (
-              <div style={{ fontSize: '12px', color: 'var(--tekst-svag)' }}>Angiv koordinater og datoer, klik "Hent vejr".</div>
-            )}
-          </Kort>
-
-          <Tekstomraade
-            label="Besked til gæster"
-            value={tur.besked_fra_ejer}
-            onChange={(v) => opdater({ besked_fra_ejer: v })}
-            placeholder="fx Vi mødes ved P kl. 15"
-          />
-          <Tekstomraade label="Noter" value={tur.noter} onChange={(v) => opdater({ noter: v })} />
-        </div>
-      )}
-
-      {aktivSektion === 'pakkeliste' && (
-        <div>
-          <Kort fremhaevet style={{ marginBottom: '16px' }}>
-            <div style={{ fontSize: '14px', fontWeight: 500 }}>
-              {pakItems.length} items · {(vaegtPrPerson / 1000).toFixed(2)} kg pr. person
-            </div>
-            <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
-              Delt: {(vaegtDelt / 1000).toFixed(2)} kg · Personligt: {(vaegtPersonligt / 1000).toFixed(2)} kg
-            </div>
-          </Kort>
-
-          {gruppeForslag.length > 0 && (
-            <div style={{ padding: '12px', background: 'var(--accent-bg)', borderRadius: '8px', marginBottom: '16px' }}>
-              <SektionsTitel>Foreslåede grupper</SektionsTitel>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                {gruppeForslag.map((g) => (
-                  <button
-                    key={g.uid}
-                    onClick={() => toggleGruppe(g.uid)}
-                    style={{ padding: '5px 12px', fontSize: '12px', background: 'var(--bg-forhoejet)', color: 'var(--accent)', border: '1px solid var(--accent-border)', borderRadius: '14px', cursor: 'pointer', fontWeight: 500 }}
-                  >
-                    + {g.navn}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <SektionsTitel>Grupper</SektionsTitel>
-          {grupper?.length === 0 && (
-            <div style={{ fontSize: '13px', color: 'var(--tekst-svag)', padding: '10px 0' }}>Ingen grupper endnu.</div>
-          )}
-          {grupper?.map((g) => {
-            const erMed = tur.gruppe_ids.includes(g.uid);
-            const gItems = items?.filter((i) => g.item_ids.includes(i.uid)) ?? [];
-            const gVaegt = gItems.reduce((s, i) => s + i.vaegt_g, 0);
-            return (
-              <Vaelgerraekke
-                key={g.id}
-                titel={g.navn}
-                detalje={`${gItems.length} items · ${(gVaegt / 1000).toFixed(2)} kg`}
-                valgt={erMed}
-                toggle={() => toggleGruppe(g.uid)}
-              />
-            );
-          })}
-
-          <div style={{ marginTop: '20px' }}>
-            <SektionsTitel>Løse items</SektionsTitel>
-            {items?.filter((i) => i.status === 'ejer').map((item) => {
-              const valgtLoest = tur.loese_item_ids.includes(item.uid);
-              // Items der allerede kommer via en gruppe kan ikke fravælges her.
-              const viaGruppe = itemUidsPaaDenneTur.has(item.uid) && !valgtLoest;
-              return (
-                <Vaelgerraekke
-                  key={item.id}
-                  titel={item.navn}
-                  detalje={`${item.vaegt_g} g${item.delt ? ' · delt' : ''}${viaGruppe ? ' · via gruppe' : ''}`}
-                  valgt={valgtLoest || viaGruppe}
-                  laast={viaGruppe}
-                  toggle={() => toggleLoestItem(item.uid)}
-                />
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {aktivSektion === 'deltagere' && (
-        <div>
-          <Kort fremhaevet style={{ marginBottom: '16px' }}>
-            <div style={{ fontSize: '14px', fontWeight: 500 }}>{tur.deltagere.length} deltagere</div>
-            <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>Foruden dig selv</div>
-          </Kort>
-
-          {tur.deltagere.length === 0 && (
-            <div style={{ fontSize: '13px', color: 'var(--tekst-svag)', padding: '10px 0' }}>Ingen deltagere endnu.</div>
-          )}
-          {tur.deltagere.map((d) => (
-            <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 4px', borderBottom: '1px solid var(--border-svag)' }}>
-              <div style={{ flex: 1, fontSize: '14px', color: 'var(--tekst)' }}>{d.navn}</div>
-              <button onClick={() => fjernDeltager(d.id)} style={{ background: 'transparent', border: 'none', color: 'var(--fejl)', cursor: 'pointer', fontSize: '12px' }}>
-                Fjern
-              </button>
-            </div>
-          ))}
-
-          <div style={{ marginTop: '16px' }}>
-            <Knap onClick={tilfoejDeltager} variant="primaer">+ Tilføj deltager</Knap>
-          </div>
-        </div>
-      )}
-
-      {aktivSektion === 'budget' && (
-        <div>
-          <Kort fremhaevet style={{ marginBottom: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Noegletal vaerdi={`${totalForventet} kr`} label="Forventet" />
-              <div style={{ textAlign: 'right' }}>
-                <Noegletal vaerdi={`${totalFaktisk} kr`} label="Faktisk" />
-              </div>
-            </div>
-          </Kort>
-
-          {tur.budget_linjer.length === 0 && (
-            <div style={{ fontSize: '13px', color: 'var(--tekst-svag)', padding: '10px 0' }}>Ingen budget-linjer endnu.</div>
-          )}
-          {tur.budget_linjer.map((l) => (
-            <div key={l.id} style={{ padding: '10px 4px', borderBottom: '1px solid var(--border-svag)', display: 'grid', gap: '6px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                <select value={l.kategori} onChange={(e) => opdaterBudgetLinje(l.id, { kategori: e.target.value })} style={{ padding: '6px', fontSize: '12px' }}>
-                  <option value="gear">Gear</option>
-                  <option value="forplejning">Forplejning</option>
-                  <option value="transport">Transport</option>
-                  <option value="andet">Andet</option>
-                </select>
-                <input placeholder="Beskrivelse" value={l.beskrivelse} onChange={(e) => opdaterBudgetLinje(l.id, { beskrivelse: e.target.value })} style={{ padding: '6px', fontSize: '12px' }} />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '6px', alignItems: 'center' }}>
-                <input type="number" placeholder="Forventet" value={l.forventet_kr} onChange={(e) => opdaterBudgetLinje(l.id, { forventet_kr: Number(e.target.value) || 0 })} style={{ padding: '6px', fontSize: '12px' }} />
-                <input type="number" placeholder="Faktisk" value={l.faktisk_kr} onChange={(e) => opdaterBudgetLinje(l.id, { faktisk_kr: Number(e.target.value) || 0 })} style={{ padding: '6px', fontSize: '12px' }} />
-                <button onClick={() => fjernBudgetLinje(l.id)} style={{ background: 'transparent', border: 'none', color: 'var(--fejl)', cursor: 'pointer', fontSize: '14px', padding: '0 8px' }}>
-                  ×
-                </button>
-              </div>
-            </div>
-          ))}
-
-          <div style={{ marginTop: '16px' }}>
-            <Knap onClick={tilfoejBudgetLinje} variant="primaer">+ Tilføj linje</Knap>
-          </div>
-        </div>
+      {aaben && (
+        <div style={{ padding: resume ? '0 14px 14px' : '4px 14px 14px' }}>{children}</div>
       )}
     </div>
   );
 }
 
-// Afkrydsningsrække brugt til både grupper og løse items i pakkelisten.
+// ─────────────────────────────────────────────
+// Sektioner
+// ─────────────────────────────────────────────
+
+function Turparametre({
+  tur, opdater, skiftDato, koordinatTekst, koordinatFejl, opdaterKoordinater,
+  soegPaaSted, stedSoeger, stedForslag, vaelgSted, beregninger
+}: {
+  tur: Tur;
+  opdater: (a: Partial<Tur>) => Promise<void>;
+  skiftDato: (a: { startdato?: string; slutdato?: string }) => Promise<void>;
+  koordinatTekst: string;
+  koordinatFejl: string;
+  opdaterKoordinater: (v: string) => Promise<void>;
+  soegPaaSted: () => Promise<void>;
+  stedSoeger: boolean;
+  stedForslag: StedForslag[];
+  vaelgSted: (f: StedForslag) => Promise<void>;
+  beregninger: Beregninger;
+}) {
+  return (
+    <div style={{ display: 'grid', gap: '12px' }}>
+      <div>
+        <Label>Sted</Label>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <input
+            value={tur.sted}
+            onChange={(e) => opdater({ sted: e.target.value })}
+            placeholder="fx Palnatokesvej 22, Odense"
+            style={{ flex: 1, minWidth: 0 }}
+          />
+          <Knap onClick={soegPaaSted} disabled={stedSoeger || !tur.sted.trim()} variant="primaer">
+            {stedSoeger ? 'Søger...' : 'Find'}
+          </Knap>
+        </div>
+        {stedForslag.length > 0 && (
+          <div style={{ marginTop: '6px', background: 'var(--bg)', border: '1px solid var(--border-svag)', borderRadius: '8px', overflow: 'hidden' }}>
+            {stedForslag.map((f, i) => (
+              <button
+                key={`${f.lat},${f.lng}`}
+                onClick={() => vaelgSted(f)}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '10px 12px',
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: i < stedForslag.length - 1 ? '1px solid var(--border-svag)' : 'none',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  color: 'var(--tekst)'
+                }}
+              >
+                <div style={{ fontSize: '13px', fontWeight: 500 }}>{f.navn}</div>
+                {f.detalje && <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)' }}>{f.detalje}</div>}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <Label fejl={koordinatFejl || undefined}>Koordinater</Label>
+        <input
+          type="text"
+          value={koordinatTekst}
+          onChange={(e) => opdaterKoordinater(e.target.value)}
+          placeholder="55.66, 10.05"
+          style={{ width: '100%' }}
+        />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+        <Felt label="Startdato" type="date" value={tur.startdato} onChange={(v) => skiftDato({ startdato: v })} />
+        <Felt label="Slutdato" type="date" value={tur.slutdato} onChange={(v) => skiftDato({ slutdato: v })} />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+        <Felt label="Personer" type="number" value={tur.personer} onChange={(v) => opdater({ personer: Number(v) || 1 })} />
+        <Felt label="Bæreafstand (km)" type="number" value={tur.baereafstand_km} onChange={(v) => opdater({ baereafstand_km: Number(v) || 0 })} />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+        <Dropdown label="Overnatning" value={tur.overnatning} onChange={(v) => opdater({ overnatning: v as Overnatning })} options={OVERNATNING} formater={etiket} />
+        <Dropdown label="Aktivitet" value={tur.aktivitet} onChange={(v) => opdater({ aktivitet: v as Aktivitet })} options={AKTIVITET} formater={etiket} />
+        <Dropdown label="Terræn" value={tur.terraen} onChange={(v) => opdater({ terraen: v as Terraen })} options={TERRAEN} formater={etiket} />
+        <Dropdown label="Erfaring" value={tur.erfaring} onChange={(v) => opdater({ erfaring: v as Erfaring })} options={ERFARING} formater={etiket} />
+      </div>
+
+      <Infokort label="Forventet forbrug">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', textAlign: 'center' }}>
+          <Noegletal vaerdi={`${beregninger.vand_liter} L`} label="Vand" />
+          <Noegletal vaerdi={`${beregninger.mad_kg} kg`} label="Mad" />
+          <Noegletal vaerdi={`${beregninger.gas_g} g`} label="Gas" />
+        </div>
+      </Infokort>
+    </div>
+  );
+}
+
+function Pakkeliste({ afsnit, perItem, visning, setVisning, antal }: {
+  afsnit: PakkelisteAfsnit[];
+  perItem: Map<Reference, Advarsel[]>;
+  visning: Visning;
+  setVisning: (v: Visning) => void;
+  antal: number;
+}) {
+  if (antal === 0) {
+    return (
+      <div style={{ fontSize: '13px', color: 'var(--tekst-svag)', padding: '10px 0' }}>
+        Ingen gear valgt endnu. Vælg en gruppe eller enkelte items under "Vælg gear".
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{ marginBottom: '14px' }}>
+        <Segment
+          vaerdier={VISNINGER}
+          valgt={visning}
+          vaelg={setVisning}
+          formater={(v) => (v === 'gruppe' ? 'Efter gruppe' : 'Efter tag')}
+          kompakt
+        />
+      </div>
+
+      {afsnit.map((a) => (
+        <div key={a.titel} style={{ marginBottom: '16px' }}>
+          <SektionsTitel>{a.titel}</SektionsTitel>
+          {a.items.map((item) => (
+            <Pakkeraekke key={item.uid} item={item} advarsler={perItem.get(item.uid) ?? []} />
+          ))}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: '11px', color: 'var(--tekst-svag)', paddingTop: '5px' }}>
+            {kg(a.items.reduce((s, i) => s + i.vaegt_g, 0))} kg
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Pakkeraekke({ item, advarsler }: { item: Item; advarsler: Advarsel[] }) {
+  // Er der flere huller på samme item, vejer det røde tungest.
+  const vaerst = advarsler.find((a) => a.niveau === 'roed') ?? advarsler[0];
+
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      padding: '7px 0',
+      borderBottom: '1px solid var(--border-svag)',
+      fontSize: '13px',
+      background: vaerst ? 'var(--advarsel-bg)' : 'transparent'
+    }}>
+      <span style={{ flex: 1, minWidth: 0, color: 'var(--tekst)' }}>{item.navn || 'Uden navn'}</span>
+
+      {vaerst && (
+        <span title={`${vaerst.besked}. ${vaerst.detalje}`}>
+          <Chip storrelse="lille" farve={vaerst.niveau === 'roed' ? 'fejl' : 'advarsel'}>
+            ⚠ {vaerst.mangler}
+          </Chip>
+        </span>
+      )}
+
+      {item.delt && <span style={{ fontSize: '10px', color: 'var(--tekst-svag)' }}>delt</span>}
+      <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '12px', minWidth: '52px', textAlign: 'right' }}>
+        {item.vaegt_g} g
+      </span>
+    </div>
+  );
+}
+
+function Advarsler({ advarsler }: { advarsler: Advarsel[] }) {
+  return (
+    <Infokort label={`Advarsler (${advarsler.length})`}>
+      <Advarselsliste advarsler={advarsler} />
+    </Infokort>
+  );
+}
+
+function Advarselsliste({ advarsler }: { advarsler: Advarsel[] }) {
+  return (
+    <div style={{ display: 'grid', gap: '8px' }}>
+      {advarsler.map((a, i) => (
+        <div key={i}>
+          <div style={{ fontSize: '12px', fontWeight: 500, color: a.niveau === 'roed' ? 'var(--fejl)' : 'var(--advarsel)' }}>
+            {a.besked}
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginTop: '1px' }}>{a.detalje}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Vaegt({ prPerson, delt, personligt, personer }: {
+  prPerson: number;
+  delt: number;
+  personligt: number;
+  personer: number;
+}) {
+  return (
+    <Infokort label="Vægt" fremhaevet>
+      <div style={{ fontSize: '22px', fontWeight: 500, fontFamily: "'Fraunces', Georgia, serif" }}>
+        {kg(prPerson)} kg
+        {personer > 1 && <span style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)' }}> / pers</span>}
+      </div>
+      <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginTop: '3px' }}>
+        Delt: {kg(delt)} kg · Personligt: {kg(personligt)} kg
+      </div>
+    </Infokort>
+  );
+}
+
+function Vejrudsigt({ data, hentes, fejl, hent }: {
+  data: VejrData | null;
+  hentes: boolean;
+  fejl: string;
+  hent: () => Promise<void>;
+}) {
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
+        <Knap onClick={hent} disabled={hentes} variant="primaer" style={{ padding: '5px 12px', fontSize: '11px' }}>
+          {hentes ? 'Henter...' : data ? 'Opdater' : 'Hent vejr'}
+        </Knap>
+      </div>
+
+      {fejl && <div style={{ fontSize: '12px', color: 'var(--fejl)', marginBottom: '8px' }}>{fejl}</div>}
+
+      {data ? (
+        <>
+          <div style={{ display: 'grid', gap: '4px', fontSize: '13px' }}>
+            {data.dage.map((d) => (
+              <div key={d.dato} style={{ display: 'grid', gridTemplateColumns: '54px 22px 1fr auto auto', gap: '8px', alignItems: 'center', padding: '3px 0' }}>
+                <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '11px' }}>{formatterDag(d.dato)}</span>
+                <span style={{ fontSize: '15px' }}>{vejrIkonKode(d.vejrkode)}</span>
+                <span>{d.temp_min}–{d.temp_max}°C</span>
+                <span style={{ color: 'var(--tekst-svag)', fontSize: '11px' }}>{d.vind_ms} m/s</span>
+                <span style={{ color: d.nedboer_mm > 0 ? 'var(--advarsel)' : 'var(--tekst-svag)', fontSize: '11px', minWidth: '38px', textAlign: 'right' }}>
+                  {d.nedboer_mm > 0 ? `${d.nedboer_mm} mm` : '—'}
+                </span>
+              </div>
+            ))}
+          </div>
+          {data.dage[0] && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--tekst-dæmpet)', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--border-svag)' }}>
+              <span>Sol op {data.dage[0].sol_op}</span>
+              <span>Sol ned {data.dage[0].sol_ned}</span>
+            </div>
+          )}
+          {data.observationer.length > 0 && (
+            <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid var(--border-svag)' }}>
+              {data.observationer.map((obs, i) => (
+                <div key={i} style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginBottom: '3px' }}>· {obs}</div>
+              ))}
+            </div>
+          )}
+        </>
+      ) : !fejl && (
+        <div style={{ fontSize: '12px', color: 'var(--tekst-svag)' }}>Angiv koordinater og datoer, klik "Hent vejr".</div>
+      )}
+    </div>
+  );
+}
+
+function Deltagere({ deltagere, tilfoej, fjern }: {
+  deltagere: Deltager[];
+  tilfoej: () => Promise<void>;
+  fjern: (id: string) => Promise<void>;
+}) {
+  return (
+    <div>
+      {deltagere.length === 0 ? (
+        <div style={{ fontSize: '13px', color: 'var(--tekst-svag)', marginBottom: '12px' }}>
+          Kun dig selv indtil videre.
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
+          {deltagere.map((d) => (
+            <Chip key={d.id} onFjern={() => fjern(d.id)}>{d.navn}</Chip>
+          ))}
+        </div>
+      )}
+      <Knap onClick={tilfoej}>+ Tilføj deltager</Knap>
+    </div>
+  );
+}
+
+const BUDGET_KATEGORIER = ['gear', 'forplejning', 'transport', 'andet'] as const;
+
+function Budget({ linjer, tilfoej, opdater, fjern }: {
+  linjer: BudgetLinje[];
+  tilfoej: () => Promise<void>;
+  opdater: (id: string, a: Partial<BudgetLinje>) => Promise<void>;
+  fjern: (id: string) => Promise<void>;
+}) {
+  return (
+    <div>
+      {linjer.length === 0 && (
+        <div style={{ fontSize: '13px', color: 'var(--tekst-svag)', marginBottom: '12px' }}>
+          Ingen budget-linjer endnu.
+        </div>
+      )}
+      {linjer.map((l) => (
+        <div key={l.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--border-svag)', display: 'grid', gap: '6px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+            <select value={l.kategori} onChange={(e) => opdater(l.id, { kategori: e.target.value })} style={{ padding: '6px', fontSize: '12px', textTransform: 'capitalize' }}>
+              {BUDGET_KATEGORIER.map((k) => <option key={k} value={k}>{k}</option>)}
+            </select>
+            <input placeholder="Beskrivelse" value={l.beskrivelse} onChange={(e) => opdater(l.id, { beskrivelse: e.target.value })} style={{ padding: '6px', fontSize: '12px', minWidth: 0 }} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '6px', alignItems: 'center' }}>
+            <input type="number" placeholder="Forventet" value={l.forventet_kr} onChange={(e) => opdater(l.id, { forventet_kr: Number(e.target.value) || 0 })} style={{ padding: '6px', fontSize: '12px', minWidth: 0 }} />
+            <input type="number" placeholder="Faktisk" value={l.faktisk_kr} onChange={(e) => opdater(l.id, { faktisk_kr: Number(e.target.value) || 0 })} style={{ padding: '6px', fontSize: '12px', minWidth: 0 }} />
+            <button onClick={() => fjern(l.id)} style={{ background: 'transparent', border: 'none', color: 'var(--fejl)', cursor: 'pointer', fontSize: '14px', padding: '0 6px' }}>
+              ×
+            </button>
+          </div>
+        </div>
+      ))}
+      <div style={{ marginTop: '12px' }}>
+        <Knap onClick={tilfoej}>+ Tilføj linje</Knap>
+      </div>
+    </div>
+  );
+}
+
+function Indholdsvalg({ grupper, items, tur, paaTuren, gruppeForslag, toggleGruppe, toggleLoestItem }: {
+  grupper: Gruppe[];
+  items: Item[];
+  tur: Tur;
+  paaTuren: Set<Reference>;
+  gruppeForslag: Gruppe[];
+  toggleGruppe: (uid: Reference) => Promise<void>;
+  toggleLoestItem: (uid: Reference) => Promise<void>;
+}) {
+  return (
+    <div>
+      {gruppeForslag.length > 0 && (
+        <div style={{ padding: '10px 12px', background: 'var(--accent-bg)', borderRadius: '8px', marginBottom: '16px' }}>
+          <SektionsTitel>Foreslåede grupper</SektionsTitel>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {gruppeForslag.map((g) => (
+              <button
+                key={g.uid}
+                onClick={() => toggleGruppe(g.uid)}
+                style={{ padding: '5px 12px', fontSize: '12px', background: 'var(--bg-forhoejet)', color: 'var(--accent)', border: '1px solid var(--accent-border)', borderRadius: '14px', cursor: 'pointer', fontWeight: 500 }}
+              >
+                + {g.navn}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <SektionsTitel>Grupper</SektionsTitel>
+      {grupper.length === 0 && (
+        <div style={{ fontSize: '13px', color: 'var(--tekst-svag)', padding: '4px 0' }}>Ingen grupper endnu.</div>
+      )}
+      {grupper.map((g) => {
+        const gItems = items.filter((i) => g.item_ids.includes(i.uid));
+        const gVaegt = gItems.reduce((s, i) => s + i.vaegt_g, 0);
+        return (
+          <Vaelgerraekke
+            key={g.uid}
+            titel={g.navn}
+            detalje={`${gItems.length} items · ${kg(gVaegt)} kg`}
+            valgt={tur.gruppe_ids.includes(g.uid)}
+            toggle={() => toggleGruppe(g.uid)}
+          />
+        );
+      })}
+
+      <div style={{ marginTop: '18px' }}>
+        <SektionsTitel>Løse items</SektionsTitel>
+        {items.filter((i) => i.status === 'ejer').map((item) => {
+          const valgtLoest = tur.loese_item_ids.includes(item.uid);
+          // Items der allerede kommer via en gruppe kan ikke fravælges her.
+          const viaGruppe = paaTuren.has(item.uid) && !valgtLoest;
+          return (
+            <Vaelgerraekke
+              key={item.uid}
+              titel={item.navn}
+              detalje={`${item.vaegt_g} g${item.delt ? ' · delt' : ''}${viaGruppe ? ' · via gruppe' : ''}`}
+              valgt={valgtLoest || viaGruppe}
+              laast={viaGruppe}
+              toggle={() => toggleLoestItem(item.uid)}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Afkrydsningsrække brugt til både grupper og løse items.
 function Vaelgerraekke({ titel, detalje, valgt, laast, toggle }: {
   titel: string;
   detalje: string;
@@ -573,7 +905,7 @@ function Vaelgerraekke({ titel, detalje, valgt, laast, toggle }: {
         display: 'flex',
         alignItems: 'center',
         gap: '10px',
-        padding: '10px 12px',
+        padding: '8px 10px',
         borderRadius: '8px',
         cursor: laast ? 'default' : 'pointer',
         opacity: laast ? 0.5 : 1,
@@ -582,8 +914,8 @@ function Vaelgerraekke({ titel, detalje, valgt, laast, toggle }: {
       }}
     >
       <input type="checkbox" checked={valgt} disabled={laast} onChange={toggle} style={{ width: 'auto' }} />
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: '13px', color: 'var(--tekst)' }}>{titel}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '13px', color: 'var(--tekst)' }}>{titel || 'Uden navn'}</div>
         <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)' }}>{detalje}</div>
       </div>
     </label>
@@ -593,16 +925,58 @@ function Vaelgerraekke({ titel, detalje, valgt, laast, toggle }: {
 function Noegletal({ vaerdi, label }: { vaerdi: string; label: string }) {
   return (
     <div>
-      <div style={{ fontSize: '20px', fontWeight: 500, fontFamily: "'Fraunces', Georgia, serif" }}>{vaerdi}</div>
+      <div style={{ fontSize: '18px', fontWeight: 500, fontFamily: "'Fraunces', Georgia, serif" }}>{vaerdi}</div>
       <div style={{ fontSize: '10px', color: 'var(--tekst-dæmpet)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</div>
     </div>
   );
+}
+
+// ─────────────────────────────────────────────
+// Hjælpere
+// ─────────────────────────────────────────────
+
+const VISNINGER: readonly Visning[] = ['gruppe', 'tag'];
+
+const MAANEDER = [
+  'januar', 'februar', 'marts', 'april', 'maj', 'juni',
+  'juli', 'august', 'september', 'oktober', 'november', 'december'
+];
+
+function kg(gram: number): string {
+  return (gram / 1000).toFixed(2);
 }
 
 function beregnNaetter(start: string, slut: string): number {
   if (!start || !slut) return 0;
   const dage = (new Date(slut).getTime() - new Date(start).getTime()) / (1000 * 60 * 60 * 24);
   return Math.max(0, Math.floor(dage));
+}
+
+// "2026-07-21" + "2026-07-23" → "21.–23. juli". Går perioden over et
+// månedsskifte, skrives måneden ud begge steder.
+function formatterPeriode(start: string, slut: string): string {
+  const fra = new Date(start);
+  if (!start || Number.isNaN(fra.getTime())) return '';
+
+  const til = slut ? new Date(slut) : fra;
+  const fuld = (d: Date) => `${d.getDate()}. ${MAANEDER[d.getMonth()]}`;
+
+  if (!slut || Number.isNaN(til.getTime()) || fra.getTime() === til.getTime()) return fuld(fra);
+  if (fra.getMonth() === til.getMonth() && fra.getFullYear() === til.getFullYear()) {
+    return `${fra.getDate()}.–${fuld(til)}`;
+  }
+  return `${fuld(fra)} – ${fuld(til)}`;
+}
+
+// Kort resumé til den foldede vejrsektion: spændet over hele turen.
+function vejrResume(data: VejrData | null): string | undefined {
+  if (!data || data.dage.length === 0) return undefined;
+
+  const min = Math.min(...data.dage.map((d) => d.temp_min));
+  const maks = Math.max(...data.dage.map((d) => d.temp_max));
+  const nedboer = data.dage.reduce((s, d) => s + d.nedboer_mm, 0);
+
+  return `${min}–${maks}°C · ${nedboer > 0 ? `${Math.round(nedboer)} mm nedbør` : 'tørt'}`;
 }
 
 // "55.66, 10.05" → koordinater, eller null hvis det ikke er et gyldigt par.
@@ -619,7 +993,7 @@ function laesKoordinater(tekst: string): { lat: number; lng: number } | null {
 }
 
 // Slår en reference til eller fra i en liste.
-function vekslet(uids: string[], uid: string): string[] {
+function vekslet(uids: Reference[], uid: Reference): Reference[] {
   return uids.includes(uid) ? uids.filter((x) => x !== uid) : [...uids, uid];
 }
 
