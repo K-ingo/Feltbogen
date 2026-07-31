@@ -2,21 +2,32 @@ import { useEffect, useState } from 'react';
 import AuthSide from './AuthSide';
 import { useAuth } from './useAuth';
 import { afstemMedServer, sendAfventende } from './sync';
+import DashboardSide from './DashboardSide';
 import InventarSide from './InventarSide';
 import ItemDetalje from './ItemDetalje';
 import GrupperListe from './GrupperListe';
 import TureListe from './TureListe';
+import TurDetalje from './TurDetalje';
 import StatistikSide from './StatistikSide';
+import { opretTomtItem, opretTomTur } from './opret';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
 
 function App() {
   const { erLoggetInd } = useAuth();
-  const [fane, setFane] = useState<Fane>('inventar');
-  // nyOprettet følger med, så ItemDetalje kan rydde en navnløs post væk igen
-  // hvis man fortryder.
+  const [fane, setFane] = useState<Fane>('dashboard');
+  // Valget ligger her og ikke i listeskærmene, fordi dashboardet også åbner
+  // både gear og ture. nyOprettet følger med, så detaljeskærmen kan rydde en
+  // navnløs post væk igen hvis man fortryder.
   const [valgtItem, setValgtItem] = useState<{ id: number; ny: boolean } | null>(null);
+  const [valgtTur, setValgtTur] = useState<{ id: number; ny: boolean } | null>(null);
   const aabnItem = (id: number, ny = false) => setValgtItem({ id, ny });
+  const aabnTur = (id: number, ny = false) => setValgtTur({ id, ny });
+
+  // Nye poster åbnes med det samme — en tom post man skal lede efter bagefter
+  // er ikke til nogen nytte.
+  const nytItem = async () => aabnItem(await opretTomtItem(), true);
+  const nyTur = async () => aabnTur(await opretTomTur(), true);
 
   // Afstem med serveren ved opstart — og igen når forbindelsen kommer tilbage.
   // En tur kan vare timer uden dækning med appen åben hele tiden; uden
@@ -45,8 +56,8 @@ function App() {
     return <AuthSide />;
   }
 
-  // Et åbent item lægger sig over den valgte fane, indtil man går tilbage.
-  // Detaljeskærme har deres egen header, så Skal får ingen titel her.
+  // En åben detaljeskærm lægger sig over den valgte fane, indtil man går
+  // tilbage. De har deres egen header, så Skal får ingen titel her.
   if (valgtItem !== null) {
     return (
       <Skal fane={fane} skift={setFane}>
@@ -59,9 +70,32 @@ function App() {
     );
   }
 
+  if (valgtTur !== null) {
+    return (
+      <Skal fane={fane} skift={setFane}>
+        <TurDetalje
+          turId={valgtTur.id}
+          nyOprettet={valgtTur.ny}
+          tilbage={() => setValgtTur(null)}
+        />
+      </Skal>
+    );
+  }
+
   switch (fane) {
+    case 'dashboard':
+      return (
+        <DashboardSide
+          fane={fane}
+          skift={setFane}
+          aabnItem={aabnItem}
+          aabnTur={aabnTur}
+          nytItem={nytItem}
+          nyTur={nyTur}
+        />
+      );
     case 'grupper': return <GrupperListe fane={fane} skift={setFane} />;
-    case 'ture': return <TureListe fane={fane} skift={setFane} />;
+    case 'ture': return <TureListe fane={fane} skift={setFane} aabnTur={aabnTur} nyTur={nyTur} />;
     case 'statistik': return <StatistikSide fane={fane} skift={setFane} />;
     case 'inventar': return <InventarSide fane={fane} skift={setFane} aabnItem={aabnItem} />;
   }

@@ -1,15 +1,17 @@
 import type { ReactNode } from 'react';
 import { useErDesktop } from './useMedie';
 
-export type Fane = 'inventar' | 'grupper' | 'ture' | 'statistik';
+export type Fane = 'dashboard' | 'inventar' | 'grupper' | 'ture' | 'statistik';
 
-// Dashboard og Indstillinger står ikke her endnu — de tilføjes sammen med de
-// skærme, så navigationen ikke peger på noget der ikke findes.
-const FANER: { id: Fane; label: string }[] = [
-  { id: 'inventar', label: 'Inventar' },
-  { id: 'grupper', label: 'Grupper' },
-  { id: 'ture', label: 'Ture' },
-  { id: 'statistik', label: 'Statistik' }
+// Indstillinger står ikke her endnu — den tilføjes sammen med skærmen, så
+// navigationen ikke peger på noget der ikke findes.
+// `kort` bruges i bundnavigationen, hvor fem faner skal dele skærmbredden.
+const FANER: { id: Fane; label: string; kort: string }[] = [
+  { id: 'dashboard', label: 'Dashboard', kort: 'Hjem' },
+  { id: 'inventar', label: 'Inventar', kort: 'Inventar' },
+  { id: 'grupper', label: 'Grupper', kort: 'Grupper' },
+  { id: 'ture', label: 'Ture', kort: 'Ture' },
+  { id: 'statistik', label: 'Statistik', kort: 'Stat' }
 ];
 
 interface Props {
@@ -176,7 +178,7 @@ function BundNav({ fane, skift }: { fane: Fane; skift: (f: Fane) => void }) {
       paddingBottom: 'env(safe-area-inset-bottom)',
       zIndex: 20
     }}>
-      {FANER.map(({ id, label }) => {
+      {FANER.map(({ id, kort }) => {
         const erAktiv = fane === id;
         return (
           <button
@@ -184,20 +186,21 @@ function BundNav({ fane, skift }: { fane: Fane; skift: (f: Fane) => void }) {
             onClick={() => skift(id)}
             style={{
               flex: 1,
-              padding: '14px 4px 12px',
+              minWidth: 0,
+              padding: '14px 2px 12px',
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
-              fontSize: '11px',
+              fontSize: '10px',
               color: erAktiv ? 'var(--accent)' : 'var(--tekst-dæmpet)',
               fontWeight: erAktiv ? 600 : 500,
               textTransform: 'uppercase',
-              letterSpacing: '0.8px',
+              letterSpacing: '0.5px',
               borderTop: erAktiv ? '2px solid var(--accent)' : '2px solid transparent',
               transition: 'color 0.15s'
             }}
           >
-            {label}
+            {kort}
           </button>
         );
       })}

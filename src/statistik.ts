@@ -3,8 +3,7 @@ import { itemUidsPaaTur } from './smartMotor';
 
 export type Periode = 'i_aar' | 'sidste_aar' | 'alt';
 
-export function filtrererTure(ture: Tur[], periode: Periode): Tur[] {
-  const nu = new Date();
+export function filtrererTure(ture: Tur[], periode: Periode, nu: Date = new Date()): Tur[] {
   const iAarStart = new Date(nu.getFullYear(), 0, 1);
   const sidsteAarStart = new Date(nu.getFullYear() - 1, 0, 1);
   const sidsteAarSlut = new Date(nu.getFullYear() - 1, 11, 31);
