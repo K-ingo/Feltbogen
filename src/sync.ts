@@ -278,14 +278,13 @@ async function synkroniser<T extends Post>(samling: Samling<T>, id: number): Pro
 
   try {
     const payload = samling.tilPb(post, bruger.id);
-    let nytPbId: string | undefined;
+    let svar: RecordModel;
 
     if (post.pb_id) {
-      await pb.collection(samling.pbNavn).update(post.pb_id, payload);
+      svar = await pb.collection(samling.pbNavn).update(post.pb_id, payload);
     } else {
-      const skabt = await pb.collection(samling.pbNavn).create(payload);
-      nytPbId = skabt.id;
-      advarHvisUidTabt(skabt, post.uid, samling.pbNavn);
+      svar = await pb.collection(samling.pbNavn).create(payload);
+      advarHvisUidTabt(svar, post.uid, samling.pbNavn);
     }
 
     // Er posten redigeret igen mens kaldet var i luften, står der en ny sync i
@@ -294,7 +293,10 @@ async function synkroniser<T extends Post>(samling: Samling<T>, id: number): Pro
 
     // Kun sync-felterne skrives, så en samtidig redigering ikke overskrives.
     await samling.tabel.update(id, (gemt) => {
-      if (nytPbId) gemt.pb_id = nytPbId;
+      gemt.pb_id = svar.id;
+      // Vi er lige blevet enige med serveren. Uden det her ville næste
+      // hentning tro at nogen havde rørt posten et andet sted.
+      gemt.server_aendret = tekst(svar.updated);
       if (!nyereAendring) gemt.usendt_aendring = false;
     });
     return true;
@@ -448,20 +450,86 @@ async function hent<T extends Post>(samling: Samling<T>, brugerId: string): Prom
   // med record-id'et som uid — et andet end det lokale. Uden også at matche
   // på pb_id blev ens egne poster derfor hentet ned igen som dubletter ved
   // hver opstart.
-  const kendteUid = new Set(lokale.map((p) => p.uid));
-  const kendtePbId = new Set(lokale.map((p) => p.pb_id).filter(Boolean));
+  const efterPbId = new Map(lokale.filter((p) => p.pb_id).map((p) => [p.pb_id!, p]));
+  const efterUid = new Map(lokale.map((p) => [p.uid, p]));
 
   // Poster vi har slettet lokalt må ikke hentes tilbage, selvom de stadig
   // ligger på serveren fordi sletningen ikke er nået op endnu.
   const slettede = await db.slettede.where('samling').equals(samling.pbNavn).toArray();
   const slettedePbIds = new Set(slettede.map((s) => s.pb_id));
 
-  const nye = records
-    .filter((r) => !kendtePbId.has(r.id) && !slettedePbIds.has(r.id))
-    .map((r) => samling.fraPb(r))
-    .filter((p) => !kendteUid.has(p.uid));
+  const nye: T[] = [];
+
+  for (const r of records) {
+    if (slettedePbIds.has(r.id)) continue;
+
+    const lokal = efterPbId.get(r.id) ?? efterUid.get(uid(r));
+    if (lokal) {
+      await fletNed(samling, lokal, r);
+    } else {
+      nye.push(samling.fraPb(r));
+    }
+  }
 
   if (nye.length > 0) await samling.tabel.bulkAdd(nye);
+}
+
+// Afgør hvad der skal ske med en post der findes begge steder.
+//
+// Rækkefølgen er valgt, så et ur kun bliver spurgt når der ikke er andet at
+// gå efter. Serverens `updated` sammenlignes med den værdi vi gemte sidst vi
+// var enige — det er den samme klokkes to aflæsninger, og den kan man stole
+// på. Først når begge sider har ændret sig, står lokal tid mod servertid, og
+// der er "nyeste vinder" et valg og ikke en kendsgerning.
+async function fletNed<T extends Post>(samling: Samling<T>, lokal: T, r: RecordModel): Promise<void> {
+  if (lokal.id === undefined) return;
+  const serverAendret = tekst(r.updated);
+
+  // Posten blev lavet her uden forbindelse og ligger nu deroppe med samme
+  // uid. Knyt dem sammen, ellers ville de drive fra hinanden.
+  if (!lokal.pb_id) {
+    await samling.tabel.update(lokal.id, (p) => { p.pb_id = r.id; });
+  }
+
+  // Serveren har ikke rørt posten siden sidst. Er der lokale ændringer,
+  // sendes de op af sendAltUsendt().
+  if (serverAendret === lokal.server_aendret) return;
+
+  // Serveren har ændret sig, og vi har intet at miste — tag dens udgave.
+  // Ingen ure indblandet.
+  if (!lokal.usendt_aendring) {
+    await tagServerens(samling, lokal, r, serverAendret);
+    return;
+  }
+
+  // Begge sider har ændret sig. Nyeste vinder.
+  if (new Date(serverAendret).getTime() > lokal.aendret.getTime()) {
+    await tagServerens(samling, lokal, r, serverAendret);
+  }
+  // Ellers er den lokale nyest; den ligger allerede i kø til at gå op og
+  // overskrive serverens.
+}
+
+async function tagServerens<T extends Post>(
+  samling: Samling<T>,
+  lokal: T,
+  r: RecordModel,
+  serverAendret: string
+): Promise<void> {
+  const fraServer = samling.fraPb(r);
+
+  await samling.tabel.update(lokal.id!, (gemt) => {
+    Object.assign(gemt, fraServer, {
+      id: lokal.id,
+      // uid er identiteten andre poster peger på. Mangler uid-feltet i
+      // PocketBase-skemaet, kommer posten retur med record-id'et som uid — og
+      // at skrive det ind ville rive gruppernes og turenes referencer over.
+      uid: lokal.uid,
+      pb_id: r.id,
+      server_aendret: serverAendret,
+      usendt_aendring: false
+    });
+  });
 }
 
 async function sendUsendte<T extends Post>(samling: Samling<T>): Promise<{ ok: number; fejl: number }> {
