@@ -96,7 +96,7 @@ function App() {
       );
     case 'grupper': return <GrupperListe fane={fane} skift={setFane} />;
     case 'ture': return <TureListe fane={fane} skift={setFane} aabnTur={aabnTur} nyTur={nyTur} />;
-    case 'statistik': return <StatistikSide fane={fane} skift={setFane} />;
+    case 'statistik': return <StatistikSide fane={fane} skift={setFane} aabnItem={aabnItem} />;
     case 'inventar': return <InventarSide fane={fane} skift={setFane} aabnItem={aabnItem} />;
   }
 }
