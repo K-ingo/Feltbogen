@@ -135,12 +135,21 @@ export interface Slettet {
   slettet: Date;
 }
 
+// Små valg der hører til denne enhed og ikke til dataene — om onboardingen
+// er set, om et tip er væk. De synkroniseres ikke: to enheder kan sagtens
+// have set forskellige ting.
+export interface Indstilling {
+  noegle: string;
+  vaerdi: string;
+}
+
 export class FeltbogenDB extends Dexie {
   // Nøgletypen er number (++id), så get/add/update slipper for id-casts.
   items!: Table<Item, number>;
   grupper!: Table<Gruppe, number>;
   ture!: Table<Tur, number>;
   slettede!: Table<Slettet, number>;
+  indstillinger!: Table<Indstilling, string>;
 
   constructor() {
     super('FeltbogenDB');
@@ -172,6 +181,16 @@ export class FeltbogenDB extends Dexie {
         slettede: '++id, samling, pb_id, [samling+pb_id]'
       })
       .upgrade(migrerTilUid);
+
+    // v6 lægger et sted at huske enhedens egne valg. Ingen upgrade: tabellen
+    // er tom til at begynde med, og det den mangler har fornuftige standarder.
+    this.version(6).stores({
+      items: '++id, &uid, navn, status, oprettet',
+      grupper: '++id, &uid, navn, oprettet',
+      ture: '++id, &uid, navn, startdato, status, oprettet',
+      slettede: '++id, samling, pb_id, [samling+pb_id]',
+      indstillinger: '&noegle'
+    });
   }
 }
 

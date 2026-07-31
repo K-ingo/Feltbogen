@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { useErDesktop } from './useMedie';
+import { markerSet, useErSet, FAB_TIP_SET } from './indstillinger';
 
 export type Fane = 'dashboard' | 'inventar' | 'grupper' | 'ture' | 'statistik' | 'indstillinger';
 
@@ -82,6 +83,7 @@ export function Skal({ fane, skift, titel, undertitel, handlinger, fab, children
         {children}
       </div>
       {fab && <Fab onClick={fab} />}
+      {fab && <FabTip />}
       <BundNav fane={fane} skift={skift} />
     </>
   );
@@ -221,6 +223,51 @@ function BundNav({ fane, skift }: { fane: Fane; skift: (f: Fane) => void }) {
           </button>
         );
       })}
+    </div>
+  );
+}
+
+// Peger på FAB'en første gang man ser den. Wireframets rundtur er fire trin;
+// her er kun det ene, fordi det er det eneste sted knappen ikke forklarer sig
+// selv — resten af appen har almindelige knapper med tekst på.
+function FabTip() {
+  const set = useErSet(FAB_TIP_SET);
+  if (set !== false) return null;
+
+  return (
+    <div style={{
+      position: 'fixed',
+      right: '20px',
+      bottom: 'calc(150px + env(safe-area-inset-bottom))',
+      maxWidth: '230px',
+      padding: '12px 14px',
+      borderRadius: '10px',
+      background: 'var(--tekst)',
+      color: 'var(--bg)',
+      boxShadow: '0 4px 16px var(--skygge)',
+      zIndex: 25,
+      fontSize: '12px',
+      lineHeight: 1.5
+    }}>
+      <div style={{ fontWeight: 600, marginBottom: '3px' }}>Tilføj her</div>
+      <div style={{ opacity: 0.85 }}>
+        Tryk på + for at oprette. Du kan altid rette det bagefter.
+      </div>
+      <button
+        onClick={() => void markerSet(FAB_TIP_SET)}
+        style={{
+          background: 'transparent',
+          border: 'none',
+          padding: '6px 0 0',
+          cursor: 'pointer',
+          color: 'inherit',
+          opacity: 0.85,
+          fontSize: '12px',
+          textDecoration: 'underline'
+        }}
+      >
+        Forstået
+      </button>
     </div>
   );
 }

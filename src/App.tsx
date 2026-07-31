@@ -10,12 +10,16 @@ import TureListe from './TureListe';
 import TurDetalje from './TurDetalje';
 import StatistikSide from './StatistikSide';
 import IndstillingerSide from './IndstillingerSide';
+import Velkomst from './Velkomst';
 import { opretTomtItem, opretTomTur } from './opret';
+import { markerSet, useErSet, ONBOARDING_SET } from './indstillinger';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
 
 function App() {
   const { erLoggetInd } = useAuth();
+  const onboardingSet = useErSet(ONBOARDING_SET);
+  const [viserLogin, setViserLogin] = useState(false);
   const [fane, setFane] = useState<Fane>('dashboard');
   // Valget ligger her og ikke i listeskærmene, fordi dashboardet også åbner
   // både gear og ture. nyOprettet følger med, så detaljeskærmen kan rydde en
@@ -29,6 +33,19 @@ function App() {
   // er ikke til nogen nytte.
   const nytItem = async () => aabnItem(await opretTomtItem(), true);
   const nyTur = async () => aabnTur(await opretTomTur(), true);
+
+  // Markeringen skrives færdig først, så velkomstskærmen er væk inden den
+  // næste skærm kommer op — ellers ville den nå at blinke igennem.
+  const efterVelkomst = async (saa?: () => Promise<void>) => {
+    await markerSet(ONBOARDING_SET);
+    await saa?.();
+  };
+
+  // Logger man ind fra velkomsten eller indstillingerne, lukker skærmen sig
+  // selv når authStore har kvitteret.
+  useEffect(() => {
+    if (erLoggetInd) setViserLogin(false);
+  }, [erLoggetInd]);
 
   // Afstem med serveren ved opstart — og igen når forbindelsen kommer tilbage.
   // En tur kan vare timer uden dækning med appen åben hele tiden; uden
@@ -52,9 +69,23 @@ function App() {
     return () => document.removeEventListener('visibilitychange', naarSkjult);
   }, []);
 
-  if (!erLoggetInd) {
-    // useAuth lytter på authStore, så skærmen skifter af sig selv ved login.
-    return <AuthSide />;
+  if (viserLogin) {
+    return <AuthSide fortryd={() => setViserLogin(false)} />;
+  }
+
+  // Onboardingen er ikke afgjort endnu — vis ingenting frem for at blinke den
+  // forbi for en bruger der har set den for længst.
+  if (onboardingSet === undefined) return null;
+
+  if (!onboardingSet) {
+    return (
+      <Velkomst
+        nytItem={() => void efterVelkomst(nytItem)}
+        nyTur={() => void efterVelkomst(nyTur)}
+        tilLogin={() => void efterVelkomst(async () => setViserLogin(true))}
+        spring={() => void efterVelkomst()}
+      />
+    );
   }
 
   // En åben detaljeskærm lægger sig over den valgte fane, indtil man går
@@ -99,7 +130,7 @@ function App() {
     case 'ture': return <TureListe fane={fane} skift={setFane} aabnTur={aabnTur} nyTur={nyTur} />;
     case 'statistik': return <StatistikSide fane={fane} skift={setFane} aabnItem={aabnItem} />;
     case 'inventar': return <InventarSide fane={fane} skift={setFane} aabnItem={aabnItem} />;
-    case 'indstillinger': return <IndstillingerSide fane={fane} skift={setFane} />;
+    case 'indstillinger': return <IndstillingerSide fane={fane} skift={setFane} tilLogin={() => setViserLogin(true)} />;
   }
 }
 

@@ -16,8 +16,15 @@ function fejlBesked(e: unknown): string {
   return besked;
 }
 
-function AuthSide() {
-  const [tilstand, setTilstand] = useState<'login' | 'opret'>('login');
+interface Props {
+  // Appen kan bruges uden konto, så login kan fortrydes. Udelades den, er der
+  // ingen vej tilbage — fx hvis skærmen en dag bruges som startpunkt igen.
+  fortryd?: () => void;
+  startTilstand?: 'login' | 'opret';
+}
+
+function AuthSide({ fortryd, startTilstand = 'login' }: Props) {
+  const [tilstand, setTilstand] = useState<'login' | 'opret'>(startTilstand);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fejl, setFejl] = useState('');
@@ -56,10 +63,19 @@ function AuthSide() {
       minHeight: '100vh',
       paddingBottom: '20px'
     }}>
+      {fortryd && (
+        <button
+          onClick={fortryd}
+          style={{ position: 'absolute', top: 'calc(16px + env(safe-area-inset-top))', left: '20px', background: 'transparent', border: 'none', fontSize: '14px', cursor: 'pointer', color: 'var(--tekst-dæmpet)', padding: '4px' }}
+        >
+          ‹ Tilbage
+        </button>
+      )}
+
       <div style={{ textAlign: 'center', marginBottom: '40px' }}>
         <h1 style={{ fontSize: '36px', margin: 0 }}>Feltbogen</h1>
         <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginTop: '4px' }}>
-          {tilstand === 'login' ? 'Log ind for at fortsætte' : 'Opret din konto'}
+          {tilstand === 'login' ? 'Log ind for at synkronisere' : 'Opret din konto'}
         </div>
       </div>
 
@@ -105,6 +121,11 @@ function AuthSide() {
         <Knap variant="primaer" onClick={handleSubmit} disabled={indlaeser} style={{ padding: '12px', fontSize: '14px' }}>
           {indlaeser ? 'Vent...' : tilstand === 'login' ? 'Log ind' : 'Opret konto'}
         </Knap>
+
+        <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', textAlign: 'center', lineHeight: 1.5 }}>
+          Med en konto kan du synkronisere mellem enheder og gendanne dine data
+          hvis din telefon bliver væk. Uden konto bliver alt liggende her.
+        </div>
 
         <div style={{ textAlign: 'center', marginTop: '8px' }}>
           <button
