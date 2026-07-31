@@ -19,11 +19,12 @@ import { Knap, SektionsTitel } from './ui';
 interface Props {
   fane: Fane;
   skift: (f: Fane) => void;
+  tilLogin: () => void;
 }
 
 type Besked = { slags: 'ok' | 'fejl'; tekst: string } | null;
 
-function IndstillingerSide({ fane, skift }: Props) {
+function IndstillingerSide({ fane, skift, tilLogin }: Props) {
   const { bruger } = useAuth();
 
   const [arbejder, setArbejder] = useState<string | null>(null);
@@ -111,14 +112,32 @@ function IndstillingerSide({ fane, skift }: Props) {
         <section>
           <SektionsTitel>Konto</SektionsTitel>
           <Kort>
-            <Raekke label="Logget ind som" vaerdi={bruger?.email ?? 'Ukendt'} />
-            <div style={{ marginTop: '12px' }}>
-              <Knap variant="fare" onClick={logUd}>Log ud</Knap>
-            </div>
-            <Hjaelp>
-              Data bliver liggende på denne enhed når du logger ud. Log ind igen for at
-              synkronisere videre.
-            </Hjaelp>
+            {bruger ? (
+              <>
+                <Raekke label="Logget ind som" vaerdi={bruger.email} />
+                <div style={{ marginTop: '12px' }}>
+                  <Knap variant="fare" onClick={logUd}>Log ud</Knap>
+                </div>
+                <Hjaelp>
+                  Data bliver liggende på denne enhed når du logger ud. Log ind igen for at
+                  synkronisere videre.
+                </Hjaelp>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: '13px', color: 'var(--tekst)', lineHeight: 1.5 }}>
+                  Ikke logget ind — alt gemmes kun lokalt på denne enhed.
+                </div>
+                <div style={{ marginTop: '12px' }}>
+                  <Knap variant="primaer" onClick={tilLogin}>Log ind eller opret konto</Knap>
+                </div>
+                <Hjaelp>
+                  Med en konto kan du synkronisere mellem enheder, dele ture med gæster og
+                  få dine data igen hvis enheden bliver væk. Det du allerede har lavet,
+                  bliver sendt op når du logger ind.
+                </Hjaelp>
+              </>
+            )}
           </Kort>
         </section>
 
