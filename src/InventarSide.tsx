@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import type { Item, ItemStatus } from './db';
-import { opretItem } from './sync';
+import { opretTomtItem } from './opret';
 import { sidstBrugtPrItem, grupperPrItem } from './statistik';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
@@ -64,32 +64,9 @@ function InventarSide({ fane, skift, aabnItem }: Props) {
     setValgtTag(null);
   };
 
-  // Opretter et tomt item og går direkte ind i det, så al redigering sker ét
-  // sted. Forlader man det uden navn, rydder ItemDetalje det væk igen.
-  const nytItem = async () => {
-    const nu = new Date();
-    const id = await opretItem({
-      navn: '',
-      vaegt_g: 0,
-      pris_kr: 0,
-      dimensioner: '',
-      antal: 1,
-      delt: false,
-      status: valgtStatus,
-      tags: [],
-      kraever: [],
-      komplementer: [],
-      koebt_hos: '',
-      koebsdato: '',
-      koebslink: '',
-      ordrenummer: '',
-      garanti: null,
-      noter: '',
-      oprettet: nu,
-      aendret: nu
-    });
-    aabnItem(id, true);
-  };
+  // Den nye post lander i den fane man står på, så den ikke forsvinder ud af
+  // syne i det øjeblik den bliver oprettet.
+  const nytItem = async () => aabnItem(await opretTomtItem(valgtStatus), true);
 
   return (
     <Skal
