@@ -98,6 +98,13 @@ function budgetLinjer(v: unknown): BudgetLinje[] {
 // et uid-felt kan to enheder ikke blive enige om hvilken post der er hvilken,
 // og det er værd at opdage med det samme frem for når data er rodet sammen.
 let harAdvaretOmUid = false;
+
+// Indstillingerne spørger til det her, så advarslen ikke kun står i konsollen
+// hvor ingen ser den.
+export function uidFeltMangler(): boolean {
+  return harAdvaretOmUid;
+}
+
 function advarHvisUidTabt(skabt: RecordModel, forventet: string, pbNavn: string): void {
   if (harAdvaretOmUid || skabt.uid === forventet) return;
   harAdvaretOmUid = true;
@@ -634,4 +641,17 @@ export function afstemMedServer(): Promise<void> {
   })();
 
   return igangvaerendeAfstemning;
+}
+
+// Hvor meget der venter på at komme op. Bruges af indstillingerne, så man kan
+// se om det er sikkert at lukke appen efter en tur uden dækning.
+export async function usendtAntal(): Promise<number> {
+  const [items, grupper, ture, sletninger] = await Promise.all([
+    db.items.filter((p) => !p.pb_id || !!p.usendt_aendring).count(),
+    db.grupper.filter((p) => !p.pb_id || !!p.usendt_aendring).count(),
+    db.ture.filter((p) => !p.pb_id || !!p.usendt_aendring).count(),
+    db.slettede.count()
+  ]);
+
+  return items + grupper + ture + sletninger;
 }

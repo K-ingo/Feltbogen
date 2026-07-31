@@ -9,6 +9,7 @@ import GrupperListe from './GrupperListe';
 import TureListe from './TureListe';
 import TurDetalje from './TurDetalje';
 import StatistikSide from './StatistikSide';
+import IndstillingerSide from './IndstillingerSide';
 import { opretTomtItem, opretTomTur } from './opret';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
@@ -98,6 +99,7 @@ function App() {
     case 'ture': return <TureListe fane={fane} skift={setFane} aabnTur={aabnTur} nyTur={nyTur} />;
     case 'statistik': return <StatistikSide fane={fane} skift={setFane} aabnItem={aabnItem} />;
     case 'inventar': return <InventarSide fane={fane} skift={setFane} aabnItem={aabnItem} />;
+    case 'indstillinger': return <IndstillingerSide fane={fane} skift={setFane} />;
   }
 }
 
