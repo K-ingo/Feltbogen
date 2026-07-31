@@ -2,9 +2,13 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import pakke from './package.json' with { type: 'json' }
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Versionen står ét sted — i package.json — og bages ind ved build, så
+  // indstillingsskærmen ikke skal holdes ved lige i hånden.
+  define: { __APP_VERSION__: JSON.stringify(pakke.version) },
   plugins: [
     react(),
     VitePWA({

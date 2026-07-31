@@ -1,18 +1,21 @@
 import type { ReactNode } from 'react';
 import { useErDesktop } from './useMedie';
 
-export type Fane = 'dashboard' | 'inventar' | 'grupper' | 'ture' | 'statistik';
+export type Fane = 'dashboard' | 'inventar' | 'grupper' | 'ture' | 'statistik' | 'indstillinger';
 
-// Indstillinger står ikke her endnu — den tilføjes sammen med skærmen, så
-// navigationen ikke peger på noget der ikke findes.
-// `kort` bruges i bundnavigationen, hvor fem faner skal dele skærmbredden.
-const FANER: { id: Fane; label: string; kort: string }[] = [
-  { id: 'dashboard', label: 'Dashboard', kort: 'Hjem' },
-  { id: 'inventar', label: 'Inventar', kort: 'Inventar' },
-  { id: 'grupper', label: 'Grupper', kort: 'Grupper' },
-  { id: 'ture', label: 'Ture', kort: 'Ture' },
-  { id: 'statistik', label: 'Statistik', kort: 'Stat' }
+// `kort` bruges i bundnavigationen, hvor fanerne skal dele skærmbredden.
+// Indstillinger står kun i sidebaren på PC; på mobil er der ikke plads til en
+// sjette fane, og den nås i stedet fra tandhjulet i topbaren.
+const FANER: { id: Fane; label: string; kort: string; iBundnav: boolean }[] = [
+  { id: 'dashboard', label: 'Dashboard', kort: 'Hjem', iBundnav: true },
+  { id: 'inventar', label: 'Inventar', kort: 'Inventar', iBundnav: true },
+  { id: 'grupper', label: 'Grupper', kort: 'Grupper', iBundnav: true },
+  { id: 'ture', label: 'Ture', kort: 'Ture', iBundnav: true },
+  { id: 'statistik', label: 'Statistik', kort: 'Stat', iBundnav: true },
+  { id: 'indstillinger', label: 'Indstillinger', kort: 'Mere', iBundnav: false }
 ];
+
+const BUNDFANER = FANER.filter((f) => f.iBundnav);
 
 interface Props {
   fane: Fane;
@@ -64,7 +67,7 @@ export function Skal({ fane, skift, titel, undertitel, handlinger, fab, children
 
   return (
     <>
-      {titel && <Topbar titel={titel} />}
+      {titel && <Topbar titel={titel} tilIndstillinger={() => skift('indstillinger')} />}
       <div style={{
         padding: '16px 20px',
         maxWidth: '640px',
@@ -84,7 +87,7 @@ export function Skal({ fane, skift, titel, undertitel, handlinger, fab, children
   );
 }
 
-function Topbar({ titel }: { titel: string }) {
+function Topbar({ titel, tilIndstillinger }: { titel: string; tilIndstillinger: () => void }) {
   return (
     <div style={{
       position: 'sticky',
@@ -99,13 +102,27 @@ function Topbar({ titel }: { titel: string }) {
         maxWidth: '640px',
         margin: '0 auto',
         padding: '12px 20px',
-        fontSize: '12px',
-        fontWeight: 600,
-        letterSpacing: '1.2px',
-        textTransform: 'uppercase',
-        color: 'var(--tekst)'
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '10px'
       }}>
-        {titel}
+        <span style={{
+          fontSize: '12px',
+          fontWeight: 600,
+          letterSpacing: '1.2px',
+          textTransform: 'uppercase',
+          color: 'var(--tekst)'
+        }}>
+          {titel}
+        </span>
+        <button
+          onClick={tilIndstillinger}
+          aria-label="Indstillinger"
+          style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '15px', padding: '2px 4px', color: 'var(--tekst-dæmpet)' }}
+        >
+          ⚙
+        </button>
       </div>
     </div>
   );
@@ -178,7 +195,7 @@ function BundNav({ fane, skift }: { fane: Fane; skift: (f: Fane) => void }) {
       paddingBottom: 'env(safe-area-inset-bottom)',
       zIndex: 20
     }}>
-      {FANER.map(({ id, kort }) => {
+      {BUNDFANER.map(({ id, kort }) => {
         const erAktiv = fane === id;
         return (
           <button
