@@ -35,15 +35,6 @@ function GruppeDetalje({ gruppeId, tilbage, nyOprettet }: Props) {
     }
   };
 
-  // En navnløs gruppe kan ikke findes igen, så en netop oprettet post man
-  // forlader uden navn, ryddes væk. Eksisterende grupper røres aldrig.
-  const gaaTilbage = async () => {
-    if (nyOprettet && gruppe?.id !== undefined && !gruppe.navn.trim()) {
-      await sletGruppe(gruppe.id);
-    }
-    tilbage();
-  };
-
   const toggleItem = async (itemUid: string) => {
     if (!gruppe) return;
     const nye = gruppe.item_ids.includes(itemUid)
@@ -65,7 +56,7 @@ function GruppeDetalje({ gruppeId, tilbage, nyOprettet }: Props) {
 
   return (
     <div style={layout.container}>
-      <DetaljeHeader tilbage={gaaTilbage} sletLabel="Slet gruppe" slet={slet} />
+      <DetaljeHeader tilbage={tilbage} sletLabel="Slet gruppe" slet={slet} />
 
       <TitelInput
         value={gruppe.navn}
