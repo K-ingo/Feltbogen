@@ -54,6 +54,8 @@ export function opretTomTur(): Promise<number> {
     besked_fra_ejer: '',
     noter: '',
     vejrsnapshot: '',
+    dele_token: '',
+    dele_snapshot: '',
     oprettet: nu,
     aendret: nu
   });

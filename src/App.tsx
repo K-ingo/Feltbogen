@@ -11,6 +11,8 @@ import TurDetalje from './TurDetalje';
 import StatistikSide from './StatistikSide';
 import IndstillingerSide from './IndstillingerSide';
 import Velkomst from './Velkomst';
+import GaesteSide from './GaesteSide';
+import { tokenFraAdresse } from './gaest';
 import { opretTomtItem, opretTomTur } from './opret';
 import { markerSet, useErSet, ONBOARDING_SET } from './indstillinger';
 import { Skal } from './Skal';
@@ -18,6 +20,9 @@ import type { Fane } from './Skal';
 
 function App() {
   const { erLoggetInd } = useAuth();
+  // Et gæstelink afgøres af adresselinjen og læses én gang. Går gæsten videre
+  // ind i appen, ryddes den, så et genbesøg ikke lander på turen igen.
+  const [gaesteToken, setGaesteToken] = useState(() => tokenFraAdresse());
   const onboardingSet = useErSet(ONBOARDING_SET);
   const [viserLogin, setViserLogin] = useState(false);
   const [fane, setFane] = useState<Fane>('dashboard');
@@ -68,6 +73,20 @@ function App() {
     document.addEventListener('visibilitychange', naarSkjult);
     return () => document.removeEventListener('visibilitychange', naarSkjult);
   }, []);
+
+  // Gæsteruten går forud for alt andet: den kræver hverken konto eller
+  // onboarding, og den viser aldrig noget fra denne enheds egen base.
+  if (gaesteToken) {
+    return (
+      <GaesteSide
+        token={gaesteToken}
+        tilAppen={() => {
+          window.history.replaceState(null, '', window.location.pathname);
+          setGaesteToken(null);
+        }}
+      />
+    );
+  }
 
   if (viserLogin) {
     return <AuthSide fortryd={() => setViserLogin(false)} />;

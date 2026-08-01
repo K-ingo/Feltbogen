@@ -68,6 +68,8 @@ export function lavTur(felter: Partial<Tur> = {}): Tur {
     besked_fra_ejer: '',
     noter: '',
     vejrsnapshot: '',
+    dele_token: '',
+    dele_snapshot: '',
     oprettet: nu,
     aendret: nu,
     ...felter

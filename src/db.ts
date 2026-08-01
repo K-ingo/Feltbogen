@@ -126,6 +126,12 @@ export interface Tur extends Synkroniserbar {
   besked_fra_ejer: string;
   noter: string;
   vejrsnapshot: string;
+  // Tom betyder ikke delt. Sættes når man laver et gæstelink og tømmes igen
+  // når linket trækkes tilbage.
+  dele_token: string;
+  // Det gæsten får at se, frosset ned som JSON da linket blev lavet. Gæsten
+  // læser aldrig inventaret — kun dette ene felt.
+  dele_snapshot: string;
   oprettet: Date;
   aendret: Date;
 }
@@ -193,6 +199,16 @@ export class FeltbogenDB extends Dexie {
       items: '++id, &uid, navn, status, oprettet',
       grupper: '++id, &uid, navn, oprettet',
       ture: '++id, &uid, navn, startdato, status, oprettet',
+      slettede: '++id, samling, pb_id, [samling+pb_id]',
+      indstillinger: '&noegle'
+    });
+
+    // v7 giver turene et delefelt. Ældre ture har ingen — og en tom streng
+    // betyder "ikke delt", så de har allerede den rigtige værdi.
+    this.version(7).stores({
+      items: '++id, &uid, navn, status, oprettet',
+      grupper: '++id, &uid, navn, oprettet',
+      ture: '++id, &uid, navn, startdato, status, oprettet, dele_token',
       slettede: '++id, samling, pb_id, [samling+pb_id]',
       indstillinger: '&noegle'
     });

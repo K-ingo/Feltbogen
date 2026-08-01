@@ -233,7 +233,9 @@ const turSamling: Samling<Tur> = {
     budget_linjer: t.budget_linjer,
     besked_fra_ejer: t.besked_fra_ejer,
     noter: t.noter,
-    vejrsnapshot: t.vejrsnapshot
+    vejrsnapshot: t.vejrsnapshot,
+    dele_token: t.dele_token,
+    dele_snapshot: t.dele_snapshot
   }),
   fraPb: (r) => ({
     uid: uid(r),
@@ -258,6 +260,8 @@ const turSamling: Samling<Tur> = {
     besked_fra_ejer: tekst(r.besked_fra_ejer),
     noter: tekst(r.noter),
     vejrsnapshot: tekst(r.vejrsnapshot),
+    dele_token: tekst(r.dele_token),
+    dele_snapshot: tekst(r.dele_snapshot),
     oprettet: dato(r.created),
     aendret: dato(r.updated)
   })
