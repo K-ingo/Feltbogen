@@ -10,6 +10,7 @@ import {
   pakkelisteEfterTag,
   pakkelisteEfterPerson,
   baererAf,
+  overnatningsAdvarsler,
   vaegtPrDeltager,
   tildelGear,
   IKKE_FORDELT,
@@ -375,5 +376,73 @@ describe('hvem bærer hvad', () => {
       tildelGear(foer, 'd1', telt);
       expect(foer[0].baerer_delt_ids).toEqual([]);
     });
+  });
+});
+
+describe('overnatningsAdvarsler', () => {
+  const sover = (navn: string, overnatning: 'telt' | 'haengekoeje' | 'shelter' | 'blandet' | null) => ({
+    id: navn, navn, overnatning, personligt_gear_ids: [], baerer_delt_ids: []
+  });
+
+  it('siger til når en deltager ikke har noget at sove i', () => {
+    const tur = lavTur({ deltagere: [sover('Mikkel', 'telt')] });
+
+    const advarsler = overnatningsAdvarsler(tur, [lavItem({ tags: ['søvn'] })]);
+
+    expect(advarsler).toHaveLength(1);
+    expect(advarsler[0].niveau).toBe('roed');
+    expect(advarsler[0].besked).toBe('Mikkel sover i telt');
+    expect(advarsler[0].mangler).toBe('telt');
+    // Advarslen skal sige hvad man gør ved den — gearet kan sagtens være med
+    // og bare mangle tagget.
+    expect(advarsler[0].detalje).toContain('Sæt tagget');
+  });
+
+  it('tier når gearet er med', () => {
+    const tur = lavTur({ deltagere: [sover('Mikkel', 'telt')] });
+    expect(overnatningsAdvarsler(tur, [lavItem({ navn: 'Telt', tags: ['telt'] })])).toEqual([]);
+  });
+
+  it('samler flere der sover ens i én advarsel', () => {
+    const tur = lavTur({ deltagere: [sover('Mikkel', 'telt'), sover('Sofie', 'telt')] });
+
+    const advarsler = overnatningsAdvarsler(tur, []);
+
+    expect(advarsler).toHaveLength(1);
+    expect(advarsler[0].besked).toBe('Mikkel og Sofie sover i telt');
+  });
+
+  it('holder de forskellige former hver for sig', () => {
+    const tur = lavTur({ deltagere: [sover('Mikkel', 'telt'), sover('Sofie', 'haengekoeje')] });
+
+    expect(overnatningsAdvarsler(tur, []).map((a) => a.mangler).sort()).toEqual(['hængekøje', 'telt']);
+  });
+
+  // Et shelter står i skoven, og "blandet" er ikke et krav om noget bestemt.
+  it('advarer ikke om shelter eller blandet', () => {
+    const tur = lavTur({ deltagere: [sover('Mikkel', 'shelter'), sover('Sofie', 'blandet')] });
+    expect(overnatningsAdvarsler(tur, [])).toEqual([]);
+  });
+
+  // Ellers ville enhver eksisterende tur uden de rigtige tags få en advarsel
+  // den ikke har fortjent.
+  it('advarer kun når nogen selv har valgt en form', () => {
+    const tur = lavTur({ overnatning: 'telt', deltagere: [sover('Mikkel', null)] });
+    expect(overnatningsAdvarsler(tur, [])).toEqual([]);
+  });
+
+  it('siger noget fornuftigt om en deltager uden navn', () => {
+    const tur = lavTur({ deltagere: [sover('', 'telt')] });
+    expect(overnatningsAdvarsler(tur, [])[0].besked).toBe('En deltager sover i telt');
+  });
+
+  it('giver ingen advarsler uden deltagere', () => {
+    expect(overnatningsAdvarsler(lavTur(), [])).toEqual([]);
+  });
+
+  // De hænger på turen som helhed, ikke på en række i pakkelisten.
+  it('havner ikke i opslaget pr. item', () => {
+    const tur = lavTur({ deltagere: [sover('Mikkel', 'telt')] });
+    expect(advarslerPrItem(overnatningsAdvarsler(tur, [])).size).toBe(0);
   });
 });
