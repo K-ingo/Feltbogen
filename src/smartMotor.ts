@@ -1,4 +1,5 @@
-import type { Item, Tur, Gruppe, Deltager, Reference } from './db';
+import { etiket } from './db';
+import type { Item, Tur, Gruppe, Deltager, Overnatning, Reference } from './db';
 
 export interface VejrDag {
   dato: string;
@@ -141,7 +142,7 @@ export interface Advarsel {
   besked: string;
   detalje: string;
   // Hvilket item advarslen hænger på, så den kan vises på selve rækken i
-  // pakkelisten og ikke kun i en samlet liste.
+  // pakkelisten. Tom når advarslen gælder turen som helhed.
   itemUid: Reference;
   // Det manglende tag — kort nok til en chip ved siden af navnet.
   mangler: string;
@@ -186,7 +187,9 @@ export function findAdvarsler(pakItems: Item[]): Advarsel[] {
 // noget frem for kun at vise en samlet liste.
 export function advarslerPrItem(advarsler: Advarsel[]): Map<Reference, Advarsel[]> {
   const pr = new Map<Reference, Advarsel[]>();
-  advarsler.forEach((a) => pr.set(a.itemUid, [...(pr.get(a.itemUid) ?? []), a]));
+  // Nogle advarsler hænger ikke på et bestemt item — fx at en deltager ikke
+  // har noget at sove i. De hører kun til i den samlede liste.
+  advarsler.filter((a) => a.itemUid !== '').forEach((a) => pr.set(a.itemUid, [...(pr.get(a.itemUid) ?? []), a]));
   return pr;
 }
 
@@ -542,5 +545,39 @@ export function tildelGear(deltagere: Deltager[], deltagerId: string, item: Item
     personligt_gear_ids: d.personligt_gear_ids.filter((uid) => uid !== item.uid),
     baerer_delt_ids: d.baerer_delt_ids.filter((uid) => uid !== item.uid),
     ...(d.id === deltagerId && !havdeDet ? { [felt]: [...d[felt].filter((uid) => uid !== item.uid), item.uid] } : {})
+  }));
+}
+
+// ─────────────────────────────────────────────
+// Sover alle et sted?
+//
+// Deltagerne kan hver især have en anden overnatningsform end turens — én
+// hænger i hængekøje, en anden ligger i telt. Det er kun værd at advare om,
+// når nogen selv har valgt formen: ellers ville enhver tur uden de rigtige
+// tags få en advarsel, den ikke har fortjent.
+// ─────────────────────────────────────────────
+
+// Et shelter står i skoven, og "blandet" er ikke et krav om noget bestemt.
+// Telt og hængekøje skal man selv have med.
+const OVERNATNING_KRAEVER_GREJ: Overnatning[] = ['telt', 'haengekoeje'];
+
+export function overnatningsAdvarsler(tur: Tur, pakItems: Item[]): Advarsel[] {
+  const paaTuren = new Set<string>();
+  pakItems.forEach((i) => i.tags.forEach((t) => paaTuren.add(t)));
+
+  // Grupperet, så tre teltsovere giver én advarsel og ikke tre.
+  const navnePrForm = new Map<Overnatning, string[]>();
+  tur.deltagere.forEach((d) => {
+    if (!d.overnatning || !OVERNATNING_KRAEVER_GREJ.includes(d.overnatning)) return;
+    if (paaTuren.has(d.overnatning)) return;
+    navnePrForm.set(d.overnatning, [...(navnePrForm.get(d.overnatning) ?? []), d.navn || 'En deltager']);
+  });
+
+  return [...navnePrForm.entries()].map(([form, navne]) => ({
+    niveau: 'roed' as const,
+    besked: `${navne.join(' og ')} sover i ${etiket(form)}`,
+    detalje: `Intet gear på turen har tagget "${etiket(form)}". Sæt tagget på det gear der dækker det.`,
+    itemUid: '',
+    mangler: etiket(form)
   }));
 }

@@ -26,6 +26,7 @@ import {
   pakkelisteEfterTag,
   pakkelisteEfterPerson,
   baererAf,
+  overnatningsAdvarsler,
   vaegtPrDeltager,
   tildelGear,
   soegSted
@@ -209,6 +210,15 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
     await opdater({ deltagere: tildelGear(tur.deltagere, deltagerId, item) });
   };
 
+  // null betyder "som turen" — så følger deltageren med, hvis man senere
+  // skifter turens egen overnatningsform.
+  const saetDeltagerOvernatning = async (id: string, form: Overnatning | null) => {
+    if (!tur) return;
+    await opdater({
+      deltagere: tur.deltagere.map((d) => (d.id === id ? { ...d, overnatning: form } : d))
+    });
+  };
+
   const fjernDeltager = async (id: string) => {
     if (!tur) return;
     await opdater({ deltagere: tur.deltagere.filter((d) => d.id !== id) });
@@ -268,7 +278,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
     await opdater({ dele_token: '', dele_snapshot: '' });
   };
 
-  const advarsler = findAdvarsler(pakItems);
+  const advarsler = [...findAdvarsler(pakItems), ...overnatningsAdvarsler(tur, pakItems)];
   const perItem = advarslerPrItem(advarsler);
   const beregninger = beregnForbrug(tur);
   const gruppeForslag = grupper ? foreslaaGrupper(tur, grupper) : [];
@@ -324,7 +334,13 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   );
 
   const deltagere = (
-    <Deltagere deltagere={tur.deltagere} tilfoej={tilfoejDeltager} fjern={fjernDeltager} />
+    <Deltagere
+      deltagere={tur.deltagere}
+      turensOvernatning={tur.overnatning}
+      tilfoej={tilfoejDeltager}
+      fjern={fjernDeltager}
+      saetOvernatning={saetDeltagerOvernatning}
+    />
   );
 
   const budget = (
@@ -862,10 +878,12 @@ function Vejrudsigt({ data, hentes, fejl, hent }: {
   );
 }
 
-function Deltagere({ deltagere, tilfoej, fjern }: {
+function Deltagere({ deltagere, turensOvernatning, tilfoej, fjern, saetOvernatning }: {
   deltagere: Deltager[];
+  turensOvernatning: Overnatning;
   tilfoej: () => Promise<void>;
   fjern: (id: string) => Promise<void>;
+  saetOvernatning: (id: string, form: Overnatning | null) => Promise<void>;
 }) {
   return (
     <div>
@@ -874,9 +892,31 @@ function Deltagere({ deltagere, tilfoej, fjern }: {
           Kun dig selv indtil videre.
         </div>
       ) : (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
+        <div style={{ display: 'grid', gap: '2px', marginBottom: '12px' }}>
           {deltagere.map((d) => (
-            <Chip key={d.id} onFjern={() => fjern(d.id)}>{d.navn}</Chip>
+            <div
+              key={d.id}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 0', borderBottom: '1px solid var(--border-svag)' }}
+            >
+              <span style={{ flex: 1, minWidth: 0, fontSize: '13px' }}>{d.navn}</span>
+
+              <select
+                value={d.overnatning ?? ''}
+                onChange={(e) => saetOvernatning(d.id, (e.target.value || null) as Overnatning | null)}
+                style={{ padding: '4px 6px', fontSize: '11px', textTransform: 'capitalize', width: 'auto' }}
+              >
+                <option value="">som turen ({etiket(turensOvernatning)})</option>
+                {OVERNATNING.map((o) => <option key={o} value={o}>{etiket(o)}</option>)}
+              </select>
+
+              <button
+                onClick={() => fjern(d.id)}
+                aria-label={`Fjern ${d.navn}`}
+                style={{ background: 'transparent', border: 'none', color: 'var(--fejl)', cursor: 'pointer', fontSize: '14px', padding: '0 4px' }}
+              >
+                ×
+              </button>
+            </div>
           ))}
         </div>
       )}
