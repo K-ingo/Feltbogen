@@ -41,7 +41,7 @@ import {
   Indlaeser,
   SektionsTitel
 } from './ui';
-import { nytDeletoken, lavSnapshot, deleLink } from './gaest';
+import { nytDeletoken, lavSnapshot, deleLink, linkadvarsel, linkvaert } from './gaest';
 import { layout } from './layout';
 import { useErDesktop } from './useMedie';
 import { sletTur, opdaterTur } from './sync';
@@ -943,6 +943,9 @@ function Deling({ token, snapshot, del, stop }: {
 
   const link = deleLink(token);
   const delt = laesDeltDen(snapshot);
+  // Et link lavet et sted gæsten ikke kan nå, virker kun for én selv — og det
+  // opdager man først, når gæsten skriver tilbage.
+  const advarsel = linkadvarsel();
 
   const kopier = async () => {
     try {
@@ -963,6 +966,12 @@ function Deling({ token, snapshot, del, stop }: {
         style={{ width: '100%', fontSize: '12px', marginBottom: '8px' }}
       />
 
+      <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', marginBottom: '10px' }}>
+        Gæsten lander på <strong style={{ fontWeight: 500 }}>{linkvaert()}</strong>
+      </div>
+
+      {advarsel && <Linkfejl slags={advarsel} />}
+
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
         <Knap variant="primaer" onClick={kopier}>{kopieret ? 'Kopieret' : 'Kopiér link'}</Knap>
         <Knap onClick={del}>Opdatér med det nyeste</Knap>
@@ -974,6 +983,27 @@ function Deling({ token, snapshot, del, stop }: {
         "Opdatér med det nyeste". Alle der har linket, kan se turen — indtil du
         stopper delingen.
       </div>
+    </div>
+  );
+}
+
+// De to tilfælde vi kan afgøre med sikkerhed. En preview-adresse vi ikke kan
+// genkende, fanges af værtsnavnet ovenover.
+function Linkfejl({ slags }: { slags: 'lokal' | 'preview' }) {
+  return (
+    <div style={{
+      padding: '10px 12px',
+      marginBottom: '10px',
+      borderRadius: '8px',
+      background: 'var(--advarsel-bg)',
+      border: '1px solid var(--advarsel-border)',
+      fontSize: '12px',
+      color: 'var(--advarsel)',
+      lineHeight: 1.55
+    }}>
+      {slags === 'lokal'
+        ? '⚠ Du kører appen lokalt. Linket virker kun på denne maskine — åbn turen på den rigtige adresse for at få et link du kan sende videre.'
+        : '⚠ Det her er en preview-adresse. Den er låst bag login, så linket virker kun for dig. Åbn turen på den rigtige adresse for at få et link du kan sende videre.'}
     </div>
   );
 }

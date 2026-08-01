@@ -5,6 +5,8 @@ import {
   laesSnapshot,
   deleLink,
   tokenFraAdresse,
+  linkadvarsel,
+  linkvaert,
   SNAPSHOT_VERSION
 } from './gaest';
 import { lavItem, lavGruppe, lavTur } from './test/data';
@@ -157,5 +159,48 @@ describe('deleLink og tokenFraAdresse', () => {
     expect(tokenFraAdresse('?tur=' + 'z'.repeat(32))).toBeNull();
     expect(tokenFraAdresse('?tur=' + 'a'.repeat(33))).toBeNull();
     expect(tokenFraAdresse("?tur=' OR 1=1 --")).toBeNull();
+  });
+});
+
+describe('linkadvarsel', () => {
+  it('advarer om adresser der kun findes på ens egen maskine', () => {
+    expect(linkadvarsel('http://localhost:5173')).toBe('lokal');
+    expect(linkadvarsel('http://127.0.0.1:4173')).toBe('lokal');
+    expect(linkadvarsel('http://feltbogen.local')).toBe('lokal');
+  });
+
+  it('advarer om adresser på det lokale net', () => {
+    expect(linkadvarsel('http://192.168.1.42:5173')).toBe('lokal');
+    expect(linkadvarsel('http://10.0.0.5:5173')).toBe('lokal');
+    expect(linkadvarsel('http://172.20.0.3:5173')).toBe('lokal');
+  });
+
+  it('tager ikke 172.x for lokal når den ikke er det', () => {
+    // Kun 172.16–172.31 er private.
+    expect(linkadvarsel('http://172.15.0.1')).toBeNull();
+    expect(linkadvarsel('http://172.32.0.1')).toBeNull();
+  });
+
+  it('advarer om Vercels grenpreviews', () => {
+    expect(linkadvarsel('https://feltbogen-git-claude-code-review-abc.vercel.app')).toBe('preview');
+  });
+
+  // En falsk advarsel på en god adresse er værre end ingen advarsel, så
+  // produktionsnavne med bindestreger skal slippe igennem.
+  it('advarer ikke om produktionsadresser', () => {
+    expect(linkadvarsel('https://feltbogen.vercel.app')).toBeNull();
+    expect(linkadvarsel('https://min-feltbog.vercel.app')).toBeNull();
+    expect(linkadvarsel('https://feltbogen.dk')).toBeNull();
+  });
+
+  it('siger ikke noget om en adresse den ikke kan læse', () => {
+    expect(linkadvarsel('volapyk')).toBeNull();
+  });
+});
+
+describe('linkvaert', () => {
+  it('viser værten gæsten lander på', () => {
+    expect(linkvaert('https://feltbogen.vercel.app')).toBe('feltbogen.vercel.app');
+    expect(linkvaert('http://localhost:4173')).toBe('localhost:4173');
   });
 });

@@ -217,3 +217,50 @@ export async function hentDeltTur(token: string): Promise<GaesteSvar> {
     return { slags: 'fejl' };
   }
 }
+
+// ─────────────────────────────────────────────
+// Er linket noget en gæst kan nå?
+// ─────────────────────────────────────────────
+
+export type Linkadvarsel = 'lokal' | 'preview' | null;
+
+// Et gæstelink er kun så godt som den adresse appen kører på. Laver man det
+// på sin egen maskine eller på en preview-udrulning, virker det for én selv
+// og for ingen andre — og det opdager man først, når gæsten skriver tilbage.
+export function linkadvarsel(oprindelse: string = window.location.origin): Linkadvarsel {
+  let vaert: string;
+  try {
+    vaert = new URL(oprindelse).hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+
+  if (erLokal(vaert)) return 'lokal';
+  // Vercels grenpreviews har altid "-git-" i værtsnavnet. Andre previews kan
+  // ikke skelnes fra et produktionsnavn, og der er et falsk alarm værre end
+  // ingen — derfor vises værten altid ved siden af linket.
+  if (vaert.endsWith('.vercel.app') && vaert.includes('-git-')) return 'preview';
+
+  return null;
+}
+
+function erLokal(vaert: string): boolean {
+  if (vaert === 'localhost' || vaert.endsWith('.localhost')) return true;
+  if (vaert === '127.0.0.1' || vaert === '::1' || vaert === '[::1]') return true;
+  if (vaert.endsWith('.local')) return true;
+
+  // Adresser på det lokale net — en telefon på samme wifi kan nå dem, resten
+  // af verden kan ikke.
+  if (vaert.startsWith('192.168.') || vaert.startsWith('10.')) return true;
+  const m = /^172\.(\d{1,2})\./.exec(vaert);
+  return !!m && Number(m[1]) >= 16 && Number(m[1]) <= 31;
+}
+
+// Værten gæsten lander på, til at vise ved siden af linket.
+export function linkvaert(oprindelse: string = window.location.origin): string {
+  try {
+    return new URL(oprindelse).host;
+  } catch {
+    return oprindelse;
+  }
+}
