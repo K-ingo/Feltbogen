@@ -1,6 +1,6 @@
 import { pb } from './pb';
 import type { Item, Gruppe, Tur } from './db';
-import { pakkelisteEfterGruppe } from './smartMotor';
+import { pakkelisteEfterGruppe, baererAf } from './smartMotor';
 import type { VejrData } from './smartMotor';
 
 // Deling af en tur med nogen der ikke har konto.
@@ -19,6 +19,9 @@ export interface GaesteItem {
   navn: string;
   vaegt_g: number;
   delt: boolean;
+  // Navnet på den der bærer det, eller tom hvis det ikke er fordelt. Kun
+  // navnet — gæsten har ikke brug for deltagernes id'er.
+  baerer: string;
 }
 
 export interface GaesteAfsnit {
@@ -58,10 +61,19 @@ export function lavSnapshot(
   pakItems: Item[],
   nu: Date = new Date()
 ): Gaestesnapshot {
+  const baerer = baererAf(tur);
+  const navnPaa = new Map(tur.deltagere.map((d) => [d.id, d.navn]));
+
   const afsnit = pakkelisteEfterGruppe(tur, grupper, pakItems).map((a) => ({
     titel: a.titel,
-    // Kun navn, vægt og om det deles. Ikke pris, ikke købsinfo, ikke noter.
-    items: a.items.map((i) => ({ navn: i.navn, vaegt_g: i.vaegt_g, delt: i.delt }))
+    // Kun navn, vægt, om det deles og hvem der bærer det. Ikke pris, ikke
+    // købsinfo, ikke noter.
+    items: a.items.map((i) => ({
+      navn: i.navn,
+      vaegt_g: i.vaegt_g,
+      delt: i.delt,
+      baerer: navnPaa.get(baerer.get(i.uid) ?? '') ?? ''
+    }))
   }));
 
   return {
@@ -159,7 +171,13 @@ function afsnit(v: unknown): GaesteAfsnit[] {
       items: Array.isArray(a.items)
         ? a.items
             .filter((i): i is Record<string, unknown> => !!i && typeof i === 'object')
-            .map((i) => ({ navn: tekst(i.navn), vaegt_g: tal(i.vaegt_g), delt: i.delt === true }))
+            // baerer mangler i snapshots lavet før feltet fandtes.
+            .map((i) => ({
+              navn: tekst(i.navn),
+              vaegt_g: tal(i.vaegt_g),
+              delt: i.delt === true,
+              baerer: tekst(i.baerer)
+            }))
         : []
     }));
 }

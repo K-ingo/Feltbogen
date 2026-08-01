@@ -77,7 +77,29 @@ describe('lavSnapshot', () => {
   it('beholder om et item er delt', () => {
     const s = lavSnapshot(tur(), [gruppe], [gryde, tarp]);
     const loese = s.afsnit.find((a) => a.titel === 'Løse items');
-    expect(loese?.items[0]).toEqual({ navn: 'Full Moon Tarp', vaegt_g: 720, delt: true });
+    expect(loese?.items[0]).toEqual({ navn: 'Full Moon Tarp', vaegt_g: 720, delt: true, baerer: '' });
+  });
+
+  it('skriver hvem der bærer hvad, med navn og ikke id', () => {
+    const medBaerer = lavTur({
+      ...tur(),
+      deltagere: [
+        { id: 'd1', navn: 'Emil', overnatning: null, personligt_gear_ids: [], baerer_delt_ids: ['u-tarp'] },
+        { id: 'd2', navn: 'Mikkel', overnatning: null, personligt_gear_ids: ['u-gryde'], baerer_delt_ids: [] }
+      ]
+    });
+
+    const s = lavSnapshot(medBaerer, [gruppe], [gryde, tarp]);
+    const alle = s.afsnit.flatMap((a) => a.items);
+
+    expect(alle.find((i) => i.navn === 'Full Moon Tarp')?.baerer).toBe('Emil');
+    expect(alle.find((i) => i.navn === 'Toaks 1L')?.baerer).toBe('Mikkel');
+    expect(JSON.stringify(s)).not.toContain('d1');
+  });
+
+  it('lader bæreren stå tom når gearet ikke er fordelt', () => {
+    const s = lavSnapshot(tur(), [gruppe], [gryde, tarp]);
+    expect(s.afsnit.flatMap((a) => a.items).every((i) => i.baerer === '')).toBe(true);
   });
 
   it('tager vejrudsigten med hvis den er hentet', () => {
@@ -109,6 +131,16 @@ describe('laesSnapshot', () => {
     expect(laesSnapshot('{"noget":"andet"}')).toBeNull();
   });
 
+  // Feltet kom til efter de første snapshots blev lavet.
+  it('klarer et snapshot fra før bæreren fandtes', () => {
+    const gammelt = JSON.stringify({
+      version: SNAPSHOT_VERSION,
+      afsnit: [{ titel: 'Køkken', items: [{ navn: 'Gryde', vaegt_g: 155, delt: false }] }]
+    });
+
+    expect(laesSnapshot(gammelt)?.afsnit[0].items[0].baerer).toBe('');
+  });
+
   it('afviser et snapshot fra en nyere version', () => {
     expect(laesSnapshot(JSON.stringify({ version: SNAPSHOT_VERSION + 1 }))).toBeNull();
   });
@@ -133,7 +165,7 @@ describe('laesSnapshot', () => {
     expect(s?.deltagere).toEqual([]);
     expect(s?.koordinater).toBeNull();
     expect(s?.afsnit).toHaveLength(1);
-    expect(s?.afsnit[0].items[0]).toEqual({ navn: 'Gryde', vaegt_g: 0, delt: false });
+    expect(s?.afsnit[0].items[0]).toEqual({ navn: 'Gryde', vaegt_g: 0, delt: false, baerer: '' });
   });
 });
 

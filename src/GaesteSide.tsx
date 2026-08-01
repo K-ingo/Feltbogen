@@ -200,9 +200,10 @@ function Turen({ snapshot }: { snapshot: Gaestesnapshot }) {
                     fontSize: '13px'
                   }}
                 >
-                  <span>{i.navn || 'Uden navn'}</span>
+                  <span style={{ minWidth: 0 }}>{i.navn || 'Uden navn'}</span>
                   <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '12px', whiteSpace: 'nowrap' }}>
-                    {i.delt && <span style={{ fontSize: '10px', marginRight: '6px' }}>delt</span>}
+                    {i.baerer && <span style={{ marginRight: '8px' }}>{i.baerer}</span>}
+                    {i.delt && !i.baerer && <span style={{ fontSize: '10px', marginRight: '6px' }}>delt</span>}
                     {i.vaegt_g} g
                   </span>
                 </div>
