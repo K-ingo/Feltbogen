@@ -171,15 +171,6 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
     }
   };
 
-  // En navnløs tur kan ikke findes igen, så en netop oprettet post man
-  // forlader uden navn, ryddes væk. Eksisterende ture røres aldrig.
-  const gaaTilbage = async () => {
-    if (nyOprettet && tur?.id !== undefined && !tur.navn.trim()) {
-      await sletTur(tur.id);
-    }
-    tilbage();
-  };
-
   const toggleGruppe = async (gruppeUid: Reference) => {
     if (!tur) return;
     await opdater({ gruppe_ids: vekslet(tur.gruppe_ids, gruppeUid) });
@@ -426,7 +417,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   if (erDesktop) {
     return (
       <div>
-        <DetaljeHeader tilbage={gaaTilbage} sletLabel="Slet tur" slet={slet} />
+        <DetaljeHeader tilbage={tilbage} sletLabel="Slet tur" slet={slet} />
         {titelblok}
 
         <div style={{
@@ -468,7 +459,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   // planlægningen står åbent, resten er foldet sammen.
   return (
     <div style={layout.container}>
-      <DetaljeHeader tilbage={gaaTilbage} sletLabel="Slet tur" slet={slet} />
+      <DetaljeHeader tilbage={tilbage} sletLabel="Slet tur" slet={slet} />
       {titelblok}
 
       {handling && (

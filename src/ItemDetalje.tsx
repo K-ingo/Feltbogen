@@ -71,16 +71,6 @@ function ItemDetalje({ itemId, tilbage, nyOprettet }: Props) {
     }
   };
 
-  // Et navnløst item kan hverken findes eller bruges, så en netop oprettet
-  // post man forlader uden at navngive, ryddes væk igen. Gælder kun poster
-  // oprettet i denne omgang — et eksisterende item slettes aldrig af sig selv.
-  const gaaTilbage = async () => {
-    if (nyOprettet && item?.id !== undefined && !item.navn.trim()) {
-      await sletItem(item.id);
-    }
-    tilbage();
-  };
-
   if (!item) return <Indlaeser />;
 
   const turePaaItem = turePrItem(ture, grupper).get(item.uid) ?? [];
@@ -88,7 +78,7 @@ function ItemDetalje({ itemId, tilbage, nyOprettet }: Props) {
 
   return (
     <div style={layout.container}>
-      <DetaljeHeader tilbage={gaaTilbage} sletLabel="Slet" slet={slet} />
+      <DetaljeHeader tilbage={tilbage} sletLabel="Slet" slet={slet} />
 
       <TitelInput
         value={item.navn}

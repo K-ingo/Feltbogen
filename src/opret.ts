@@ -1,5 +1,5 @@
 import type { ItemStatus } from './db';
-import { opretItem, opretTur } from './sync';
+import { opretItem, opretGruppe, opretTur } from './sync';
 
 // Tomme poster med fornuftige standardværdier. De ligger her, fordi både
 // listeskærmene og dashboardet opretter gear og ture — en post skal se ens ud
@@ -23,6 +23,18 @@ export function opretTomtItem(status: ItemStatus = 'ejer'): Promise<number> {
     koebslink: '',
     ordrenummer: '',
     garanti: null,
+    noter: '',
+    oprettet: nu,
+    aendret: nu
+  });
+}
+
+export function opretTomGruppe(): Promise<number> {
+  const nu = new Date();
+  return opretGruppe({
+    navn: '',
+    tags: [],
+    item_ids: [],
     noter: '',
     oprettet: nu,
     aendret: nu
