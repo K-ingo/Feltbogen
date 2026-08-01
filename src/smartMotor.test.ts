@@ -8,6 +8,11 @@ import {
   advarslerPrItem,
   pakkelisteEfterGruppe,
   pakkelisteEfterTag,
+  pakkelisteEfterPerson,
+  baererAf,
+  vaegtPrDeltager,
+  tildelGear,
+  IKKE_FORDELT,
   vejrIkonKode
 } from './smartMotor';
 import { lavItem, lavGruppe, lavTur } from './test/data';
@@ -230,5 +235,145 @@ describe('pakkelisteEfterTag', () => {
     ];
 
     expect(pakkelisteEfterTag(items).map((a) => a.titel)).toEqual(['bål', 'Uden tag']);
+  });
+});
+
+describe('hvem bærer hvad', () => {
+  const telt = lavItem({ uid: 'u-telt', navn: 'Telt', vaegt_g: 2400, delt: true });
+  const sovepose = lavItem({ uid: 'u-sovepose', navn: 'Sovepose', vaegt_g: 800 });
+  const kniv = lavItem({ uid: 'u-kniv', navn: 'Kniv', vaegt_g: 40 });
+
+  const deltager = (id: string, navn: string, felter = {}) => ({
+    id, navn, overnatning: null, personligt_gear_ids: [], baerer_delt_ids: [], ...felter
+  });
+
+  const turMed = (deltagere: ReturnType<typeof deltager>[]) => lavTur({ deltagere });
+
+  describe('baererAf', () => {
+    it('samler begge slags gear i ét opslag', () => {
+      const tur = turMed([
+        deltager('d1', 'Emil', { baerer_delt_ids: ['u-telt'], personligt_gear_ids: ['u-sovepose'] })
+      ]);
+
+      const baerer = baererAf(tur);
+      expect(baerer.get('u-telt')).toBe('d1');
+      expect(baerer.get('u-sovepose')).toBe('d1');
+      expect(baerer.has('u-kniv')).toBe(false);
+    });
+  });
+
+  describe('pakkelisteEfterPerson', () => {
+    it('laver et afsnit pr. deltager, tungeste først', () => {
+      const tur = turMed([
+        deltager('d1', 'Emil', { baerer_delt_ids: ['u-telt'], personligt_gear_ids: ['u-kniv'] }),
+        deltager('d2', 'Mikkel', { personligt_gear_ids: ['u-sovepose'] })
+      ]);
+
+      const afsnit = pakkelisteEfterPerson(tur, [telt, sovepose, kniv]);
+
+      expect(afsnit.map((a) => a.titel)).toEqual(['Emil', 'Mikkel']);
+      expect(afsnit[0].items.map((i) => i.navn)).toEqual(['Telt', 'Kniv']);
+      expect(afsnit[1].items.map((i) => i.navn)).toEqual(['Sovepose']);
+    });
+
+    it('lægger resten i en bunke til sidst', () => {
+      const tur = turMed([deltager('d1', 'Emil', { baerer_delt_ids: ['u-telt'] })]);
+
+      const afsnit = pakkelisteEfterPerson(tur, [telt, sovepose, kniv]);
+
+      expect(afsnit.map((a) => a.titel)).toEqual(['Emil', IKKE_FORDELT]);
+      expect(afsnit[1].items.map((i) => i.navn)).toEqual(['Sovepose', 'Kniv']);
+    });
+
+    it('springer deltagere over der ikke bærer noget', () => {
+      const tur = turMed([
+        deltager('d1', 'Emil', { baerer_delt_ids: ['u-telt'] }),
+        deltager('d2', 'Tomhændet')
+      ]);
+
+      expect(pakkelisteEfterPerson(tur, [telt]).map((a) => a.titel)).toEqual(['Emil']);
+    });
+
+    it('ignorerer tildelt gear der ikke er på turen længere', () => {
+      const tur = turMed([deltager('d1', 'Emil', { personligt_gear_ids: ['u-fjernet'] })]);
+      expect(pakkelisteEfterPerson(tur, [kniv]).map((a) => a.titel)).toEqual([IKKE_FORDELT]);
+    });
+
+    it('giver en tom liste uden gear', () => {
+      expect(pakkelisteEfterPerson(turMed([deltager('d1', 'Emil')]), [])).toEqual([]);
+    });
+  });
+
+  describe('vaegtPrDeltager', () => {
+    it('tæller det den enkelte faktisk slæber', () => {
+      const tur = turMed([
+        deltager('d1', 'Emil', { baerer_delt_ids: ['u-telt'], personligt_gear_ids: ['u-kniv'] }),
+        deltager('d2', 'Mikkel', { personligt_gear_ids: ['u-sovepose'] })
+      ]);
+
+      expect(vaegtPrDeltager(tur, [telt, sovepose, kniv])).toEqual([
+        { id: 'd1', navn: 'Emil', vaegt_g: 2440, antal: 2 },
+        { id: 'd2', navn: 'Mikkel', vaegt_g: 800, antal: 1 }
+      ]);
+    });
+
+    it('tager en deltager uden gear med som nul', () => {
+      const tur = turMed([deltager('d1', 'Emil')]);
+      expect(vaegtPrDeltager(tur, [telt])[0]).toEqual({ id: 'd1', navn: 'Emil', vaegt_g: 0, antal: 0 });
+    });
+  });
+
+  describe('tildelGear', () => {
+    it('lægger delt gear i baerer_delt_ids', () => {
+      const efter = tildelGear([deltager('d1', 'Emil')], 'd1', telt);
+      expect(efter[0].baerer_delt_ids).toEqual(['u-telt']);
+      expect(efter[0].personligt_gear_ids).toEqual([]);
+    });
+
+    it('lægger personligt gear i personligt_gear_ids', () => {
+      const efter = tildelGear([deltager('d1', 'Emil')], 'd1', sovepose);
+      expect(efter[0].personligt_gear_ids).toEqual(['u-sovepose']);
+      expect(efter[0].baerer_delt_ids).toEqual([]);
+    });
+
+    it('slår fra igen når man trykker på den samme', () => {
+      const efter = tildelGear([deltager('d1', 'Emil', { baerer_delt_ids: ['u-telt'] })], 'd1', telt);
+      expect(efter[0].baerer_delt_ids).toEqual([]);
+    });
+
+    // Ellers ville vægten tælle det samme stykke gear med to gange.
+    it('flytter gearet væk fra den der havde det', () => {
+      const foer = [
+        deltager('d1', 'Emil', { baerer_delt_ids: ['u-telt'] }),
+        deltager('d2', 'Mikkel')
+      ];
+
+      const efter = tildelGear(foer, 'd2', telt);
+
+      expect(efter[0].baerer_delt_ids).toEqual([]);
+      expect(efter[1].baerer_delt_ids).toEqual(['u-telt']);
+    });
+
+    // Skifter man "delt" på itemet bagefter, ligger uid'et i den forkerte
+    // liste — det skal ikke blive liggende som en skygge.
+    it('rydder op i den anden liste når gearet skifter slags', () => {
+      const foer = [deltager('d1', 'Emil', { personligt_gear_ids: ['u-telt'] })];
+
+      const efter = tildelGear(foer, 'd1', telt);
+
+      expect(efter[0].personligt_gear_ids).toEqual([]);
+      expect(efter[0].baerer_delt_ids).toEqual(['u-telt']);
+    });
+
+    it('rører ikke andet gear deltageren har', () => {
+      const foer = [deltager('d1', 'Emil', { personligt_gear_ids: ['u-kniv', 'u-sovepose'] })];
+      expect(tildelGear(foer, 'd1', telt)[0].personligt_gear_ids).toEqual(['u-kniv', 'u-sovepose']);
+    });
+
+    it('rører ikke listen den får ind', () => {
+      const foer = [deltager('d1', 'Emil')];
+      tildelGear(foer, 'd1', telt);
+      expect(foer[0].baerer_delt_ids).toEqual([]);
+    });
   });
 });

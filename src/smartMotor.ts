@@ -1,4 +1,4 @@
-import type { Item, Tur, Gruppe, Reference } from './db';
+import type { Item, Tur, Gruppe, Deltager, Reference } from './db';
 
 export interface VejrDag {
   dato: string;
@@ -406,8 +406,7 @@ export function garantiAdvarsel(item: Item, nu: Date = new Date()): string | nul
 // ─────────────────────────────────────────────
 // Pakkelisten grupperet
 // Wireframet viser pakkelisten opdelt med overskrifter frem for som én lang
-// liste. "Efter person" mangler, fordi der endnu ikke er en måde at tildele
-// gear til en deltager på.
+// liste — efter gruppe, efter tag eller efter hvem der bærer hvad.
 // ─────────────────────────────────────────────
 
 export interface PakkelisteAfsnit {
@@ -459,4 +458,89 @@ export function pakkelisteEfterTag(pakItems: Item[]): PakkelisteAfsnit[] {
 
   if (utaggede.length > 0) afsnit.push({ titel: 'Uden tag', items: [...utaggede].sort(efterVaegt) });
   return afsnit;
+}
+
+// ─────────────────────────────────────────────
+// Hvem bærer hvad
+//
+// Et stykke gear har højst én bærer. Delt grej bæres af én selvom flere
+// bruger det, og personligt grej er personligt — begge dele bliver forkerte,
+// hvis det samme kan ligge to steder, for så tælles vægten med to gange.
+//
+// Deltagerlisten har to felter, fordi de to slags gear betyder noget
+// forskelligt: baerer_delt_ids er "jeg slæber fællesteltet", og
+// personligt_gear_ids er "det her er mit".
+// ─────────────────────────────────────────────
+
+export const IKKE_FORDELT = 'Ikke fordelt endnu';
+
+// itemUid → deltagerens id.
+export function baererAf(tur: Tur): Map<Reference, string> {
+  const baerer = new Map<Reference, string>();
+
+  tur.deltagere.forEach((d) => {
+    d.personligt_gear_ids.forEach((uid) => baerer.set(uid, d.id));
+    d.baerer_delt_ids.forEach((uid) => baerer.set(uid, d.id));
+  });
+
+  return baerer;
+}
+
+export function pakkelisteEfterPerson(tur: Tur, pakItems: Item[]): PakkelisteAfsnit[] {
+  const baerer = baererAf(tur);
+  const afsnit: PakkelisteAfsnit[] = [];
+
+  tur.deltagere.forEach((d) => {
+    const items = pakItems.filter((i) => baerer.get(i.uid) === d.id);
+    if (items.length > 0) {
+      afsnit.push({ titel: d.navn || 'Uden navn', items: [...items].sort(efterVaegt) });
+    }
+  });
+
+  // Resten står til sidst — det er den bunke man skal have fordelt.
+  const tilbage = pakItems.filter((i) => !baerer.has(i.uid));
+  if (tilbage.length > 0) {
+    afsnit.push({ titel: IKKE_FORDELT, items: [...tilbage].sort(efterVaegt) });
+  }
+
+  return afsnit;
+}
+
+export interface Baerevaegt {
+  id: string;
+  navn: string;
+  vaegt_g: number;
+  antal: number;
+}
+
+// Hvad hver deltager faktisk kommer til at slæbe. Det er noget andet end
+// gennemsnittet: har én taget teltet, bærer den person mere end de andre.
+export function vaegtPrDeltager(tur: Tur, pakItems: Item[]): Baerevaegt[] {
+  const baerer = baererAf(tur);
+
+  return tur.deltagere.map((d) => {
+    const items = pakItems.filter((i) => baerer.get(i.uid) === d.id);
+    return {
+      id: d.id,
+      navn: d.navn || 'Uden navn',
+      vaegt_g: items.reduce((s, i) => s + i.vaegt_g, 0),
+      antal: items.length
+    };
+  });
+}
+
+// Slår et stykke gear til eller fra hos en deltager. Var det tildelt en
+// anden, flytter det med — ellers ville vægten tælle det to gange.
+export function tildelGear(deltagere: Deltager[], deltagerId: string, item: Item): Deltager[] {
+  const felt = item.delt ? 'baerer_delt_ids' : 'personligt_gear_ids';
+  const havdeDet = deltagere.some((d) => d.id === deltagerId && d[felt].includes(item.uid));
+
+  return deltagere.map((d) => ({
+    ...d,
+    // Fjern fra begge lister overalt: skiftede itemet mellem delt og
+    // personligt, kan det ligge i den forkerte.
+    personligt_gear_ids: d.personligt_gear_ids.filter((uid) => uid !== item.uid),
+    baerer_delt_ids: d.baerer_delt_ids.filter((uid) => uid !== item.uid),
+    ...(d.id === deltagerId && !havdeDet ? { [felt]: [...d[felt].filter((uid) => uid !== item.uid), item.uid] } : {})
+  }));
 }

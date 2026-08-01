@@ -24,9 +24,13 @@ import {
   itemUidsPaaTur,
   pakkelisteEfterGruppe,
   pakkelisteEfterTag,
+  pakkelisteEfterPerson,
+  baererAf,
+  vaegtPrDeltager,
+  tildelGear,
   soegSted
 } from './smartMotor';
-import type { VejrData, StedForslag, Advarsel, PakkelisteAfsnit, Beregninger } from './smartMotor';
+import type { VejrData, StedForslag, Advarsel, PakkelisteAfsnit, Beregninger, Baerevaegt } from './smartMotor';
 import {
   Knap,
   Felt,
@@ -63,9 +67,7 @@ const NAESTE_TILSTAND: Record<TurStatus, { label: string; naeste: TurStatus } | 
   afsluttet: null
 };
 
-// Pakkelisten kan grupperes på to måder. Wireframets "efter person" mangler,
-// fordi der endnu ikke er en måde at tildele gear til en deltager på.
-type Visning = 'gruppe' | 'tag';
+type Visning = 'gruppe' | 'tag' | 'person';
 
 function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   const erDesktop = useErDesktop();
@@ -202,6 +204,11 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
     await opdater({ deltagere: [...tur.deltagere, nyDeltager] });
   };
 
+  const toggleGearHos = async (deltagerId: string, item: Item) => {
+    if (!tur) return;
+    await opdater({ deltagere: tildelGear(tur.deltagere, deltagerId, item) });
+  };
+
   const fjernDeltager = async (id: string) => {
     if (!tur) return;
     await opdater({ deltagere: tur.deltagere.filter((d) => d.id !== id) });
@@ -266,9 +273,9 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   const beregninger = beregnForbrug(tur);
   const gruppeForslag = grupper ? foreslaaGrupper(tur, grupper) : [];
 
-  const afsnit = visning === 'gruppe'
-    ? pakkelisteEfterGruppe(tur, grupper ?? [], pakItems)
-    : pakkelisteEfterTag(pakItems);
+  const afsnit = visning === 'gruppe' ? pakkelisteEfterGruppe(tur, grupper ?? [], pakItems)
+    : visning === 'tag' ? pakkelisteEfterTag(pakItems)
+    : pakkelisteEfterPerson(tur, pakItems);
 
   const handling = NAESTE_TILSTAND[tur.status];
 
@@ -296,6 +303,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
       visning={visning}
       setVisning={setVisning}
       antal={pakItems.length}
+      baerernavne={baerernavne(tur)}
     />
   );
 
@@ -325,6 +333,26 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
       tilfoej={tilfoejBudgetLinje}
       opdater={opdaterBudgetLinje}
       fjern={fjernBudgetLinje}
+    />
+  );
+
+  const vaegt = (
+    <Vaegt
+      prPerson={vaegtPrPerson}
+      delt={vaegtDelt}
+      personligt={vaegtPersonligt}
+      personer={tur.personer}
+      baaret={vaegtPrDeltager(tur, pakItems)}
+    />
+  );
+
+  const fordeling = (
+    <Fordeling
+      deltagere={tur.deltagere}
+      pakItems={pakItems}
+      baerer={baererAf(tur)}
+      vaegte={vaegtPrDeltager(tur, pakItems)}
+      toggle={toggleGearHos}
     />
   );
 
@@ -401,13 +429,16 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
             <Foldbar titel="Turparametre" resume={parametreResume}>{parametre}</Foldbar>
             <Foldbar titel="Vejrudsigt" resume={vejrResume(vejrData)}>{vejr}</Foldbar>
             {advarsler.length > 0 && <Advarsler advarsler={advarsler} />}
-            <Vaegt prPerson={vaegtPrPerson} delt={vaegtDelt} personligt={vaegtPersonligt} personer={tur.personer} />
+            {vaegt}
             <Foldbar
               titel={`Deltagere (${tur.deltagere.length})`}
               resume={tur.deltagere.map((d) => d.navn).join(', ')}
             >
               {deltagere}
             </Foldbar>
+            {tur.deltagere.length > 0 && pakItems.length > 0 && (
+              <Foldbar titel="Fordel gear" resume={fordelingsResume(tur, pakItems)}>{fordeling}</Foldbar>
+            )}
             <Foldbar titel="Budget" resume={`${totalFaktisk} / ${totalForventet} kr`}>{budget}</Foldbar>
             <Foldbar titel="Del med gæster" resume={tur.dele_token ? 'Delt' : 'Ikke delt'}>{deling}</Foldbar>
             <Foldbar titel="Noter">{noter}</Foldbar>
@@ -443,7 +474,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
         )}
         <Foldbar titel={`Pakkeliste (${pakItems.length})`} aabenFra>{pakkeliste}</Foldbar>
         <Foldbar titel="Vægt" resume={`${kg(vaegtPrPerson)} kg${tur.personer > 1 ? ' / pers' : ''}`}>
-          <Vaegt prPerson={vaegtPrPerson} delt={vaegtDelt} personligt={vaegtPersonligt} personer={tur.personer} />
+          {vaegt}
         </Foldbar>
         <Foldbar titel="Vælg gear">{valgAfIndhold}</Foldbar>
         <Foldbar titel="Vejrudsigt" resume={vejrResume(vejrData)}>{vejr}</Foldbar>
@@ -453,6 +484,9 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
         >
           {deltagere}
         </Foldbar>
+        {tur.deltagere.length > 0 && pakItems.length > 0 && (
+          <Foldbar titel="Fordel gear" resume={fordelingsResume(tur, pakItems)}>{fordeling}</Foldbar>
+        )}
         <Foldbar titel="Budget" resume={`${totalFaktisk} / ${totalForventet} kr`}>{budget}</Foldbar>
         <Foldbar titel="Del med gæster" resume={tur.dele_token ? 'Delt' : 'Ikke delt'}>{deling}</Foldbar>
         <Foldbar titel="Noter">{noter}</Foldbar>
@@ -620,12 +654,26 @@ function Turparametre({
   );
 }
 
-function Pakkeliste({ afsnit, perItem, visning, setVisning, antal }: {
+// itemUid → navnet på den der bærer det.
+function baerernavne(tur: Tur): Map<Reference, string> {
+  const navnPaa = new Map(tur.deltagere.map((d) => [d.id, d.navn]));
+  const pr = new Map<Reference, string>();
+
+  baererAf(tur).forEach((deltagerId, itemUid) => {
+    const navn = navnPaa.get(deltagerId);
+    if (navn) pr.set(itemUid, navn);
+  });
+
+  return pr;
+}
+
+function Pakkeliste({ afsnit, perItem, visning, setVisning, antal, baerernavne }: {
   afsnit: PakkelisteAfsnit[];
   perItem: Map<Reference, Advarsel[]>;
   visning: Visning;
   setVisning: (v: Visning) => void;
   antal: number;
+  baerernavne: Map<Reference, string>;
 }) {
   if (antal === 0) {
     return (
@@ -642,7 +690,7 @@ function Pakkeliste({ afsnit, perItem, visning, setVisning, antal }: {
           vaerdier={VISNINGER}
           valgt={visning}
           vaelg={setVisning}
-          formater={(v) => (v === 'gruppe' ? 'Efter gruppe' : 'Efter tag')}
+          formater={(v) => VISNING_LABEL[v]}
           kompakt
         />
       </div>
@@ -651,7 +699,13 @@ function Pakkeliste({ afsnit, perItem, visning, setVisning, antal }: {
         <div key={a.titel} style={{ marginBottom: '16px' }}>
           <SektionsTitel>{a.titel}</SektionsTitel>
           {a.items.map((item) => (
-            <Pakkeraekke key={item.uid} item={item} advarsler={perItem.get(item.uid) ?? []} />
+            <Pakkeraekke
+              key={item.uid}
+              item={item}
+              advarsler={perItem.get(item.uid) ?? []}
+              // I "efter person" står navnet allerede som overskrift.
+              baerer={visning === 'person' ? '' : baerernavne.get(item.uid) ?? ''}
+            />
           ))}
           <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: '11px', color: 'var(--tekst-svag)', paddingTop: '5px' }}>
             {kg(a.items.reduce((s, i) => s + i.vaegt_g, 0))} kg
@@ -662,7 +716,7 @@ function Pakkeliste({ afsnit, perItem, visning, setVisning, antal }: {
   );
 }
 
-function Pakkeraekke({ item, advarsler }: { item: Item; advarsler: Advarsel[] }) {
+function Pakkeraekke({ item, advarsler, baerer }: { item: Item; advarsler: Advarsel[]; baerer: string }) {
   // Er der flere huller på samme item, vejer det røde tungest.
   const vaerst = advarsler.find((a) => a.niveau === 'roed') ?? advarsler[0];
 
@@ -686,7 +740,8 @@ function Pakkeraekke({ item, advarsler }: { item: Item; advarsler: Advarsel[] })
         </span>
       )}
 
-      {item.delt && <span style={{ fontSize: '10px', color: 'var(--tekst-svag)' }}>delt</span>}
+      {baerer && <span style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)' }}>{baerer}</span>}
+      {item.delt && !baerer && <span style={{ fontSize: '10px', color: 'var(--tekst-svag)' }}>delt</span>}
       <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '12px', minWidth: '52px', textAlign: 'right' }}>
         {item.vaegt_g} g
       </span>
@@ -717,12 +772,17 @@ function Advarselsliste({ advarsler }: { advarsler: Advarsel[] }) {
   );
 }
 
-function Vaegt({ prPerson, delt, personligt, personer }: {
+function Vaegt({ prPerson, delt, personligt, personer, baaret }: {
   prPerson: number;
   delt: number;
   personligt: number;
   personer: number;
+  baaret: Baerevaegt[];
 }) {
+  // Gennemsnittet siger ikke noget om, at én har fået teltet. Er gearet
+  // fordelt, er det den fordeling der gælder.
+  const erFordelt = baaret.some((b) => b.antal > 0);
+
   return (
     <Infokort label="Vægt" fremhaevet>
       <div style={{ fontSize: '22px', fontWeight: 500, fontFamily: "'Fraunces', Georgia, serif" }}>
@@ -730,8 +790,22 @@ function Vaegt({ prPerson, delt, personligt, personer }: {
         {personer > 1 && <span style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)' }}> / pers</span>}
       </div>
       <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginTop: '3px' }}>
-        Delt: {kg(delt)} kg · Personligt: {kg(personligt)} kg
+        {erFordelt ? 'I gennemsnit · ' : ''}Delt: {kg(delt)} kg · Personligt: {kg(personligt)} kg
       </div>
+
+      {erFordelt && (
+        <div style={{ marginTop: '10px', paddingTop: '9px', borderTop: '1px solid var(--accent-border)' }}>
+          <div style={{ fontSize: '10px', color: 'var(--tekst-dæmpet)', textTransform: 'uppercase', letterSpacing: '0.6px', fontWeight: 600, marginBottom: '5px' }}>
+            Sådan er det fordelt
+          </div>
+          {baaret.map((b) => (
+            <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', fontSize: '12px', padding: '2px 0' }}>
+              <span>{b.navn}</span>
+              <span style={{ color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>{kg(b.vaegt_g)} kg</span>
+            </div>
+          ))}
+        </div>
+      )}
     </Infokort>
   );
 }
@@ -919,6 +993,107 @@ function Indholdsvalg({ grupper, items, tur, paaTuren, gruppeForslag, toggleGrup
 }
 
 // Afkrydsningsrække brugt til både grupper og løse items.
+// Hvem slæber hvad. Vægten pr. person er ellers et gennemsnit, og det siger
+// intet om, at én har fået teltet med.
+function Fordeling({ deltagere, pakItems, baerer, vaegte, toggle }: {
+  deltagere: Deltager[];
+  pakItems: Item[];
+  baerer: Map<Reference, string>;
+  vaegte: Baerevaegt[];
+  toggle: (deltagerId: string, item: Item) => Promise<void>;
+}) {
+  const [valgt, setValgt] = useState(deltagere[0]?.id ?? '');
+  // Fjernes en deltager mens sektionen er åben, falder vi tilbage til den
+  // første der er tilbage.
+  const aktiv = deltagere.some((d) => d.id === valgt) ? valgt : (deltagere[0]?.id ?? '');
+
+  return (
+    <div>
+      <div style={{ display: 'grid', gap: '4px', marginBottom: '14px' }}>
+        {vaegte.map((v) => (
+          <button
+            key={v.id}
+            onClick={() => setValgt(v.id)}
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'baseline',
+              gap: '10px',
+              padding: '8px 10px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              textAlign: 'left',
+              fontSize: '13px',
+              border: `1px solid ${v.id === aktiv ? 'var(--accent-border)' : 'transparent'}`,
+              background: v.id === aktiv ? 'var(--accent-bg)' : 'transparent',
+              color: 'var(--tekst)'
+            }}
+          >
+            <span style={{ fontWeight: v.id === aktiv ? 600 : 400 }}>{v.navn}</span>
+            <span style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>
+              {v.antal === 0 ? 'intet endnu' : `${v.antal} ting · ${kg(v.vaegt_g)} kg`}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {aktiv && (
+        <div>
+          <SektionsTitel>Gear på turen</SektionsTitel>
+          {pakItems.map((item) => {
+            const hos = baerer.get(item.uid);
+            // Gear en anden allerede har taget, kan ikke også være dit — men
+            // det skal kunne ses, så man ved hvorfor det ikke er til rådighed.
+            const hosAnden = hos !== undefined && hos !== aktiv;
+            const hosNavn = deltagere.find((d) => d.id === hos)?.navn;
+
+            return (
+              <label
+                key={item.uid}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  padding: '7px 10px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  marginBottom: '2px',
+                  opacity: hosAnden ? 0.55 : 1,
+                  background: hos === aktiv ? 'var(--accent-bg)' : 'transparent'
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={hos === aktiv}
+                  onChange={() => toggle(aktiv, item)}
+                  style={{ width: 'auto' }}
+                />
+                <span style={{ flex: 1, minWidth: 0, fontSize: '13px' }}>
+                  {item.navn || 'Uden navn'}
+                  {item.delt && <span style={{ fontSize: '10px', color: 'var(--tekst-svag)', marginLeft: '6px' }}>delt</span>}
+                </span>
+                <span style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>
+                  {hosAnden ? `hos ${hosNavn}` : `${item.vaegt_g} g`}
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// "3 af 8 fordelt" — nok til at se om der er mere at tage stilling til.
+function fordelingsResume(tur: Tur, pakItems: Item[]): string {
+  const baerer = baererAf(tur);
+  const fordelt = pakItems.filter((i) => baerer.has(i.uid)).length;
+
+  if (fordelt === 0) return `Intet af ${pakItems.length} fordelt`;
+  if (fordelt === pakItems.length) return 'Alt er fordelt';
+  return `${fordelt} af ${pakItems.length} fordelt`;
+}
+
 // Delingen af en tur. Linket er det eneste der giver adgang, så det kan
 // trækkes tilbage — og et nyt link får et nyt token.
 function Deling({ token, snapshot, del, stop }: {
@@ -1061,7 +1236,13 @@ function Noegletal({ vaerdi, label }: { vaerdi: string; label: string }) {
 // Hjælpere
 // ─────────────────────────────────────────────
 
-const VISNINGER: readonly Visning[] = ['gruppe', 'tag'];
+const VISNINGER: readonly Visning[] = ['gruppe', 'tag', 'person'];
+
+const VISNING_LABEL: Record<Visning, string> = {
+  gruppe: 'Efter gruppe',
+  tag: 'Efter tag',
+  person: 'Efter person'
+};
 
 const MAANEDER = [
   'januar', 'februar', 'marts', 'april', 'maj', 'juni',
