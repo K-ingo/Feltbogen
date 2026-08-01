@@ -41,6 +41,7 @@ import {
   Indlaeser,
   SektionsTitel
 } from './ui';
+import { nytDeletoken, lavSnapshot, deleLink } from './gaest';
 import { layout } from './layout';
 import { useErDesktop } from './useMedie';
 import { sletTur, opdaterTur } from './sync';
@@ -245,6 +246,21 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   const totalForventet = tur.budget_linjer.reduce((s, l) => s + l.forventet_kr, 0);
   const totalFaktisk = tur.budget_linjer.reduce((s, l) => s + l.faktisk_kr, 0);
 
+  // Deling fryser pakkelisten ned som den ser ud nu. Gæsten læser kun det
+  // ene felt — aldrig inventaret. Retter man turen bagefter, står gæstens
+  // udgave stille, indtil man deler igen.
+  const del = async () => {
+    await opdater({
+      dele_token: tur.dele_token || nytDeletoken(),
+      dele_snapshot: JSON.stringify(lavSnapshot(tur, grupper ?? [], pakItems))
+    });
+  };
+
+  const stopDeling = async () => {
+    if (!confirm('Træk linket tilbage? Gæster kan så ikke længere se turen.')) return;
+    await opdater({ dele_token: '', dele_snapshot: '' });
+  };
+
   const advarsler = findAdvarsler(pakItems);
   const perItem = advarslerPrItem(advarsler);
   const beregninger = beregnForbrug(tur);
@@ -309,6 +325,15 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
       tilfoej={tilfoejBudgetLinje}
       opdater={opdaterBudgetLinje}
       fjern={fjernBudgetLinje}
+    />
+  );
+
+  const deling = (
+    <Deling
+      token={tur.dele_token}
+      snapshot={tur.dele_snapshot}
+      del={del}
+      stop={stopDeling}
     />
   );
 
@@ -384,6 +409,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
               {deltagere}
             </Foldbar>
             <Foldbar titel="Budget" resume={`${totalFaktisk} / ${totalForventet} kr`}>{budget}</Foldbar>
+            <Foldbar titel="Del med gæster" resume={tur.dele_token ? 'Delt' : 'Ikke delt'}>{deling}</Foldbar>
             <Foldbar titel="Noter">{noter}</Foldbar>
           </div>
         </div>
@@ -428,6 +454,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
           {deltagere}
         </Foldbar>
         <Foldbar titel="Budget" resume={`${totalFaktisk} / ${totalForventet} kr`}>{budget}</Foldbar>
+        <Foldbar titel="Del med gæster" resume={tur.dele_token ? 'Delt' : 'Ikke delt'}>{deling}</Foldbar>
         <Foldbar titel="Noter">{noter}</Foldbar>
       </div>
     </div>
@@ -892,6 +919,75 @@ function Indholdsvalg({ grupper, items, tur, paaTuren, gruppeForslag, toggleGrup
 }
 
 // Afkrydsningsrække brugt til både grupper og løse items.
+// Delingen af en tur. Linket er det eneste der giver adgang, så det kan
+// trækkes tilbage — og et nyt link får et nyt token.
+function Deling({ token, snapshot, del, stop }: {
+  token: string;
+  snapshot: string;
+  del: () => Promise<void>;
+  stop: () => Promise<void>;
+}) {
+  const [kopieret, setKopieret] = useState(false);
+
+  if (!token) {
+    return (
+      <div>
+        <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', lineHeight: 1.55, marginBottom: '12px' }}>
+          Lav et link, dine gæster kan åbne uden at oprette noget. De ser turen,
+          pakkelisten og din besked — ikke dit øvrige inventar og ingen priser.
+        </div>
+        <Knap variant="primaer" onClick={del}>Lav et gæstelink</Knap>
+      </div>
+    );
+  }
+
+  const link = deleLink(token);
+  const delt = laesDeltDen(snapshot);
+
+  const kopier = async () => {
+    try {
+      await navigator.clipboard.writeText(link);
+      setKopieret(true);
+      setTimeout(() => setKopieret(false), 2000);
+    } catch {
+      // Uden adgang til udklipsholderen kan linket stadig markeres i feltet.
+    }
+  };
+
+  return (
+    <div>
+      <input
+        readOnly
+        value={link}
+        onFocus={(e) => e.currentTarget.select()}
+        style={{ width: '100%', fontSize: '12px', marginBottom: '8px' }}
+      />
+
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <Knap variant="primaer" onClick={kopier}>{kopieret ? 'Kopieret' : 'Kopiér link'}</Knap>
+        <Knap onClick={del}>Opdatér med det nyeste</Knap>
+        <Knap variant="fare" onClick={stop}>Stop deling</Knap>
+      </div>
+
+      <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', marginTop: '12px', lineHeight: 1.55 }}>
+        Gæsterne ser turen som den så ud {delt}. Har du rettet noget siden, så tryk
+        "Opdatér med det nyeste". Alle der har linket, kan se turen — indtil du
+        stopper delingen.
+      </div>
+    </div>
+  );
+}
+
+function laesDeltDen(snapshot: string): string {
+  try {
+    const d = new Date((JSON.parse(snapshot) as { delt_den?: string }).delt_den ?? '');
+    if (!Number.isNaN(d.getTime())) return `den ${d.toLocaleDateString('da-DK')}`;
+  } catch {
+    // Ikke noget vi kan læse — sig det vagt frem for at gætte.
+  }
+  return 'da du delte den';
+}
+
 function Vaelgerraekke({ titel, detalje, valgt, laast, toggle }: {
   titel: string;
   detalje: string;
