@@ -103,6 +103,21 @@ export const pb = {
       return [...samlingAf(pbMock, navn).values()];
     },
 
+    // Gæstesiden slår op på ét felt. Filteret er allerede skrevet ud af
+    // pb.filter ovenfor, så her skal der kun læses `felt = "værdi"`.
+    async getList(_side: number, perSide: number, opts: { filter?: string } = {}) {
+      pbMock.kald.push({ metode: 'getList', samling: navn });
+      kraevOnline();
+
+      const alle = [...samlingAf(pbMock, navn).values()];
+      const m = /^(\w+)\s*=\s*(.+)$/.exec(opts.filter ?? '');
+      const fundne = m
+        ? alle.filter((r) => JSON.stringify(r[m[1]] ?? '') === m[2].trim())
+        : alle;
+
+      return { page: 1, perPage: perSide, totalItems: fundne.length, items: fundne.slice(0, perSide) };
+    },
+
     async create(data: Record<string, unknown>) {
       pbMock.kald.push({ metode: 'create', samling: navn });
       kraevOnline();

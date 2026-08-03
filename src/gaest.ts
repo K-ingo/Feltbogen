@@ -1,5 +1,6 @@
 import { pb } from './pb';
-import type { Item, Gruppe, Tur } from './db';
+import { db } from './db';
+import type { Item, Gruppe, Tur, DeltTur } from './db';
 import { pakkelisteEfterGruppe, baererAf } from './smartMotor';
 import type { VejrData } from './smartMotor';
 
@@ -281,4 +282,57 @@ export function linkvaert(oprindelse: string = window.location.origin): string {
   } catch {
     return oprindelse;
   }
+}
+
+// ─────────────────────────────────────────────
+// Ture andre har delt med én
+//
+// Et gæstelink er et kig, ikke en kopi — lukker man fanen, er turen væk.
+// Herunder kan gæsten gemme den, så den ligger i hendes egen Ture-fane og
+// kan læses uden link og uden forbindelse.
+//
+// Den gemte tur er stadig kun et øjebliksbillede. Den kommer ikke i hendes
+// PocketBase-konto, og hun kan ikke redigere den — men hun kan hente ejerens
+// nyeste udgave, så længe linket virker.
+// ─────────────────────────────────────────────
+
+// Gemmer eller opdaterer. Åbner man samme link to gange, skal der ikke ligge
+// to ens ture i listen.
+export async function gemDeltTur(
+  token: string,
+  snapshot: Gaestesnapshot,
+  kilde: string = window.location.origin,
+  nu: Date = new Date()
+): Promise<number> {
+  const gemt = await db.delte_ture.where('token').equals(token).first();
+
+  if (gemt?.id !== undefined) {
+    await db.delte_ture.update(gemt.id, { snapshot, kilde, opdateret: nu });
+    return gemt.id;
+  }
+
+  return db.delte_ture.add({ token, snapshot, kilde, gemt: nu, opdateret: nu });
+}
+
+export async function sletDeltTur(id: number): Promise<void> {
+  await db.delte_ture.delete(id);
+}
+
+export function erDeltTurGemt(token: string): Promise<DeltTur | undefined> {
+  return db.delte_ture.where('token').equals(token).first();
+}
+
+// Henter ejerens nuværende udgave og skriver den ind over den gemte.
+//
+// Kun et svar vi kan læse tæller. Går kaldet galt, eller er delingen trukket
+// tilbage, bliver det gemte øjebliksbillede stående — en tur man kan læse
+// offline er bedre end en tom skærm.
+export type Opdatering = 'opdateret' | 'ikke_fundet' | 'fejl';
+
+export async function opdaterDeltTur(deltTur: DeltTur, nu: Date = new Date()): Promise<Opdatering> {
+  const svar = await hentDeltTur(deltTur.token);
+  if (svar.slags !== 'ok') return svar.slags === 'ikke_fundet' ? 'ikke_fundet' : 'fejl';
+
+  await gemDeltTur(deltTur.token, svar.snapshot, deltTur.kilde, nu);
+  return 'opdateret';
 }

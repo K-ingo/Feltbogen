@@ -47,6 +47,7 @@ import {
   SektionsTitel
 } from './ui';
 import { nytDeletoken, lavSnapshot, deleLink, linkadvarsel, linkvaert } from './gaest';
+import { formatterPeriode } from './datotekst';
 import { layout } from './layout';
 import { useErDesktop } from './useMedie';
 import { sletTur, opdaterTur } from './sync';
@@ -1275,11 +1276,6 @@ const VISNING_LABEL: Record<Visning, string> = {
   person: 'Efter person'
 };
 
-const MAANEDER = [
-  'januar', 'februar', 'marts', 'april', 'maj', 'juni',
-  'juli', 'august', 'september', 'oktober', 'november', 'december'
-];
-
 function kg(gram: number): string {
   return (gram / 1000).toFixed(2);
 }
@@ -1288,22 +1284,6 @@ function beregnNaetter(start: string, slut: string): number {
   if (!start || !slut) return 0;
   const dage = (new Date(slut).getTime() - new Date(start).getTime()) / (1000 * 60 * 60 * 24);
   return Math.max(0, Math.floor(dage));
-}
-
-// "2026-07-21" + "2026-07-23" → "21.–23. juli". Går perioden over et
-// månedsskifte, skrives måneden ud begge steder.
-function formatterPeriode(start: string, slut: string): string {
-  const fra = new Date(start);
-  if (!start || Number.isNaN(fra.getTime())) return '';
-
-  const til = slut ? new Date(slut) : fra;
-  const fuld = (d: Date) => `${d.getDate()}. ${MAANEDER[d.getMonth()]}`;
-
-  if (!slut || Number.isNaN(til.getTime()) || fra.getTime() === til.getTime()) return fuld(fra);
-  if (fra.getMonth() === til.getMonth() && fra.getFullYear() === til.getFullYear()) {
-    return `${fra.getDate()}.–${fuld(til)}`;
-  }
-  return `${fuld(fra)} – ${fuld(til)}`;
 }
 
 // Kort resumé til den foldede vejrsektion: spændet over hele turen.

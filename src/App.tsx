@@ -10,6 +10,7 @@ import GrupperListe from './GrupperListe';
 import GruppeDetalje from './GruppeDetalje';
 import TureListe from './TureListe';
 import TurDetalje from './TurDetalje';
+import DeltTurDetalje from './DeltTurDetalje';
 import StatistikSide from './StatistikSide';
 import IndstillingerSide from './IndstillingerSide';
 import Velkomst from './Velkomst';
@@ -34,9 +35,13 @@ function App() {
   const [valgtItem, setValgtItem] = useState<{ id: number; ny: boolean } | null>(null);
   const [valgtGruppe, setValgtGruppe] = useState<{ id: number; ny: boolean } | null>(null);
   const [valgtTur, setValgtTur] = useState<{ id: number; ny: boolean } | null>(null);
+  // En tur en anden har delt. Den kan ikke redigeres og har derfor ingen
+  // ny-tilstand at rydde op efter.
+  const [valgtDeltTur, setValgtDeltTur] = useState<number | null>(null);
   const aabnItem = (id: number, ny = false) => setValgtItem({ id, ny });
   const aabnGruppe = (id: number, ny = false) => setValgtGruppe({ id, ny });
   const aabnTur = (id: number, ny = false) => setValgtTur({ id, ny });
+  const aabnDeltTur = (id: number) => setValgtDeltTur(id);
 
   // Nye poster åbnes med det samme — en tom post man skal lede efter bagefter
   // er ikke til nogen nytte.
@@ -57,6 +62,7 @@ function App() {
     setValgtItem(null);
     setValgtGruppe(null);
     setValgtTur(null);
+    setValgtDeltTur(null);
 
     for (const { valgt, tabel, slet } of aabne) {
       if (!valgt?.ny) continue;
@@ -167,6 +173,14 @@ function App() {
     );
   }
 
+  if (valgtDeltTur !== null) {
+    return (
+      <Skal fane={fane} skift={skiftFane}>
+        <DeltTurDetalje deltTurId={valgtDeltTur} tilbage={lukDetalje} />
+      </Skal>
+    );
+  }
+
   switch (fane) {
     case 'dashboard':
       return (
@@ -180,7 +194,7 @@ function App() {
         />
       );
     case 'grupper': return <GrupperListe fane={fane} skift={skiftFane} aabnGruppe={aabnGruppe} nyGruppe={nyGruppe} />;
-    case 'ture': return <TureListe fane={fane} skift={skiftFane} aabnTur={aabnTur} nyTur={nyTur} />;
+    case 'ture': return <TureListe fane={fane} skift={skiftFane} aabnTur={aabnTur} aabnDeltTur={aabnDeltTur} nyTur={nyTur} />;
     case 'statistik': return <StatistikSide fane={fane} skift={skiftFane} aabnItem={aabnItem} />;
     case 'inventar': return <InventarSide fane={fane} skift={skiftFane} aabnItem={aabnItem} />;
     case 'indstillinger': return <IndstillingerSide fane={fane} skift={skiftFane} tilLogin={() => setViserLogin(true)} />;
