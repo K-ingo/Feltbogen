@@ -561,22 +561,47 @@ export function tildelGear(deltagere: Deltager[], deltagerId: string, item: Item
 // Telt og hængekøje skal man selv have med.
 const OVERNATNING_KRAEVER_GREJ: Overnatning[] = ['telt', 'haengekoeje'];
 
-export function overnatningsAdvarsler(tur: Tur, pakItems: Item[]): Advarsel[] {
-  const paaTuren = new Set<string>();
-  pakItems.forEach((i) => i.tags.forEach((t) => paaTuren.add(t)));
+// Værdien hedder "haengekoeje" i basen og "hængekøje" på skærmen, og brugeren
+// skriver sine tags i hånden — nogle med tegn, nogle uden. Alle tre stavemåder
+// skæres ned til den samme, så "hængekøje", "haengekoeje" og "hangekoje" er ét
+// og det samme ord. Ellers bad advarslen om et tag, den selv ville afvise.
+function udenSaerlige(tekst: string): string {
+  return tekst
+    .toLowerCase()
+    .replace(/æ/g, 'a')
+    .replace(/ø/g, 'o')
+    .replace(/å/g, 'a')
+    .replace(/ae/g, 'a')
+    .replace(/oe/g, 'o')
+    .replace(/aa/g, 'a');
+}
 
+// Har turen noget, der dækker den her måde at sove på?
+//
+// Både tagget og navnet tæller. Kun at se på tags gjorde et item der hedder
+// "TTTM Hængekøje" usynligt, og så stod advarslen og lyste, mens hængekøjen lå
+// på listen. Navnet kan i sjældne tilfælde snyde — "teltunderlag" ligner et
+// telt — men at overse en advarsel er mildere end en advarsel man ikke kan få
+// til at gå væk.
+function daekker(item: Item, form: Overnatning): boolean {
+  const soegt = udenSaerlige(form);
+  return item.tags.some((t) => udenSaerlige(t) === soegt) || udenSaerlige(item.navn).includes(soegt);
+}
+
+export function overnatningsAdvarsler(tur: Tur, pakItems: Item[]): Advarsel[] {
   // Grupperet, så tre teltsovere giver én advarsel og ikke tre.
   const navnePrForm = new Map<Overnatning, string[]>();
+
   tur.deltagere.forEach((d) => {
     if (!d.overnatning || !OVERNATNING_KRAEVER_GREJ.includes(d.overnatning)) return;
-    if (paaTuren.has(d.overnatning)) return;
+    if (pakItems.some((i) => daekker(i, d.overnatning!))) return;
     navnePrForm.set(d.overnatning, [...(navnePrForm.get(d.overnatning) ?? []), d.navn || 'En deltager']);
   });
 
   return [...navnePrForm.entries()].map(([form, navne]) => ({
     niveau: 'roed' as const,
     besked: `${navne.join(' og ')} sover i ${etiket(form)}`,
-    detalje: `Intet gear på turen har tagget "${etiket(form)}". Sæt tagget på det gear der dækker det.`,
+    detalje: `Intet gear på turen hedder eller er tagget "${etiket(form)}". Sæt tagget på det gear der dækker, eller tilføj det til listen.`,
     itemUid: '',
     mangler: etiket(form)
   }));
