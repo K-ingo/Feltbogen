@@ -403,6 +403,35 @@ describe('overnatningsAdvarsler', () => {
     expect(overnatningsAdvarsler(tur, [lavItem({ navn: 'Telt', tags: ['telt'] })])).toEqual([]);
   });
 
+  // Fejlen brugeren løb ind i: formen hedder "haengekoeje" i basen, men
+  // beskeden bad om tagget "hængekøje". Satte man det tag beskeden nævnte,
+  // blev advarslen stående.
+  it('accepterer tagget skrevet med æ og ø', () => {
+    const tur = lavTur({ deltagere: [sover('Mikkel', 'haengekoeje')] });
+
+    expect(overnatningsAdvarsler(tur, [lavItem({ navn: 'TTTM', tags: ['hængekøje'] })])).toEqual([]);
+    expect(overnatningsAdvarsler(tur, [lavItem({ navn: 'TTTM', tags: ['haengekoeje'] })])).toEqual([]);
+  });
+
+  it('er ligeglad med store og små bogstaver', () => {
+    const tur = lavTur({ deltagere: [sover('Mikkel', 'haengekoeje')] });
+    expect(overnatningsAdvarsler(tur, [lavItem({ tags: ['Hængekøje'] })])).toEqual([]);
+  });
+
+  // Et item der hedder "TTTM Hængekøje" er åbenlyst en hængekøje, også uden
+  // at nogen har tagget det.
+  it('tæller også navnet og ikke kun tagget', () => {
+    const tur = lavTur({ deltagere: [sover('Mikkel', 'haengekoeje')] });
+
+    expect(overnatningsAdvarsler(tur, [lavItem({ navn: 'TTTM Hængekøje', tags: [] })])).toEqual([]);
+    expect(overnatningsAdvarsler(tur, [lavItem({ navn: 'Hangekoje uden tegn', tags: [] })])).toEqual([]);
+  });
+
+  it('lader sig ikke narre af et helt andet stykke gear', () => {
+    const tur = lavTur({ deltagere: [sover('Mikkel', 'haengekoeje')] });
+    expect(overnatningsAdvarsler(tur, [lavItem({ navn: 'Sovepose', tags: ['søvn'] })])).toHaveLength(1);
+  });
+
   it('samler flere der sover ens i én advarsel', () => {
     const tur = lavTur({ deltagere: [sover('Mikkel', 'telt'), sover('Sofie', 'telt')] });
 
