@@ -68,16 +68,19 @@ describe('lavSnapshot', () => {
     expect(raa).not.toContain('koebsdato');
   });
 
-  it('tager ikke uid med', () => {
+  // Gearets uid følger med fra version 2, så en deltager kan sige "jeg tager
+  // den". Det er et tilfældigt id og fortæller intet om tingen — og uden
+  // adgang til items-samlingen kan det ikke slås op til noget.
+  it('tager gearets uid med, men ikke gruppernes', () => {
     const raa = JSON.stringify(lavSnapshot(tur(), [gruppe], [gryde, tarp]));
-    expect(raa).not.toContain('u-gryde');
+    expect(raa).toContain('u-gryde');
     expect(raa).not.toContain('g-1');
   });
 
   it('beholder om et item er delt', () => {
     const s = lavSnapshot(tur(), [gruppe], [gryde, tarp]);
     const loese = s.afsnit.find((a) => a.titel === 'Løse items');
-    expect(loese?.items[0]).toEqual({ navn: 'Full Moon Tarp', vaegt_g: 720, delt: true, baerer: '' });
+    expect(loese?.items[0]).toEqual({ uid: 'u-tarp', navn: 'Full Moon Tarp', vaegt_g: 720, delt: true, baerer: '' });
   });
 
   it('skriver hvem der bærer hvad, med navn og ikke id', () => {
@@ -165,7 +168,7 @@ describe('laesSnapshot', () => {
     expect(s?.deltagere).toEqual([]);
     expect(s?.koordinater).toBeNull();
     expect(s?.afsnit).toHaveLength(1);
-    expect(s?.afsnit[0].items[0]).toEqual({ navn: 'Gryde', vaegt_g: 0, delt: false, baerer: '' });
+    expect(s?.afsnit[0].items[0]).toEqual({ uid: '', navn: 'Gryde', vaegt_g: 0, delt: false, baerer: '' });
   });
 });
 

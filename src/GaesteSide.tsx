@@ -1,48 +1,93 @@
 import { useEffect, useState } from 'react';
 import { hentDeltTur, gemDeltTur, erDeltTurGemt } from './gaest';
 import type { Gaestesnapshot } from './gaest';
+import {
+  hentDeltagelser, gemDeltagelse, forladTur, minDeltagelse, nyDeltagelse
+} from './deltagelse';
+import type { Deltagelse } from './deltagelse';
+import { useAuth } from './useAuth';
+import AuthSide from './AuthSide';
 import DeltTurVisning from './DeltTurVisning';
+import MitGrej from './MitGrej';
 import { Knap, Indlaeser } from './ui';
 import { layout } from './layout';
 
 interface Props {
   token: string;
-  // Gæsten kan gå videre til sin egen konto — det er ikke en betingelse for
-  // at se turen.
+  // Gæsten kan gå videre til sin egen Feltbog — turen bliver liggende.
   tilAppen: () => void;
 }
 
-// Turen set af en gæst uden konto. Alt kommer fra ét frosset felt på turen;
-// der er ingen adgang til ejerens inventar herfra.
+// Turen set af en der er inviteret med.
+//
+// Man skal være logget ind: linket giver adgang til at skrive sig på turen,
+// og så skal det kunne ses hvem der skriver. Selve turen kommer stadig fra ét
+// frosset felt — der er ingen adgang til ejerens inventar herfra.
 function GaesteSide({ token, tilAppen }: Props) {
+  const { bruger } = useAuth();
+  const [viserLogin, setViserLogin] = useState(false);
+
   const [tilstand, setTilstand] = useState<'henter' | 'ok' | 'ikke_fundet' | 'fejl'>('henter');
   const [snapshot, setSnapshot] = useState<Gaestesnapshot | null>(null);
+  const [turPbId, setTurPbId] = useState('');
+  const [deltagelser, setDeltagelser] = useState<Deltagelse[]>([]);
   const [gemt, setGemt] = useState(false);
 
+  // Turen hentes først når man er logget ind. Læsereglen i PocketBase kræver
+  // det, så et kald uden konto ville alligevel kun give "findes ikke".
   useEffect(() => {
+    if (!bruger) return;
     let aktiv = true;
 
-    hentDeltTur(token).then((svar) => {
+    void (async () => {
+      const svar = await hentDeltTur(token);
       if (!aktiv) return;
-      if (svar.slags === 'ok') {
-        setSnapshot(svar.snapshot);
-        setTilstand('ok');
-      } else {
-        setTilstand(svar.slags);
-      }
-    });
 
-    // Har man gemt turen før, skal knappen ikke lokke med det igen.
+      if (svar.slags !== 'ok') {
+        setTilstand(svar.slags);
+        return;
+      }
+
+      setSnapshot(svar.snapshot);
+      setTurPbId(svar.turPbId);
+      setTilstand('ok');
+
+      const hentede = await hentDeltagelser(svar.turPbId, token);
+      if (aktiv && hentede.slags === 'ok') setDeltagelser(hentede.data);
+    })();
+
     erDeltTurGemt(token).then((fundet) => { if (aktiv) setGemt(!!fundet); });
 
     return () => { aktiv = false; };
-  }, [token]);
+  }, [token, bruger]);
 
   const gem = async () => {
     if (!snapshot) return;
-    await gemDeltTur(token, snapshot);
+    await gemDeltTur(token, snapshot, window.location.origin, new Date(), turPbId);
     setGemt(true);
   };
+
+  // Ens egen række skrives til serveren og lægges så ind i den liste alle
+  // ser — så står ens eget grej på pakkelisten med det samme.
+  const skrivMig = async (naeste: Deltagelse): Promise<Deltagelse | null> => {
+    const svar = await gemDeltagelse(naeste, token);
+    if (svar.slags !== 'ok') return null;
+
+    setDeltagelser((foer) => [
+      ...foer.filter((d) => d.user !== svar.data.user),
+      svar.data
+    ]);
+    return svar.data;
+  };
+
+  const meldFra = async (pbId: string): Promise<boolean> => {
+    if (!await forladTur(pbId)) return false;
+    setDeltagelser((foer) => foer.filter((d) => d.pb_id !== pbId));
+    return true;
+  };
+
+  if (viserLogin) return <AuthSide fortryd={() => setViserLogin(false)} />;
+  if (!bruger) return <Login token={token} tilLogin={() => setViserLogin(true)} />;
 
   return (
     <div>
@@ -64,10 +109,42 @@ function GaesteSide({ token, tilAppen }: Props) {
         )}
         {tilstand === 'ok' && snapshot && (
           <>
-            <DeltTurVisning snapshot={snapshot} />
+            <DeltTurVisning snapshot={snapshot} deltagelser={deltagelser} />
+            <MitGrej
+              mig={minDeltagelse(deltagelser, bruger.id) ?? nyDeltagelse(turPbId, bruger.id)}
+              faelles={snapshot.afsnit}
+              gem={skrivMig}
+              meldFra={meldFra}
+            />
             <Gemfelt gemt={gemt} gem={() => void gem()} tilAppen={tilAppen} />
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+// Uden konto er der ingen tur at vise. Man skal kunne se hvem der skriver sig
+// på en fælles pakkeliste — ellers er den ikke til at stole på.
+function Login({ token, tilLogin }: { token: string; tilLogin: () => void }) {
+  return (
+    <div>
+      <Topbar />
+      <div style={{ ...layout.container, padding: '50px 20px', textAlign: 'center' }}>
+        <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '22px', marginBottom: '10px' }}>
+          Du er inviteret med på en tur
+        </div>
+        <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', lineHeight: 1.65, marginBottom: '20px' }}>
+          Log ind eller opret en konto for at se turen. Så kan du også skrive
+          hvad du selv tager med, og sige hvad du bærer af det fælles grej.
+        </div>
+        <Knap variant="primaer" onClick={tilLogin}>Log ind eller opret konto</Knap>
+        <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', marginTop: '14px' }}>
+          Linket bliver liggende — du lander på turen igen bagefter.
+        </div>
+        {/* Tokenet bliver stående i adresselinjen, så turen findes igen efter
+            login. Det vises ikke; det er ikke noget man skal skrive af. */}
+        <span hidden>{token}</span>
       </div>
     </div>
   );
@@ -99,13 +176,13 @@ function Gemfelt({ gemt, gem, tilAppen }: { gemt: boolean; gem: () => void; tilA
         </>
       )}
       <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', marginTop: '10px' }}>
-        Gemmes kun på denne enhed. Du kan ikke rette i en tur en anden har delt.
+        Du kan rette i dit eget grej, men ikke i resten af turen.
       </div>
     </div>
   );
 }
 
-function Topbar({ tilAppen }: { tilAppen: () => void }) {
+function Topbar({ tilAppen }: { tilAppen?: () => void }) {
   return (
     <div style={{
       borderBottom: '1px solid var(--border)',
@@ -127,21 +204,23 @@ function Topbar({ tilAppen }: { tilAppen: () => void }) {
           </div>
           <div style={{ fontSize: '11px', color: 'var(--tekst-svag)' }}>Delt med dig</div>
         </div>
-        <button
-          onClick={tilAppen}
-          style={{
-            padding: '7px 13px',
-            borderRadius: '8px',
-            fontSize: '12px',
-            fontWeight: 500,
-            cursor: 'pointer',
-            background: 'transparent',
-            color: 'var(--tekst)',
-            border: '1px solid var(--border)'
-          }}
-        >
-          Åbn Feltbogen
-        </button>
+        {tilAppen && (
+          <button
+            onClick={tilAppen}
+            style={{
+              padding: '7px 13px',
+              borderRadius: '8px',
+              fontSize: '12px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              background: 'transparent',
+              color: 'var(--tekst)',
+              border: '1px solid var(--border)'
+            }}
+          >
+            Åbn Feltbogen
+          </button>
+        )}
       </div>
     </div>
   );

@@ -4,7 +4,10 @@ import type { Item, Gruppe, Tur, DeltTur } from './db';
 import { pakkelisteEfterGruppe, baererAf } from './smartMotor';
 import type { VejrData } from './smartMotor';
 
-// Deling af en tur med nogen der ikke har konto.
+// Deling af en tur med de andre der skal med.
+//
+// Linket er en invitation, ikke en nøgle: man skal være logget ind for at
+// åbne det. Til gengæld kan man så skrive sig på turen — se deltagelse.ts.
 //
 // Gæsten læser aldrig inventaret. Alt hvad hun skal se, fryses ned i ét felt
 // på turen, når linket bliver lavet — så er der ét felt at åbne for læsning i
@@ -14,9 +17,14 @@ import type { VejrData } from './smartMotor';
 // turen. Det er med vilje: gæsten skal se det man delte, ikke det man er
 // midt i at lave om.
 
-export const SNAPSHOT_VERSION = 1;
+// 2 gav hvert stykke gear sit uid med, så en deltager kan sige "jeg tager
+// den". Ældre snapshots læses stadig — de har bare ingen uid'er, og så kan
+// deres grej ikke fordeles.
+export const SNAPSHOT_VERSION = 2;
 
 export interface GaesteItem {
+  // Ejerens uid for gearet. Tomt i snapshots fra version 1.
+  uid: string;
   navn: string;
   vaegt_g: number;
   delt: boolean;
@@ -70,6 +78,7 @@ export function lavSnapshot(
     // Kun navn, vægt, om det deles og hvem der bærer det. Ikke pris, ikke
     // købsinfo, ikke noter.
     items: a.items.map((i) => ({
+      uid: i.uid,
       navn: i.navn,
       vaegt_g: i.vaegt_g,
       delt: i.delt,
@@ -174,6 +183,7 @@ function afsnit(v: unknown): GaesteAfsnit[] {
             .filter((i): i is Record<string, unknown> => !!i && typeof i === 'object')
             // baerer mangler i snapshots lavet før feltet fandtes.
             .map((i) => ({
+              uid: tekst(i.uid),
               navn: tekst(i.navn),
               vaegt_g: tal(i.vaegt_g),
               delt: i.delt === true,
@@ -202,7 +212,9 @@ export function tokenFraAdresse(soeg: string = window.location.search): string |
 // ─────────────────────────────────────────────
 
 export type GaesteSvar =
-  | { slags: 'ok'; snapshot: Gaestesnapshot }
+  // turPbId følger med, fordi deltagelser hænger på turen og ikke på tokenet
+  // — så overlever de at ejeren laver et nyt link.
+  | { slags: 'ok'; snapshot: Gaestesnapshot; turPbId: string }
   | { slags: 'ikke_fundet' }
   | { slags: 'fejl' };
 
@@ -227,7 +239,7 @@ export async function hentDeltTur(token: string): Promise<GaesteSvar> {
     const snapshot = laesSnapshot(record.dele_snapshot);
     if (!snapshot) return { slags: 'ikke_fundet' };
 
-    return { slags: 'ok', snapshot };
+    return { slags: 'ok', snapshot, turPbId: record.id };
   } catch (e) {
     // 404 og 403 betyder begge "den findes ikke for dig" — der er ingen grund
     // til at fortælle en fremmed hvilken af delene det er.
@@ -302,16 +314,21 @@ export async function gemDeltTur(
   token: string,
   snapshot: Gaestesnapshot,
   kilde: string = window.location.origin,
-  nu: Date = new Date()
+  nu: Date = new Date(),
+  turPbId?: string
 ): Promise<number> {
   const gemt = await db.delte_ture.where('token').equals(token).first();
 
   if (gemt?.id !== undefined) {
-    await db.delte_ture.update(gemt.id, { snapshot, kilde, opdateret: nu });
+    // tur_pb_id skrives kun når vi har den. Et opslag der fejlede, skal ikke
+    // kunne rive forbindelsen til turen over.
+    await db.delte_ture.update(gemt.id, {
+      snapshot, kilde, opdateret: nu, ...(turPbId ? { tur_pb_id: turPbId } : {})
+    });
     return gemt.id;
   }
 
-  return db.delte_ture.add({ token, snapshot, kilde, gemt: nu, opdateret: nu });
+  return db.delte_ture.add({ token, snapshot, kilde, tur_pb_id: turPbId, gemt: nu, opdateret: nu });
 }
 
 export async function sletDeltTur(id: number): Promise<void> {
@@ -333,6 +350,6 @@ export async function opdaterDeltTur(deltTur: DeltTur, nu: Date = new Date()): P
   const svar = await hentDeltTur(deltTur.token);
   if (svar.slags !== 'ok') return svar.slags === 'ikke_fundet' ? 'ikke_fundet' : 'fejl';
 
-  await gemDeltTur(deltTur.token, svar.snapshot, deltTur.kilde, nu);
+  await gemDeltTur(deltTur.token, svar.snapshot, deltTur.kilde, nu, svar.turPbId);
   return 'opdateret';
 }

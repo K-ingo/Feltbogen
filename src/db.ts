@@ -172,6 +172,9 @@ export interface DeltTur {
   snapshot: Gaestesnapshot;
   // Adressen linket blev åbnet fra, så turen kan hentes forfra senere.
   kilde: string;
+  // Turens record-id i PocketBase. Deltagelser hænger på den og ikke på
+  // tokenet. Mangler på ture gemt før deltagelse fandtes.
+  tur_pb_id?: string;
   gemt: Date;
   opdateret: Date;
 }
