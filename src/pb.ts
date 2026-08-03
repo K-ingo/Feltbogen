@@ -56,3 +56,16 @@ export async function logInd(email: string, password: string): Promise<Bruger> {
 export function logUd(): void {
   pb.authStore.clear();
 }
+// Navnet man optræder med for de andre på en delt tur. E-mailen er ikke et
+// navn — og den skal heller ikke stå på en fælles pakkeliste.
+export async function gemNavn(navn: string): Promise<void> {
+  const bruger = nuvaerendeBruger();
+  if (!bruger) return;
+  await pb.collection('users').update(bruger.id, { name: navn.trim() });
+}
+
+// Navnet, eller tom hvis man ikke har sat et. Kalderen bestemmer hvad der
+// så skal stå — "En deltager" hører til på turen, ikke her.
+export function mitNavn(): string {
+  return nuvaerendeBruger()?.name?.trim() ?? '';
+}

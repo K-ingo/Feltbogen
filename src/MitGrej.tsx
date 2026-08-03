@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from './db';
+import type { Item } from './db';
 import type { Deltagelse, MedbragtGear } from './deltagelse';
 import type { GaesteAfsnit } from './gaest';
 import { Knap, Felt, SektionsTitel, Chip } from './ui';
@@ -79,6 +82,11 @@ function MitGrej({ mig, faelles, gem, meldFra }: Props) {
         <Medbragt
           gear={kladde.medbragt}
           saet={(medbragt) => ret({ medbragt })}
+        />
+
+        <FraMitInventar
+          alleredeMed={kladde.medbragt}
+          tilfoej={(nye) => ret({ medbragt: [...kladde.medbragt, ...nye] })}
         />
 
         {deltGrej.length > 0 && (
@@ -167,6 +175,93 @@ function Medbragt({ gear, saet }: { gear: MedbragtGear[]; saet: (g: MedbragtGear
 
       <div style={{ marginTop: '8px' }}>
         <Knap onClick={() => saet([...gear, { navn: '', vaegt_g: 0 }])}>+ Tilføj grej</Knap>
+      </div>
+    </div>
+  );
+}
+
+// Man har som regel gearet i sit eget inventar i forvejen. At skrive navn og
+// vægt af i hånden er både besværligt og en kilde til slåfejl.
+//
+// Der kopieres navn og vægt over — ikke en henvisning. Ejeren af turen kan
+// ikke læse ens inventar, og det skal hun heller ikke kunne.
+function FraMitInventar({ alleredeMed, tilfoej }: {
+  alleredeMed: MedbragtGear[];
+  tilfoej: (gear: MedbragtGear[]) => void;
+}) {
+  const [aaben, setAaben] = useState(false);
+  const [valgte, setValgte] = useState<string[]>([]);
+  const [soeg, setSoeg] = useState('');
+
+  const mine = useLiveQuery(() => db.items.where('status').equals('ejer').toArray());
+  if (!mine || mine.length === 0) return null;
+
+  const navnePaaListen = new Set(alleredeMed.map((g) => g.navn.toLowerCase()));
+  const kanVaelges = mine.filter((i) =>
+    i.navn.trim() !== ''
+    && !navnePaaListen.has(i.navn.toLowerCase())
+    && i.navn.toLowerCase().includes(soeg.toLowerCase()));
+
+  const skift = (uid: string) =>
+    setValgte(valgte.includes(uid) ? valgte.filter((u) => u !== uid) : [...valgte, uid]);
+
+  const laegTil = () => {
+    const valgtGear: MedbragtGear[] = mine
+      .filter((i) => valgte.includes(i.uid))
+      .map((i: Item) => ({ navn: i.navn, vaegt_g: i.vaegt_g }));
+
+    tilfoej(valgtGear);
+    setValgte([]);
+    setAaben(false);
+    setSoeg('');
+  };
+
+  if (!aaben) {
+    return (
+      <div>
+        <Knap onClick={() => setAaben(true)}>Tag fra mit inventar</Knap>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ border: '1px solid var(--border-svag)', borderRadius: '10px', padding: '12px' }}>
+      <SektionsTitel>Fra mit inventar</SektionsTitel>
+      <input
+        value={soeg}
+        onChange={(e) => setSoeg(e.target.value)}
+        placeholder="Søg i dit gear"
+        style={{ width: '100%', fontSize: '14px', marginBottom: '10px' }}
+      />
+
+      <div style={{ maxHeight: '240px', overflowY: 'auto', display: 'grid', gap: '2px' }}>
+        {kanVaelges.length === 0 && (
+          <div style={{ fontSize: '12px', color: 'var(--tekst-svag)' }}>
+            {soeg ? 'Intet gear passer på søgningen.' : 'Alt dit gear er allerede på listen.'}
+          </div>
+        )}
+        {kanVaelges.map((i) => (
+          <label
+            key={i.uid}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 2px',
+              borderBottom: '1px solid var(--border-svag)', fontSize: '13px', cursor: 'pointer'
+            }}
+          >
+            <input type="checkbox" checked={valgte.includes(i.uid)} onChange={() => skift(i.uid)} />
+            <span style={{ flex: 1, minWidth: 0 }}>{i.navn}</span>
+            <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '12px' }}>{i.vaegt_g} g</span>
+          </label>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
+        <Knap variant="primaer" onClick={laegTil} disabled={valgte.length === 0}>
+          {valgte.length > 0 ? `Tag ${valgte.length} med` : 'Vælg noget gear'}
+        </Knap>
+        <Knap variant="tekst" onClick={() => { setAaben(false); setValgte([]); setSoeg(''); }}>
+          Fortryd
+        </Knap>
       </div>
     </div>
   );

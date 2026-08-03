@@ -6,6 +6,7 @@ import {
 } from './deltagelse';
 import type { Deltagelse } from './deltagelse';
 import { useAuth } from './useAuth';
+import { mitNavn } from './pb';
 import AuthSide from './AuthSide';
 import DeltTurVisning from './DeltTurVisning';
 import MitGrej from './MitGrej';
@@ -86,7 +87,9 @@ function GaesteSide({ token, tilAppen }: Props) {
     return true;
   };
 
-  if (viserLogin) return <AuthSide fortryd={() => setViserLogin(false)} />;
+  // Login-skærmen lukker sig selv når der er kvitteret. Uden det blev man
+  // stående på den og skulle selv trykke tilbage for at se turen.
+  if (viserLogin && !bruger) return <AuthSide fortryd={() => setViserLogin(false)} />;
   if (!bruger) return <Login token={token} tilLogin={() => setViserLogin(true)} />;
 
   return (
@@ -111,7 +114,7 @@ function GaesteSide({ token, tilAppen }: Props) {
           <>
             <DeltTurVisning snapshot={snapshot} deltagelser={deltagelser} />
             <MitGrej
-              mig={minDeltagelse(deltagelser, bruger.id) ?? nyDeltagelse(turPbId, bruger.id)}
+              mig={minDeltagelse(deltagelser, bruger.id) ?? nyDeltagelse(turPbId, bruger.id, mitNavn())}
               faelles={snapshot.afsnit}
               gem={skrivMig}
               meldFra={meldFra}

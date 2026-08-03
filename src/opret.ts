@@ -1,5 +1,6 @@
 import type { ItemStatus } from './db';
 import { opretItem, opretGruppe, opretTur } from './sync';
+import { mitNavn } from './pb';
 
 // Tomme poster med fornuftige standardværdier. De ligger her, fordi både
 // listeskærmene og dashboardet opretter gear og ture — en post skal se ens ud
@@ -61,7 +62,15 @@ export function opretTomTur(): Promise<number> {
     status: 'kladde',
     gruppe_ids: [],
     loese_item_ids: [],
-    deltagere: [],
+    // Den der opretter turen skal selv med på den. Uden det stod ejeren ikke
+    // på sin egen deltagerliste, og hendes eget grej kunne ikke fordeles.
+    deltagere: [{
+      id: crypto.randomUUID(),
+      navn: mitNavn(),
+      overnatning: null,
+      personligt_gear_ids: [],
+      baerer_delt_ids: []
+    }],
     budget_linjer: [],
     besked_fra_ejer: '',
     noter: '',

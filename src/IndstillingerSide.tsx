@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
-import { logUd } from './pb';
+import { logUd, gemNavn } from './pb';
 import { useAuth } from './useAuth';
 import { afstemMedServer, fjernDubletter, usendtAntal, uidFeltMangler } from './sync';
 import {
@@ -14,7 +14,7 @@ import {
 } from './dataudveksling';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
-import { Knap, SektionsTitel } from './ui';
+import { Knap, SektionsTitel, Felt } from './ui';
 
 interface Props {
   fane: Fane;
@@ -30,6 +30,7 @@ function IndstillingerSide({ fane, skift, tilLogin }: Props) {
   const [arbejder, setArbejder] = useState<string | null>(null);
   const [syncBesked, setSyncBesked] = useState<Besked>(null);
   const [dataBesked, setDataBesked] = useState<Besked>(null);
+  const [navnBesked, setNavnBesked] = useState<Besked>(null);
   const filvaelger = useRef<HTMLInputElement>(null);
 
   const items = useLiveQuery(() => db.items.toArray()) ?? [];
@@ -115,6 +116,18 @@ function IndstillingerSide({ fane, skift, tilLogin }: Props) {
             {bruger ? (
               <>
                 <Raekke label="Logget ind som" vaerdi={bruger.email} />
+                <Navnefelt
+                  start={bruger.name ?? ''}
+                  gem={async (v) => {
+                    try {
+                      await gemNavn(v);
+                      setNavnBesked({ slags: 'ok', tekst: 'Navnet er gemt.' });
+                    } catch {
+                      setNavnBesked({ slags: 'fejl', tekst: 'Kunne ikke gemme navnet.' });
+                    }
+                  }}
+                />
+                {navnBesked && <Kvittering besked={navnBesked} />}
                 <div style={{ marginTop: '12px' }}>
                   <Knap variant="fare" onClick={logUd}>Log ud</Knap>
                 </div>
@@ -228,6 +241,33 @@ function IndstillingerSide({ fane, skift, tilLogin }: Props) {
 // ─────────────────────────────────────────────
 // Byggeklodser
 // ─────────────────────────────────────────────
+
+// Navnet er det de andre ser på en delt tur. Det gemmes med en knap og ikke
+// pr. tastetryk — hvert gem er et kald til serveren.
+function Navnefelt({ start, gem }: { start: string; gem: (v: string) => Promise<void> }) {
+  const [navn, setNavn] = useState(start);
+  const [gemmer, setGemmer] = useState(false);
+
+  return (
+    <div style={{ marginTop: '14px' }}>
+      <Felt
+        label="Dit navn"
+        value={navn}
+        onChange={setNavn}
+        placeholder="Fx Emil"
+        hjaelp="vises for de andre på delte ture"
+      />
+      <div style={{ marginTop: '8px' }}>
+        <Knap
+          onClick={() => { setGemmer(true); void gem(navn).finally(() => setGemmer(false)); }}
+          disabled={gemmer || navn.trim() === start.trim()}
+        >
+          {gemmer ? 'Gemmer…' : 'Gem navn'}
+        </Knap>
+      </div>
+    </div>
+  );
+}
 
 function poster(n: number): string {
   return `${n} ${n === 1 ? 'post' : 'poster'}`;
