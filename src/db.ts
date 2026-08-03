@@ -1,5 +1,8 @@
 import Dexie from 'dexie';
 import type { Table, Transaction } from 'dexie';
+// Kun typen. Den er erased ved build, så den gensidige import mellem db og
+// gaest findes ikke i det der køres.
+import type { Gaestesnapshot } from './gaest';
 
 // Værdilisterne er kilden til både typerne og de knapper/dropdowns der viser
 // dem, så en ny mulighed kun skal tilføjes ét sted.
@@ -154,6 +157,28 @@ export interface Indstilling {
   vaerdi: string;
 }
 
+// En tur en anden har delt med én, gemt så den kan findes igen uden linket.
+//
+// Den ligger ikke i `ture`: den er ikke ens egen, den kan ikke redigeres, og
+// den skal aldrig sendes op i ens egen PocketBase-konto. Snapshottet er alt
+// hvad ejeren delte — der er ingen forbindelse til hendes inventar.
+export interface DeltTur {
+  id?: number;
+  // Linkets token. Åbner man samme link igen, opdateres den gemte i stedet
+  // for at blive lagt ved siden af.
+  token: string;
+  // Allerede læst igennem laesSnapshot(). Ligger som objekt og ikke som JSON,
+  // fordi Dexie gemmer det direkte.
+  snapshot: Gaestesnapshot;
+  // Adressen linket blev åbnet fra, så turen kan hentes forfra senere.
+  kilde: string;
+  // Turens record-id i PocketBase. Deltagelser hænger på den og ikke på
+  // tokenet. Mangler på ture gemt før deltagelse fandtes.
+  tur_pb_id?: string;
+  gemt: Date;
+  opdateret: Date;
+}
+
 export class FeltbogenDB extends Dexie {
   // Nøgletypen er number (++id), så get/add/update slipper for id-casts.
   items!: Table<Item, number>;
@@ -161,6 +186,7 @@ export class FeltbogenDB extends Dexie {
   ture!: Table<Tur, number>;
   slettede!: Table<Slettet, number>;
   indstillinger!: Table<Indstilling, string>;
+  delte_ture!: Table<DeltTur, number>;
 
   constructor() {
     super('FeltbogenDB');
@@ -211,6 +237,17 @@ export class FeltbogenDB extends Dexie {
       ture: '++id, &uid, navn, startdato, status, oprettet, dele_token',
       slettede: '++id, samling, pb_id, [samling+pb_id]',
       indstillinger: '&noegle'
+    });
+
+    // v8 giver plads til ture andre har delt med én. Ingen upgrade: tabellen
+    // er tom indtil man åbner sit første gæstelink.
+    this.version(8).stores({
+      items: '++id, &uid, navn, status, oprettet',
+      grupper: '++id, &uid, navn, oprettet',
+      ture: '++id, &uid, navn, startdato, status, oprettet, dele_token',
+      slettede: '++id, samling, pb_id, [samling+pb_id]',
+      indstillinger: '&noegle',
+      delte_ture: '++id, &token, gemt'
     });
   }
 }

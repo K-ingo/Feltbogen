@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, etiket, TUR_STATUS, OVERNATNING, AKTIVITET, TERRAEN, ERFARING } from './db';
 import type {
@@ -47,6 +47,9 @@ import {
   SektionsTitel
 } from './ui';
 import { nytDeletoken, lavSnapshot, deleLink, linkadvarsel, linkvaert } from './gaest';
+import { formatterPeriode } from './datotekst';
+import { hentDeltagelser, medbragtPrDeltager, baererePrGear } from './deltagelse';
+import type { Deltagelse } from './deltagelse';
 import { layout } from './layout';
 import { useErDesktop } from './useMedie';
 import { sletTur, opdaterTur } from './sync';
@@ -80,6 +83,8 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   const [koordinatFejl, setKoordinatFejl] = useState('');
   const [stedForslag, setStedForslag] = useState<StedForslag[]>([]);
   const [stedSoeger, setStedSoeger] = useState(false);
+  // Hvad de inviterede har skrevet sig på for. Hentes kun når turen er delt.
+  const [deltagelser, setDeltagelser] = useState<Deltagelse[]>([]);
 
   const items = useLiveQuery(() => db.items.toArray());
   const grupper = useLiveQuery(() => db.grupper.toArray());
@@ -98,6 +103,20 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
       }
     }
   });
+
+  // Bidragene ligger på serveren og ikke i den lokale base — de kommer fra
+  // andres enheder. Uden forbindelse vises turen bare uden dem.
+  const token = tur?.dele_token ?? '';
+  const turPbId = tur?.pb_id ?? '';
+  useEffect(() => {
+    if (!token || !turPbId) { setDeltagelser([]); return; }
+
+    let aktiv = true;
+    void hentDeltagelser(turPbId, token).then((svar) => {
+      if (aktiv && svar.slags === 'ok') setDeltagelser(svar.data);
+    });
+    return () => { aktiv = false; };
+  }, [token, turPbId]);
 
   const skiftDato = async (aendringer: { startdato?: string; slutdato?: string }) => {
     if (!tur) return;
@@ -367,6 +386,8 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
     <Deling
       token={tur.dele_token}
       snapshot={tur.dele_snapshot}
+      deltagelser={deltagelser}
+      gearnavne={new Map(pakItems.map((i) => [i.uid, i.navn]))}
       del={del}
       stop={stopDeling}
     />
@@ -1127,9 +1148,12 @@ function fordelingsResume(tur: Tur, pakItems: Item[]): string {
 
 // Delingen af en tur. Linket er det eneste der giver adgang, så det kan
 // trækkes tilbage — og et nyt link får et nyt token.
-function Deling({ token, snapshot, del, stop }: {
+function Deling({ token, snapshot, deltagelser, gearnavne, del, stop }: {
   token: string;
   snapshot: string;
+  deltagelser: Deltagelse[];
+  // uid → navn, så en der har meldt sig kan nævnes ved det grej hun tager.
+  gearnavne: Map<Reference, string>;
   del: () => Promise<void>;
   stop: () => Promise<void>;
 }) {
@@ -1139,8 +1163,10 @@ function Deling({ token, snapshot, del, stop }: {
     return (
       <div>
         <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', lineHeight: 1.55, marginBottom: '12px' }}>
-          Lav et link, dine gæster kan åbne uden at oprette noget. De ser turen,
-          pakkelisten og din besked — ikke dit øvrige inventar og ingen priser.
+          Lav et link til dem der skal med. De skal logge ind for at åbne det,
+          og så kan de skrive hvad de selv tager med, og hvad de bærer af det
+          fælles. De ser turen, pakkelisten og din besked — ikke dit øvrige
+          inventar og ingen priser.
         </div>
         <Knap variant="primaer" onClick={del}>Lav et gæstelink</Knap>
       </div>
@@ -1185,10 +1211,60 @@ function Deling({ token, snapshot, del, stop }: {
       </div>
 
       <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', marginTop: '12px', lineHeight: 1.55 }}>
-        Gæsterne ser turen som den så ud {delt}. Har du rettet noget siden, så tryk
-        "Opdatér med det nyeste". Alle der har linket, kan se turen — indtil du
-        stopper delingen.
+        De andre ser turen som den så ud {delt}. Har du rettet noget siden, så tryk
+        "Opdatér med det nyeste". Alle med linket og en konto kan se turen — indtil
+        du stopper delingen.
       </div>
+
+      <Meldtind deltagelser={deltagelser} gearnavne={gearnavne} />
+    </div>
+  );
+}
+
+// Hvad de inviterede har skrevet sig på for. Det ligger hos dem og ikke på
+// turen — ejeren læser det, men retter ikke i det.
+function Meldtind({ deltagelser, gearnavne }: {
+  deltagelser: Deltagelse[];
+  gearnavne: Map<Reference, string>;
+}) {
+  const medbragt = medbragtPrDeltager(deltagelser);
+  const baerere = [...baererePrGear(deltagelser).entries()];
+
+  if (deltagelser.length === 0) return null;
+
+  return (
+    <div style={{ marginTop: '18px', paddingTop: '14px', borderTop: '1px solid var(--border-svag)' }}>
+      <SektionsTitel>Deltagerne melder ind ({deltagelser.length})</SektionsTitel>
+
+      {medbragt.length === 0 && baerere.length === 0 && (
+        <div style={{ fontSize: '12px', color: 'var(--tekst-svag)' }}>
+          De har åbnet turen, men ikke skrevet noget endnu.
+        </div>
+      )}
+
+      {medbragt.map((d) => (
+        <div key={d.navn} style={{ marginBottom: '10px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 500, marginBottom: '3px' }}>
+            {d.navn} tager selv med · {(d.vaegt_g / 1000).toFixed(2)} kg
+          </div>
+          <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)' }}>
+            {d.gear.map((g) => `${g.navn} (${g.vaegt_g} g)`).join(' · ')}
+          </div>
+        </div>
+      ))}
+
+      {baerere.length > 0 && (
+        <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', marginTop: '8px', lineHeight: 1.6 }}>
+          {baerere.map(([uid, navne]) => (
+            <div key={uid}>
+              {navne.join(' og ')} bærer {gearnavne.get(uid) ?? 'noget der er taget af listen'}
+              {navne.length > 1 && (
+                <span style={{ color: 'var(--advarsel)' }}> — begge har meldt sig</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -1275,11 +1351,6 @@ const VISNING_LABEL: Record<Visning, string> = {
   person: 'Efter person'
 };
 
-const MAANEDER = [
-  'januar', 'februar', 'marts', 'april', 'maj', 'juni',
-  'juli', 'august', 'september', 'oktober', 'november', 'december'
-];
-
 function kg(gram: number): string {
   return (gram / 1000).toFixed(2);
 }
@@ -1288,22 +1359,6 @@ function beregnNaetter(start: string, slut: string): number {
   if (!start || !slut) return 0;
   const dage = (new Date(slut).getTime() - new Date(start).getTime()) / (1000 * 60 * 60 * 24);
   return Math.max(0, Math.floor(dage));
-}
-
-// "2026-07-21" + "2026-07-23" → "21.–23. juli". Går perioden over et
-// månedsskifte, skrives måneden ud begge steder.
-function formatterPeriode(start: string, slut: string): string {
-  const fra = new Date(start);
-  if (!start || Number.isNaN(fra.getTime())) return '';
-
-  const til = slut ? new Date(slut) : fra;
-  const fuld = (d: Date) => `${d.getDate()}. ${MAANEDER[d.getMonth()]}`;
-
-  if (!slut || Number.isNaN(til.getTime()) || fra.getTime() === til.getTime()) return fuld(fra);
-  if (fra.getMonth() === til.getMonth() && fra.getFullYear() === til.getFullYear()) {
-    return `${fra.getDate()}.–${fuld(til)}`;
-  }
-  return `${fuld(fra)} – ${fuld(til)}`;
 }
 
 // Kort resumé til den foldede vejrsektion: spændet over hele turen.

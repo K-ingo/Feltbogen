@@ -1,9 +1,10 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import type { TurStatus } from './db';
+import { formatterPeriode } from './datotekst';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
-import { Knap, Badge, ListeRaekke, TomListe } from './ui';
+import { Knap, Badge, ListeRaekke, SektionsTitel, TomListe } from './ui';
 
 // Farven signalerer hvor turen er i sit livsforløb.
 const STATUS_NIVEAU: Record<TurStatus, 'info' | 'accent' | 'advarsel'> = {
@@ -17,22 +18,30 @@ interface Props {
   fane: Fane;
   skift: (f: Fane) => void;
   aabnTur: (id: number, nyOprettet?: boolean) => void;
+  aabnDeltTur: (id: number) => void;
   nyTur: () => void;
 }
 
-function TureListe({ fane, skift, aabnTur, nyTur }: Props) {
+function TureListe({ fane, skift, aabnTur, aabnDeltTur, nyTur }: Props) {
   const ture = useLiveQuery(() => db.ture.orderBy('startdato').reverse().toArray());
+  // Ture andre har delt med én. De ligger i deres egen tabel og kan ikke
+  // redigeres, men de hører hjemme her — det er stadig ture man skal med på.
+  const delte = useLiveQuery(() => db.delte_ture.orderBy('gemt').reverse().toArray());
+
+  const egne = ture?.length ?? 0;
+  const antalDelte = delte?.length ?? 0;
 
   return (
     <Skal
       fane={fane}
       skift={skift}
       titel="Ture"
-      undertitel={`${ture?.length ?? 0} ture`}
+      undertitel={undertitel(egne, antalDelte)}
       handlinger={<Knap variant="primaer" onClick={nyTur}>+ Ny tur</Knap>}
       fab={nyTur}
     >
-      {ture?.length === 0 && <TomListe>Ingen ture endnu. Opret din første.</TomListe>}
+      {egne === 0 && antalDelte === 0 && <TomListe>Ingen ture endnu. Opret din første.</TomListe>}
+
       {ture?.map((t) => (
         <ListeRaekke
           key={t.uid}
@@ -51,8 +60,37 @@ function TureListe({ fane, skift, aabnTur, nyTur }: Props) {
           }
         />
       ))}
+
+      {antalDelte > 0 && (
+        <div style={{ marginTop: egne > 0 ? '26px' : '4px' }}>
+          <SektionsTitel>Delt med dig</SektionsTitel>
+          {delte?.map((d) => (
+            <ListeRaekke
+              key={d.token}
+              onClick={() => d.id !== undefined && aabnDeltTur(d.id)}
+              titel={
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {d.snapshot.navn || 'Uden navn'}
+                  <Badge niveau="info">delt</Badge>
+                </span>
+              }
+              detalje={
+                <>
+                  {d.snapshot.sted || 'Intet sted'}
+                  {formatterPeriode(d.snapshot.startdato, d.snapshot.slutdato) && ` · ${formatterPeriode(d.snapshot.startdato, d.snapshot.slutdato)}`}
+                </>
+              }
+            />
+          ))}
+        </div>
+      )}
     </Skal>
   );
+}
+
+function undertitel(egne: number, delte: number): string {
+  const mine = `${egne} ${egne === 1 ? 'tur' : 'ture'}`;
+  return delte > 0 ? `${mine} · ${delte} delt med dig` : mine;
 }
 
 export default TureListe;

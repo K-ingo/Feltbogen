@@ -1,38 +1,93 @@
 import { useEffect, useState } from 'react';
-import { hentDeltTur } from './gaest';
+import { hentDeltTur, gemDeltTur, erDeltTurGemt } from './gaest';
 import type { Gaestesnapshot } from './gaest';
-import { vejrIkonKode } from './smartMotor';
-import { Chip, Infokort, SektionsTitel, Indlaeser } from './ui';
+import {
+  hentDeltagelser, gemDeltagelse, forladTur, minDeltagelse, nyDeltagelse
+} from './deltagelse';
+import type { Deltagelse } from './deltagelse';
+import { useAuth } from './useAuth';
+import AuthSide from './AuthSide';
+import DeltTurVisning from './DeltTurVisning';
+import MitGrej from './MitGrej';
+import { Knap, Indlaeser } from './ui';
 import { layout } from './layout';
 
 interface Props {
   token: string;
-  // Gæsten kan gå videre til sin egen konto — det er ikke en betingelse for
-  // at se turen.
+  // Gæsten kan gå videre til sin egen Feltbog — turen bliver liggende.
   tilAppen: () => void;
 }
 
-// Turen set af en gæst uden konto. Alt kommer fra ét frosset felt på turen;
-// der er ingen adgang til ejerens inventar herfra.
+// Turen set af en der er inviteret med.
+//
+// Man skal være logget ind: linket giver adgang til at skrive sig på turen,
+// og så skal det kunne ses hvem der skriver. Selve turen kommer stadig fra ét
+// frosset felt — der er ingen adgang til ejerens inventar herfra.
 function GaesteSide({ token, tilAppen }: Props) {
+  const { bruger } = useAuth();
+  const [viserLogin, setViserLogin] = useState(false);
+
   const [tilstand, setTilstand] = useState<'henter' | 'ok' | 'ikke_fundet' | 'fejl'>('henter');
   const [snapshot, setSnapshot] = useState<Gaestesnapshot | null>(null);
+  const [turPbId, setTurPbId] = useState('');
+  const [deltagelser, setDeltagelser] = useState<Deltagelse[]>([]);
+  const [gemt, setGemt] = useState(false);
 
+  // Turen hentes først når man er logget ind. Læsereglen i PocketBase kræver
+  // det, så et kald uden konto ville alligevel kun give "findes ikke".
   useEffect(() => {
+    if (!bruger) return;
     let aktiv = true;
 
-    hentDeltTur(token).then((svar) => {
+    void (async () => {
+      const svar = await hentDeltTur(token);
       if (!aktiv) return;
-      if (svar.slags === 'ok') {
-        setSnapshot(svar.snapshot);
-        setTilstand('ok');
-      } else {
+
+      if (svar.slags !== 'ok') {
         setTilstand(svar.slags);
+        return;
       }
-    });
+
+      setSnapshot(svar.snapshot);
+      setTurPbId(svar.turPbId);
+      setTilstand('ok');
+
+      const hentede = await hentDeltagelser(svar.turPbId, token);
+      if (aktiv && hentede.slags === 'ok') setDeltagelser(hentede.data);
+    })();
+
+    erDeltTurGemt(token).then((fundet) => { if (aktiv) setGemt(!!fundet); });
 
     return () => { aktiv = false; };
-  }, [token]);
+  }, [token, bruger]);
+
+  const gem = async () => {
+    if (!snapshot) return;
+    await gemDeltTur(token, snapshot, window.location.origin, new Date(), turPbId);
+    setGemt(true);
+  };
+
+  // Ens egen række skrives til serveren og lægges så ind i den liste alle
+  // ser — så står ens eget grej på pakkelisten med det samme.
+  const skrivMig = async (naeste: Deltagelse): Promise<Deltagelse | null> => {
+    const svar = await gemDeltagelse(naeste, token);
+    if (svar.slags !== 'ok') return null;
+
+    setDeltagelser((foer) => [
+      ...foer.filter((d) => d.user !== svar.data.user),
+      svar.data
+    ]);
+    return svar.data;
+  };
+
+  const meldFra = async (pbId: string): Promise<boolean> => {
+    if (!await forladTur(pbId)) return false;
+    setDeltagelser((foer) => foer.filter((d) => d.pb_id !== pbId));
+    return true;
+  };
+
+  if (viserLogin) return <AuthSide fortryd={() => setViserLogin(false)} />;
+  if (!bruger) return <Login token={token} tilLogin={() => setViserLogin(true)} />;
 
   return (
     <div>
@@ -52,13 +107,82 @@ function GaesteSide({ token, tilAppen }: Props) {
             tekst="Der var ikke forbindelse til serveren. Prøv igen om lidt."
           />
         )}
-        {tilstand === 'ok' && snapshot && <Turen snapshot={snapshot} />}
+        {tilstand === 'ok' && snapshot && (
+          <>
+            <DeltTurVisning snapshot={snapshot} deltagelser={deltagelser} />
+            <MitGrej
+              mig={minDeltagelse(deltagelser, bruger.id) ?? nyDeltagelse(turPbId, bruger.id)}
+              faelles={snapshot.afsnit}
+              gem={skrivMig}
+              meldFra={meldFra}
+            />
+            <Gemfelt gemt={gemt} gem={() => void gem()} tilAppen={tilAppen} />
+          </>
+        )}
       </div>
     </div>
   );
 }
 
-function Topbar({ tilAppen }: { tilAppen: () => void }) {
+// Uden konto er der ingen tur at vise. Man skal kunne se hvem der skriver sig
+// på en fælles pakkeliste — ellers er den ikke til at stole på.
+function Login({ token, tilLogin }: { token: string; tilLogin: () => void }) {
+  return (
+    <div>
+      <Topbar />
+      <div style={{ ...layout.container, padding: '50px 20px', textAlign: 'center' }}>
+        <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '22px', marginBottom: '10px' }}>
+          Du er inviteret med på en tur
+        </div>
+        <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', lineHeight: 1.65, marginBottom: '20px' }}>
+          Log ind eller opret en konto for at se turen. Så kan du også skrive
+          hvad du selv tager med, og sige hvad du bærer af det fælles grej.
+        </div>
+        <Knap variant="primaer" onClick={tilLogin}>Log ind eller opret konto</Knap>
+        <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', marginTop: '14px' }}>
+          Linket bliver liggende — du lander på turen igen bagefter.
+        </div>
+        {/* Tokenet bliver stående i adresselinjen, så turen findes igen efter
+            login. Det vises ikke; det er ikke noget man skal skrive af. */}
+        <span hidden>{token}</span>
+      </div>
+    </div>
+  );
+}
+
+// Et link man har fået tilsendt, forsvinder når fanen lukkes. Herfra kan
+// gæsten lægge turen over i sin egen app, så den kan findes igen.
+function Gemfelt({ gemt, gem, tilAppen }: { gemt: boolean; gem: () => void; tilAppen: () => void }) {
+  return (
+    <div style={{
+      marginTop: '24px',
+      paddingTop: '18px',
+      borderTop: '1px solid var(--border-svag)',
+      textAlign: 'center'
+    }}>
+      {gemt ? (
+        <>
+          <div style={{ fontSize: '13px', marginBottom: '10px' }}>
+            Turen ligger nu under <strong>Ture</strong> i din Feltbog.
+          </div>
+          <Knap variant="primaer" onClick={tilAppen}>Åbn den i appen</Knap>
+        </>
+      ) : (
+        <>
+          <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginBottom: '10px', lineHeight: 1.55 }}>
+            Gem turen, så du kan finde den igen uden linket — også uden dækning.
+          </div>
+          <Knap variant="primaer" onClick={gem}>Gem turen hos mig</Knap>
+        </>
+      )}
+      <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', marginTop: '10px' }}>
+        Du kan rette i dit eget grej, men ikke i resten af turen.
+      </div>
+    </div>
+  );
+}
+
+function Topbar({ tilAppen }: { tilAppen?: () => void }) {
   return (
     <div style={{
       borderBottom: '1px solid var(--border)',
@@ -80,141 +204,23 @@ function Topbar({ tilAppen }: { tilAppen: () => void }) {
           </div>
           <div style={{ fontSize: '11px', color: 'var(--tekst-svag)' }}>Delt med dig</div>
         </div>
-        <button
-          onClick={tilAppen}
-          style={{
-            padding: '7px 13px',
-            borderRadius: '8px',
-            fontSize: '12px',
-            fontWeight: 500,
-            cursor: 'pointer',
-            background: 'transparent',
-            color: 'var(--tekst)',
-            border: '1px solid var(--border)'
-          }}
-        >
-          Åbn Feltbogen
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function Turen({ snapshot }: { snapshot: Gaestesnapshot }) {
-  const k = snapshot.koordinater;
-
-  return (
-    <div style={{ display: 'grid', gap: '18px' }}>
-      <div>
-        <h1 style={{ fontSize: '26px', margin: '10px 0 4px' }}>{snapshot.navn || 'Uden navn'}</h1>
-        <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)' }}>
-          {[
-            periode(snapshot.startdato, snapshot.slutdato),
-            snapshot.sted,
-            `${snapshot.naetter} ${snapshot.naetter === 1 ? 'nat' : 'nætter'}`,
-            snapshot.baereafstand_km > 0 ? `${snapshot.baereafstand_km} km bæreafstand` : null
-          ].filter(Boolean).join(' · ')}
-        </div>
-        {k && (
-          <a
-            href={`https://www.openstreetmap.org/?mlat=${k.lat}&mlon=${k.lng}#map=14/${k.lat}/${k.lng}`}
-            target="_blank"
-            rel="noreferrer noopener"
-            style={{ fontSize: '12px', color: 'var(--accent)', display: 'inline-block', marginTop: '7px' }}
+        {tilAppen && (
+          <button
+            onClick={tilAppen}
+            style={{
+              padding: '7px 13px',
+              borderRadius: '8px',
+              fontSize: '12px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              background: 'transparent',
+              color: 'var(--tekst)',
+              border: '1px solid var(--border)'
+            }}
           >
-            {k.lat}, {k.lng} · Åbn i kort ↗
-          </a>
+            Åbn Feltbogen
+          </button>
         )}
-      </div>
-
-      {snapshot.besked_fra_ejer && (
-        <div style={{
-          padding: '12px 14px',
-          borderRadius: '10px',
-          background: 'var(--accent-bg)',
-          border: '1px solid var(--accent-border)',
-          fontSize: '13px',
-          lineHeight: 1.55,
-          whiteSpace: 'pre-wrap'
-        }}>
-          {snapshot.besked_fra_ejer}
-        </div>
-      )}
-
-      {snapshot.vejr && snapshot.vejr.dage.length > 0 && (
-        <Infokort label="Vejrudsigt da turen blev delt">
-          <div style={{ display: 'grid', gap: '4px', fontSize: '13px' }}>
-            {snapshot.vejr.dage.map((d) => (
-              <div key={d.dato} style={{ display: 'grid', gridTemplateColumns: '54px 22px 1fr auto', gap: '8px', alignItems: 'center' }}>
-                <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '11px' }}>{dagsnavn(d.dato)}</span>
-                <span style={{ fontSize: '15px' }}>{vejrIkonKode(d.vejrkode)}</span>
-                <span>{d.temp_min}–{d.temp_max}°C</span>
-                <span style={{ fontSize: '11px', color: d.nedboer_mm > 0 ? 'var(--advarsel)' : 'var(--tekst-svag)' }}>
-                  {d.nedboer_mm > 0 ? `${d.nedboer_mm} mm` : '—'}
-                </span>
-              </div>
-            ))}
-          </div>
-        </Infokort>
-      )}
-
-      {snapshot.deltagere.length > 0 && (
-        <Infokort label={`Deltagere (${snapshot.deltagere.length})`}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-            {snapshot.deltagere.map((navn) => <Chip key={navn}>{navn}</Chip>)}
-          </div>
-        </Infokort>
-      )}
-
-      <Infokort label="Samlet vægt" fremhaevet>
-        <div style={{ fontSize: '22px', fontFamily: "'Fraunces', Georgia, serif" }}>
-          {(snapshot.vaegt_i_alt_g / 1000).toFixed(2)} kg
-        </div>
-        {snapshot.personer > 1 && (
-          <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginTop: '3px' }}>
-            fordelt på {snapshot.personer} personer
-          </div>
-        )}
-      </Infokort>
-
-      <div>
-        <SektionsTitel>Delt pakkeliste</SektionsTitel>
-        {snapshot.afsnit.length === 0 ? (
-          <div style={{ fontSize: '13px', color: 'var(--tekst-svag)' }}>Der var ikke valgt gear endnu.</div>
-        ) : (
-          snapshot.afsnit.map((a) => (
-            <div key={a.titel} style={{ marginBottom: '14px' }}>
-              <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', fontWeight: 600, marginBottom: '5px' }}>
-                {a.titel}
-              </div>
-              {a.items.map((i, n) => (
-                <div
-                  key={`${i.navn}-${n}`}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'baseline',
-                    gap: '10px',
-                    padding: '6px 0',
-                    borderBottom: '1px solid var(--border-svag)',
-                    fontSize: '13px'
-                  }}
-                >
-                  <span style={{ minWidth: 0 }}>{i.navn || 'Uden navn'}</span>
-                  <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '12px', whiteSpace: 'nowrap' }}>
-                    {i.baerer && <span style={{ marginRight: '8px' }}>{i.baerer}</span>}
-                    {i.delt && !i.baerer && <span style={{ fontSize: '10px', marginRight: '6px' }}>delt</span>}
-                    {i.vaegt_g} g
-                  </span>
-                </div>
-              ))}
-            </div>
-          ))
-        )}
-      </div>
-
-      <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', textAlign: 'center', paddingTop: '6px' }}>
-        Et øjebliksbillede fra {datoTekst(snapshot.delt_den)}. Turen kan være ændret siden.
       </div>
     </div>
   );
@@ -227,36 +233,6 @@ function Besked({ titel, tekst }: { titel: string; tekst: string }) {
       <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', lineHeight: 1.6 }}>{tekst}</div>
     </div>
   );
-}
-
-const MAANEDER = [
-  'januar', 'februar', 'marts', 'april', 'maj', 'juni',
-  'juli', 'august', 'september', 'oktober', 'november', 'december'
-];
-
-function periode(start: string, slut: string): string {
-  const fra = new Date(start);
-  if (!start || Number.isNaN(fra.getTime())) return '';
-
-  const til = slut ? new Date(slut) : fra;
-  const fuld = (d: Date) => `${d.getDate()}. ${MAANEDER[d.getMonth()]}`;
-
-  if (!slut || Number.isNaN(til.getTime()) || fra.getTime() === til.getTime()) return fuld(fra);
-  if (fra.getMonth() === til.getMonth() && fra.getFullYear() === til.getFullYear()) {
-    return `${fra.getDate()}.–${fuld(til)}`;
-  }
-  return `${fuld(fra)} – ${fuld(til)}`;
-}
-
-function dagsnavn(dato: string): string {
-  const d = new Date(dato);
-  const dage = ['søn', 'man', 'tir', 'ons', 'tor', 'fre', 'lør'];
-  return `${dage[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}`;
-}
-
-function datoTekst(iso: string): string {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? 'et tidligere tidspunkt' : d.toLocaleDateString('da-DK');
 }
 
 export default GaesteSide;

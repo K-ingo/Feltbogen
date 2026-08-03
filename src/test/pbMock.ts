@@ -51,9 +51,12 @@ export const pbMock: PbMock = {
     blokering = null;
   },
 
+  // En record i PocketBase har altid en ejer, og hentningen filtrerer på den.
+  // Uden en standard skulle hver eneste seed i testene gentage den samme
+  // testbruger — så den sættes her, og kan stadig overskrives.
   seed(samling, id, data = {}) {
     const nu = tik();
-    samlingAf(this, samling).set(id, { id, created: nu, updated: nu, ...data });
+    samlingAf(this, samling).set(id, { id, created: nu, updated: nu, user: 'bruger1', ...data });
   },
 
   // En anden enhed har rettet posten: felterne ændres, og `updated` rykker.
@@ -97,10 +100,20 @@ export const pb = {
     raa.replace(/\{:(\w+)\}/g, (_, n) => JSON.stringify(params[n])),
 
   collection: (navn: string) => ({
-    async getFullList() {
+    async getFullList(opts: { filter?: string } = {}) {
       pbMock.kald.push({ metode: 'getFullList', samling: navn });
       kraevOnline();
-      return [...samlingAf(pbMock, navn).values()];
+      return filtreret([...samlingAf(pbMock, navn).values()], opts.filter);
+    },
+
+    // Gæstesiden slår op på ét felt. Filteret er allerede skrevet ud af
+    // pb.filter ovenfor, så her skal der kun læses `felt = "værdi"`.
+    async getList(_side: number, perSide: number, opts: { filter?: string } = {}) {
+      pbMock.kald.push({ metode: 'getList', samling: navn });
+      kraevOnline();
+
+      const fundne = filtreret([...samlingAf(pbMock, navn).values()], opts.filter);
+      return { page: 1, perPage: perSide, totalItems: fundne.length, items: fundne.slice(0, perSide) };
     },
 
     async create(data: Record<string, unknown>) {
@@ -140,6 +153,14 @@ export const pb = {
     }
   })
 };
+
+// Filteret er allerede skrevet ud af pb.filter, så her skal der kun læses
+// `felt = "værdi"`. Andre former bruges ikke af appen.
+function filtreret(poster: Record<string, unknown>[], filter?: string) {
+  const m = /^(\w+)\s*=\s*(.+)$/.exec(filter ?? '');
+  if (!m) return poster;
+  return poster.filter((r) => JSON.stringify(r[m[1]] ?? '') === m[2].trim());
+}
 
 // Felter uden for skemaet forsvinder, præcis som i PocketBase.
 function gemtData(data: Record<string, unknown>): Record<string, unknown> {
