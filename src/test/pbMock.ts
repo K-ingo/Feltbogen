@@ -182,3 +182,12 @@ export const nuvaerendeBruger = () => ({
   created: '2026-01-01 00:00:00Z',
   updated: '2026-01-01 00:00:00Z'
 });
+
+// Profilnavnet. Testene sætter det direkte, så de kan vise hvad der sker med
+// og uden et navn på kontoen.
+export let testNavn = '';
+export function saetTestNavn(navn: string) { testNavn = navn; }
+
+export const mitNavn = () => testNavn.trim();
+export const gemNavn = async (navn: string) => { testNavn = navn.trim(); };
+export const logUd = () => { testNavn = ''; };
