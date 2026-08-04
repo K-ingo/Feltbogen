@@ -12,6 +12,12 @@ import {
   baererAf,
   overnatningsAdvarsler,
   vaegtPrDeltager,
+  linjeAfItem,
+  linjeAfMedbragt,
+  linjerEfterPerson,
+  medDeltagernes,
+  samletVaegt,
+  DELTAGERNES,
   tildelGear,
   IKKE_FORDELT,
   vejrIkonKode
@@ -473,5 +479,103 @@ describe('overnatningsAdvarsler', () => {
   it('havner ikke i opslaget pr. item', () => {
     const tur = lavTur({ deltagere: [sover('Mikkel', 'telt')] });
     expect(advarslerPrItem(overnatningsAdvarsler(tur, [])).size).toBe(0);
+  });
+});
+
+describe('den fælles pakkeliste', () => {
+  const linje = (navn: string, vaegt: number, baerer = '', egen = true) =>
+    ({ uid: egen ? `u-${navn}` : '', navn, vaegt_g: vaegt, delt: false, baerer, egen });
+
+  describe('linjeAfItem', () => {
+    it('tager navn, vægt og om det deles med', () => {
+      const l = linjeAfItem(lavItem({ uid: 'u-telt', navn: 'Telt', vaegt_g: 2400, delt: true }), 'Emil');
+      expect(l).toEqual({ uid: 'u-telt', navn: 'Telt', vaegt_g: 2400, delt: true, baerer: 'Emil', egen: true });
+    });
+
+    it('er turens eget gear', () => {
+      expect(linjeAfItem(lavItem({ navn: 'Telt' })).egen).toBe(true);
+    });
+  });
+
+  describe('linjeAfMedbragt', () => {
+    // En deltagers grej ligger i hendes inventar og ikke i ejerens. Uden uid
+    // kan hverken advarsler eller fordeling hænge på det — og det er meningen.
+    it('har intet uid, fordi det ikke findes i ejerens base', () => {
+      expect(linjeAfMedbragt('Dunjakke', 450, 'Sofie').uid).toBe('');
+    });
+
+    it('bærer navnet på den der tager det med', () => {
+      expect(linjeAfMedbragt('Dunjakke', 450, 'Sofie'))
+        .toEqual({ uid: '', navn: 'Dunjakke', vaegt_g: 450, delt: false, baerer: 'Sofie', egen: false });
+    });
+  });
+
+  describe('linjerEfterPerson', () => {
+    it('samler hver persons ting under hendes navn', () => {
+      const afsnit = linjerEfterPerson([
+        linje('Telt', 2400, 'Emil'),
+        linje('Dunjakke', 450, 'Sofie', false),
+        linje('Kniv', 40, 'Emil')
+      ]);
+
+      expect(afsnit.map((a) => a.titel)).toEqual(['Emil', 'Sofie']);
+      expect(afsnit[0].linjer.map((l) => l.navn)).toEqual(['Telt', 'Kniv']);
+    });
+
+    it('lægger det tungeste øverst hos hver person', () => {
+      const afsnit = linjerEfterPerson([linje('Kniv', 40, 'Emil'), linje('Telt', 2400, 'Emil')]);
+      expect(afsnit[0].linjer.map((l) => l.navn)).toEqual(['Telt', 'Kniv']);
+    });
+
+    // Den ufordelte bunke er den der mangler en beslutning, så den står til
+    // sidst og ikke blandet ind mellem personerne.
+    it('sætter det ufordelte til sidst', () => {
+      const afsnit = linjerEfterPerson([linje('Gryde', 155), linje('Telt', 2400, 'Emil')]);
+      expect(afsnit.map((a) => a.titel)).toEqual(['Emil', IKKE_FORDELT]);
+    });
+
+    it('blander ikke ejerens og deltagernes ting sammen på tværs af navne', () => {
+      const afsnit = linjerEfterPerson([
+        linje('Telt', 2400, 'Emil'),
+        linje('Dunjakke', 450, 'Sofie', false)
+      ]);
+      expect(afsnit.find((a) => a.titel === 'Sofie')?.linjer).toHaveLength(1);
+    });
+
+    it('giver ingen afsnit uden linjer', () => {
+      expect(linjerEfterPerson([])).toEqual([]);
+    });
+  });
+
+  describe('medDeltagernes', () => {
+    // Deltagernes grej hører ikke til i nogen af ejerens grupper eller tags.
+    // Uden sit eget afsnit ville det falde ud af listen i de to opdelinger.
+    it('lægger deltagernes grej til sidst i sit eget afsnit', () => {
+      const egne = [{ titel: 'Sovegrej', linjer: [linje('Telt', 2400)] }];
+      const afsnit = medDeltagernes(egne, [linje('Telt', 2400), linje('Dunjakke', 450, 'Sofie', false)]);
+
+      expect(afsnit.map((a) => a.titel)).toEqual(['Sovegrej', DELTAGERNES]);
+      expect(afsnit[1].linjer.map((l) => l.navn)).toEqual(['Dunjakke']);
+    });
+
+    it('lader listen være når ingen har meldt noget ind', () => {
+      const egne = [{ titel: 'Sovegrej', linjer: [linje('Telt', 2400)] }];
+      expect(medDeltagernes(egne, [linje('Telt', 2400)])).toEqual(egne);
+    });
+
+    it('tager ikke ejerens eget gear med i deltagerafsnittet', () => {
+      const afsnit = medDeltagernes([], [linje('Telt', 2400), linje('Dunjakke', 450, 'Sofie', false)]);
+      expect(afsnit[0].linjer.map((l) => l.navn)).toEqual(['Dunjakke']);
+    });
+  });
+
+  describe('samletVaegt', () => {
+    it('lægger linjerne sammen', () => {
+      expect(samletVaegt([linje('Telt', 2400), linje('Kniv', 40)])).toBe(2440);
+    });
+
+    it('er nul uden linjer', () => {
+      expect(samletVaegt([])).toBe(0);
+    });
   });
 });

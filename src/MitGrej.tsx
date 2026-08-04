@@ -79,14 +79,9 @@ function MitGrej({ mig, faelles, gem, meldFra }: Props) {
           placeholder="Så de andre ved hvem der tager hvad"
         />
 
-        <Medbragt
-          gear={kladde.medbragt}
+        <VaelgMitGrej
+          valgt={kladde.medbragt}
           saet={(medbragt) => ret({ medbragt })}
-        />
-
-        <FraMitInventar
-          alleredeMed={kladde.medbragt}
-          tilfoej={(nye) => ret({ medbragt: [...kladde.medbragt, ...nye] })}
         />
 
         {deltGrej.length > 0 && (
@@ -130,138 +125,101 @@ function rensetFor(d: Deltagelse): Deltagelse {
   };
 }
 
-function Medbragt({ gear, saet }: { gear: MedbragtGear[]; saet: (g: MedbragtGear[]) => void }) {
-  const ret = (n: number, aendring: Partial<MedbragtGear>) =>
-    saet(gear.map((g, i) => (i === n ? { ...g, ...aendring } : g)));
-
-  return (
-    <div>
-      <SektionsTitel>Hvad tager du med</SektionsTitel>
-      {gear.length === 0 && (
-        <div style={{ fontSize: '12px', color: 'var(--tekst-svag)', marginBottom: '8px' }}>
-          Ingenting endnu.
-        </div>
-      )}
-
-      <div style={{ display: 'grid', gap: '8px' }}>
-        {gear.map((g, n) => (
-          <div key={n} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <input
-              value={g.navn}
-              placeholder="Fx sovepose"
-              onChange={(e) => ret(n, { navn: e.target.value })}
-              style={{ flex: 1, fontSize: '14px', minWidth: 0 }}
-            />
-            <input
-              type="number"
-              value={g.vaegt_g || ''}
-              placeholder="g"
-              onChange={(e) => ret(n, { vaegt_g: Math.max(0, Number(e.target.value) || 0) })}
-              style={{ width: '80px', fontSize: '14px' }}
-            />
-            <button
-              onClick={() => saet(gear.filter((_, i) => i !== n))}
-              aria-label={`Fjern ${g.navn || 'linjen'}`}
-              style={{
-                background: 'transparent', border: 'none', cursor: 'pointer',
-                color: 'var(--tekst-svag)', fontSize: '18px', padding: '0 4px'
-              }}
-            >
-              ×
-            </button>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ marginTop: '8px' }}>
-        <Knap onClick={() => saet([...gear, { navn: '', vaegt_g: 0 }])}>+ Tilføj grej</Knap>
-      </div>
-    </div>
-  );
-}
-
-// Man har som regel gearet i sit eget inventar i forvejen. At skrive navn og
-// vægt af i hånden er både besværligt og en kilde til slåfejl.
+// Man vælger sit grej på samme måde som når man selv laver en tur: fra sine
+// egne grupper og sit eget inventar. Det er det flow der i forvejen virker —
+// at skrive navn og vægt af i hånden var både besværligt og forvirrende.
 //
-// Der kopieres navn og vægt over — ikke en henvisning. Ejeren af turen kan
+// Der kopieres navn og vægt over, ikke en henvisning. Ejeren af turen kan
 // ikke læse ens inventar, og det skal hun heller ikke kunne.
-function FraMitInventar({ alleredeMed, tilfoej }: {
-  alleredeMed: MedbragtGear[];
-  tilfoej: (gear: MedbragtGear[]) => void;
+function VaelgMitGrej({ valgt, saet }: {
+  valgt: MedbragtGear[];
+  saet: (gear: MedbragtGear[]) => void;
 }) {
-  const [aaben, setAaben] = useState(false);
-  const [valgte, setValgte] = useState<string[]>([]);
   const [soeg, setSoeg] = useState('');
 
   const mine = useLiveQuery(() => db.items.where('status').equals('ejer').toArray());
-  if (!mine || mine.length === 0) return null;
+  const grupper = useLiveQuery(() => db.grupper.toArray());
 
-  const navnePaaListen = new Set(alleredeMed.map((g) => g.navn.toLowerCase()));
-  const kanVaelges = mine.filter((i) =>
-    i.navn.trim() !== ''
-    && !navnePaaListen.has(i.navn.toLowerCase())
-    && i.navn.toLowerCase().includes(soeg.toLowerCase()));
+  const paaListen = new Set(valgt.map((g) => g.navn.toLowerCase()));
+  const somGear = (i: Item): MedbragtGear => ({ navn: i.navn, vaegt_g: i.vaegt_g });
 
-  const skift = (uid: string) =>
-    setValgte(valgte.includes(uid) ? valgte.filter((u) => u !== uid) : [...valgte, uid]);
-
-  const laegTil = () => {
-    const valgtGear: MedbragtGear[] = mine
-      .filter((i) => valgte.includes(i.uid))
-      .map((i: Item) => ({ navn: i.navn, vaegt_g: i.vaegt_g }));
-
-    tilfoej(valgtGear);
-    setValgte([]);
-    setAaben(false);
-    setSoeg('');
+  const skift = (item: Item) => {
+    const erMed = paaListen.has(item.navn.toLowerCase());
+    saet(erMed
+      ? valgt.filter((g) => g.navn.toLowerCase() !== item.navn.toLowerCase())
+      : [...valgt, somGear(item)]);
   };
 
-  if (!aaben) {
+  // En hel gruppe ad gangen — det er den genvej der gør turopsætningen hurtig.
+  const tagGruppe = (uids: string[]) => {
+    const nye = (mine ?? [])
+      .filter((i) => uids.includes(i.uid) && i.navn.trim() !== '' && !paaListen.has(i.navn.toLowerCase()))
+      .map(somGear);
+    if (nye.length > 0) saet([...valgt, ...nye]);
+  };
+
+  if (!mine || mine.length === 0) {
     return (
-      <div>
-        <Knap onClick={() => setAaben(true)}>Tag fra mit inventar</Knap>
+      <div style={{ fontSize: '12px', color: 'var(--tekst-svag)', lineHeight: 1.6 }}>
+        Du har ikke noget gear i din Feltbog endnu. Læg det ind under Inventar,
+        så kan du vælge det her.
       </div>
     );
   }
 
+  const synlige = mine.filter((i) =>
+    i.navn.trim() !== '' && i.navn.toLowerCase().includes(soeg.toLowerCase()));
+
   return (
-    <div style={{ border: '1px solid var(--border-svag)', borderRadius: '10px', padding: '12px' }}>
-      <SektionsTitel>Fra mit inventar</SektionsTitel>
+    <div>
+      <SektionsTitel>Hvad tager du med</SektionsTitel>
+
+      {(grupper ?? []).length > 0 && (
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
+          {(grupper ?? []).filter((g) => g.item_ids.length > 0).map((g) => (
+            <Knap key={g.uid} onClick={() => tagGruppe(g.item_ids)}>
+              + {g.navn || 'Uden navn'}
+            </Knap>
+          ))}
+        </div>
+      )}
+
       <input
         value={soeg}
         onChange={(e) => setSoeg(e.target.value)}
         placeholder="Søg i dit gear"
-        style={{ width: '100%', fontSize: '14px', marginBottom: '10px' }}
+        style={{ width: '100%', fontSize: '14px', marginBottom: '8px' }}
       />
 
-      <div style={{ maxHeight: '240px', overflowY: 'auto', display: 'grid', gap: '2px' }}>
-        {kanVaelges.length === 0 && (
+      <div style={{ maxHeight: '300px', overflowY: 'auto', display: 'grid', gap: '2px' }}>
+        {synlige.length === 0 && (
           <div style={{ fontSize: '12px', color: 'var(--tekst-svag)' }}>
-            {soeg ? 'Intet gear passer på søgningen.' : 'Alt dit gear er allerede på listen.'}
+            Intet gear passer på søgningen.
           </div>
         )}
-        {kanVaelges.map((i) => (
+        {synlige.map((i) => (
           <label
             key={i.uid}
             style={{
-              display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 2px',
+              display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 2px',
               borderBottom: '1px solid var(--border-svag)', fontSize: '13px', cursor: 'pointer'
             }}
           >
-            <input type="checkbox" checked={valgte.includes(i.uid)} onChange={() => skift(i.uid)} />
+            <input
+              type="checkbox"
+              checked={paaListen.has(i.navn.toLowerCase())}
+              onChange={() => skift(i)}
+            />
             <span style={{ flex: 1, minWidth: 0 }}>{i.navn}</span>
             <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '12px' }}>{i.vaegt_g} g</span>
           </label>
         ))}
       </div>
 
-      <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
-        <Knap variant="primaer" onClick={laegTil} disabled={valgte.length === 0}>
-          {valgte.length > 0 ? `Tag ${valgte.length} med` : 'Vælg noget gear'}
-        </Knap>
-        <Knap variant="tekst" onClick={() => { setAaben(false); setValgte([]); setSoeg(''); }}>
-          Fortryd
-        </Knap>
+      <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', marginTop: '8px' }}>
+        {valgt.length === 0
+          ? 'Ingenting valgt endnu.'
+          : `${valgt.length} ${valgt.length === 1 ? 'ting' : 'ting'} · ${(valgt.reduce((s, g) => s + g.vaegt_g, 0) / 1000).toFixed(2)} kg`}
       </div>
     </div>
   );

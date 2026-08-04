@@ -24,14 +24,19 @@ import {
   itemUidsPaaTur,
   pakkelisteEfterGruppe,
   pakkelisteEfterTag,
-  pakkelisteEfterPerson,
   baererAf,
+  linjeAfItem,
+  linjeAfMedbragt,
+  linjerEfterPerson,
+  medDeltagernes,
+  afsnitAfItems,
+  samletVaegt,
   overnatningsAdvarsler,
   vaegtPrDeltager,
   tildelGear,
   soegSted
 } from './smartMotor';
-import type { VejrData, StedForslag, Advarsel, PakkelisteAfsnit, Beregninger, Baerevaegt } from './smartMotor';
+import type { VejrData, StedForslag, Advarsel, Pakkelinje, Pakkeafsnit, Beregninger, Baerevaegt } from './smartMotor';
 import {
   Knap,
   Felt,
@@ -48,7 +53,7 @@ import {
 } from './ui';
 import { nytDeletoken, lavSnapshot, deleLink, linkadvarsel, linkvaert } from './gaest';
 import { formatterPeriode } from './datotekst';
-import { hentDeltagelser, medbragtPrDeltager, baererePrGear } from './deltagelse';
+import { hentDeltagelser, baererePrGear, visningsnavn } from './deltagelse';
 import type { Deltagelse } from './deltagelse';
 import { layout } from './layout';
 import { useErDesktop } from './useMedie';
@@ -293,9 +298,30 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   const beregninger = beregnForbrug(tur);
   const gruppeForslag = grupper ? foreslaaGrupper(tur, grupper) : [];
 
-  const afsnit = visning === 'gruppe' ? pakkelisteEfterGruppe(tur, grupper ?? [], pakItems)
-    : visning === 'tag' ? pakkelisteEfterTag(pakItems)
-    : pakkelisteEfterPerson(tur, pakItems);
+  // Deltagernes eget grej hører til i den samme liste som ens eget — det er
+  // én tur, og man pakker efter én liste.
+  const deltagerlinjer = deltagelser.flatMap((d) =>
+    d.medbragt.map((g) => linjeAfMedbragt(g.navn, g.vaegt_g, visningsnavn(d))));
+
+  // Ejerens egen fordeling, plus dem der selv har meldt sig på noget.
+  const navne = new Map(baerernavne(tur));
+  baererePrGear(deltagelser).forEach((meldte, uid) => {
+    navne.set(uid, [navne.get(uid), ...meldte].filter(Boolean).join(' og '));
+  });
+
+  const alleLinjer = [...pakItems.map((i) => linjeAfItem(i, navne.get(i.uid) ?? '')), ...deltagerlinjer];
+
+  const afsnit: Pakkeafsnit[] = visning === 'person'
+    ? linjerEfterPerson(alleLinjer)
+    : medDeltagernes(
+        afsnitAfItems(
+          visning === 'gruppe'
+            ? pakkelisteEfterGruppe(tur, grupper ?? [], pakItems)
+            : pakkelisteEfterTag(pakItems),
+          navne
+        ),
+        alleLinjer
+      );
 
   const handling = NAESTE_TILSTAND[tur.status];
 
@@ -323,7 +349,6 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
       visning={visning}
       setVisning={setVisning}
       antal={pakItems.length}
-      baerernavne={baerernavne(tur)}
     />
   );
 
@@ -695,13 +720,12 @@ function baerernavne(tur: Tur): Map<Reference, string> {
   return pr;
 }
 
-function Pakkeliste({ afsnit, perItem, visning, setVisning, antal, baerernavne }: {
-  afsnit: PakkelisteAfsnit[];
+function Pakkeliste({ afsnit, perItem, visning, setVisning, antal }: {
+  afsnit: Pakkeafsnit[];
   perItem: Map<Reference, Advarsel[]>;
   visning: Visning;
   setVisning: (v: Visning) => void;
   antal: number;
-  baerernavne: Map<Reference, string>;
 }) {
   if (antal === 0) {
     return (
@@ -726,17 +750,19 @@ function Pakkeliste({ afsnit, perItem, visning, setVisning, antal, baerernavne }
       {afsnit.map((a) => (
         <div key={a.titel} style={{ marginBottom: '16px' }}>
           <SektionsTitel>{a.titel}</SektionsTitel>
-          {a.items.map((item) => (
+          {a.linjer.map((linje, n) => (
             <Pakkeraekke
-              key={item.uid}
-              item={item}
-              advarsler={perItem.get(item.uid) ?? []}
+              key={`${linje.uid || linje.navn}-${n}`}
+              linje={linje}
+              // Deltagernes eget grej har ingen advarsler — de bygger på tags
+              // fra ejerens inventar, og det kender vi ikke for deres ting.
+              advarsler={linje.uid ? perItem.get(linje.uid) ?? [] : []}
               // I "efter person" står navnet allerede som overskrift.
-              baerer={visning === 'person' ? '' : baerernavne.get(item.uid) ?? ''}
+              visBaerer={visning !== 'person'}
             />
           ))}
           <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: '11px', color: 'var(--tekst-svag)', paddingTop: '5px' }}>
-            {kg(a.items.reduce((s, i) => s + i.vaegt_g, 0))} kg
+            {kg(samletVaegt(a.linjer))} kg
           </div>
         </div>
       ))}
@@ -744,7 +770,11 @@ function Pakkeliste({ afsnit, perItem, visning, setVisning, antal, baerernavne }
   );
 }
 
-function Pakkeraekke({ item, advarsler, baerer }: { item: Item; advarsler: Advarsel[]; baerer: string }) {
+function Pakkeraekke({ linje, advarsler, visBaerer }: {
+  linje: Pakkelinje;
+  advarsler: Advarsel[];
+  visBaerer: boolean;
+}) {
   // Er der flere huller på samme item, vejer det røde tungest.
   const vaerst = advarsler.find((a) => a.niveau === 'roed') ?? advarsler[0];
 
@@ -758,7 +788,7 @@ function Pakkeraekke({ item, advarsler, baerer }: { item: Item; advarsler: Advar
       fontSize: '13px',
       background: vaerst ? 'var(--advarsel-bg)' : 'transparent'
     }}>
-      <span style={{ flex: 1, minWidth: 0, color: 'var(--tekst)' }}>{item.navn || 'Uden navn'}</span>
+      <span style={{ flex: 1, minWidth: 0, color: 'var(--tekst)' }}>{linje.navn || 'Uden navn'}</span>
 
       {vaerst && (
         <span title={`${vaerst.besked}. ${vaerst.detalje}`}>
@@ -768,10 +798,12 @@ function Pakkeraekke({ item, advarsler, baerer }: { item: Item; advarsler: Advar
         </span>
       )}
 
-      {baerer && <span style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)' }}>{baerer}</span>}
-      {item.delt && !baerer && <span style={{ fontSize: '10px', color: 'var(--tekst-svag)' }}>delt</span>}
+      {visBaerer && linje.baerer && (
+        <span style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)' }}>{linje.baerer}</span>
+      )}
+      {linje.delt && !linje.baerer && <span style={{ fontSize: '10px', color: 'var(--tekst-svag)' }}>delt</span>}
       <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '12px', minWidth: '52px', textAlign: 'right' }}>
-        {item.vaegt_g} g
+        {linje.vaegt_g} g
       </span>
     </div>
   );
@@ -1221,50 +1253,35 @@ function Deling({ token, snapshot, deltagelser, gearnavne, del, stop }: {
   );
 }
 
-// Hvad de inviterede har skrevet sig på for. Det ligger hos dem og ikke på
-// turen — ejeren læser det, men retter ikke i det.
+// Hvem der er kommet med, og det man ikke kan aflæse af pakkelisten. Selve
+// grejet står dér — det er én tur og én liste.
 function Meldtind({ deltagelser, gearnavne }: {
   deltagelser: Deltagelse[];
   gearnavne: Map<Reference, string>;
 }) {
-  const medbragt = medbragtPrDeltager(deltagelser);
-  const baerere = [...baererePrGear(deltagelser).entries()];
+  // To der har meldt sig på det samme telt er ikke en fejl appen kan afgøre,
+  // men det er noget ejeren skal se frem for at opdage det på P-pladsen.
+  const dobbelt = [...baererePrGear(deltagelser).entries()].filter(([, navne]) => navne.length > 1);
 
   if (deltagelser.length === 0) return null;
 
   return (
     <div style={{ marginTop: '18px', paddingTop: '14px', borderTop: '1px solid var(--border-svag)' }}>
-      <SektionsTitel>Deltagerne melder ind ({deltagelser.length})</SektionsTitel>
+      <SektionsTitel>Med på turen ({deltagelser.length})</SektionsTitel>
 
-      {medbragt.length === 0 && baerere.length === 0 && (
-        <div style={{ fontSize: '12px', color: 'var(--tekst-svag)' }}>
-          De har åbnet turen, men ikke skrevet noget endnu.
-        </div>
-      )}
+      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+        {deltagelser.map((d) => <Chip key={d.pb_id ?? d.user}>{visningsnavn(d)}</Chip>)}
+      </div>
 
-      {medbragt.map((d) => (
-        <div key={d.navn} style={{ marginBottom: '10px' }}>
-          <div style={{ fontSize: '12px', fontWeight: 500, marginBottom: '3px' }}>
-            {d.navn} tager selv med · {(d.vaegt_g / 1000).toFixed(2)} kg
-          </div>
-          <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)' }}>
-            {d.gear.map((g) => `${g.navn} (${g.vaegt_g} g)`).join(' · ')}
-          </div>
+      <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', marginTop: '8px', lineHeight: 1.55 }}>
+        Det de tager med, står i pakkelisten sammen med dit eget.
+      </div>
+
+      {dobbelt.map(([uid, navne]) => (
+        <div key={uid} style={{ fontSize: '12px', color: 'var(--advarsel)', marginTop: '8px' }}>
+          {navne.join(' og ')} har begge meldt sig på {gearnavne.get(uid) ?? 'noget der er taget af listen'}.
         </div>
       ))}
-
-      {baerere.length > 0 && (
-        <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', marginTop: '8px', lineHeight: 1.6 }}>
-          {baerere.map(([uid, navne]) => (
-            <div key={uid}>
-              {navne.join(' og ')} bærer {gearnavne.get(uid) ?? 'noget der er taget af listen'}
-              {navne.length > 1 && (
-                <span style={{ color: 'var(--advarsel)' }}> — begge har meldt sig</span>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

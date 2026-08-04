@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import type { Gaestesnapshot } from './gaest';
 import type { Deltagelse } from './deltagelse';
-import { medbragtPrDeltager, baererePrGear, samletMedbragtVaegt } from './deltagelse';
-import { vejrIkonKode } from './smartMotor';
+import { baererePrGear, samletMedbragtVaegt, visningsnavn } from './deltagelse';
+import { vejrIkonKode, linjerEfterPerson, medDeltagernes, samletVaegt, linjeAfMedbragt } from './smartMotor';
+import type { Pakkelinje, Pakkeafsnit } from './smartMotor';
 import { formatterPeriode, kortDag, datoTekst } from './datotekst';
 import { Chip, Infokort, SektionsTitel } from './ui';
 
@@ -16,9 +18,31 @@ function DeltTurVisning({ snapshot, deltagelser = [] }: {
   deltagelser?: Deltagelse[];
 }) {
   const k = snapshot.koordinater;
-  const medbragt = medbragtPrDeltager(deltagelser);
   const baerere = baererePrGear(deltagelser);
   const medbragtVaegt = samletMedbragtVaegt(deltagelser);
+  const [efterPerson, setEfterPerson] = useState(false);
+
+  // Én liste med det hele: ejerens gear og det deltagerne selv tager med.
+  const linjer: Pakkelinje[] = [
+    ...snapshot.afsnit.flatMap((a) => a.items.map((i): Pakkelinje => ({
+      uid: i.uid, navn: i.navn, vaegt_g: i.vaegt_g, delt: i.delt, egen: true,
+      baerer: baererAf(i.uid, i.baerer, baerere).join(' og ')
+    }))),
+    ...deltagelser.flatMap((d) => d.medbragt.map((g) =>
+      linjeAfMedbragt(g.navn, g.vaegt_g, visningsnavn(d))))
+  ];
+
+  // Ejerens egen opdeling, med deltagernes grej lagt til sidst — eller alt
+  // samlet efter hvem der tager det med, som er den man pakker efter.
+  const afsnit: Pakkeafsnit[] = efterPerson
+    ? linjerEfterPerson(linjer)
+    : medDeltagernes(
+        snapshot.afsnit.map((a) => ({
+          titel: a.titel,
+          linjer: linjer.filter((l) => l.egen && a.items.some((i) => i.uid === l.uid && i.navn === l.navn))
+        })).filter((a) => a.linjer.length > 0),
+        linjer
+      );
 
   return (
     <div style={{ display: 'grid', gap: '18px' }}>
@@ -96,72 +120,55 @@ function DeltTurVisning({ snapshot, deltagelser = [] }: {
       </Infokort>
 
       <div>
-        <SektionsTitel>Delt pakkeliste</SektionsTitel>
-        {snapshot.afsnit.length === 0 ? (
-          <div style={{ fontSize: '13px', color: 'var(--tekst-svag)' }}>Der var ikke valgt gear endnu.</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+          <SektionsTitel>Pakkeliste</SektionsTitel>
+          {/* Hele listen er det man planlægger efter; ens egen bunke er det
+              man pakker efter. Begge dele skal kunne ses. */}
+          <button
+            onClick={() => setEfterPerson(!efterPerson)}
+            style={{
+              background: 'transparent', border: '1px solid var(--border)', borderRadius: '16px',
+              padding: '4px 12px', fontSize: '11px', cursor: 'pointer', color: 'var(--tekst-dæmpet)',
+              marginBottom: '10px'
+            }}
+          >
+            {efterPerson ? 'Vis efter gruppe' : 'Vis efter person'}
+          </button>
+        </div>
+
+        {afsnit.length === 0 ? (
+          <div style={{ fontSize: '13px', color: 'var(--tekst-svag)' }}>Der er ikke valgt gear endnu.</div>
         ) : (
-          snapshot.afsnit.map((a) => (
+          afsnit.map((a) => (
             <div key={a.titel} style={{ marginBottom: '14px' }}>
               <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', fontWeight: 600, marginBottom: '5px' }}>
                 {a.titel}
               </div>
-              {a.items.map((i, n) => (
+              {a.linjer.map((l, n) => (
                 <div
-                  key={`${i.navn}-${n}`}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'baseline',
-                    gap: '10px',
-                    padding: '6px 0',
-                    borderBottom: '1px solid var(--border-svag)',
-                    fontSize: '13px'
-                  }}
-                >
-                  <span style={{ minWidth: 0 }}>{i.navn || 'Uden navn'}</span>
-                  <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '12px', whiteSpace: 'nowrap' }}>
-                    {baererAf(i.uid, i.baerer, baerere).map((navn) => (
-                      <span key={navn} style={{ marginRight: '8px' }}>{navn}</span>
-                    ))}
-                    {i.delt && baererAf(i.uid, i.baerer, baerere).length === 0 && (
-                      <span style={{ fontSize: '10px', marginRight: '6px' }}>delt</span>
-                    )}
-                    {i.vaegt_g} g
-                  </span>
-                </div>
-              ))}
-            </div>
-          ))
-        )}
-      </div>
-
-      {medbragt.length > 0 && (
-        <div>
-          <SektionsTitel>Deltagerne tager selv med</SektionsTitel>
-          {medbragt.map((d) => (
-            <div key={d.navn} style={{ marginBottom: '14px' }}>
-              <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', fontWeight: 600, marginBottom: '5px' }}>
-                {d.navn} · {(d.vaegt_g / 1000).toFixed(2)} kg
-              </div>
-              {d.gear.map((g, n) => (
-                <div
-                  key={`${g.navn}-${n}`}
+                  key={`${l.navn}-${n}`}
                   style={{
                     display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
                     gap: '10px', padding: '6px 0', borderBottom: '1px solid var(--border-svag)',
                     fontSize: '13px'
                   }}
                 >
-                  <span style={{ minWidth: 0 }}>{g.navn}</span>
+                  <span style={{ minWidth: 0 }}>{l.navn || 'Uden navn'}</span>
                   <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '12px', whiteSpace: 'nowrap' }}>
-                    {g.vaegt_g} g
+                    {/* I "efter person" står navnet allerede som overskrift. */}
+                    {!efterPerson && l.baerer && <span style={{ marginRight: '8px' }}>{l.baerer}</span>}
+                    {l.delt && !l.baerer && <span style={{ fontSize: '10px', marginRight: '6px' }}>delt</span>}
+                    {l.vaegt_g} g
                   </span>
                 </div>
               ))}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: '11px', color: 'var(--tekst-svag)', paddingTop: '4px' }}>
+                {(samletVaegt(a.linjer) / 1000).toFixed(2)} kg
+              </div>
             </div>
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
 
       <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', textAlign: 'center', paddingTop: '6px' }}>
         Et øjebliksbillede fra {datoTekst(snapshot.delt_den)}. Turen kan være ændret siden.

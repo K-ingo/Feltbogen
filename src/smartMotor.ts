@@ -606,3 +606,84 @@ export function overnatningsAdvarsler(tur: Tur, pakItems: Item[]): Advarsel[] {
     mangler: etiket(form)
   }));
 }
+
+// ─────────────────────────────────────────────
+// Én fælles pakkeliste
+//
+// Pakkelisten rummer to slags gear: turens eget, som ejeren har valgt fra sit
+// inventar, og det deltagerne selv tager med. De skal stå i den samme liste —
+// det er hele pointen med at pakke sammen — men de kommer fra hver sin kilde
+// og kan ikke være den samme type. En Pakkelinje er det de har til fælles.
+// ─────────────────────────────────────────────
+
+export interface Pakkelinje {
+  // Ejerens uid. Tom for en deltagers eget grej, som ikke findes i hendes base.
+  uid: Reference;
+  navn: string;
+  vaegt_g: number;
+  delt: boolean;
+  // Navnet på den der tager det med. Tom når det ikke er fordelt endnu.
+  baerer: string;
+  // Turens eget gear, eller noget en deltager selv har meldt ind.
+  egen: boolean;
+}
+
+export const DELTAGERNES = 'Deltagernes eget grej';
+
+export function linjeAfItem(item: Item, baerer = ''): Pakkelinje {
+  return { uid: item.uid, navn: item.navn, vaegt_g: item.vaegt_g, delt: item.delt, baerer, egen: true };
+}
+
+// En deltagers eget grej. Det har ingen uid — det ligger i hendes inventar og
+// ikke i ejerens, og kun navn og vægt er delt.
+export function linjeAfMedbragt(navn: string, vaegt_g: number, baerer: string): Pakkelinje {
+  return { uid: '', navn, vaegt_g, delt: false, baerer, egen: false };
+}
+
+const tungestFoerst = (a: Pakkelinje, b: Pakkelinje) => b.vaegt_g - a.vaegt_g;
+
+export interface Pakkeafsnit {
+  titel: string;
+  linjer: Pakkelinje[];
+}
+
+// Efter hvem der tager det med. Det er den opdeling man pakker efter: man vil
+// se sin egen bunke, ikke alles.
+export function linjerEfterPerson(linjer: Pakkelinje[]): Pakkeafsnit[] {
+  const pr = new Map<string, Pakkelinje[]>();
+  const uden: Pakkelinje[] = [];
+
+  linjer.forEach((l) => {
+    if (!l.baerer) { uden.push(l); return; }
+    pr.set(l.baerer, [...(pr.get(l.baerer) ?? []), l]);
+  });
+
+  const afsnit = [...pr.entries()].map(([titel, egne]) => ({
+    titel,
+    linjer: [...egne].sort(tungestFoerst)
+  }));
+
+  // Den ufordelte bunke står til sidst — det er den der mangler en beslutning.
+  if (uden.length > 0) afsnit.push({ titel: IKKE_FORDELT, linjer: [...uden].sort(tungestFoerst) });
+  return afsnit;
+}
+
+// Deltagernes eget grej hører ikke til i nogen af ejerens grupper eller tags.
+// Det får sit eget afsnit til sidst, så de to andre opdelinger stadig kan
+// bruges uden at noget falder ud af listen.
+export function medDeltagernes(afsnit: Pakkeafsnit[], linjer: Pakkelinje[]): Pakkeafsnit[] {
+  const fremmede = linjer.filter((l) => !l.egen);
+  if (fremmede.length === 0) return afsnit;
+  return [...afsnit, { titel: DELTAGERNES, linjer: [...fremmede].sort(tungestFoerst) }];
+}
+
+export function afsnitAfItems(afsnit: PakkelisteAfsnit[], baerernavne: Map<Reference, string>): Pakkeafsnit[] {
+  return afsnit.map((a) => ({
+    titel: a.titel,
+    linjer: a.items.map((i) => linjeAfItem(i, baerernavne.get(i.uid) ?? ''))
+  }));
+}
+
+export function samletVaegt(linjer: Pakkelinje[]): number {
+  return linjer.reduce((s, l) => s + l.vaegt_g, 0);
+}
