@@ -126,6 +126,9 @@ function App() {
         tilAppen={() => {
           window.history.replaceState(null, '', window.location.pathname);
           setGaesteToken(null);
+          // Man er kommet ind ad en invitation og har allerede set hvad appen
+          // kan. Velkomsten ville bede om en konto man lige har brugt.
+          void markerSet(ONBOARDING_SET);
         }}
       />
     );
@@ -139,7 +142,9 @@ function App() {
   // forbi for en bruger der har set den for længst.
   if (onboardingSet === undefined) return null;
 
-  if (!onboardingSet) {
+  // Velkomsten sælger en konto. Har man allerede en, er den ikke bare
+  // overflødig — den ser ud som om man er blevet logget ud.
+  if (!onboardingSet && !erLoggetInd) {
     return (
       <Velkomst
         nytItem={() => void efterVelkomst(nytItem)}

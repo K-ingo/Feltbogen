@@ -62,10 +62,17 @@ function GaesteSide({ token, tilAppen }: Props) {
     return () => { aktiv = false; };
   }, [token, bruger]);
 
+  // At gemme turen er en tilmelding: man tager den med hjem, fordi man skal
+  // med. Så skal de andre også kunne se at man er med — uden at man først
+  // skal ned og udfylde "Mit grej".
   const gem = async () => {
-    if (!snapshot) return;
+    if (!snapshot || !bruger) return;
     await gemDeltTur(token, snapshot, window.location.origin, new Date(), turPbId);
     setGemt(true);
+
+    if (turPbId && !minDeltagelse(deltagelser, bruger.id)) {
+      await skrivMig(nyDeltagelse(turPbId, bruger.id, mitNavn()));
+    }
   };
 
   // Ens egen række skrives til serveren og lægges så ind i den liste alle
