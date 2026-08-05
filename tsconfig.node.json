@@ -3,7 +3,8 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
     "target": "es2023",
     "lib": ["ES2023"],
-    "types": [""],
+    // vite.config.ts er Node-kode: den læser miljøet og spørger git om commit.
+    "types": ["node"],
     "skipLibCheck": true,
 
     /* Bundler mode */

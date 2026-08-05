@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import { logUd, gemNavn } from './pb';
+import { hentNyesteUdgave, byggetekst } from './opdatering';
 import { useAuth } from './useAuth';
 import { afstemMedServer, fjernDubletter, usendtAntal, uidFeltMangler } from './sync';
 import {
@@ -229,7 +230,16 @@ function IndstillingerSide({ fane, skift, tilLogin }: Props) {
         <section>
           <SektionsTitel>Om</SektionsTitel>
           <Kort>
-            <Raekke label="Feltbogen" vaerdi={`version ${__APP_VERSION__}`} />
+            <Raekke label="Feltbogen" vaerdi={`version ${__APP_VERSION__} · ${__APP_COMMIT__}`} />
+            <Raekke label="Denne udgave er bygget" vaerdi={byggetekst()} />
+            <div style={{ marginTop: '12px' }}>
+              <Knap onClick={() => void hentNyesteUdgave()}>Hent nyeste udgave</Knap>
+            </div>
+            <Hjaelp>
+              Appen ligger i cache, så den kan startes uden dækning. En ny
+              udgave slår derfor først igennem ved en senere indlæsning — her
+              kan du hente den med det samme.
+            </Hjaelp>
           </Kort>
         </section>
 
