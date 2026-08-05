@@ -1,5 +1,56 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { ReactNode, CSSProperties } from 'react';
+
+// ─────────────────────────────────────────────
+// Talfelter
+//
+// Et talfelt skal kunne stå tomt. Skriver man tallet direkte tilbage i
+// feltet, kan man ikke slette det sidste ciffer — 0 tegnes igen med det
+// samme, og så skal man markere det for at komme videre. På en telefon er
+// det næsten ikke til at ramme.
+//
+// Derfor holder feltet sin egen tekst mens man skriver, og 0 vises som
+// ingenting. Modellen får stadig et tal: kalderen laver tomt om til det den
+// vil have, typisk 0 eller 1.
+// ─────────────────────────────────────────────
+
+function talTekst(v: string | number): string {
+  const n = Number(v);
+  return v === '' || (Number.isFinite(n) && n === 0) ? '' : String(v);
+}
+
+function useTalvisning(vaerdi: string | number): [string, (v: string) => void] {
+  const [tekst, setTekst] = useState(() => talTekst(vaerdi));
+
+  // Kommer værdien udefra — fx fra en anden enhed — skal feltet følge med.
+  // Men ikke mens man selv står i det: så ville markøren hoppe.
+  useEffect(() => {
+    setTekst((foer) => (Number(foer || 0) === Number(vaerdi) ? foer : talTekst(vaerdi)));
+  }, [vaerdi]);
+
+  return [tekst, setTekst];
+}
+
+// Et bart talfelt, til de steder hvor der ikke er plads til en etiket.
+export function Talinput({ value, onChange, placeholder, style }: {
+  value: number;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  style?: CSSProperties;
+}) {
+  const [tekst, setTekst] = useTalvisning(value);
+
+  return (
+    <input
+      type="number"
+      inputMode="numeric"
+      value={tekst}
+      placeholder={placeholder}
+      onChange={(e) => { setTekst(e.target.value); onChange(e.target.value); }}
+      style={style}
+    />
+  );
+}
 
 // Fælles stilarter der bruges af flere komponenter herunder.
 const labelStil: CSSProperties = {
@@ -131,13 +182,22 @@ export function Felt({ label, value, onChange, type = 'text', placeholder, hjael
   return (
     <div>
       <Label hjaelp={hjaelp} fejl={fejl}>{label}</Label>
-      <input
-        type={type}
-        value={value}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        style={{ width: '100%', fontSize: '14px' }}
-      />
+      {type === 'number' ? (
+        <Talinput
+          value={Number(value)}
+          onChange={onChange}
+          placeholder={placeholder}
+          style={{ width: '100%', fontSize: '14px' }}
+        />
+      ) : (
+        <input
+          type={type}
+          value={value}
+          placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)}
+          style={{ width: '100%', fontSize: '14px' }}
+        />
+      )}
     </div>
   );
 }
@@ -406,26 +466,37 @@ export function Feltkort({ label, value, onChange, type = 'text', enhed, placeho
     }}>
       <div style={{ ...feltkortEtiket }}>{label}</div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px' }}>
-        <input
-          type={type}
-          value={value}
-          placeholder={placeholder}
-          onChange={(e) => onChange(e.target.value)}
-          style={{
-            border: 'none',
-            background: 'transparent',
-            padding: 0,
-            fontSize: '16px',
-            width: '100%',
-            minWidth: 0,
-            color: 'var(--tekst)'
-          }}
-        />
+        {type === 'number' ? (
+          <Talinput
+            value={Number(value)}
+            onChange={onChange}
+            placeholder={placeholder}
+            style={{ ...feltkortInput }}
+          />
+        ) : (
+          <input
+            type={type}
+            value={value}
+            placeholder={placeholder}
+            onChange={(e) => onChange(e.target.value)}
+            style={{ ...feltkortInput }}
+          />
+        )}
         {enhed && <span style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)' }}>{enhed}</span>}
       </div>
     </div>
   );
 }
+
+const feltkortInput: CSSProperties = {
+  border: 'none',
+  background: 'transparent',
+  padding: 0,
+  fontSize: '16px',
+  width: '100%',
+  minWidth: 0,
+  color: 'var(--tekst)'
+};
 
 const feltkortEtiket: CSSProperties = {
   fontSize: '10px',
