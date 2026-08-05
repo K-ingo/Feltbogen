@@ -279,8 +279,8 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   const totalFaktisk = tur.budget_linjer.reduce((s, l) => s + l.faktisk_kr, 0);
 
   // Deling fryser pakkelisten ned som den ser ud nu. Gæsten læser kun det
-  // ene felt — aldrig inventaret. Retter man turen bagefter, står gæstens
-  // udgave stille, indtil man deler igen.
+  // ene felt — aldrig inventaret. Retter man turen bagefter, bygges det om af
+  // sig selv; se delesnapshot.ts.
   const del = async () => {
     await opdater({
       dele_token: tur.dele_token || nytDeletoken(),
@@ -1238,14 +1238,13 @@ function Deling({ token, snapshot, deltagelser, gearnavne, del, stop }: {
 
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
         <Knap variant="primaer" onClick={kopier}>{kopieret ? 'Kopieret' : 'Kopiér link'}</Knap>
-        <Knap onClick={del}>Opdatér med det nyeste</Knap>
         <Knap variant="fare" onClick={stop}>Stop deling</Knap>
       </div>
 
       <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', marginTop: '12px', lineHeight: 1.55 }}>
-        De andre ser turen som den så ud {delt}. Har du rettet noget siden, så tryk
-        "Opdatér med det nyeste". Alle med linket og en konto kan se turen — indtil
-        du stopper delingen.
+        De andre ser turen som den er nu — den følger med af sig selv, når du
+        retter noget. Sidst opdateret {delt}. Alle med linket og en konto kan
+        se turen, indtil du stopper delingen.
       </div>
 
       <Meldtind deltagelser={deltagelser} gearnavne={gearnavne} />

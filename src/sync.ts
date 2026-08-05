@@ -356,6 +356,15 @@ export async function sendAfventende(): Promise<void> {
   await Promise.all(ventende.map((v) => v.synk()));
 }
 
+// Kaldes efter hver lokal skrivning. Delingen bruger den til at bygge
+// gæsternes udgave om, men sync skal ikke kende til deling — derfor en krog
+// frem for en import der peger begge veje.
+let efterSkrivning: (() => void) | null = null;
+
+export function saetEfterSkrivning(fn: () => void): void {
+  efterSkrivning = fn;
+}
+
 // uid tildeles her frem for hos kalderen, så identiteten altid findes fra
 // postens fødsel — også når den oprettes uden forbindelse.
 async function opret<T extends Post>(
@@ -363,6 +372,7 @@ async function opret<T extends Post>(
   post: Omit<T, 'id' | 'uid'>
 ): Promise<number> {
   const id = await samling.tabel.add({ ...post, uid: crypto.randomUUID() } as T);
+  efterSkrivning?.();
   await synkroniser(samling, id);
   return id;
 }
@@ -379,12 +389,14 @@ async function opdater<T extends Post>(
     post.aendret = new Date();
     post.usendt_aendring = true;
   });
+  efterSkrivning?.();
   planlaegSync(samling, id);
 }
 
 async function slet<T extends Post>(samling: Samling<T>, id: number): Promise<void> {
   const post = await samling.tabel.get(id);
   await samling.tabel.delete(id);
+  efterSkrivning?.();
 
   // Nåede posten aldrig op i PocketBase, er der intet at gøre deroppe.
   if (!post?.pb_id) return;
@@ -476,6 +488,7 @@ async function hent<T extends Post>(samling: Samling<T>, brugerId: string): Prom
   }
 
   if (nye.length > 0) await samling.tabel.bulkAdd(nye);
+  efterSkrivning?.();
 }
 
 // Afgør hvad der skal ske med en post der findes begge steder.

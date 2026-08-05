@@ -16,6 +16,9 @@ import IndstillingerSide from './IndstillingerSide';
 import Velkomst from './Velkomst';
 import GaesteSide from './GaesteSide';
 import { tokenFraAdresse } from './gaest';
+// Kobler friskningen af delte ture på skrivninger. Importeres for sin
+// bivirkning — modulet melder sig selv til hos sync.
+import './delesnapshot';
 import { opretTomtItem, opretTomGruppe, opretTomTur } from './opret';
 import { markerSet, useErSet, ONBOARDING_SET } from './indstillinger';
 import { Skal } from './Skal';
