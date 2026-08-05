@@ -2,13 +2,35 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { execSync } from 'node:child_process'
 import pakke from './package.json' with { type: 'json' }
+
+// Hvilken udgave der faktisk kører. Versionsnummeret i package.json rykker
+// sjældent, og så kan man ikke se om en udrulning er nået frem — det er
+// byggetidspunktet og commit'en der afgør det.
+const bygget = new Date().toISOString()
+
+function commit(): string {
+  // Vercel bygger fra en løsrevet checkout og sætter sha'en i miljøet.
+  const fraVercel = process.env.VERCEL_GIT_COMMIT_SHA
+  if (fraVercel) return fraVercel.slice(0, 7)
+
+  try {
+    return execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim()
+  } catch {
+    return 'ukendt'
+  }
+}
 
 // https://vite.dev/config/
 export default defineConfig({
   // Versionen står ét sted — i package.json — og bages ind ved build, så
   // indstillingsskærmen ikke skal holdes ved lige i hånden.
-  define: { __APP_VERSION__: JSON.stringify(pakke.version) },
+  define: {
+    __APP_VERSION__: JSON.stringify(pakke.version),
+    __APP_BYGGET__: JSON.stringify(bygget),
+    __APP_COMMIT__: JSON.stringify(commit())
+  },
   plugins: [
     react(),
     VitePWA({
