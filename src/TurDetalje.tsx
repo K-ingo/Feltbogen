@@ -46,6 +46,7 @@ import {
   Infokort,
   Segment,
   Tekstomraade,
+  Talinput,
   TitelInput,
   DetaljeHeader,
   Indlaeser,
@@ -1013,8 +1014,8 @@ function Budget({ linjer, tilfoej, opdater, fjern }: {
             <input placeholder="Beskrivelse" value={l.beskrivelse} onChange={(e) => opdater(l.id, { beskrivelse: e.target.value })} style={{ padding: '6px', fontSize: '12px', minWidth: 0 }} />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '6px', alignItems: 'center' }}>
-            <input type="number" placeholder="Forventet" value={l.forventet_kr} onChange={(e) => opdater(l.id, { forventet_kr: Number(e.target.value) || 0 })} style={{ padding: '6px', fontSize: '12px', minWidth: 0 }} />
-            <input type="number" placeholder="Faktisk" value={l.faktisk_kr} onChange={(e) => opdater(l.id, { faktisk_kr: Number(e.target.value) || 0 })} style={{ padding: '6px', fontSize: '12px', minWidth: 0 }} />
+            <Talinput placeholder="Forventet" value={l.forventet_kr} onChange={(v) => opdater(l.id, { forventet_kr: Number(v) || 0 })} style={{ padding: '6px', fontSize: '12px', minWidth: 0 }} />
+            <Talinput placeholder="Faktisk" value={l.faktisk_kr} onChange={(v) => opdater(l.id, { faktisk_kr: Number(v) || 0 })} style={{ padding: '6px', fontSize: '12px', minWidth: 0 }} />
             <button onClick={() => fjern(l.id)} style={{ background: 'transparent', border: 'none', color: 'var(--fejl)', cursor: 'pointer', fontSize: '14px', padding: '0 6px' }}>
               ×
             </button>

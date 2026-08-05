@@ -22,6 +22,14 @@ function DeltTurVisning({ snapshot, deltagelser = [] }: {
   const medbragtVaegt = samletMedbragtVaegt(deltagelser);
   const [efterPerson, setEfterPerson] = useState(false);
 
+  // Ejerens egen liste, plus dem der har skrevet sig på siden turen blev delt.
+  // Uden dem stod man ikke på deltagerlisten, selvom man havde taget turen
+  // hjem til sig selv.
+  const alleDeltagere = [...new Set([
+    ...snapshot.deltagere,
+    ...deltagelser.map(visningsnavn)
+  ])];
+
   // Én liste med det hele: ejerens gear og det deltagerne selv tager med.
   const linjer: Pakkelinje[] = [
     ...snapshot.afsnit.flatMap((a) => a.items.map((i): Pakkelinje => ({
@@ -99,10 +107,10 @@ function DeltTurVisning({ snapshot, deltagelser = [] }: {
         </Infokort>
       )}
 
-      {snapshot.deltagere.length > 0 && (
-        <Infokort label={`Deltagere (${snapshot.deltagere.length})`}>
+      {alleDeltagere.length > 0 && (
+        <Infokort label={`Deltagere (${alleDeltagere.length})`}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-            {snapshot.deltagere.map((navn) => <Chip key={navn}>{navn}</Chip>)}
+            {alleDeltagere.map((navn) => <Chip key={navn}>{navn}</Chip>)}
           </div>
         </Infokort>
       )}
