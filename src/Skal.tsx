@@ -42,7 +42,10 @@ export function Skal({ fane, skift, titel, undertitel, handlinger, fab, children
     return (
       <div style={{ display: 'flex', minHeight: '100vh' }}>
         <Sidebar fane={fane} skift={skift} />
-        <main style={{ flex: 1, minWidth: 0, padding: '28px 32px 60px', maxWidth: '1100px' }}>
+        {/* Loftet er der for læsbarhedens skyld — en linje der løber tværs
+            over en bred skærm er svær at følge. Men 1100 px lod en tredjedel
+            af skærmen stå tom på en almindelig PC-skærm. */}
+        <main style={{ flex: 1, minWidth: 0, padding: '28px 32px 60px', maxWidth: '1600px' }}>
           {titel && (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginBottom: '20px' }}>
               <div>
