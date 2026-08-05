@@ -56,7 +56,7 @@ import { formatterPeriode } from './datotekst';
 import { hentDeltagelser, baererePrGear, visningsnavn } from './deltagelse';
 import type { Deltagelse } from './deltagelse';
 import { layout } from './layout';
-import { useErDesktop } from './useMedie';
+import { useErDesktop, useErBredskaerm } from './useMedie';
 import { sletTur, opdaterTur } from './sync';
 import { useRedigerbar } from './useRedigerbar';
 
@@ -80,6 +80,7 @@ type Visning = 'gruppe' | 'tag' | 'person';
 
 function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   const erDesktop = useErDesktop();
+  const erBred = useErBredskaerm();
   const [visning, setVisning] = useState<Visning>('gruppe');
   const [vejrData, setVejrData] = useState<VejrData | null>(null);
   const [vejrHentes, setVejrHentes] = useState(false);
@@ -460,15 +461,39 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
     </div>
   );
 
+  // Kortene der flytter sig mellem spalterne alt efter pladsen. Ét sted, så
+  // de to opstillinger ikke kan komme til at vise forskellige ting.
+  const sidespalte = (
+    <>
+      <Foldbar
+        titel={`Deltagere (${tur.deltagere.length})`}
+        resume={tur.deltagere.map((d) => d.navn).join(', ')}
+      >
+        {deltagere}
+      </Foldbar>
+      {tur.deltagere.length > 0 && pakItems.length > 0 && (
+        <Foldbar titel="Fordel gear" resume={fordelingsResume(tur, pakItems)}>{fordeling}</Foldbar>
+      )}
+      <Foldbar titel="Budget" resume={`${totalFaktisk} / ${totalForventet} kr`}>{budget}</Foldbar>
+      <Foldbar titel="Del med gæster" resume={tur.dele_token ? 'Delt' : 'Ikke delt'}>{deling}</Foldbar>
+      <Foldbar titel="Noter">{noter}</Foldbar>
+    </>
+  );
+
   if (erDesktop) {
     return (
       <div>
         <DetaljeHeader tilbage={tilbage} sletLabel="Slet tur" slet={slet} />
         {titelblok}
 
+        {/* Er der plads til det, deles sidekortene i to spalter frem for at
+            stå i én lang strimmel. Pakkelisten er den man arbejder i, så den
+            beholder mest plads. */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1.9fr) minmax(300px, 1fr)',
+          gridTemplateColumns: erBred
+            ? 'minmax(0, 1.5fr) minmax(280px, 1fr) minmax(280px, 1fr)'
+            : 'minmax(0, 1.9fr) minmax(300px, 1fr)',
           gap: '24px',
           alignItems: 'start',
           marginTop: '22px'
@@ -478,24 +503,19 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
             <Foldbar titel="Vælg gear">{valgAfIndhold}</Foldbar>
           </div>
 
+          {/* Det man kigger på mens man planlægger: rammerne om turen og det
+              der er galt. */}
           <div style={{ display: 'grid', gap: '10px' }}>
             <Foldbar titel="Turparametre" resume={parametreResume}>{parametre}</Foldbar>
             <Foldbar titel="Vejrudsigt" resume={vejrResume(vejrData)}>{vejr}</Foldbar>
             {advarsler.length > 0 && <Advarsler advarsler={advarsler} />}
             {vaegt}
-            <Foldbar
-              titel={`Deltagere (${tur.deltagere.length})`}
-              resume={tur.deltagere.map((d) => d.navn).join(', ')}
-            >
-              {deltagere}
-            </Foldbar>
-            {tur.deltagere.length > 0 && pakItems.length > 0 && (
-              <Foldbar titel="Fordel gear" resume={fordelingsResume(tur, pakItems)}>{fordeling}</Foldbar>
-            )}
-            <Foldbar titel="Budget" resume={`${totalFaktisk} / ${totalForventet} kr`}>{budget}</Foldbar>
-            <Foldbar titel="Del med gæster" resume={tur.dele_token ? 'Delt' : 'Ikke delt'}>{deling}</Foldbar>
-            <Foldbar titel="Noter">{noter}</Foldbar>
+            {!erBred && sidespalte}
           </div>
+
+          {/* Det man tager fat i, når rammerne er på plads. Står i sin egen
+              spalte når der er plads, og under den første når der ikke er. */}
+          {erBred && <div style={{ display: 'grid', gap: '10px' }}>{sidespalte}</div>}
         </div>
       </div>
     );
