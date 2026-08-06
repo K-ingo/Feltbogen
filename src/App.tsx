@@ -13,7 +13,7 @@ import TurDetalje from './TurDetalje';
 import DeltTurDetalje from './DeltTurDetalje';
 import StatistikSide from './StatistikSide';
 import IndstillingerSide from './IndstillingerSide';
-import Velkomst from './Velkomst';
+import Rundvisning from './Rundvisning';
 import GaesteSide from './GaesteSide';
 import { tokenFraAdresse } from './gaest';
 // Kobler friskningen af delte ture på skrivninger. Importeres for sin
@@ -31,6 +31,9 @@ function App() {
   const [gaesteToken, setGaesteToken] = useState(() => tokenFraAdresse());
   const onboardingSet = useErSet(ONBOARDING_SET);
   const [viserLogin, setViserLogin] = useState(false);
+  // Rundvisningen kan hentes frem igen fra indstillingerne. Den vises da som
+  // opslag: uden kontosalg og uden knapper til at komme i gang.
+  const [viserRundvisning, setViserRundvisning] = useState(false);
   const [fane, setFane] = useState<Fane>('dashboard');
   // Valget ligger her og ikke i listeskærmene, fordi dashboardet også åbner
   // både gear og ture. nyOprettet følger med, så detaljeskærmen kan rydde en
@@ -142,15 +145,27 @@ function App() {
   // forbi for en bruger der har set den for længst.
   if (onboardingSet === undefined) return null;
 
-  // Velkomsten sælger en konto. Har man allerede en, er den ikke bare
-  // overflødig — den ser ud som om man er blevet logget ud.
+  if (viserRundvisning) {
+    return (
+      <Rundvisning
+        kunOpslag
+        nytItem={() => void nytItem()}
+        nyTur={() => void nyTur()}
+        tilLogin={() => setViserLogin(true)}
+        faerdig={() => setViserRundvisning(false)}
+      />
+    );
+  }
+
+  // Rundvisningen slutter med at tilbyde en konto. Har man allerede en, er den
+  // del ikke bare overflødig — den ser ud som om man er blevet logget ud.
   if (!onboardingSet && !erLoggetInd) {
     return (
-      <Velkomst
+      <Rundvisning
         nytItem={() => void efterVelkomst(nytItem)}
         nyTur={() => void efterVelkomst(nyTur)}
         tilLogin={() => void efterVelkomst(async () => setViserLogin(true))}
-        spring={() => void efterVelkomst()}
+        faerdig={() => void efterVelkomst()}
       />
     );
   }
@@ -205,7 +220,15 @@ function App() {
     case 'ture': return <TureListe fane={fane} skift={skiftFane} aabnTur={aabnTur} aabnDeltTur={aabnDeltTur} nyTur={nyTur} />;
     case 'statistik': return <StatistikSide fane={fane} skift={skiftFane} aabnItem={aabnItem} />;
     case 'inventar': return <InventarSide fane={fane} skift={skiftFane} aabnItem={aabnItem} />;
-    case 'indstillinger': return <IndstillingerSide fane={fane} skift={skiftFane} tilLogin={() => setViserLogin(true)} />;
+    case 'indstillinger':
+      return (
+        <IndstillingerSide
+          fane={fane}
+          skift={skiftFane}
+          tilLogin={() => setViserLogin(true)}
+          seRundvisning={() => setViserRundvisning(true)}
+        />
+      );
   }
 }
 
