@@ -21,11 +21,12 @@ interface Props {
   fane: Fane;
   skift: (f: Fane) => void;
   tilLogin: () => void;
+  seRundvisning: () => void;
 }
 
 type Besked = { slags: 'ok' | 'fejl'; tekst: string } | null;
 
-function IndstillingerSide({ fane, skift, tilLogin }: Props) {
+function IndstillingerSide({ fane, skift, tilLogin, seRundvisning }: Props) {
   const { bruger } = useAuth();
 
   const [arbejder, setArbejder] = useState<string | null>(null);
@@ -232,7 +233,8 @@ function IndstillingerSide({ fane, skift, tilLogin }: Props) {
           <Kort>
             <Raekke label="Feltbogen" vaerdi={`version ${__APP_VERSION__} · ${__APP_COMMIT__}`} />
             <Raekke label="Denne udgave er bygget" vaerdi={byggetekst()} />
-            <div style={{ marginTop: '12px' }}>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
+              <Knap onClick={seRundvisning}>Se rundvisningen igen</Knap>
               <Knap onClick={() => void hentNyesteUdgave()}>Hent nyeste udgave</Knap>
             </div>
             <Hjaelp>
