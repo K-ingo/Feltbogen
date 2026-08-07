@@ -68,25 +68,14 @@ oprettelse, så det også findes offline, og alle referencer mellem poster
 Dexies `++id` kan ikke bruges til det: den tælles op pr. enhed, så id 1 betyder
 noget forskelligt to steder.
 
-> **PocketBase-samlingerne skal have et tekstfelt `uid`** på `items`, `grupper`
-> og `ture`. Uden det dropper serveren feltet, og to enheder kan ikke blive
-> enige om hvilken post der er hvilken. Appen skriver en advarsel i konsollen
-> hvis den opdager det.
+> **PocketBase dropper lydløst felter der ikke findes i samlingens skema.** Der
+> kommer ingen fejl — dataene forsvinder bare på vej op. Den fulde liste over
+> samlinger, felter og API-regler står i [`POCKETBASE.md`](./POCKETBASE.md), og
+> den skal følges præcist.
 >
-> Samlingen `ture` skal desuden have JSON-felterne `pak_af_tjek` og et
-> tekstfelt `sted_uid`, og `items` skal have JSON-felterne `udlaan` og
-> `laant_af`. PocketBase dropper lydløst felter der ikke findes i skemaet, så
-> uden dem bliver efterregnskabet og låne-loggen liggende på den enhed de blev
-> lavet på.
->
-> Til turkortet og afgangs-tjeklisten skal `ture` desuden have tekstfelterne
-> `turkort_token`, `turkort_retur`, `turkort_besked` og `turkort_snapshot` samt
-> JSON-feltet `afgangs_tjek`.
->
-> Der skal også være to nye samlinger, `steder` og `personer`, begge med et
-> tekstfelt `uid` og et `user`-felt som de øvrige. Felterne er:
-> `steder`: `navn`, `koordinater` (JSON), `adresse`, `tags` (JSON), `noter`.
-> `personer`: `navn`, `email`, `standard_overnatning`, `noter`.
+> Mangler tekstfeltet `uid`, kan to enheder ikke blive enige om hvilken post
+> der er hvilken. Appen skriver en advarsel i konsollen og i Indstillinger hvis
+> den opdager det.
 
 Hver post har også et `pb_id`: er det sat, findes posten i PocketBase; er det
 tomt, er den kun lokal endnu.
