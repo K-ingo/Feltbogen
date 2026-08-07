@@ -27,6 +27,8 @@ import type {
   KategoriNote,
   Udlaan,
   Laant,
+  AfgangsTjek,
+  AfgangsLinje,
   Sted,
   Person
 } from './db';
@@ -144,6 +146,25 @@ function pakAfTjek(v: unknown): PakAfTjek | null {
   };
   if (kategori_noter.length > 0) tjek.kategori_noter = kategori_noter;
   return tjek;
+}
+
+// Ture fra før afgangs-tjeklisten fandtes har ingen. Tom betyder "ikke taget
+// i brug", og det er den rigtige værdi for dem.
+function afgangsTjek(v: unknown): AfgangsTjek | null {
+  if (!v || typeof v !== 'object') return null;
+  const t = v as Record<string, unknown>;
+
+  const linjer: AfgangsLinje[] = (Array.isArray(t.linjer) ? t.linjer : [])
+    .map((raa) => (raa ?? {}) as Record<string, unknown>)
+    .filter((l) => tekst(l.tekst).trim() !== '')
+    .map((l) => ({
+      id: tekst(l.id) || crypto.randomUUID(),
+      tekst: tekst(l.tekst),
+      afkrydset: l.afkrydset === true,
+      fra_skabelon: l.fra_skabelon === true
+    }));
+
+  return { linjer };
 }
 
 function budgetLinjer(v: unknown): BudgetLinje[] {
@@ -331,11 +352,16 @@ const turSamling: Samling<Tur> = {
     deltagere: t.deltagere,
     budget_linjer: t.budget_linjer,
     pak_af_tjek: t.pak_af_tjek ?? null,
+    afgangs_tjek: t.afgangs_tjek ?? null,
     besked_fra_ejer: t.besked_fra_ejer,
     noter: t.noter,
     vejrsnapshot: t.vejrsnapshot,
     dele_token: t.dele_token,
-    dele_snapshot: t.dele_snapshot
+    dele_snapshot: t.dele_snapshot,
+    turkort_token: t.turkort_token,
+    turkort_retur: t.turkort_retur,
+    turkort_besked: t.turkort_besked,
+    turkort_snapshot: t.turkort_snapshot
   }),
   fraPb: (r) => ({
     uid: uid(r),
@@ -359,11 +385,16 @@ const turSamling: Samling<Tur> = {
     deltagere: deltagere(r.deltagere),
     budget_linjer: budgetLinjer(r.budget_linjer),
     pak_af_tjek: pakAfTjek(r.pak_af_tjek),
+    afgangs_tjek: afgangsTjek(r.afgangs_tjek),
     besked_fra_ejer: tekst(r.besked_fra_ejer),
     noter: tekst(r.noter),
     vejrsnapshot: tekst(r.vejrsnapshot),
     dele_token: tekst(r.dele_token),
     dele_snapshot: tekst(r.dele_snapshot),
+    turkort_token: tekst(r.turkort_token),
+    turkort_retur: tekst(r.turkort_retur),
+    turkort_besked: tekst(r.turkort_besked),
+    turkort_snapshot: tekst(r.turkort_snapshot),
     oprettet: dato(r.created),
     aendret: dato(r.updated)
   })

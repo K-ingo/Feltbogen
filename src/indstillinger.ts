@@ -16,6 +16,10 @@ export const PAK_AF_NIVEAU_VALG = 'pak_af_niveau';
 // her kan den regne med brugeren. De hører til enheden på samme måde som
 // resten — det er ikke data om turene, og de skal ikke med i en sikkerhedskopi
 // af inventaret.
+// Afgangs-tjeklistens skabelon, gemt som JSON. Se afgangsTjek.ts for
+// læsningen — indstillingstabellen kan kun tekst.
+export const AFGANGS_SKABELON = 'afgangs_tjek_skabelon';
+
 export const KROPSVAEGT = 'kropsvaegt_kg';
 export const AKTIVITETSNIVEAU_VALG = 'aktivitetsniveau';
 export const DAGLIG_KALORIE = 'daglig_kalorie';
@@ -36,6 +40,12 @@ export async function markerSet(noegle: string): Promise<void> {
 // onboardingen forbi på vej ind.
 export function useErSet(noegle: string): boolean | undefined {
   return useLiveQuery(async () => (await laes(noegle)) !== null, [noegle]);
+}
+
+// Rå tekst, som den står. null mens den hentes og når nøglen aldrig er sat —
+// kalderen afgør selv hvad der er standarden.
+export function useTekst(noegle: string): string | null {
+  return useLiveQuery(() => laes(noegle), [noegle]) ?? null;
 }
 
 // Et valg fra en fast liste. Står der noget uventet i basen — en ældre udgave

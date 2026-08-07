@@ -205,6 +205,22 @@ export interface PakAfTjek {
   kategori_noter?: KategoriNote[];
 }
 
+// Alt det man glemmer, som ikke er gear: nøgler, telefon opladet, besked til
+// den derhjemme. Det bor i hovedet i dag, og hovedet er et dårligt sted at
+// gemme noget man kun bruger fire gange om året.
+export interface AfgangsLinje {
+  id: string;
+  tekst: string;
+  afkrydset: boolean;
+  // Kom fra skabelonen i indstillingerne, i modsætning til noget man skrev
+  // ind på netop denne tur. Skabelonlinjer kan genindlæses; egne kan ikke.
+  fra_skabelon: boolean;
+}
+
+export interface AfgangsTjek {
+  linjer: AfgangsLinje[];
+}
+
 export interface Tur extends Synkroniserbar {
   id?: number;
   navn: string;
@@ -230,6 +246,8 @@ export interface Tur extends Synkroniserbar {
   // null indtil turen er gjort op. Ture fra før feltet fandtes har det slet
   // ikke — læs det derfor altid med ?? null.
   pak_af_tjek: PakAfTjek | null;
+  // null indtil listen er taget i brug på turen.
+  afgangs_tjek: AfgangsTjek | null;
   besked_fra_ejer: string;
   noter: string;
   vejrsnapshot: string;
@@ -239,6 +257,18 @@ export interface Tur extends Synkroniserbar {
   // Det gæsten får at se, frosset ned som JSON da linket blev lavet. Gæsten
   // læser aldrig inventaret — kun dette ene felt.
   dele_snapshot: string;
+  // Turkortet til én pårørende: "hvis jeg ikke er hjemme torsdag, ved du hvor
+  // du skal begynde at lede". Det er ikke live-tracking og ikke en app til den
+  // anden — ét link med fire oplysninger.
+  //
+  // Felterne står fladt og ikke i ét objekt, af samme grund som dele_token og
+  // dele_snapshot gør det: tokenet skal kunne filtreres på i PocketBase, og
+  // snapshottet er den ene ting læsereglen åbner for. Modtageren ser aldrig
+  // resten af turen.
+  turkort_token: string;
+  turkort_retur: string;
+  turkort_besked: string;
+  turkort_snapshot: string;
   oprettet: Date;
   aendret: Date;
 }

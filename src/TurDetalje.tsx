@@ -13,6 +13,7 @@ import type {
   Deltager,
   BudgetLinje,
   PakAfTjek,
+  AfgangsTjek,
   Person,
   Sted,
   Reference
@@ -57,6 +58,18 @@ import {
   Hvorfor
 } from './ui';
 import PakAfTjekSide from './PakAfTjekSide';
+import PaaTurTilstand from './PaaTurTilstand';
+import {
+  nytAfgangsTjek,
+  fletSkabelonInd,
+  fremdriftstekst,
+  saetAfkrydset,
+  saetTekst,
+  tilfoejLinje,
+  fjernLinje,
+  laesSkabelon
+} from './afgangsTjek';
+import { nytTurkorttoken, lavTurkort, turkortLink, returtekst } from './turkort';
 import {
   foreslaaPersoner,
   antalTurePrPerson,
@@ -66,7 +79,7 @@ import {
 import { foreslaaSteder, besoegPrSted, besoegstekst, naermesteSted } from './steder';
 import { udlaansAdvarsler } from './udlaan';
 import { nytPakAfTjek, synkroniserLinjer, resumetekst } from './pakAfTjek';
-import { useValg, useKropsdata, PAK_AF_NIVEAU_VALG } from './indstillinger';
+import { useValg, useKropsdata, useTekst, PAK_AF_NIVEAU_VALG, AFGANGS_SKABELON } from './indstillinger';
 import { nytDeletoken, lavSnapshot, deleLink, linkadvarsel, linkvaert } from './gaest';
 import { formatterPeriode } from './datotekst';
 import { hentDeltagelser, baererePrGear, visningsnavn } from './deltagelse';
@@ -103,6 +116,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   // Pak-af-tjekket lægger sig over turskærmen frem for at være en fane for
   // sig: man kommer dertil fra turen, og man skal tilbage til den bagefter.
   const [viserPakAfTjek, setViserPakAfTjek] = useState(false);
+  const [viserPaaTur, setViserPaaTur] = useState(false);
   const [vejrData, setVejrData] = useState<VejrData | null>(null);
   const [vejrHentes, setVejrHentes] = useState(false);
   const [vejrFejl, setVejrFejl] = useState('');
@@ -143,6 +157,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   // Motoren regner med brugeren frem for en gennemsnitsdansker, når hun har
   // fortalt den hvem hun er.
   const kropsdata = useKropsdata();
+  const afgangsSkabelon = laesSkabelon(useTekst(AFGANGS_SKABELON));
 
   // Bidragene ligger på serveren og ikke i den lokale base — de kommer fra
   // andres enheder. Uden forbindelse vises turen bare uden dem.
@@ -340,6 +355,45 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   const pakItems = items?.filter((i) => itemUidsPaaDenneTur.has(i.uid)) ?? [];
 
   const pakAfTjek = tur.pak_af_tjek ?? null;
+  const afgangsTjek = tur.afgangs_tjek ?? null;
+
+  // Et gemt sted har et navn en pårørende kan finde på et kort; koordinater er
+  // noget man skal taste ind et andet sted.
+  const valgtStedNavn = steder.find((s) => s.uid === tur.sted_uid)?.navn ?? '';
+
+  // Listen laves når man første gang folder sektionen ud eller går på tur.
+  // Er den lavet, flettes nye punkter fra skabelonen ind uden at røre det man
+  // allerede har krydset af.
+  const sikrAfgangsTjek = async () => {
+    const nyt = afgangsTjek
+      ? fletSkabelonInd(afgangsTjek, afgangsSkabelon)
+      : nytAfgangsTjek(afgangsSkabelon);
+
+    if (nyt !== afgangsTjek) await opdater({ afgangs_tjek: nyt });
+    return nyt;
+  };
+
+  const gemAfgang = (nyt: AfgangsTjek) => void opdater({ afgangs_tjek: nyt });
+
+  const gaaPaaTur = async () => {
+    await sikrAfgangsTjek();
+    setViserPaaTur(true);
+  };
+
+  // Turkortet fryses ned som gæstelinket: modtageren læser ét felt, aldrig
+  // resten af turen.
+  const lavTurkortLink = async () => {
+    const token = tur.turkort_token || nytTurkorttoken();
+    await opdater({
+      turkort_token: token,
+      turkort_snapshot: JSON.stringify(lavTurkort({ ...tur, turkort_token: token }, valgtStedNavn))
+    });
+  };
+
+  const stopTurkort = async () => {
+    if (!confirm('Træk turkortet tilbage? Modtageren kan så ikke længere se det.')) return;
+    await opdater({ turkort_token: '', turkort_snapshot: '' });
+  };
 
   // Tjekket laves her og ikke inde på selve skærmen. Så kan den aldrig komme
   // til at skrive et tomt tjek oven i et udfyldt, og linjerne bygges på den
@@ -353,6 +407,17 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
     if (opdateret !== pakAfTjek) await opdater({ pak_af_tjek: opdateret });
     setViserPakAfTjek(true);
   };
+
+  if (viserPaaTur) {
+    return (
+      <PaaTurTilstand
+        tur={tur}
+        vejr={vejrData}
+        saetNoter={(v) => void opdater({ noter: v })}
+        luk={() => setViserPaaTur(false)}
+      />
+    );
+  }
 
   if (viserPakAfTjek && pakAfTjek) {
     return (
@@ -554,6 +619,34 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
 
   // Er turen gjort op, står regnskabet på turen bagefter. Selve redigeringen
   // sker på sin egen skærm — her er det kun til at læse.
+  const afgangsSektion = (
+    <Foldbar
+      titel="Afgangs-tjek"
+      resume={fremdriftstekst(afgangsTjek)}
+      // Er turen gået i gang, er det ikke længere noget man folder ud når man
+      // får lyst — det er det sidste man skulle have gjort.
+      aabenFra={tur.status === 'aktiv'}
+    >
+      <Afgangstjekliste
+        tjek={afgangsTjek}
+        opret={() => void sikrAfgangsTjek()}
+        gem={gemAfgang}
+      />
+    </Foldbar>
+  );
+
+  const turkortSektion = (
+    <Foldbar titel="Turkort til pårørende" resume={tur.turkort_token ? 'Sendt' : 'Ikke lavet'}>
+      <Turkort
+        tur={tur}
+        stednavn={valgtStedNavn}
+        opdater={opdater}
+        lav={lavTurkortLink}
+        stop={stopTurkort}
+      />
+    </Foldbar>
+  );
+
   const pakAfSektion = pakAfTjek && (
     <Foldbar titel="Pak-af-tjek" resume={resumetekst(pakAfTjek)}>
       <div style={{ display: 'grid', gap: '10px' }}>
@@ -588,9 +681,12 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
         <Segment vaerdier={TUR_STATUS} valgt={tur.status} vaelg={(s) => opdater({ status: s })} kompakt />
       </div>
       {erDesktop && (
-        <Knap variant="primaer" onClick={handling.gaa}>
-          {handling.label}
-        </Knap>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {tur.status === 'aktiv' && <Knap onClick={() => void gaaPaaTur()}>På tur</Knap>}
+          <Knap variant="primaer" onClick={handling.gaa}>
+            {handling.label}
+          </Knap>
+        </div>
       )}
     </div>
   );
@@ -600,6 +696,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   const sidespalte = (
     <>
       {pakAfSektion}
+      {afgangsSektion}
       <Foldbar
         titel={`Deltagere (${tur.deltagere.length})`}
         resume={tur.deltagere.map((d) => d.navn).join(', ')}
@@ -611,6 +708,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
       )}
       <Foldbar titel="Budget" resume={`${totalFaktisk} / ${totalForventet} kr`}>{budget}</Foldbar>
       <Foldbar titel="Del med gæster" resume={tur.dele_token ? 'Delt' : 'Ikke delt'}>{deling}</Foldbar>
+      {turkortSektion}
       <Foldbar titel="Noter">{noter}</Foldbar>
     </>
   );
@@ -663,16 +761,29 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
       <DetaljeHeader tilbage={tilbage} sletLabel="Slet tur" slet={slet} />
       {titelblok}
 
+      {/* På en aktiv tur er på-tur-skærmen den man skal have fat i, ikke
+          knappen der afslutter turen. */}
+      {tur.status === 'aktiv' && (
+        <Knap
+          variant="primaer"
+          onClick={() => void gaaPaaTur()}
+          style={{ width: '100%', marginTop: '14px', padding: '11px' }}
+        >
+          Åbn på-tur-skærmen
+        </Knap>
+      )}
+
       <Knap
-        variant="primaer"
+        variant={tur.status === 'aktiv' ? 'sekundaer' : 'primaer'}
         onClick={handling.gaa}
-        style={{ width: '100%', marginTop: '14px', padding: '11px' }}
+        style={{ width: '100%', marginTop: tur.status === 'aktiv' ? '8px' : '14px', padding: '11px' }}
       >
         {handling.label}
       </Knap>
 
       <div style={{ display: 'grid', gap: '8px', marginTop: '16px' }}>
         {pakAfSektion}
+        {afgangsSektion}
         <Foldbar titel="Turparametre" resume={parametreResume}>{parametre}</Foldbar>
         {advarsler.length > 0 && (
           <Foldbar titel={`Advarsler (${advarsler.length})`} advarsel aabenFra>
@@ -696,6 +807,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
         )}
         <Foldbar titel="Budget" resume={`${totalFaktisk} / ${totalForventet} kr`}>{budget}</Foldbar>
         <Foldbar titel="Del med gæster" resume={tur.dele_token ? 'Delt' : 'Ikke delt'}>{deling}</Foldbar>
+        {turkortSektion}
         <Foldbar titel="Noter">{noter}</Foldbar>
       </div>
     </div>
@@ -1591,6 +1703,167 @@ function Deling({ token, snapshot, deltagelser, gearnavne, del, stop }: {
 
 // Hvem der er kommet med, og det man ikke kan aflæse af pakkelisten. Selve
 // grejet står dér — det er én tur og én liste.
+// Afgangs-tjeklisten. Alt det man glemmer, som ikke er gear.
+function Afgangstjekliste({ tjek, opret, gem }: {
+  tjek: AfgangsTjek | null;
+  opret: () => void;
+  gem: (t: AfgangsTjek) => void;
+}) {
+  const [nyLinje, setNyLinje] = useState('');
+
+  if (!tjek) {
+    return (
+      <div>
+        <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginBottom: '12px', lineHeight: 1.5 }}>
+          Nøgler, telefon opladet, besked til den derhjemme. Listen bygges på din skabelon
+          fra indstillingerne, og du kan tilføje til den her.
+        </div>
+        <Knap onClick={opret}>Lav afgangs-tjek</Knap>
+      </div>
+    );
+  }
+
+  const tilfoej = () => {
+    if (!nyLinje.trim()) return;
+    gem(tilfoejLinje(tjek, nyLinje));
+    setNyLinje('');
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'grid', gap: '2px', marginBottom: '12px' }}>
+        {tjek.linjer.map((linje) => (
+          <div
+            key={linje.id}
+            style={{ display: 'flex', alignItems: 'center', gap: '9px', padding: '5px 0' }}
+          >
+            <input
+              type="checkbox"
+              checked={linje.afkrydset}
+              onChange={(e) => gem(saetAfkrydset(tjek, linje.id, e.target.checked))}
+              style={{ width: 'auto', flexShrink: 0 }}
+            />
+            <input
+              value={linje.tekst}
+              onChange={(e) => gem(saetTekst(tjek, linje.id, e.target.value))}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                fontSize: '13px',
+                border: 'none',
+                background: 'transparent',
+                padding: '2px 0',
+                textDecoration: linje.afkrydset ? 'line-through' : 'none',
+                color: linje.afkrydset ? 'var(--tekst-svag)' : 'var(--tekst)'
+              }}
+            />
+            <button
+              onClick={() => gem(fjernLinje(tjek, linje.id))}
+              aria-label={`Fjern ${linje.tekst}`}
+              style={{ background: 'transparent', border: 'none', color: 'var(--fejl)', cursor: 'pointer', fontSize: '14px', padding: '0 4px' }}
+            >
+              ×
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', gap: '6px' }}>
+        <input
+          value={nyLinje}
+          onChange={(e) => setNyLinje(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') tilfoej(); }}
+          placeholder="Tilføj et punkt"
+          style={{ flex: 1, minWidth: 0, fontSize: '13px' }}
+        />
+        <Knap onClick={tilfoej} disabled={!nyLinje.trim()}>+ Tilføj</Knap>
+      </div>
+    </div>
+  );
+}
+
+// Turkortet til én pårørende. Samme mønster som gæstelinket, men snævrere:
+// modtageren har ingen konto og ser kun fire ting.
+function Turkort({ tur, stednavn, opdater, lav, stop }: {
+  tur: Tur;
+  stednavn: string;
+  opdater: (a: Partial<Tur>) => Promise<void>;
+  lav: () => Promise<void>;
+  stop: () => Promise<void>;
+}) {
+  const [kopieret, setKopieret] = useState(false);
+  const link = tur.turkort_token ? turkortLink(tur.turkort_token) : '';
+
+  const kopier = async () => {
+    await navigator.clipboard.writeText(link);
+    setKopieret(true);
+    setTimeout(() => setKopieret(false), 2000);
+  };
+
+  return (
+    <div style={{ display: 'grid', gap: '12px' }}>
+      <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', lineHeight: 1.55 }}>
+        Ét link til én person: hvor du er, hvornår du burde være hjemme, og hvad du selv
+        skriver. Ikke live-position — modtageren ser det du delte, og at turen er slut når
+        du markerer den afsluttet.
+      </div>
+
+      <Felt
+        label="Forventet hjemme"
+        type="datetime-local"
+        value={tur.turkort_retur}
+        onChange={(v) => opdater({ turkort_retur: v })}
+        hjaelp="det tidspunkt hvor nogen skal begynde at undre sig"
+      />
+
+      <Tekstomraade
+        label="Besked"
+        value={tur.turkort_besked}
+        onChange={(v) => opdater({ turkort_besked: v })}
+        placeholder="fx Ring til Mikkel på 12 34 56 78 hvis jeg ikke er hjemme"
+      />
+
+      {link ? (
+        <>
+          <div style={{
+            padding: '9px 11px',
+            background: 'var(--bg-forhoejet)',
+            border: '1px solid var(--border-svag)',
+            borderRadius: '8px',
+            fontSize: '11px',
+            wordBreak: 'break-all',
+            color: 'var(--tekst-dæmpet)'
+          }}>
+            {link}
+          </div>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <Knap onClick={() => void kopier()}>{kopieret ? 'Kopieret' : 'Kopiér link'}</Knap>
+            {/* Retter man tidspunktet eller beskeden, skal kortet bygges om —
+                modtageren læser et frosset øjebliksbillede. */}
+            <Knap onClick={() => void lav()}>Opdatér kortet</Knap>
+            <Knap variant="fare" onClick={() => void stop()}>Træk tilbage</Knap>
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--tekst-svag)' }}>
+            Viser {stednavn || tur.sted || 'intet sted'} · hjemme {returtekst(tur.turkort_retur)}
+          </div>
+        </>
+      ) : (
+        <div>
+          <Knap variant="primaer" onClick={() => void lav()} disabled={!tur.turkort_retur}>
+            Lav turkort
+          </Knap>
+          {!tur.turkort_retur && (
+            <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', marginTop: '6px' }}>
+              Sæt et forventet hjemkomsttidspunkt først — det er den ene oplysning kortet
+              er til for.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Meldtind({ deltagelser, gearnavne }: {
   deltagelser: Deltagelse[];
   gearnavne: Map<Reference, string>;

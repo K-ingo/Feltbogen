@@ -4,7 +4,9 @@ import { db, etiket, PAK_AF_NIVEAU, AKTIVITETSNIVEAU } from './db';
 import {
   saet,
   useValg,
+  useTekst,
   useKropsdata,
+  AFGANGS_SKABELON,
   PAK_AF_NIVEAU_VALG,
   KROPSVAEGT,
   AKTIVITETSNIVEAU_VALG,
@@ -26,6 +28,7 @@ import type { Baseindhold } from './dataudveksling';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
 import Personer from './Personer';
+import { laesSkabelon, skrivSkabelon, STANDARD_SKABELON } from './afgangsTjek';
 import { Knap, SektionsTitel, Felt, Segment } from './ui';
 
 interface Props {
@@ -55,6 +58,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning }: Props) {
   const usendt = useLiveQuery(usendtAntal, [], 0);
   const pakAfNiveau = useValg(PAK_AF_NIVEAU_VALG, PAK_AF_NIVEAU, 'let');
   const krop = useKropsdata();
+  const afgangsSkabelon = laesSkabelon(useTekst(AFGANGS_SKABELON));
 
   const synkroniser = async () => {
     setArbejder('sync');
@@ -271,6 +275,22 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning }: Props) {
         </section>
 
         <section>
+          <SektionsTitel>Afgangs-tjek</SektionsTitel>
+          <Kort>
+            <Skabelon
+              linjer={afgangsSkabelon}
+              gem={(l) => void saet(AFGANGS_SKABELON, skrivSkabelon(l))}
+              nulstil={() => void saet(AFGANGS_SKABELON, skrivSkabelon([...STANDARD_SKABELON]))}
+            />
+            <Hjaelp>
+              Skabelonen bruges når du laver et afgangs-tjek på en tur. Retter du den
+              bagefter, flettes de nye punkter ind på turene uden at røre det du allerede
+              har krydset af — og uden at fjerne det du selv har skrevet på turen.
+            </Hjaelp>
+          </Kort>
+        </section>
+
+        <section>
           <SektionsTitel>Pak-af-tjek</SektionsTitel>
           <Kort>
             <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginBottom: '8px' }}>
@@ -384,6 +404,63 @@ function Navnefelt({ start, gem }: { start: string; gem: (v: string) => Promise<
 function antalIBasen(base: Baseindhold): number {
   return base.items.length + base.grupper.length + base.ture.length
     + base.steder.length + base.personer.length;
+}
+
+// Skabelonen redigeres som en liste af linjer. Den gemmes som JSON, men det
+// skal man ikke kunne se — man skriver punkter, ikke et array.
+function Skabelon({ linjer, gem, nulstil }: {
+  linjer: string[];
+  gem: (linjer: string[]) => void;
+  nulstil: () => void;
+}) {
+  const [ny, setNy] = useState('');
+
+  const tilfoej = () => {
+    if (!ny.trim()) return;
+    gem([...linjer, ny.trim()]);
+    setNy('');
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'grid', gap: '2px', marginBottom: '12px' }}>
+        {linjer.length === 0 && (
+          <div style={{ fontSize: '13px', color: 'var(--tekst-svag)' }}>
+            Skabelonen er tom. Tilføj de punkter du altid skal huske.
+          </div>
+        )}
+        {linjer.map((linje, n) => (
+          <div key={`${linje}-${n}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0' }}>
+            <input
+              value={linje}
+              onChange={(e) => gem(linjer.map((l, i) => (i === n ? e.target.value : l)))}
+              style={{ flex: 1, minWidth: 0, fontSize: '13px', border: 'none', background: 'transparent', padding: '2px 0' }}
+            />
+            <button
+              onClick={() => gem(linjer.filter((_, i) => i !== n))}
+              aria-label={`Fjern ${linje}`}
+              style={{ background: 'transparent', border: 'none', color: 'var(--fejl)', cursor: 'pointer', fontSize: '14px', padding: '0 4px' }}
+            >
+              ×
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
+        <input
+          value={ny}
+          onChange={(e) => setNy(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') tilfoej(); }}
+          placeholder="Nyt punkt"
+          style={{ flex: 1, minWidth: 0, fontSize: '13px' }}
+        />
+        <Knap onClick={tilfoej} disabled={!ny.trim()}>+ Tilføj</Knap>
+      </div>
+
+      <Knap onClick={nulstil}>Nulstil til standard</Knap>
+    </div>
+  );
 }
 
 function poster(n: number): string {

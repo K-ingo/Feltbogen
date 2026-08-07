@@ -18,6 +18,8 @@ import IndstillingerSide from './IndstillingerSide';
 import Rundvisning from './Rundvisning';
 import GaesteSide from './GaesteSide';
 import { tokenFraAdresse } from './gaest';
+import TurkortSide from './TurkortSide';
+import { turkorttokenFraAdresse } from './turkort';
 // Kobler friskningen af delte ture på skrivninger. Importeres for sin
 // bivirkning — modulet melder sig selv til hos sync.
 import './delesnapshot';
@@ -31,6 +33,9 @@ function App() {
   // Et gæstelink afgøres af adresselinjen og læses én gang. Går gæsten videre
   // ind i appen, ryddes den, så et genbesøg ikke lander på turen igen.
   const [gaesteToken, setGaesteToken] = useState(() => tokenFraAdresse());
+  // Turkortet er endnu snævrere end gæstelinket: modtageren har ingen konto,
+  // og der er ingen vej videre ind i appen herfra.
+  const [turkortToken] = useState(() => turkorttokenFraAdresse());
   const onboardingSet = useErSet(ONBOARDING_SET);
   const [viserLogin, setViserLogin] = useState(false);
   // Rundvisningen kan hentes frem igen fra indstillingerne. Den vises da som
@@ -127,7 +132,13 @@ function App() {
     return () => document.removeEventListener('visibilitychange', naarSkjult);
   }, []);
 
-  // Gæsteruten går forud for alt andet: den kræver hverken konto eller
+  // Turkortet går forud for alt: det er ét opslag for én pårørende, og hun
+  // skal hverken se onboarding, login eller resten af appen.
+  if (turkortToken) {
+    return <TurkortSide token={turkortToken} />;
+  }
+
+  // Gæsteruten går forud for resten: den kræver hverken konto eller
   // onboarding, og den viser aldrig noget fra denne enheds egen base.
   if (gaesteToken) {
     return (

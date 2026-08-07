@@ -77,11 +77,16 @@ export function opretTomTur(): Promise<number> {
     }],
     budget_linjer: [],
     pak_af_tjek: null,
+    afgangs_tjek: null,
     besked_fra_ejer: '',
     noter: '',
     vejrsnapshot: '',
     dele_token: '',
     dele_snapshot: '',
+    turkort_token: '',
+    turkort_retur: '',
+    turkort_besked: '',
+    turkort_snapshot: '',
     oprettet: nu,
     aendret: nu
   });
