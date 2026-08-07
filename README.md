@@ -32,6 +32,7 @@ appen starter.
 | Sync | `src/sync.ts` | CRUD mod IndexedDB + PocketBase, og oprydning af det der ikke nåede op |
 | Auth | `src/pb.ts`, `src/useAuth.ts` | PocketBase-klient og login-tilstand |
 | Domænelogik | `src/smartMotor.ts` | Vejr, forbrugsberegning, kompatibilitets-advarsler, gruppeforslag, stedsøgning |
+| Efterregnskab | `src/pakAfTjek.ts` | Pak-af-tjek: hvad blev brugt, hvad lå urørt, hvad gik i stykker |
 | Statistik | `src/statistik.ts` | Aggregeringer over inventar og ture |
 | UI-primitiver | `src/ui.tsx`, `src/layout.ts` | Knap, Kort, Felt, Chip, Badge, listerækker, detalje-header |
 | Skærme | `src/App.tsx` m.fl. | Inventar, Grupper, Ture, Statistik |
@@ -46,6 +47,10 @@ noget forskelligt to steder.
 > og `ture`. Uden det dropper serveren feltet, og to enheder kan ikke blive
 > enige om hvilken post der er hvilken. Appen skriver en advarsel i konsollen
 > hvis den opdager det.
+>
+> Samlingen `ture` skal desuden have et JSON-felt `pak_af_tjek`. PocketBase
+> dropper lydløst felter der ikke findes i skemaet, så uden det bliver turens
+> efterregnskab liggende på den enhed det blev lavet på.
 
 Hver post har også et `pb_id`: er det sat, findes posten i PocketBase; er det
 tomt, er den kun lokal endnu.
@@ -100,6 +105,8 @@ Der er ingen service worker under `npm run dev`. Test offline med
 
 ## Status
 
-V1 under udvikling. Bygget: inventar, grupper, ture med smart-motor, statistik.
-Endnu ikke bygget: PWA-opsætning (service worker + manifest), deling og
-gæsteview, dashboard, badges/notifikationer, pak-af-tjek, indstillinger.
+V1 under udvikling. Bygget: inventar, grupper, ture med smart-motor, statistik,
+PWA, deling og gæsteview, dashboard, indstillinger, pak-af-tjek.
+Endnu ikke bygget: badges/notifikationer.
+
+Ideer til det videre arbejde ligger i [`IDEER.md`](./IDEER.md).

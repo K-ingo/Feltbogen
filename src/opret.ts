@@ -72,6 +72,7 @@ export function opretTomTur(): Promise<number> {
       baerer_delt_ids: []
     }],
     budget_linjer: [],
+    pak_af_tjek: null,
     besked_fra_ejer: '',
     noter: '',
     vejrsnapshot: '',

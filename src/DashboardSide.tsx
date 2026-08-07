@@ -37,8 +37,16 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, nytItem, nyTur }: Props
   const aar = tureIAar(ture);
   const nyeste = sidstTilfoejede(items, MAKS_SIDST_TILFOEJET);
 
+  // Kortet fører hen til den post det handler om — gear eller tur. Findes den
+  // ikke længere, sker der ingenting; listen bygges om ved næste render.
   const aabnHandling = (h: Handling) => {
-    const item = items.find((i) => i.uid === h.itemUid);
+    if (h.maal.slags === 'tur') {
+      const tur = ture.find((t) => t.uid === h.maal.uid);
+      if (tur?.id !== undefined) aabnTur(tur.id);
+      return;
+    }
+
+    const item = items.find((i) => i.uid === h.maal.uid);
     if (item?.id !== undefined) aabnItem(item.id);
   };
 
@@ -73,7 +81,11 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, nytItem, nyTur }: Props
               gap: '8px'
             }}>
               {alleHandlinger.slice(0, MAKS_HANDLINGER).map((h) => (
-                <HandlingsKort key={`${h.type}-${h.itemUid}`} handling={h} aabn={() => aabnHandling(h)} />
+                <HandlingsKort
+                  key={`${h.type}-${h.maal.slags}-${h.maal.uid}`}
+                  handling={h}
+                  aabn={() => aabnHandling(h)}
+                />
               ))}
             </div>
             {alleHandlinger.length > MAKS_HANDLINGER && (
@@ -180,8 +192,9 @@ function NaesteTurKort({ tur, items, grupper, aabn, opret }: {
 }
 
 function HandlingsKort({ handling, aabn }: { handling: Handling; aabn: () => void }) {
-  // Garantien har en frist; de to andre kan vente. Farven siger hvad der haster.
-  const haster = handling.type === 'garanti';
+  // Hvad der haster afgøres af reglen der fandt handlingen, ikke af kortet —
+  // en frist er ikke det samme for en garanti som for en tur.
+  const haster = handling.haster;
 
   return (
     <button

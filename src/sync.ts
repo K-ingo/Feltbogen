@@ -1,8 +1,31 @@
 import type { Table } from 'dexie';
 import type { RecordModel } from 'pocketbase';
-import { db, OVERNATNING, ITEM_STATUS, TUR_STATUS, AKTIVITET, TERRAEN, ERFARING } from './db';
+import {
+  db,
+  OVERNATNING,
+  ITEM_STATUS,
+  TUR_STATUS,
+  AKTIVITET,
+  TERRAEN,
+  ERFARING,
+  PAK_AF_STATUS,
+  PAK_AF_NIVEAU,
+  KATEGORI_VURDERING
+} from './db';
 import { pb, nuvaerendeBruger } from './pb';
-import type { Item, Gruppe, Tur, Synkroniserbar, Reference, Garanti, Deltager, BudgetLinje } from './db';
+import type {
+  Item,
+  Gruppe,
+  Tur,
+  Synkroniserbar,
+  Reference,
+  Garanti,
+  Deltager,
+  BudgetLinje,
+  PakAfTjek,
+  PakAfLinje,
+  KategoriNote
+} from './db';
 
 // Offline-first: alt skrives til IndexedDB først og sendes derefter til
 // PocketBase. Fejler netværket, bliver posten liggende uden pb_id og forsøges
@@ -78,6 +101,44 @@ function deltagere(v: unknown): Deltager[] {
       baerer_delt_ids: referencer(d.baerer_delt_ids)
     };
   });
+}
+
+// Ture fra før pak-af-tjekket fandtes har ingen — og det er den rigtige
+// værdi for dem: de er aldrig gjort op.
+function pakAfTjek(v: unknown): PakAfTjek | null {
+  if (!v || typeof v !== 'object') return null;
+  const t = v as Record<string, unknown>;
+
+  const linjer: PakAfLinje[] = (Array.isArray(t.linjer) ? t.linjer : [])
+    .map((raa) => (raa ?? {}) as Record<string, unknown>)
+    .filter((l) => tekst(l.item_uid) !== '')
+    .map((l) => {
+      const linje: PakAfLinje = {
+        item_uid: tekst(l.item_uid),
+        status: enumVaerdi(l.status, PAK_AF_STATUS, 'brugt')
+      };
+      const noter = tekst(l.noter);
+      if (noter) linje.noter = noter;
+      return linje;
+    });
+
+  const raaNoter = Array.isArray(t.kategori_noter) ? t.kategori_noter : [];
+  const kategori_noter: KategoriNote[] = raaNoter
+    .map((raa) => (raa ?? {}) as Record<string, unknown>)
+    .filter((n) => tekst(n.kategori) !== '')
+    .map((n) => ({
+      kategori: tekst(n.kategori),
+      vurdering: enumVaerdi(n.vurdering, KATEGORI_VURDERING, 'tilstraekkeligt'),
+      noter: tekst(n.noter)
+    }));
+
+  const tjek: PakAfTjek = {
+    udfyldt_dato: tekst(t.udfyldt_dato),
+    niveau: enumVaerdi(t.niveau, PAK_AF_NIVEAU, 'let'),
+    linjer
+  };
+  if (kategori_noter.length > 0) tjek.kategori_noter = kategori_noter;
+  return tjek;
 }
 
 function budgetLinjer(v: unknown): BudgetLinje[] {
@@ -231,6 +292,7 @@ const turSamling: Samling<Tur> = {
     loese_item_ids: t.loese_item_ids,
     deltagere: t.deltagere,
     budget_linjer: t.budget_linjer,
+    pak_af_tjek: t.pak_af_tjek ?? null,
     besked_fra_ejer: t.besked_fra_ejer,
     noter: t.noter,
     vejrsnapshot: t.vejrsnapshot,
@@ -257,6 +319,7 @@ const turSamling: Samling<Tur> = {
     loese_item_ids: referencer(r.loese_item_ids),
     deltagere: deltagere(r.deltagere),
     budget_linjer: budgetLinjer(r.budget_linjer),
+    pak_af_tjek: pakAfTjek(r.pak_af_tjek),
     besked_fra_ejer: tekst(r.besked_fra_ejer),
     noter: tekst(r.noter),
     vejrsnapshot: tekst(r.vejrsnapshot),

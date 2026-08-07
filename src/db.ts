@@ -12,12 +12,19 @@ export const OVERNATNING = ['haengekoeje', 'telt', 'shelter', 'blandet'] as cons
 export const AKTIVITET = ['bushcraft', 'vandretur', 'kano', 'andet'] as const;
 export const TERRAEN = ['skov', 'kyst', 'fjeld', 'mix'] as const;
 export const ERFARING = ['begynder', 'oevet', 'erfaren'] as const;
+export const PAK_AF_STATUS = ['brugt', 'ubrugt', 'i_stykker'] as const;
+export const PAK_AF_NIVEAU = ['let', 'grundig'] as const;
+export const KATEGORI_VURDERING = ['tilstraekkeligt', 'for_meget', 'for_lidt'] as const;
 
 // Værdierne gemmes uden æ/ø/å, så de er stabile som nøgler og i PocketBase.
 // Til visning skrives de ud på dansk.
 const ETIKETTER: Record<string, string> = {
   haengekoeje: 'hængekøje',
-  oevet: 'øvet'
+  oevet: 'øvet',
+  i_stykker: 'gik i stykker',
+  tilstraekkeligt: 'tilstrækkeligt',
+  for_meget: 'for meget',
+  for_lidt: 'for lidt'
 };
 
 export function etiket(vaerdi: string): string {
@@ -30,6 +37,9 @@ export type Overnatning = (typeof OVERNATNING)[number];
 export type Aktivitet = (typeof AKTIVITET)[number];
 export type Terraen = (typeof TERRAEN)[number];
 export type Erfaring = (typeof ERFARING)[number];
+export type PakAfStatus = (typeof PAK_AF_STATUS)[number];
+export type PakAfNiveau = (typeof PAK_AF_NIVEAU)[number];
+export type KategoriVurdering = (typeof KATEGORI_VURDERING)[number];
 
 export interface Garanti {
   laengde_aar: number;
@@ -107,6 +117,34 @@ export interface BudgetLinje {
   faktisk_kr: number;
 }
 
+// Hvad der skete med ét stykke gear på turen. Noterne findes kun på det
+// grundige niveau — på det lette er en linje tre knapper og ikke andet.
+export interface PakAfLinje {
+  item_uid: Reference;
+  status: PakAfStatus;
+  noter?: string;
+}
+
+// Hvordan en hel kategori føltes — om der var for meget eller for lidt med.
+// Det er den vurdering motoren senere skal lære mængder af; en enkelt linje
+// siger kun om ét item blev brugt.
+export interface KategoriNote {
+  kategori: string;
+  vurdering: KategoriVurdering;
+  noter: string;
+}
+
+// Turens efterregnskab. Uden det har smart-motoren ingen data at lære af —
+// se fundamentets §8.
+export interface PakAfTjek {
+  udfyldt_dato: string;
+  niveau: PakAfNiveau;
+  linjer: PakAfLinje[];
+  // Kun på det grundige niveau. Skifter man tilbage til let, bliver de
+  // liggende — de er dyrere at skrive end at bære rundt på.
+  kategori_noter?: KategoriNote[];
+}
+
 export interface Tur extends Synkroniserbar {
   id?: number;
   navn: string;
@@ -126,6 +164,9 @@ export interface Tur extends Synkroniserbar {
   loese_item_ids: Reference[];
   deltagere: Deltager[];
   budget_linjer: BudgetLinje[];
+  // null indtil turen er gjort op. Ture fra før feltet fandtes har det slet
+  // ikke — læs det derfor altid med ?? null.
+  pak_af_tjek: PakAfTjek | null;
   besked_fra_ejer: string;
   noter: string;
   vejrsnapshot: string;

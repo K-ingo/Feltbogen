@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, etiket, TUR_STATUS, OVERNATNING, AKTIVITET, TERRAEN, ERFARING } from './db';
+import { db, etiket, TUR_STATUS, OVERNATNING, AKTIVITET, TERRAEN, ERFARING, PAK_AF_NIVEAU } from './db';
 import type {
   Item,
   Gruppe,
@@ -12,6 +12,7 @@ import type {
   Erfaring,
   Deltager,
   BudgetLinje,
+  PakAfTjek,
   Reference
 } from './db';
 import {
@@ -52,6 +53,9 @@ import {
   Indlaeser,
   SektionsTitel
 } from './ui';
+import PakAfTjekSide from './PakAfTjekSide';
+import { nytPakAfTjek, synkroniserLinjer, resumetekst } from './pakAfTjek';
+import { useValg, PAK_AF_NIVEAU_VALG } from './indstillinger';
 import { nytDeletoken, lavSnapshot, deleLink, linkadvarsel, linkvaert } from './gaest';
 import { formatterPeriode } from './datotekst';
 import { hentDeltagelser, baererePrGear, visningsnavn } from './deltagelse';
@@ -68,8 +72,9 @@ interface Props {
   nyOprettet?: boolean;
 }
 
-// Turen har fire tilstande, og handlingsknappen fører til den næste.
-// "afsluttet" har ingen næste: pak-af-tjekket fra fundamentets §8 findes ikke.
+// Turen har fire tilstande, og handlingsknappen fører til den næste. En
+// afsluttet tur har ingen næste tilstand — der fører knappen til pak-af-tjekket
+// i stedet, så kredsløbet bliver lukket.
 const NAESTE_TILSTAND: Record<TurStatus, { label: string; naeste: TurStatus } | null> = {
   kladde: { label: 'Markér som klar', naeste: 'klar' },
   klar: { label: 'Start tur', naeste: 'aktiv' },
@@ -83,6 +88,9 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   const erDesktop = useErDesktop();
   const erBred = useErBredskaerm();
   const [visning, setVisning] = useState<Visning>('gruppe');
+  // Pak-af-tjekket lægger sig over turskærmen frem for at være en fane for
+  // sig: man kommer dertil fra turen, og man skal tilbage til den bagefter.
+  const [viserPakAfTjek, setViserPakAfTjek] = useState(false);
   const [vejrData, setVejrData] = useState<VejrData | null>(null);
   const [vejrHentes, setVejrHentes] = useState(false);
   const [vejrFejl, setVejrFejl] = useState('');
@@ -110,6 +118,11 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
       }
     }
   });
+
+  // Niveauet er en vane og ikke en egenskab ved turen, så det står i
+  // indstillingerne. Det følger med ind i tjekket, hvor det kan rettes for den
+  // enkelte tur.
+  const pakAfNiveau = useValg(PAK_AF_NIVEAU_VALG, PAK_AF_NIVEAU, 'let');
 
   // Bidragene ligger på serveren og ikke i den lokale base — de kommer fra
   // andres enheder. Uden forbindelse vises turen bare uden dem.
@@ -270,6 +283,34 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   const itemUidsPaaDenneTur = itemUidsPaaTur(tur, grupper ?? []);
   const pakItems = items?.filter((i) => itemUidsPaaDenneTur.has(i.uid)) ?? [];
 
+  const pakAfTjek = tur.pak_af_tjek ?? null;
+
+  // Tjekket laves her og ikke inde på selve skærmen. Så kan den aldrig komme
+  // til at skrive et tomt tjek oven i et udfyldt, og linjerne bygges på den
+  // samme pakkeliste som resten af turskærmen viser. Er pakkelisten rettet
+  // siden sidst, følger linjerne med.
+  const aabnPakAfTjek = async () => {
+    const opdateret = pakAfTjek
+      ? synkroniserLinjer(pakAfTjek, pakItems)
+      : nytPakAfTjek(pakItems, pakAfNiveau);
+
+    if (opdateret !== pakAfTjek) await opdater({ pak_af_tjek: opdateret });
+    setViserPakAfTjek(true);
+  };
+
+  if (viserPakAfTjek && pakAfTjek) {
+    return (
+      <PakAfTjekSide
+        tur={tur}
+        tjek={pakAfTjek}
+        pakItems={pakItems}
+        grupper={grupper ?? []}
+        gem={(nyt: PakAfTjek | null) => void opdater({ pak_af_tjek: nyt })}
+        tilbage={() => setViserPakAfTjek(false)}
+      />
+    );
+  }
+
   const vaegtDelt = pakItems.filter((i) => i.delt).reduce((s, i) => s + i.vaegt_g, 0);
   const vaegtPersonligt = pakItems.filter((i) => !i.delt).reduce((s, i) => s + i.vaegt_g, 0);
   // Delt gear bæres af én, men vises fair fordelt over deltagerne.
@@ -325,7 +366,17 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
         alleLinjer
       );
 
-  const handling = NAESTE_TILSTAND[tur.status];
+  const naeste = NAESTE_TILSTAND[tur.status];
+
+  // Én knap uanset tilstand: den fører turen videre indtil den er afsluttet, og
+  // derefter til efterregnskabet. Uden det sidste trin stopper turen bare, og
+  // motoren får aldrig noget at vide.
+  const handling = naeste
+    ? { label: naeste.label, gaa: () => void opdater({ status: naeste.naeste }) }
+    : {
+        label: pakAfTjek ? 'Se pak-af-tjek' : 'Lav pak-af-tjek',
+        gaa: () => void aabnPakAfTjek()
+      };
 
   // Sektionerne er de samme på begge layouts — kun rammen om dem er forskellig.
   const parametre = (
@@ -432,6 +483,19 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
     </div>
   );
 
+  // Er turen gjort op, står regnskabet på turen bagefter. Selve redigeringen
+  // sker på sin egen skærm — her er det kun til at læse.
+  const pakAfSektion = pakAfTjek && (
+    <Foldbar titel="Pak-af-tjek" resume={resumetekst(pakAfTjek)}>
+      <div style={{ display: 'grid', gap: '10px' }}>
+        <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)' }}>
+          {`Gjort op ${formatterDag(pakAfTjek.udfyldt_dato)} · niveau: ${pakAfTjek.niveau}`}
+        </div>
+        <Knap onClick={() => void aabnPakAfTjek()}>Åbn pak-af-tjek</Knap>
+      </div>
+    </Foldbar>
+  );
+
   // Resuméerne står altid fremme, så en foldet sektion stadig kan aflæses.
   const parametreResume = [
     `${tur.naetter} ${tur.naetter === 1 ? 'nat' : 'nætter'}`,
@@ -454,8 +518,8 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
         </div>
         <Segment vaerdier={TUR_STATUS} valgt={tur.status} vaelg={(s) => opdater({ status: s })} kompakt />
       </div>
-      {erDesktop && handling && (
-        <Knap variant="primaer" onClick={() => opdater({ status: handling.naeste })}>
+      {erDesktop && (
+        <Knap variant="primaer" onClick={handling.gaa}>
           {handling.label}
         </Knap>
       )}
@@ -466,6 +530,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   // de to opstillinger ikke kan komme til at vise forskellige ting.
   const sidespalte = (
     <>
+      {pakAfSektion}
       <Foldbar
         titel={`Deltagere (${tur.deltagere.length})`}
         resume={tur.deltagere.map((d) => d.navn).join(', ')}
@@ -529,17 +594,16 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
       <DetaljeHeader tilbage={tilbage} sletLabel="Slet tur" slet={slet} />
       {titelblok}
 
-      {handling && (
-        <Knap
-          variant="primaer"
-          onClick={() => opdater({ status: handling.naeste })}
-          style={{ width: '100%', marginTop: '14px', padding: '11px' }}
-        >
-          {handling.label}
-        </Knap>
-      )}
+      <Knap
+        variant="primaer"
+        onClick={handling.gaa}
+        style={{ width: '100%', marginTop: '14px', padding: '11px' }}
+      >
+        {handling.label}
+      </Knap>
 
       <div style={{ display: 'grid', gap: '8px', marginTop: '16px' }}>
+        {pakAfSektion}
         <Foldbar titel="Turparametre" resume={parametreResume}>{parametre}</Foldbar>
         {advarsler.length > 0 && (
           <Foldbar titel={`Advarsler (${advarsler.length})`} advarsel aabenFra>

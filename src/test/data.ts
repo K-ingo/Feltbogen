@@ -65,6 +65,7 @@ export function lavTur(felter: Partial<Tur> = {}): Tur {
     loese_item_ids: [],
     deltagere: [],
     budget_linjer: [],
+    pak_af_tjek: null,
     besked_fra_ejer: '',
     noter: '',
     vejrsnapshot: '',

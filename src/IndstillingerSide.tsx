@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from './db';
+import { db, PAK_AF_NIVEAU } from './db';
+import { saet, useValg, PAK_AF_NIVEAU_VALG } from './indstillinger';
 import { logUd, gemNavn } from './pb';
 import { hentNyesteUdgave, byggetekst } from './opdatering';
 import { useAuth } from './useAuth';
@@ -15,7 +16,7 @@ import {
 } from './dataudveksling';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
-import { Knap, SektionsTitel, Felt } from './ui';
+import { Knap, SektionsTitel, Felt, Segment } from './ui';
 
 interface Props {
   fane: Fane;
@@ -40,6 +41,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning }: Props) {
   const ture = useLiveQuery(() => db.ture.toArray()) ?? [];
   // Tælles om når basen ændrer sig, så tallet ikke står og lyver efter en sync.
   const usendt = useLiveQuery(usendtAntal, [], 0);
+  const pakAfNiveau = useValg(PAK_AF_NIVEAU_VALG, PAK_AF_NIVEAU, 'let');
 
   const synkroniser = async () => {
     setArbejder('sync');
@@ -188,6 +190,26 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning }: Props) {
             <Hjaelp>
               Alt gemmes først på enheden og sendes derefter op. Er du uden dækning, bliver
               ændringerne liggende og går op af sig selv når forbindelsen er tilbage.
+            </Hjaelp>
+          </Kort>
+        </section>
+
+        <section>
+          <SektionsTitel>Pak-af-tjek</SektionsTitel>
+          <Kort>
+            <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginBottom: '8px' }}>
+              Niveau på nye tjek
+            </div>
+            <Segment
+              vaerdier={PAK_AF_NIVEAU}
+              valgt={pakAfNiveau}
+              vaelg={(n) => void saet(PAK_AF_NIVEAU_VALG, n)}
+            />
+            <Hjaelp>
+              Let er tre knapper pr. stykke gear — brugt, ubrugt, gik i stykker. Grundig
+              lægger en note pr. item oveni, plus en vurdering af om der var for meget
+              eller for lidt med i hver kategori. Niveauet kan skiftes undervejs på den
+              enkelte tur.
             </Hjaelp>
           </Kort>
         </section>

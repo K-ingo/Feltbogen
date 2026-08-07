@@ -4,6 +4,8 @@ import { db, ITEM_STATUS } from './db';
 import type { Item, Tur, Garanti } from './db';
 import TagsInput from './TagsInput';
 import { turePrItem } from './statistik';
+import { brugPrItem } from './pakAfTjek';
+import type { Brug } from './pakAfTjek';
 import { garantiAdvarsel } from './smartMotor';
 import {
   Felt,
@@ -74,6 +76,7 @@ function ItemDetalje({ itemId, tilbage, nyOprettet }: Props) {
   if (!item) return <Indlaeser />;
 
   const turePaaItem = turePrItem(ture, grupper).get(item.uid) ?? [];
+  const brug = brugPrItem(ture).get(item.uid) ?? null;
   const advarsel = garantiAdvarsel(item);
 
   return (
@@ -116,7 +119,7 @@ function ItemDetalje({ itemId, tilbage, nyOprettet }: Props) {
 
         <Feltkort label="Dimensioner" value={item.dimensioner} onChange={(v) => opdater({ dimensioner: v })} placeholder="ø 33 × 15 cm" />
 
-        <Brugsstatistik ture={turePaaItem} />
+        <Brugsstatistik ture={turePaaItem} brug={brug} />
 
         <div style={{ height: '4px' }} />
         <SektionsTitel>Kompatibilitet</SektionsTitel>
@@ -244,7 +247,10 @@ function DeltKort({ delt, skift }: { delt: boolean; skift: (v: boolean) => void 
 
 // Hvor meget gearet reelt bliver brugt. Uden turhistorik står der ingenting at
 // bygge på, så kortet siger det ligeud frem for at vise nuller.
-function Brugsstatistik({ ture }: { ture: Tur[] }) {
+//
+// "Med på 8 ture" og "brugt 5 af 8 gange" er to forskellige tal: det første
+// tæller pakkelister, det andet kun de ture der er gjort op bagefter.
+function Brugsstatistik({ ture, brug }: { ture: Tur[]; brug: Brug | null }) {
   const seneste = ture.find((t) => t.startdato);
 
   return (
@@ -259,6 +265,12 @@ function Brugsstatistik({ ture }: { ture: Tur[] }) {
             <strong>{ture.length} {ture.length === 1 ? 'tur' : 'ture'}</strong>
             {seneste && ` · senest ${formatterDato(seneste.startdato)}`}
           </div>
+          {brug && brug.gjort_op > 0 && (
+            <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', marginTop: '3px' }}>
+              Brugt {brug.brugt} af {brug.gjort_op} gange
+              {brug.i_stykker > 0 && ` · gik i stykker ${brug.i_stykker} ${brug.i_stykker === 1 ? 'gang' : 'gange'}`}
+            </div>
+          )}
           <div style={{ marginTop: '8px', display: 'grid', gap: '4px' }}>
             {ture.slice(0, 3).map((t) => (
               <div key={t.uid} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--tekst-dæmpet)' }}>
