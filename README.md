@@ -37,6 +37,12 @@ appen starter.
 | UI-primitiver | `src/ui.tsx`, `src/layout.ts` | Knap, Kort, Felt, Chip, Badge, listerækker, detalje-header |
 | Skærme | `src/App.tsx` m.fl. | Inventar, Grupper, Ture, Statistik |
 
+Smart-motoren er rådgiver og ikke automat (fundament §15). Derfor bærer hver
+advarsel, hvert gruppeforslag og hvert forbrugstal en `begrundelse` — reglen bag
+skrevet ud — som vises bag et "hvorfor?" i skærmbilledet. Kropsdata (vægt,
+aktivitetsniveau, kaloriebehov) sættes i indstillingerne, bliver på enheden og
+lader motoren regne med brugeren frem for en gennemsnitsdansker.
+
 Hver post har et `uid` — dens identitet på tværs af enheder. Det tildeles ved
 oprettelse, så det også findes offline, og alle referencer mellem poster
 (`item_ids`, `gruppe_ids`, `loese_item_ids`, deltagernes gear) bruger `uid`.

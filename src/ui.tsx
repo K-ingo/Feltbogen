@@ -619,6 +619,54 @@ export function DetaljeHeader({ tilbage, sletLabel, slet }: DetaljeHeaderProps) 
   );
 }
 
+// Motorens resonnement, gemt bag et lille spørgsmålstegn.
+//
+// Åbenhed er det der gør forskellen mellem en rådgiver og en automat
+// (fundamentet §15). Motoren ved allerede hvorfor den siger som den gør — den
+// skal bare kunne spørges. Teksten ligger også i title, så den kan læses ved
+// at holde musen over på PC uden at folde noget ud.
+export function Hvorfor({ begrundelse }: { begrundelse: string }) {
+  const [aaben, setAaben] = useState(false);
+
+  if (!begrundelse) return null;
+
+  return (
+    <>
+      <button
+        onClick={() => setAaben(!aaben)}
+        title={begrundelse}
+        aria-expanded={aaben}
+        style={{
+          background: 'transparent',
+          border: 'none',
+          padding: '0 2px',
+          fontSize: '11px',
+          cursor: 'pointer',
+          color: aaben ? 'var(--accent)' : 'var(--tekst-svag)',
+          textDecoration: 'underline',
+          textUnderlineOffset: '2px'
+        }}
+      >
+        hvorfor?
+      </button>
+      {aaben && (
+        <div style={{
+          marginTop: '5px',
+          padding: '8px 10px',
+          borderRadius: '8px',
+          border: '1px solid var(--border-svag)',
+          background: 'var(--bg-forhoejet)',
+          fontSize: '11px',
+          lineHeight: 1.55,
+          color: 'var(--tekst-dæmpet)'
+        }}>
+          {begrundelse}
+        </div>
+      )}
+    </>
+  );
+}
+
 export function Indlaeser() {
   return <div style={{ padding: '20px', color: 'var(--tekst-dæmpet)' }}>Indlæser...</div>;
 }

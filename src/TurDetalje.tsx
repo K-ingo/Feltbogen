@@ -37,7 +37,7 @@ import {
   tildelGear,
   soegSted
 } from './smartMotor';
-import type { VejrData, StedForslag, Advarsel, Pakkelinje, Pakkeafsnit, Beregninger, Baerevaegt } from './smartMotor';
+import type { VejrData, StedForslag, Advarsel, Pakkelinje, Pakkeafsnit, Beregninger, Baerevaegt, GruppeForslag } from './smartMotor';
 import {
   Knap,
   Felt,
@@ -51,11 +51,12 @@ import {
   TitelInput,
   DetaljeHeader,
   Indlaeser,
-  SektionsTitel
+  SektionsTitel,
+  Hvorfor
 } from './ui';
 import PakAfTjekSide from './PakAfTjekSide';
 import { nytPakAfTjek, synkroniserLinjer, resumetekst } from './pakAfTjek';
-import { useValg, PAK_AF_NIVEAU_VALG } from './indstillinger';
+import { useValg, useKropsdata, PAK_AF_NIVEAU_VALG } from './indstillinger';
 import { nytDeletoken, lavSnapshot, deleLink, linkadvarsel, linkvaert } from './gaest';
 import { formatterPeriode } from './datotekst';
 import { hentDeltagelser, baererePrGear, visningsnavn } from './deltagelse';
@@ -123,6 +124,9 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   // indstillingerne. Det følger med ind i tjekket, hvor det kan rettes for den
   // enkelte tur.
   const pakAfNiveau = useValg(PAK_AF_NIVEAU_VALG, PAK_AF_NIVEAU, 'let');
+  // Motoren regner med brugeren frem for en gennemsnitsdansker, når hun har
+  // fortalt den hvem hun er.
+  const kropsdata = useKropsdata();
 
   // Bidragene ligger på serveren og ikke i den lokale base — de kommer fra
   // andres enheder. Uden forbindelse vises turen bare uden dem.
@@ -338,7 +342,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
 
   const advarsler = [...findAdvarsler(pakItems), ...overnatningsAdvarsler(tur, pakItems)];
   const perItem = advarslerPrItem(advarsler);
-  const beregninger = beregnForbrug(tur);
+  const beregninger = beregnForbrug(tur, kropsdata);
   const gruppeForslag = grupper ? foreslaaGrupper(tur, grupper) : [];
 
   // Deltagernes eget grej hører til i den samme liste som ens eget — det er
@@ -787,7 +791,21 @@ function Turparametre({
           <Noegletal vaerdi={`${beregninger.mad_kg} kg`} label="Mad" />
           <Noegletal vaerdi={`${beregninger.gas_g} g`} label="Gas" />
         </div>
+        {/* Tallene er råd og ikke facit, så de skal kunne spørges ad. */}
+        <div style={{ marginTop: '8px', display: 'grid', gap: '5px' }}>
+          <Forbrugsforklaring label="Vand" begrundelse={beregninger.begrundelser.vand} />
+          <Forbrugsforklaring label="Mad" begrundelse={beregninger.begrundelser.mad} />
+          <Forbrugsforklaring label="Gas" begrundelse={beregninger.begrundelser.gas} />
+        </div>
       </Infokort>
+    </div>
+  );
+}
+
+function Forbrugsforklaring({ label, begrundelse }: { label: string; begrundelse: string }) {
+  return (
+    <div style={{ fontSize: '11px', color: 'var(--tekst-svag)' }}>
+      {label}: <Hvorfor begrundelse={begrundelse} />
     </div>
   );
 }
@@ -910,7 +928,9 @@ function Advarselsliste({ advarsler }: { advarsler: Advarsel[] }) {
           <div style={{ fontSize: '12px', fontWeight: 500, color: a.niveau === 'roed' ? 'var(--fejl)' : 'var(--advarsel)' }}>
             {a.besked}
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginTop: '1px' }}>{a.detalje}</div>
+          <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginTop: '1px' }}>
+            {a.detalje} <Hvorfor begrundelse={a.begrundelse} />
+          </div>
         </div>
       ))}
     </div>
@@ -1098,7 +1118,7 @@ function Indholdsvalg({ grupper, items, tur, paaTuren, gruppeForslag, toggleGrup
   items: Item[];
   tur: Tur;
   paaTuren: Set<Reference>;
-  gruppeForslag: Gruppe[];
+  gruppeForslag: GruppeForslag[];
   toggleGruppe: (uid: Reference) => Promise<void>;
   toggleLoestItem: (uid: Reference) => Promise<void>;
 }) {
@@ -1108,15 +1128,20 @@ function Indholdsvalg({ grupper, items, tur, paaTuren, gruppeForslag, toggleGrup
         <div style={{ padding: '10px 12px', background: 'var(--accent-bg)', borderRadius: '8px', marginBottom: '16px' }}>
           <SektionsTitel>Foreslåede grupper</SektionsTitel>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-            {gruppeForslag.map((g) => (
+            {gruppeForslag.map((f) => (
               <button
-                key={g.uid}
-                onClick={() => toggleGruppe(g.uid)}
+                key={f.gruppe.uid}
+                onClick={() => toggleGruppe(f.gruppe.uid)}
                 style={{ padding: '5px 12px', fontSize: '12px', background: 'var(--bg-forhoejet)', color: 'var(--accent)', border: '1px solid var(--accent-border)', borderRadius: '14px', cursor: 'pointer', fontWeight: 500 }}
               >
-                + {g.navn}
+                + {f.gruppe.navn}
               </button>
             ))}
+          </div>
+          {/* Én samlet forklaring frem for en pr. chip — ellers fylder
+              spørgsmålstegnene mere end forslagene. */}
+          <div style={{ marginTop: '6px' }}>
+            <Hvorfor begrundelse={gruppeForslag.map((f) => f.begrundelse).join(' ')} />
           </div>
         </div>
       )}

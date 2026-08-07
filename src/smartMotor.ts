@@ -1,5 +1,5 @@
 import { etiket } from './db';
-import type { Item, Tur, Gruppe, Deltager, Overnatning, Reference } from './db';
+import type { Item, Tur, Gruppe, Deltager, Overnatning, Reference, Aktivitetsniveau } from './db';
 
 export interface VejrDag {
   dato: string;
@@ -113,28 +113,183 @@ export function vejrIkonKode(kode: number): string {
   return '☁';
 }
 
+// ─────────────────────────────────────────────
+// Forventet forbrug
+//
+// Tallene er råd, ikke facit. Derfor følger der en begrundelse med hvert af
+// dem: brugeren skal kunne se hvad de bygger på og selv vurdere om det passer
+// på hende. Se fundamentets §15 om motoren som rådgiver frem for automat.
+// ─────────────────────────────────────────────
+
+// Vandbehovet glider mellem de to yderpunkter hen over året. Før var det et
+// binært spring mellem marts og april, og et hop på 40 % mellem to nabodage er
+// ikke til at tro på.
+const VAND_VINTER_L = 2.5;
+const VAND_SOMMER_L = 3.8;
+
+// Mad går den anden vej: man brænder mere af på at holde varmen. Gennemsnittet
+// over året lander på de 0,6 kg der stod her før.
+const MAD_VINTER_KG = 0.65;
+const MAD_SOMMER_KG = 0.55;
+
+const GAS_PR_PERSON_PR_DAG_G = 25;
+
+// Den krop satserne ovenfor er skrevet for. Er der ikke oplyst en vægt, er det
+// den der regnes med — og så opfører motoren sig som før.
+const REFERENCE_VAEGT_KG = 75;
+
+// En tastefejl i vægtfeltet må ikke kunne fordoble eller halvere pakkelisten.
+const MINDSTE_VAEGTFAKTOR = 0.7;
+const STOERSTE_VAEGTFAKTOR = 1.4;
+
+// Bøjet som tillægsord, så begrundelsen kan sige "højt aktivitetsniveau" og
+// ikke "høj aktivitetsniveau".
+const NIVEAU_ORD: Record<Aktivitetsniveau, string> = {
+  lav: 'lavt',
+  middel: 'middel',
+  hoej: 'højt'
+};
+
+const AKTIVITETSFAKTOR: Record<Aktivitetsniveau, number> = {
+  lav: 0.85,
+  middel: 1,
+  hoej: 1.2
+};
+
+// Tør turmad ligger omkring 5 kcal/g. Bruges kun når man selv har skrevet et
+// kaloriebehov ind — ellers regnes der i kilo hele vejen.
+const KCAL_PR_KG_MAD = 5000;
+
+// Koldest omkring midten af januar. Kurven er en cosinus gennem året, så to
+// nabodage aldrig kan springe.
+const KOLDESTE_DAG = 15;
+const DAGE_PR_AAR = 365;
+
+export interface Kropsdata {
+  kropsvaegt_kg?: number;
+  aktivitetsniveau?: Aktivitetsniveau;
+  // Valgfri: sætter man den, regnes maden ud fra kalorier i stedet.
+  daglig_kalorie?: number;
+}
+
 export interface Beregninger {
   vand_liter: number;
   mad_kg: number;
   gas_g: number;
+  // Hvordan hvert tal er nået frem. Vises bag "hvorfor?".
+  begrundelser: { vand: string; mad: string; gas: string };
 }
 
-export function beregnForbrug(tur: Tur): Beregninger {
+// 0 i dybvinter, 1 i højsommer, og alt derimellem glidende.
+export function saesonfaktor(dato: string): number {
+  const dag = dagIAaret(dato);
+  if (dag === null) return 1;
+
+  return (1 - Math.cos((2 * Math.PI * (dag - KOLDESTE_DAG)) / DAGE_PR_AAR)) / 2;
+}
+
+export function beregnForbrug(tur: Tur, krop: Kropsdata = {}): Beregninger {
   const dage = Math.max(1, tur.naetter + 1);
-  const erSommer = erSommermaanederne(tur.startdato);
-  const vand_pr_person_pr_dag = erSommer ? 3.5 : 2.5;
+  const personer = tur.personer;
+  const faktor = saesonfaktor(tur.startdato);
+
+  const vaegtfaktor = beregnVaegtfaktor(krop.kropsvaegt_kg);
+  const niveau = krop.aktivitetsniveau;
+  const aktivitetsfaktor = niveau ? AKTIVITETSFAKTOR[niveau] : 1;
+  const kropsfaktor = vaegtfaktor * aktivitetsfaktor;
+
+  const vandPrDag = mellem(VAND_VINTER_L, VAND_SOMMER_L, faktor) * kropsfaktor;
+
+  // Har man selv skrevet et kaloriebehov ind, er spørgsmålet besvaret — så
+  // skal hverken vægt, aktivitetsniveau eller årstid gætte oveni.
+  const egetKaloriebehov = (krop.daglig_kalorie ?? 0) > 0;
+  const madPrDag = egetKaloriebehov
+    ? krop.daglig_kalorie! / KCAL_PR_KG_MAD
+    : mellem(MAD_VINTER_KG, MAD_SOMMER_KG, faktor) * kropsfaktor;
+
+  const omfang = `${antal(personer, 'person', 'personer')} × ${antal(dage, 'dag', 'dage')}`;
+  const kropstekst = kropsbegrundelse(krop, vaegtfaktor, aktivitetsfaktor);
 
   return {
-    vand_liter: Math.round(tur.personer * dage * vand_pr_person_pr_dag * 10) / 10,
-    mad_kg: Math.round(tur.personer * dage * 0.6 * 10) / 10,
-    gas_g: Math.round(tur.personer * dage * 25)
+    vand_liter: afrundet(personer * dage * vandPrDag),
+    mad_kg: afrundet(personer * dage * madPrDag),
+    gas_g: Math.round(personer * dage * GAS_PR_PERSON_PR_DAG_G),
+    begrundelser: {
+      vand: [
+        `${omfang} × ${tal(vandPrDag)} L pr. dag.`,
+        `Grundsatsen glider fra ${tal(VAND_VINTER_L)} L i dybvinter til ${tal(VAND_SOMMER_L)} L i højsommer;`,
+        `${saesontekst(tur.startdato, faktor)}.`,
+        kropstekst
+      ].filter(Boolean).join(' '),
+      mad: [
+        `${omfang} × ${tal(madPrDag)} kg pr. dag.`,
+        egetKaloriebehov
+          ? `Regnet ud fra dit eget behov på ${Math.round(krop.daglig_kalorie!)} kcal om dagen og ca. ${KCAL_PR_KG_MAD / 1000} kcal pr. gram tør turmad.`
+          : `Grundsatsen går den modsatte vej af vandet — ${tal(MAD_VINTER_KG, 2)} kg i dybvinter mod ${tal(MAD_SOMMER_KG, 2)} kg i højsommer, fordi kulden brænder mere af. ${stort(saesontekst(tur.startdato, faktor))}.`,
+        egetKaloriebehov ? '' : kropstekst
+      ].filter(Boolean).join(' '),
+      gas: `${omfang} × ${GAS_PR_PERSON_PR_DAG_G} g pr. dag. En fast sats — hvor meget der koges af, afhænger mere af hvad man laver end af årstiden.`
+    }
   };
 }
 
-function erSommermaanederne(dato: string): boolean {
-  if (!dato) return true;
-  const m = new Date(dato).getMonth();
-  return m >= 3 && m <= 8;
+function beregnVaegtfaktor(kropsvaegt_kg?: number): number {
+  if (!kropsvaegt_kg || kropsvaegt_kg <= 0) return 1;
+
+  const raa = kropsvaegt_kg / REFERENCE_VAEGT_KG;
+  return Math.min(STOERSTE_VAEGTFAKTOR, Math.max(MINDSTE_VAEGTFAKTOR, raa));
+}
+
+function kropsbegrundelse(krop: Kropsdata, vaegtfaktor: number, aktivitetsfaktor: number): string {
+  const dele = [
+    krop.kropsvaegt_kg ? `din vægt på ${Math.round(krop.kropsvaegt_kg)} kg (×${tal(vaegtfaktor, 2)})` : '',
+    krop.aktivitetsniveau ? `${NIVEAU_ORD[krop.aktivitetsniveau]} aktivitetsniveau (×${tal(aktivitetsfaktor, 2)})` : ''
+  ].filter(Boolean);
+
+  if (dele.length === 0) {
+    return `Ingen kropsdata sat, så der regnes med en person på ${REFERENCE_VAEGT_KG} kg — sæt din vægt i indstillingerne for et tal der passer på dig.`;
+  }
+  return `Justeret for ${dele.join(' og ')}.`;
+}
+
+function saesontekst(dato: string, faktor: number): string {
+  const pct = Math.round(faktor * 100);
+  if (!dagIAaret(dato)) return 'turen har ingen startdato, så der regnes med højsommer';
+  return `turens startdato ligger ${pct} % af vejen mod højsommer`;
+}
+
+// Dag 1-366, eller null hvis datoen ikke kan læses.
+function dagIAaret(dato: string): number | null {
+  if (!dato) return null;
+
+  const d = new Date(dato);
+  if (Number.isNaN(d.getTime())) return null;
+
+  const nytaar = new Date(d.getFullYear(), 0, 0);
+  return Math.round((d.getTime() - nytaar.getTime()) / 86400000);
+}
+
+function mellem(vinter: number, sommer: number, faktor: number): number {
+  return vinter + (sommer - vinter) * faktor;
+}
+
+function afrundet(v: number): number {
+  return Math.round(v * 10) / 10;
+}
+
+// Tal skrevet på dansk — 3.8 bliver til "3,8".
+function tal(v: number, decimaler = 1): string {
+  return v.toFixed(decimaler).replace('.', ',');
+}
+
+// Sætningsdele sættes sammen af flere stykker, og et af dem kan komme til at
+// stå først. Så skal det begynde med stort.
+function stort(tekst: string): string {
+  return tekst.charAt(0).toUpperCase() + tekst.slice(1);
+}
+
+function antal(n: number, ental: string, flertal: string): string {
+  return `${n} ${n === 1 ? ental : flertal}`;
 }
 
 export interface Advarsel {
@@ -146,6 +301,9 @@ export interface Advarsel {
   itemUid: Reference;
   // Det manglende tag — kort nok til en chip ved siden af navnet.
   mangler: string;
+  // Reglen der udløste advarslen, skrevet ud. Motoren ved allerede hvorfor —
+  // den skal bare sige det, ellers ser den ud som om den gætter.
+  begrundelse: string;
 }
 
 export function findAdvarsler(pakItems: Item[]): Advarsel[] {
@@ -153,6 +311,8 @@ export function findAdvarsler(pakItems: Item[]): Advarsel[] {
 
   const alleTagsPaaTur = new Set<string>();
   pakItems.forEach((i) => i.tags.forEach((t) => alleTagsPaaTur.add(t)));
+
+  const tagsTaltOp = `Pakkelisten har ${antal(pakItems.length, 'stykke gear', 'stykker gear')} med ${antal(alleTagsPaaTur.size, 'tag', 'forskellige tags')} tilsammen`;
 
   pakItems.forEach((item) => {
     item.kraever.forEach((krav) => {
@@ -162,7 +322,8 @@ export function findAdvarsler(pakItems: Item[]): Advarsel[] {
           besked: `${item.navn} kræver "${krav}"`,
           detalje: 'Ingen items på turen leverer dette. Tilføj et item med tagget.',
           itemUid: item.uid,
-          mangler: krav
+          mangler: krav,
+          begrundelse: `Reglen: står et tag under "kræver" på et stykke gear, skal noget andet på turen bære det tag. ${tagsTaltOp} — "${krav}" er ikke blandt dem. Rød, fordi et krav er en hård afhængighed: uden den virker ${item.navn} ikke.`
         });
       }
     });
@@ -174,7 +335,8 @@ export function findAdvarsler(pakItems: Item[]): Advarsel[] {
           besked: `${item.navn} komplementerer "${komp}"`,
           detalje: 'Ingen items på turen leverer dette. Overvej at tilføje.',
           itemUid: item.uid,
-          mangler: komp
+          mangler: komp,
+          begrundelse: `Reglen: står et tag under "komplementer", er det et blødt forslag. ${tagsTaltOp} — "${komp}" er ikke blandt dem. Gul, fordi ${item.navn} godt kan bruges uden.`
         });
       }
     });
@@ -211,24 +373,42 @@ export function itemsPaaTur(tur: Tur, grupper: Gruppe[], items: Item[]): Item[] 
   return items.filter((i) => uids.has(i.uid));
 }
 
-export function foreslaaGrupper(tur: Tur, grupper: Gruppe[]): Gruppe[] {
-  const turTags = new Set<string>();
-  turTags.add(tur.overnatning);
-  turTags.add(tur.aktivitet);
-  turTags.add(tur.terraen);
-  if (tur.personer > 1) turTags.add('gruppe');
-  else turTags.add('solo');
+export interface GruppeForslag {
+  gruppe: Gruppe;
+  // Hvor mange af gruppens tags der ramte turen.
+  score: number;
+  traf: string[];
+  begrundelse: string;
+}
+
+// Turens kendetegn som tags. De er det gruppernes tags måles imod.
+export function turensTags(tur: Tur): Set<string> {
+  return new Set<string>([
+    tur.overnatning,
+    tur.aktivitet,
+    tur.terraen,
+    tur.personer > 1 ? 'gruppe' : 'solo'
+  ]);
+}
+
+export function foreslaaGrupper(tur: Tur, grupper: Gruppe[]): GruppeForslag[] {
+  const turTags = turensTags(tur);
+  const turtekst = [...turTags].map(etiket).join(', ');
 
   return grupper
     .filter((g) => !tur.gruppe_ids.includes(g.uid))
-    .map((g) => ({
-      gruppe: g,
-      score: g.tags.filter((t) => turTags.has(t)).length
-    }))
+    .map((g) => {
+      const traf = g.tags.filter((t) => turTags.has(t));
+      return {
+        gruppe: g,
+        score: traf.length,
+        traf,
+        begrundelse: `Turen er markeret ${turtekst}. ${g.navn} matcher på ${traf.length} af sine ${antal(g.tags.length, 'tag', 'tags')}: ${traf.map(etiket).join(', ')}.`
+      };
+    })
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 3)
-    .map((x) => x.gruppe);
+    .slice(0, 3);
 }
 
 // ─────────────────────────────────────────────
@@ -603,7 +783,8 @@ export function overnatningsAdvarsler(tur: Tur, pakItems: Item[]): Advarsel[] {
     besked: `${navne.join(' og ')} sover i ${etiket(form)}`,
     detalje: `Intet gear på turen hedder eller er tagget "${etiket(form)}". Sæt tagget på det gear der dækker, eller tilføj det til listen.`,
     itemUid: '',
-    mangler: etiket(form)
+    mangler: etiket(form),
+    begrundelse: `Reglen: en deltager der sover i telt eller hængekøje skal have gear der dækker — shelter står i skoven, og "blandet" er ikke et krav om noget bestemt. ${antal(pakItems.length, 'stykke gear', 'stykker gear')} på turen blev gennemgået, både på navn og på tags, og intet af dem svarer til "${etiket(form)}".`
   }));
 }
 

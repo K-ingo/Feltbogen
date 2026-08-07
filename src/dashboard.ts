@@ -56,6 +56,8 @@ export interface Handling {
   titel: string;
   detalje: string;
   maal: Maal;
+  // Reglen der udløste handlingen, skrevet ud. Vises bag "hvorfor?".
+  begrundelse: string;
   // Kortet farves rødt. Sættes af den enkelte handling og ikke af skærmen, så
   // grænsen for hvornår noget haster står sammen med reglen der finder det.
   haster: boolean;
@@ -89,6 +91,7 @@ export function handlinger(
       titel: 'Garanti udløber',
       detalje: `${item.navn} · ${garantiFrist(dage)}`,
       maal: { slags: 'item', uid: item.uid },
+      begrundelse: `Garantien på ${item.navn} udløber ${item.garanti?.udloeber_dato}, og du har bedt om at blive mindet om det ${item.garanti?.paamindelse_dage} dage før.`,
       haster: true
     }));
 
@@ -101,6 +104,7 @@ export function handlinger(
       titel: 'Manglende købsinfo',
       detalje: i.navn,
       maal: { slags: 'item', uid: i.uid },
+      begrundelse: `${i.navn} har en pris på ${i.pris_kr} kr, men hverken købssted eller købsdato. Det er de to ting en garantisag skal bruge, og de er svære at grave frem bagefter.`,
       haster: false
     }));
 
@@ -145,6 +149,7 @@ function kladderNaerStart(ture: Tur[], nu: Date): Handling[] {
       titel: 'Turen er stadig en kladde',
       detalje: `${tur.navn || 'Uden navn'} · ${startFrist(dage)}`,
       maal: { slags: 'tur' as const, uid: tur.uid },
+      begrundelse: `Turen begynder ${startOm(dage)} og står stadig som kladde. Varslet går ${KLADDE_VARSEL_DAGE} dage tilbage — så tæt på er en kladde ikke længere noget man er i gang med.`,
       haster: false
     }));
 }
@@ -163,12 +168,14 @@ function manglendePakAfTjek(ture: Tur[], nu: Date): Handling[] {
       titel: 'Mangler pak-af-tjek',
       detalje: `${tur.navn || 'Uden navn'} · ${slutFrist(dage)}`,
       maal: { slags: 'tur' as const, uid: tur.uid },
+      begrundelse: `Turen står som afsluttet og sluttede ${sluttedeFor(dage)}, men den er aldrig gjort op. Uden pak-af-tjekket har smart-motoren ingen data at lære af. Efter ${PAK_AF_FRIST_DAGE} dage regnes det som noget der haster, fordi man husker dårligere jo længere tid der går.`,
       // Jo længere tid der går, jo mindre kan man huske. Efter fristen er det
       // ikke længere en note man kan tage sig af i næste uge.
       haster: dage > PAK_AF_FRIST_DAGE
     }));
 }
 
+// Til detaljelinjen på kortet, hvor der ikke er plads til en hel sætning.
 function startFrist(dage: number): string {
   if (dage > 1) return `om ${dage} dage`;
   if (dage === 1) return 'i morgen';
@@ -179,6 +186,17 @@ function slutFrist(dage: number): string {
   if (dage > 1) return `slut for ${dage} dage siden`;
   if (dage === 1) return 'slut i går';
   return 'slut i dag';
+}
+
+// De samme to frister, bøjet så de kan stå midt i en sætning.
+function startOm(dage: number): string {
+  if (dage > 1) return `om ${dage} dage`;
+  return dage === 1 ? 'i morgen' : 'i dag';
+}
+
+function sluttedeFor(dage: number): string {
+  if (dage > 1) return `for ${dage} dage siden`;
+  return dage === 1 ? 'i går' : 'i dag';
 }
 
 // Gear der ikke har været med på nogen af de seneste ture. Måles i ture og
@@ -207,6 +225,7 @@ function ubrugteEfterSidsteTure(
       titel: 'Ubrugt gear',
       detalje: `${i.navn} · ${forgangne.length} ture`,
       maal: { slags: 'item', uid: i.uid },
+      begrundelse: `${i.navn} var ikke med på nogen af de seneste ${forgangne.length} ture — hverken løst eller via en gruppe. Der måles i ture og ikke i måneder, fordi det er turene der siger noget om brug.`,
       haster: false
     }));
 }

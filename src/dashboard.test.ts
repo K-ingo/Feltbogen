@@ -296,6 +296,70 @@ describe('handlinger', () => {
   });
 });
 
+// Motoren skal kunne spørges hvorfor. Kortet er kort af nødvendighed, men
+// begrundelsen bag "hvorfor?" har plads til reglen.
+describe('begrundelser', () => {
+  it('forklarer en garanti med dato og varsel', () => {
+    const item = lavItem({
+      navn: 'Nordisk Telemark',
+      koebt_hos: 'Butik',
+      koebsdato: '01/2025',
+      garanti: { laengde_aar: 2, udloeber_dato: '02/08/2026', paamindelse_dage: 30 }
+    });
+
+    const [h] = handlinger([item], [], [], NU);
+
+    expect(h.begrundelse).toContain('02/08/2026');
+    expect(h.begrundelse).toContain('30 dage før');
+  });
+
+  it('forklarer manglende købsinfo med prisen og hvad den skal bruges til', () => {
+    const [h] = handlinger([lavItem({ navn: 'Toaks 1L', pris_kr: 400 })], [], [], NU);
+
+    expect(h.begrundelse).toContain('400 kr');
+    expect(h.begrundelse).toContain('garantisag');
+  });
+
+  it('forklarer ubrugt gear med hvor mange ture der blev målt på', () => {
+    const item = lavItem({ navn: 'Fiskars X7', pris_kr: 0, koebt_hos: 'Butik' });
+    const ture = ['2026-07-01', '2026-06-01', '2026-05-01', '2026-04-01', '2026-03-01']
+      .map((d) => lavTur({ startdato: d, slutdato: d }));
+
+    const [h] = handlinger([item], ture, [], NU);
+
+    expect(h.begrundelse).toContain('seneste 5 ture');
+    expect(h.begrundelse).toContain('via en gruppe');
+  });
+
+  it('forklarer en kladde med hvor langt varslet rækker', () => {
+    const tur = lavTur({ navn: 'Rold Skov', startdato: '2026-08-01', slutdato: '2026-08-01', status: 'kladde' });
+
+    const [h] = handlinger([], [tur], [], NU);
+
+    expect(h.begrundelse).toContain('begynder om 2 dage');
+    expect(h.begrundelse).toContain('3 dage tilbage');
+  });
+
+  it('forklarer et manglende pak-af-tjek med hvad det koster at lade være', () => {
+    const tur = lavTur({ navn: 'Mols', startdato: '2026-07-20', slutdato: '2026-07-20', status: 'afsluttet' });
+
+    const [h] = handlinger([], [tur], [], NU);
+
+    expect(h.begrundelse).toContain('sluttede for 10 dage siden');
+    expect(h.begrundelse).toContain('ingen data at lære af');
+  });
+
+  // Sætningerne bygges af flere stumper, og "begynder starter i dag" er ikke
+  // dansk. Grænsetilfældene er dem der går galt.
+  it('bøjer fristerne så de kan stå midt i en sætning', () => {
+    const idag = lavTur({ navn: 'I dag', startdato: '2026-07-30', slutdato: '2026-07-30', status: 'kladde' });
+    const igaar = lavTur({ navn: 'I går', startdato: '2026-07-29', slutdato: '2026-07-29', status: 'afsluttet' });
+
+    expect(handlinger([], [idag], [], NU)[0].begrundelse).toContain('begynder i dag');
+    expect(handlinger([], [igaar], [], NU)[0].begrundelse).toContain('sluttede i går');
+  });
+});
+
 describe('tureIAar', () => {
   it('tæller årets ture og sammenligner med sidste år', () => {
     const ture = [

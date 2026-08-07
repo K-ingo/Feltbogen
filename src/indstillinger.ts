@@ -1,5 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from './db';
+import { db, AKTIVITETSNIVEAU } from './db';
+import type { Aktivitetsniveau } from './db';
+import type { Kropsdata } from './smartMotor';
 
 // Enhedens egne valg — ikke data, og derfor ikke noget der synkroniseres.
 // To enheder kan sagtens have set forskellige ting.
@@ -9,6 +11,14 @@ export const FAB_TIP_SET = 'fab_tip_set';
 // Hvor grundigt et pak-af-tjek skal være. Det er en vane og ikke en egenskab
 // ved turen — derfor et valg på enheden og ikke et felt på turen.
 export const PAK_AF_NIVEAU_VALG = 'pak_af_niveau';
+
+// Kroppen bag tallene. Motoren regnede før med en gennemsnitsdansker; med de
+// her kan den regne med brugeren. De hører til enheden på samme måde som
+// resten — det er ikke data om turene, og de skal ikke med i en sikkerhedskopi
+// af inventaret.
+export const KROPSVAEGT = 'kropsvaegt_kg';
+export const AKTIVITETSNIVEAU_VALG = 'aktivitetsniveau';
+export const DAGLIG_KALORIE = 'daglig_kalorie';
 
 export async function saet(noegle: string, vaerdi: string): Promise<void> {
   await db.indstillinger.put({ noegle, vaerdi });
@@ -38,4 +48,29 @@ export function useValg<T extends string>(
 ): T {
   const gemt = useLiveQuery(() => laes(noegle), [noegle]);
   return tilladte.includes(gemt as T) ? (gemt as T) : standard;
+}
+
+// Kropsdataene samlet, klar til at give videre til motoren. Felter der ikke er
+// sat udelades helt — så falder beregningen tilbage på sine egne konstanter i
+// stedet for at regne med et nul.
+export function useKropsdata(): Kropsdata {
+  const vaegt = useLiveQuery(() => laes(KROPSVAEGT));
+  const kalorier = useLiveQuery(() => laes(DAGLIG_KALORIE));
+  const gemtNiveau = useLiveQuery(() => laes(AKTIVITETSNIVEAU_VALG));
+
+  const niveau = AKTIVITETSNIVEAU.includes(gemtNiveau as Aktivitetsniveau)
+    ? (gemtNiveau as Aktivitetsniveau)
+    : undefined;
+
+  return {
+    ...(positivtTal(vaegt) ? { kropsvaegt_kg: Number(vaegt) } : {}),
+    ...(niveau ? { aktivitetsniveau: niveau } : {}),
+    ...(positivtTal(kalorier) ? { daglig_kalorie: Number(kalorier) } : {})
+  };
+}
+
+function positivtTal(v: string | null | undefined): boolean {
+  if (!v) return false;
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0;
 }

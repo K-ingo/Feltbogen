@@ -12,6 +12,7 @@ export const OVERNATNING = ['haengekoeje', 'telt', 'shelter', 'blandet'] as cons
 export const AKTIVITET = ['bushcraft', 'vandretur', 'kano', 'andet'] as const;
 export const TERRAEN = ['skov', 'kyst', 'fjeld', 'mix'] as const;
 export const ERFARING = ['begynder', 'oevet', 'erfaren'] as const;
+export const AKTIVITETSNIVEAU = ['lav', 'middel', 'hoej'] as const;
 export const PAK_AF_STATUS = ['brugt', 'ubrugt', 'i_stykker'] as const;
 export const PAK_AF_NIVEAU = ['let', 'grundig'] as const;
 export const KATEGORI_VURDERING = ['tilstraekkeligt', 'for_meget', 'for_lidt'] as const;
@@ -21,6 +22,7 @@ export const KATEGORI_VURDERING = ['tilstraekkeligt', 'for_meget', 'for_lidt'] a
 const ETIKETTER: Record<string, string> = {
   haengekoeje: 'hængekøje',
   oevet: 'øvet',
+  hoej: 'høj',
   i_stykker: 'gik i stykker',
   tilstraekkeligt: 'tilstrækkeligt',
   for_meget: 'for meget',
@@ -37,6 +39,7 @@ export type Overnatning = (typeof OVERNATNING)[number];
 export type Aktivitet = (typeof AKTIVITET)[number];
 export type Terraen = (typeof TERRAEN)[number];
 export type Erfaring = (typeof ERFARING)[number];
+export type Aktivitetsniveau = (typeof AKTIVITETSNIVEAU)[number];
 export type PakAfStatus = (typeof PAK_AF_STATUS)[number];
 export type PakAfNiveau = (typeof PAK_AF_NIVEAU)[number];
 export type KategoriVurdering = (typeof KATEGORI_VURDERING)[number];

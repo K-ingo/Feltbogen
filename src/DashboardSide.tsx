@@ -8,7 +8,7 @@ import { samletInventarvaerdi, samletVaegt } from './statistik';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
 import { useErDesktop } from './useMedie';
-import { Knap, Chip, Infokort, SektionsTitel, ListeRaekke, TomListe } from './ui';
+import { Knap, Chip, Infokort, SektionsTitel, ListeRaekke, TomListe, Hvorfor } from './ui';
 
 interface Props {
   fane: Fane;
@@ -196,29 +196,42 @@ function HandlingsKort({ handling, aabn }: { handling: Handling; aabn: () => voi
   // en frist er ikke det samme for en garanti som for en tur.
   const haster = handling.haster;
 
+  // Kortet er én stor knap, så "hvorfor?" kan ikke ligge inden i det — en
+  // knap i en knap er ikke gyldigt, og et klik ville ramme begge dele.
   return (
-    <button
-      onClick={aabn}
-      style={{
-        textAlign: 'left',
-        padding: '11px 13px',
-        borderRadius: '10px',
-        cursor: 'pointer',
-        border: `1px solid ${haster ? 'var(--advarsel-border)' : 'var(--border-svag)'}`,
-        background: haster ? 'var(--advarsel-bg)' : 'var(--bg-forhoejet)'
-      }}
-    >
-      <div style={{
-        fontSize: '13px',
-        fontWeight: 600,
-        color: haster ? 'var(--advarsel)' : 'var(--tekst)'
-      }}>
-        {handling.titel}
+    <div style={{
+      padding: '11px 13px',
+      borderRadius: '10px',
+      border: `1px solid ${haster ? 'var(--advarsel-border)' : 'var(--border-svag)'}`,
+      background: haster ? 'var(--advarsel-bg)' : 'var(--bg-forhoejet)'
+    }}>
+      <button
+        onClick={aabn}
+        style={{
+          display: 'block',
+          width: '100%',
+          textAlign: 'left',
+          padding: 0,
+          border: 'none',
+          background: 'transparent',
+          cursor: 'pointer'
+        }}
+      >
+        <div style={{
+          fontSize: '13px',
+          fontWeight: 600,
+          color: haster ? 'var(--advarsel)' : 'var(--tekst)'
+        }}>
+          {handling.titel}
+        </div>
+        <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
+          {handling.detalje}
+        </div>
+      </button>
+      <div style={{ marginTop: '4px' }}>
+        <Hvorfor begrundelse={handling.begrundelse} />
       </div>
-      <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
-        {handling.detalje}
-      </div>
-    </button>
+    </div>
   );
 }
 

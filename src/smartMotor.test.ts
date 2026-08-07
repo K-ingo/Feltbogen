@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
   beregnForbrug,
+  saesonfaktor,
   findAdvarsler,
   itemUidsPaaTur,
   itemsPaaTur,
   foreslaaGrupper,
+  turensTags,
   advarslerPrItem,
   pakkelisteEfterGruppe,
   pakkelisteEfterTag,
@@ -22,29 +24,164 @@ import {
   IKKE_FORDELT,
   vejrIkonKode
 } from './smartMotor';
+import type { Beregninger } from './smartMotor';
 import { lavItem, lavGruppe, lavTur } from './test/data';
+
+// Tallene uden begrundelserne. Begrundelsen ændrer sig med vilje når man
+// oplyser noget, selv når det ikke rykker ved resultatet.
+const kunTal = ({ vand_liter, mad_kg, gas_g }: Beregninger) => ({ vand_liter, mad_kg, gas_g });
+
+describe('saesonfaktor', () => {
+  it('er 0 i dybvinter og 1 i højsommer', () => {
+    expect(saesonfaktor('2026-01-15')).toBeCloseTo(0, 3);
+    expect(saesonfaktor('2026-07-16')).toBeCloseTo(1, 3);
+  });
+
+  // Det var hele pointen med at lave om på det: før sprang satsen 40 % mellem
+  // 31. marts og 1. april, fordi grænsen gik mellem to måneder.
+  it('springer ikke mellem to nabodage', () => {
+    const marts = saesonfaktor('2026-03-31');
+    const april = saesonfaktor('2026-04-01');
+
+    expect(Math.abs(april - marts)).toBeLessThan(0.01);
+  });
+
+  it('holder sig mellem 0 og 1 hele året rundt', () => {
+    for (let maaned = 1; maaned <= 12; maaned++) {
+      const f = saesonfaktor(`2026-${String(maaned).padStart(2, '0')}-15`);
+      expect(f).toBeGreaterThanOrEqual(0);
+      expect(f).toBeLessThanOrEqual(1);
+    }
+  });
+
+  // Uden en dato kan årstiden ikke gættes. Højsommer er det sikre valg: det
+  // giver det største vandbehov, og for meget vand er en tungere sæk, mens
+  // for lidt er et problem.
+  it('regner med højsommer når datoen mangler eller er vrøvl', () => {
+    expect(saesonfaktor('')).toBe(1);
+    expect(saesonfaktor('ikke en dato')).toBe(1);
+  });
+});
 
 describe('beregnForbrug', () => {
   it('regner vand, mad og gas ud pr. person pr. dag', () => {
-    // 2 nætter = 3 dage, 2 personer, sommer → 3.5 L/person/dag
+    // 2 nætter = 3 dage, 2 personer, 10. juli er praktisk talt højsommer.
     const tur = lavTur({ naetter: 2, personer: 2, startdato: '2026-07-10' });
-    expect(beregnForbrug(tur)).toEqual({
-      vand_liter: 21,   // 2 × 3 × 3.5
-      mad_kg: 3.6,      // 2 × 3 × 0.6
-      gas_g: 150        // 2 × 3 × 25
-    });
+    const b = beregnForbrug(tur);
+
+    expect(b.vand_liter).toBe(22.8);  // 2 × 3 × ~3,8 L
+    expect(b.mad_kg).toBe(3.3);       // 2 × 3 × ~0,55 kg
+    expect(b.gas_g).toBe(150);        // 2 × 3 × 25 g
   });
 
-  it('bruger den lavere vandsats uden for sommermånederne', () => {
+  it('bruger den lavere vandsats om vinteren', () => {
     const sommer = beregnForbrug(lavTur({ naetter: 1, personer: 1, startdato: '2026-07-10' }));
     const vinter = beregnForbrug(lavTur({ naetter: 1, personer: 1, startdato: '2026-01-10' }));
-    expect(sommer.vand_liter).toBe(7);   // 2 dage × 3.5
-    expect(vinter.vand_liter).toBe(5);   // 2 dage × 2.5
+
+    expect(sommer.vand_liter).toBe(7.6);
+    expect(vinter.vand_liter).toBe(5);
+  });
+
+  // Maden går den modsatte vej af vandet: kulden brænder mere af.
+  it('regner med mere mad om vinteren end om sommeren', () => {
+    const sommer = beregnForbrug(lavTur({ naetter: 1, personer: 1, startdato: '2026-07-10' }));
+    const vinter = beregnForbrug(lavTur({ naetter: 1, personer: 1, startdato: '2026-01-10' }));
+
+    expect(vinter.mad_kg).toBeGreaterThan(sommer.mad_kg);
   });
 
   it('regner en dagstur som mindst én dag', () => {
     const tur = lavTur({ naetter: 0, personer: 1, startdato: '2026-07-10' });
-    expect(beregnForbrug(tur).vand_liter).toBe(3.5);
+    expect(beregnForbrug(tur).vand_liter).toBe(3.8);
+  });
+
+  describe('kropsdata', () => {
+    const tur = lavTur({ naetter: 1, personer: 1, startdato: '2026-07-10' });
+    const uden = beregnForbrug(tur);
+
+    it('lader tallene stå som før når intet er oplyst', () => {
+      expect(beregnForbrug(tur, {})).toEqual(uden);
+    });
+
+    it('skalerer vand og mad med kropsvægten', () => {
+      const tung = beregnForbrug(tur, { kropsvaegt_kg: 95 });
+      const let_ = beregnForbrug(tur, { kropsvaegt_kg: 60 });
+
+      expect(tung.vand_liter).toBeGreaterThan(uden.vand_liter);
+      expect(let_.vand_liter).toBeLessThan(uden.vand_liter);
+      expect(tung.mad_kg).toBeGreaterThan(let_.mad_kg);
+    });
+
+    // Referencekroppen er 75 kg — den skal give præcis de samme tal som
+    // ingenting. Begrundelsen må gerne skrive at vægten er sat.
+    it('rører ikke tallene for en person på referencevægten', () => {
+      expect(kunTal(beregnForbrug(tur, { kropsvaegt_kg: 75 }))).toEqual(kunTal(uden));
+    });
+
+    // En tastefejl må ikke kunne fordoble pakkelisten.
+    it('holder vægtfaktoren inden for rimelighedens grænser', () => {
+      const vanvid = beregnForbrug(tur, { kropsvaegt_kg: 400 });
+      const loft = beregnForbrug(tur, { kropsvaegt_kg: 105 });
+
+      expect(vanvid.vand_liter).toBe(loft.vand_liter);
+    });
+
+    it('skalerer med aktivitetsniveauet', () => {
+      const hoej = beregnForbrug(tur, { aktivitetsniveau: 'hoej' });
+      const lav = beregnForbrug(tur, { aktivitetsniveau: 'lav' });
+
+      expect(hoej.vand_liter).toBeGreaterThan(uden.vand_liter);
+      expect(lav.vand_liter).toBeLessThan(uden.vand_liter);
+      expect(kunTal(beregnForbrug(tur, { aktivitetsniveau: 'middel' }))).toEqual(kunTal(uden));
+    });
+
+    // Har man selv svaret på spørgsmålet, skal motoren ikke gætte oveni.
+    it('lader et oplyst kaloriebehov afgøre maden alene', () => {
+      const medKalorier = { daglig_kalorie: 3000, kropsvaegt_kg: 95, aktivitetsniveau: 'hoej' as const };
+      const kunKalorier = beregnForbrug(tur, { daglig_kalorie: 3000 });
+
+      // 3000 kcal / 5000 kcal pr. kg = 0,6 kg pr. dag, 2 dage.
+      expect(beregnForbrug(tur, medKalorier).mad_kg).toBe(1.2);
+      expect(kunKalorier.mad_kg).toBe(1.2);
+    });
+
+    it('lader vandet blive skaleret selvom kalorierne er oplyst', () => {
+      const a = beregnForbrug(tur, { daglig_kalorie: 3000, kropsvaegt_kg: 95 });
+      expect(a.vand_liter).toBeGreaterThan(uden.vand_liter);
+    });
+
+    it('ser bort fra et kaloriebehov på nul', () => {
+      expect(beregnForbrug(tur, { daglig_kalorie: 0 })).toEqual(uden);
+    });
+  });
+
+  describe('begrundelser', () => {
+    it('siger hvad tallet er ganget sammen af', () => {
+      const b = beregnForbrug(lavTur({ naetter: 2, personer: 2, startdato: '2026-07-10' }));
+
+      expect(b.begrundelser.vand).toContain('2 personer × 3 dage');
+      expect(b.begrundelser.gas).toContain('25 g pr. dag');
+    });
+
+    it('siger til når der ikke er kropsdata at regne med', () => {
+      const b = beregnForbrug(lavTur({ startdato: '2026-07-10' }));
+      expect(b.begrundelser.vand).toContain('Ingen kropsdata');
+    });
+
+    it('nævner de kropsdata der faktisk er sat', () => {
+      const b = beregnForbrug(lavTur({ startdato: '2026-07-10' }), {
+        kropsvaegt_kg: 95,
+        aktivitetsniveau: 'hoej'
+      });
+
+      expect(b.begrundelser.vand).toContain('95 kg');
+      expect(b.begrundelser.vand).toContain('højt aktivitetsniveau');
+    });
+
+    it('forklarer maden ud fra kalorier når de er oplyst', () => {
+      const b = beregnForbrug(lavTur({ startdato: '2026-07-10' }), { daglig_kalorie: 3000 });
+      expect(b.begrundelser.mad).toContain('3000 kcal');
+    });
   });
 });
 
@@ -77,6 +214,83 @@ describe('findAdvarsler', () => {
 
   it('finder ingen advarsler i en tom pakkeliste', () => {
     expect(findAdvarsler([])).toEqual([]);
+  });
+});
+
+// Motoren ved allerede hvorfor den siger som den gør — begrundelsen er dét,
+// skrevet ud. Se fundamentets §15 om rådgiver frem for automat.
+describe('begrundelser på advarsler', () => {
+  it('forklarer en rød advarsel med reglen bag den', () => {
+    const braender = lavItem({ navn: 'MSR Pocket Rocket', kraever: ['skruegevind-gas'] });
+
+    const [a] = findAdvarsler([braender]);
+
+    expect(a.begrundelse).toContain('kræver');
+    expect(a.begrundelse).toContain('skruegevind-gas');
+    expect(a.begrundelse).toContain('hård afhængighed');
+  });
+
+  it('forklarer hvorfor et komplement kun er gult', () => {
+    const kop = lavItem({ navn: 'Toaks 1L', komplementer: ['låg'] });
+
+    const [a] = findAdvarsler([kop]);
+
+    expect(a.begrundelse).toContain('blødt forslag');
+    expect(a.begrundelse).toContain('kan bruges uden');
+  });
+
+  it('tæller det gennemgåede med, så man kan se hvad der blev kigget på', () => {
+    const braender = lavItem({ navn: 'MSR', kraever: ['gas'], tags: ['koekken', 'braender'] });
+    const kop = lavItem({ navn: 'Kop', tags: ['koekken'] });
+
+    const [a] = findAdvarsler([braender, kop]);
+
+    // To stykker gear, tre forskellige tags mellem dem.
+    expect(a.begrundelse).toContain('2 stykker gear');
+    expect(a.begrundelse).toContain('2 forskellige tags');
+  });
+
+  it('forklarer en manglende soveløsning med hvad der blev søgt efter', () => {
+    const tur = lavTur({
+      deltagere: [{ id: 'd1', navn: 'Emil', overnatning: 'telt', personligt_gear_ids: [], baerer_delt_ids: [] }]
+    });
+
+    const [a] = overnatningsAdvarsler(tur, [lavItem({ navn: 'Kop' })]);
+
+    expect(a.begrundelse).toContain('telt');
+    expect(a.begrundelse).toContain('både på navn og på tags');
+  });
+});
+
+describe('begrundelser på gruppeforslag', () => {
+  it('siger hvad turen er markeret som, og hvad gruppen ramte', () => {
+    const gruppe = lavGruppe({ navn: 'Hængekøje-skov', tags: ['haengekoeje', 'skov'] });
+    const tur = lavTur({ overnatning: 'haengekoeje', terraen: 'skov', personer: 1 });
+
+    const [f] = foreslaaGrupper(tur, [gruppe]);
+
+    expect(f.traf).toEqual(['haengekoeje', 'skov']);
+    // Værdien hedder haengekoeje i basen, men skal skrives ud på dansk.
+    expect(f.begrundelse).toContain('hængekøje');
+    expect(f.begrundelse).toContain('2 af sine 2 tags');
+  });
+
+  it('nævner kun de tags der ramte, ikke gruppens øvrige', () => {
+    const gruppe = lavGruppe({ navn: 'Blandet', tags: ['skov', 'vinter', 'fisketur'] });
+    const tur = lavTur({ terraen: 'skov' });
+
+    const [f] = foreslaaGrupper(tur, [gruppe]);
+
+    expect(f.begrundelse).toContain('1 af sine 3 tags');
+    expect(f.begrundelse).not.toContain('vinter');
+  });
+});
+
+describe('turensTags', () => {
+  it('samler turens kendetegn som de tags grupperne måles mod', () => {
+    const tur = lavTur({ overnatning: 'telt', aktivitet: 'kano', terraen: 'kyst', personer: 3 });
+
+    expect([...turensTags(tur)].sort()).toEqual(['gruppe', 'kano', 'kyst', 'telt']);
   });
 });
 
@@ -129,7 +343,8 @@ describe('foreslaaGrupper', () => {
 
     const forslag = foreslaaGrupper(tur, [traeffer1, traeffer0, traeffer2]);
 
-    expect(forslag.map((g) => g.navn)).toEqual(['Hængekøje-skov', 'Kun skov']);
+    expect(forslag.map((f) => f.gruppe.navn)).toEqual(['Hængekøje-skov', 'Kun skov']);
+    expect(forslag.map((f) => f.score)).toEqual([2, 1]);
   });
 
   it('foreslår ikke grupper der allerede er valgt', () => {
@@ -143,8 +358,8 @@ describe('foreslaaGrupper', () => {
     const solo = lavGruppe({ navn: 'Solo', tags: ['solo'] });
     const flere = lavGruppe({ navn: 'Gruppe', tags: ['gruppe'] });
 
-    expect(foreslaaGrupper(lavTur({ personer: 1 }), [solo, flere]).map((g) => g.navn)).toEqual(['Solo']);
-    expect(foreslaaGrupper(lavTur({ personer: 4 }), [solo, flere]).map((g) => g.navn)).toEqual(['Gruppe']);
+    expect(foreslaaGrupper(lavTur({ personer: 1 }), [solo, flere]).map((f) => f.gruppe.navn)).toEqual(['Solo']);
+    expect(foreslaaGrupper(lavTur({ personer: 4 }), [solo, flere]).map((f) => f.gruppe.navn)).toEqual(['Gruppe']);
   });
 });
 

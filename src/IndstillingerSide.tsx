@@ -1,7 +1,15 @@
 import { useState, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, PAK_AF_NIVEAU } from './db';
-import { saet, useValg, PAK_AF_NIVEAU_VALG } from './indstillinger';
+import { db, etiket, PAK_AF_NIVEAU, AKTIVITETSNIVEAU } from './db';
+import {
+  saet,
+  useValg,
+  useKropsdata,
+  PAK_AF_NIVEAU_VALG,
+  KROPSVAEGT,
+  AKTIVITETSNIVEAU_VALG,
+  DAGLIG_KALORIE
+} from './indstillinger';
 import { logUd, gemNavn } from './pb';
 import { hentNyesteUdgave, byggetekst } from './opdatering';
 import { useAuth } from './useAuth';
@@ -42,6 +50,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning }: Props) {
   // Tælles om når basen ændrer sig, så tallet ikke står og lyver efter en sync.
   const usendt = useLiveQuery(usendtAntal, [], 0);
   const pakAfNiveau = useValg(PAK_AF_NIVEAU_VALG, PAK_AF_NIVEAU, 'let');
+  const krop = useKropsdata();
 
   const synkroniser = async () => {
     setArbejder('sync');
@@ -190,6 +199,48 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning }: Props) {
             <Hjaelp>
               Alt gemmes først på enheden og sendes derefter op. Er du uden dækning, bliver
               ændringerne liggende og går op af sig selv når forbindelsen er tilbage.
+            </Hjaelp>
+          </Kort>
+        </section>
+
+        <section>
+          <SektionsTitel>Kroppen</SektionsTitel>
+          <Kort>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <Felt
+                label="Din vægt"
+                type="number"
+                value={krop.kropsvaegt_kg ?? ''}
+                onChange={(v) => void saet(KROPSVAEGT, v)}
+                hjaelp="kg"
+              />
+              <Felt
+                label="Kalorier pr. dag"
+                type="number"
+                value={krop.daglig_kalorie ?? ''}
+                onChange={(v) => void saet(DAGLIG_KALORIE, v)}
+                hjaelp="valgfrit"
+              />
+            </div>
+
+            <div style={{ marginTop: '12px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginBottom: '8px' }}>
+                Aktivitetsniveau
+              </div>
+              <Segment
+                vaerdier={AKTIVITETSNIVEAU}
+                valgt={krop.aktivitetsniveau ?? 'middel'}
+                vaelg={(n) => void saet(AKTIVITETSNIVEAU_VALG, n)}
+                formater={(n) => etiket(n)}
+              />
+            </div>
+
+            <Hjaelp>
+              Bruges til at regne vand og mad ud på turene. Uden dem regner motoren med
+              en person på 75 kg — en 65-kilos vandrer og en 95-kilos bushcrafter med
+              bålmad drikker ikke det samme. Skriver du et kaloriebehov ind, bruges det
+              i stedet for skønnet over maden. Tallene bliver på denne enhed og deles
+              aldrig med gæster på dine ture.
             </Hjaelp>
           </Kort>
         </section>
