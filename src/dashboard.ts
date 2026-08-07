@@ -2,6 +2,7 @@ import type { Item, Tur, Gruppe, Reference } from './db';
 import { itemUidsPaaTur, laesDanskDato, dageTil } from './smartMotor';
 import { filtrererTure } from './statistik';
 import { manglerPakAfTjek, dageSidenSlut, PAK_AF_FRIST_DAGE } from './pakAfTjek';
+import { udlaanteItems, dageUdlaant, erOverskredet, laengde, LANGT_UDLAAN_DAGE } from './udlaan';
 
 // Logikken bag startskærmen. Alt herinde er rene funktioner, så rækkefølgen og
 // grænserne kan testes uden at rende skærmen igennem.
@@ -41,6 +42,7 @@ export type HandlingsType =
   | 'garanti'
   | 'kladde_naer_start'
   | 'pak_af_tjek_mangler'
+  | 'udlaan_laenge'
   | 'koebsinfo'
   | 'ubrugt';
 
@@ -117,6 +119,7 @@ export function handlinger(
     ...garantier,
     ...kladderNaerStart(ture, nu),
     ...manglendePakAfTjek(ture, nu),
+    ...langeUdlaan(ejet, nu),
     ...koebsinfo,
     ...ubrugt
   ]);
@@ -173,6 +176,35 @@ function manglendePakAfTjek(ture: Tur[], nu: Date): Handling[] {
       // ikke længere en note man kan tage sig af i næste uge.
       haster: dage > PAK_AF_FRIST_DAGE
     }));
+}
+
+// Gear der har været ude af huset længe, eller som skulle have været tilbage.
+// Det længste lån først — det er det mest glemte.
+function langeUdlaan(ejet: Item[], nu: Date): Handling[] {
+  return udlaanteItems(ejet)
+    .map((item) => ({
+      item,
+      dage: dageUdlaant(item, nu) ?? 0,
+      overskredet: erOverskredet(item.udlaan?.forventet_retur, nu)
+    }))
+    .filter((x) => x.overskredet || x.dage >= LANGT_UDLAAN_DAGE)
+    .sort((a, b) => b.dage - a.dage)
+    .map(({ item, dage, overskredet }) => {
+      const hos = item.udlaan?.navn.trim() || 'en anden';
+
+      return {
+        type: 'udlaan_laenge' as const,
+        titel: 'Udlånt gear',
+        detalje: `${item.navn} · hos ${hos} i ${laengde(dage)}`,
+        maal: { slags: 'item' as const, uid: item.uid },
+        begrundelse: overskredet
+          ? `${item.navn} skulle have været retur fra ${hos} den ${item.udlaan?.forventet_retur}. Den dato er passeret.`
+          : `${item.navn} har været hos ${hos} i ${laengde(dage)}. Efter ${LANGT_UDLAAN_DAGE} dage spørger appen til det — et lån man ikke bliver mindet om, bliver til en foræring.`,
+        // En aftalt frist der er overskredet er en anden slags end bare lang
+        // tid: dér har nogen sagt en dato, og den er passeret.
+        haster: overskredet
+      };
+    });
 }
 
 // Til detaljelinjen på kortet, hvor der ikke er plads til en hel sætning.

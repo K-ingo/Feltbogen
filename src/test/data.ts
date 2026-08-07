@@ -1,4 +1,4 @@
-import type { Item, Gruppe, Tur } from '../db';
+import type { Item, Gruppe, Tur, Sted, Person } from '../db';
 
 // Fabrikker til testdata. Kun det en test bryder sig om angives; resten får
 // harmløse standardværdier. Hver post får et uid, ligesom opret() ville give
@@ -23,6 +23,8 @@ export function lavItem(felter: Partial<Item> = {}): Item {
     koebslink: '',
     ordrenummer: '',
     garanti: null,
+    udlaan: null,
+    laant_af: null,
     noter: '',
     oprettet: nu,
     aendret: nu,
@@ -44,12 +46,42 @@ export function lavGruppe(felter: Partial<Gruppe> = {}): Gruppe {
   };
 }
 
+export function lavSted(felter: Partial<Sted> = {}): Sted {
+  const nu = new Date('2026-07-01T12:00:00Z');
+  return {
+    uid: crypto.randomUUID(),
+    navn: 'Teststed',
+    koordinater: { lat: 56.8, lng: 9.9 },
+    adresse: '',
+    tags: [],
+    noter: '',
+    oprettet: nu,
+    aendret: nu,
+    ...felter
+  };
+}
+
+export function lavPerson(felter: Partial<Person> = {}): Person {
+  const nu = new Date('2026-07-01T12:00:00Z');
+  return {
+    uid: crypto.randomUUID(),
+    navn: 'Testperson',
+    email: '',
+    standard_overnatning: null,
+    noter: '',
+    oprettet: nu,
+    aendret: nu,
+    ...felter
+  };
+}
+
 export function lavTur(felter: Partial<Tur> = {}): Tur {
   const nu = new Date('2026-07-01T12:00:00Z');
   return {
     uid: crypto.randomUUID(),
     navn: 'Testtur',
     sted: '',
+    sted_uid: '',
     koordinater: null,
     startdato: '2026-07-10',
     slutdato: '2026-07-12',

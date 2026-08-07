@@ -2,16 +2,20 @@ import type { ReactNode } from 'react';
 import { useErDesktop } from './useMedie';
 import { markerSet, useErSet, FAB_TIP_SET } from './indstillinger';
 
-export type Fane = 'dashboard' | 'inventar' | 'grupper' | 'ture' | 'statistik' | 'indstillinger';
+export type Fane = 'dashboard' | 'inventar' | 'grupper' | 'ture' | 'steder' | 'statistik' | 'indstillinger';
 
 // `kort` bruges i bundnavigationen, hvor fanerne skal dele skærmbredden.
-// Indstillinger står kun i sidebaren på PC; på mobil er der ikke plads til en
-// sjette fane, og den nås i stedet fra tandhjulet i topbaren.
+//
+// Indstillinger og Steder står kun i sidebaren på PC. På mobil er der ikke
+// plads til flere end fem faner i bunden uden at de bliver for smalle at ramme
+// — indstillinger nås fra tandhjulet i topbaren, og steder fra turlisten, hvor
+// man alligevel er når et sted er det man leder efter.
 const FANER: { id: Fane; label: string; kort: string; iBundnav: boolean }[] = [
   { id: 'dashboard', label: 'Dashboard', kort: 'Hjem', iBundnav: true },
   { id: 'inventar', label: 'Inventar', kort: 'Inventar', iBundnav: true },
   { id: 'grupper', label: 'Grupper', kort: 'Grupper', iBundnav: true },
   { id: 'ture', label: 'Ture', kort: 'Ture', iBundnav: true },
+  { id: 'steder', label: 'Steder', kort: 'Steder', iBundnav: false },
   { id: 'statistik', label: 'Statistik', kort: 'Stat', iBundnav: true },
   { id: 'indstillinger', label: 'Indstillinger', kort: 'Mere', iBundnav: false }
 ];

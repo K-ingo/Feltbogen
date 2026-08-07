@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import Dexie from 'dexie';
 import { db } from './db';
 import { saet, laes, markerSet, ONBOARDING_SET } from './indstillinger';
-import { lavItem } from './test/data';
+import { lavItem, lavTur } from './test/data';
 
 beforeEach(async () => {
   await db.indstillinger.clear();
@@ -63,6 +63,76 @@ describe('migration til v6', () => {
 
     expect((await ny.table('items').toArray()).map((i) => i.navn)).toEqual(['Moonquilt']);
     expect(await ny.table('indstillinger').count()).toBe(0);
+    ny.close();
+  });
+});
+
+// v9 lægger to tabeller til. Ingen upgrade-funktion — men en migration der
+// taber data er stadig værd at have et net under.
+describe('migration til v9', () => {
+  const V8_STORES = {
+    items: '++id, &uid, navn, status, oprettet',
+    grupper: '++id, &uid, navn, oprettet',
+    ture: '++id, &uid, navn, startdato, status, oprettet, dele_token',
+    slettede: '++id, samling, pb_id, [samling+pb_id]',
+    indstillinger: '&noegle',
+    delte_ture: '++id, &token, gemt'
+  };
+  const V9_STORES = {
+    ...V8_STORES,
+    steder: '++id, &uid, navn, oprettet',
+    personer: '++id, &uid, navn, oprettet'
+  };
+
+  it('beholder gear og ture når steder og personer kommer til', async () => {
+    const navn = `MigrationV9_${crypto.randomUUID()}`;
+
+    const gammel = new Dexie(navn);
+    gammel.version(8).stores(V8_STORES);
+    await gammel.open();
+    await gammel.table('items').add(lavItem({ uid: 'u-1', navn: 'Moonquilt' }));
+    await gammel.table('ture').add(lavTur({ uid: 't-1', navn: 'Rold Skov' }));
+    gammel.close();
+
+    const ny = new Dexie(navn);
+    ny.version(8).stores(V8_STORES);
+    ny.version(9).stores(V9_STORES);
+    await ny.open();
+
+    expect((await ny.table('items').toArray()).map((i) => i.navn)).toEqual(['Moonquilt']);
+    expect((await ny.table('ture').toArray()).map((t) => t.navn)).toEqual(['Rold Skov']);
+    expect(await ny.table('steder').count()).toBe(0);
+    expect(await ny.table('personer').count()).toBe(0);
+    ny.close();
+  });
+
+  // Ture fra før v9 har hverken sted_uid eller person_uid. Tomt er den
+  // rigtige værdi: de er ikke koblet til noget.
+  it('lader ældre ture stå uden kobling frem for at gætte en', async () => {
+    const navn = `MigrationV9Kobling_${crypto.randomUUID()}`;
+
+    const gammel = new Dexie(navn);
+    gammel.version(8).stores(V8_STORES);
+    await gammel.open();
+    await gammel.table('ture').add({
+      uid: 't-1',
+      navn: 'Feddet',
+      sted: 'Feddet Strandcamping',
+      deltagere: [{ id: 'd1', navn: 'Mikkel', overnatning: null, personligt_gear_ids: [], baerer_delt_ids: [] }],
+      oprettet: new Date('2026-01-01'),
+      aendret: new Date('2026-01-01')
+    });
+    gammel.close();
+
+    const ny = new Dexie(navn);
+    ny.version(8).stores(V8_STORES);
+    ny.version(9).stores(V9_STORES);
+    await ny.open();
+
+    const tur = await ny.table('ture').get(1);
+    expect(tur.sted).toBe('Feddet Strandcamping');
+    expect(tur.sted_uid).toBeUndefined();
+    expect(tur.deltagere[0].person_uid).toBeUndefined();
     ny.close();
   });
 });

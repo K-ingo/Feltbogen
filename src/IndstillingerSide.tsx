@@ -22,8 +22,10 @@ import {
   filnavn,
   KopiFejl
 } from './dataudveksling';
+import type { Baseindhold } from './dataudveksling';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
+import Personer from './Personer';
 import { Knap, SektionsTitel, Felt, Segment } from './ui';
 
 interface Props {
@@ -47,6 +49,8 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning }: Props) {
   const items = useLiveQuery(() => db.items.toArray()) ?? [];
   const grupper = useLiveQuery(() => db.grupper.toArray()) ?? [];
   const ture = useLiveQuery(() => db.ture.toArray()) ?? [];
+  const steder = useLiveQuery(() => db.steder.toArray()) ?? [];
+  const personerIBasen = useLiveQuery(() => db.personer.toArray()) ?? [];
   // Tælles om når basen ændrer sig, så tallet ikke står og lyver efter en sync.
   const usendt = useLiveQuery(usendtAntal, [], 0);
   const pakAfNiveau = useValg(PAK_AF_NIVEAU_VALG, PAK_AF_NIVEAU, 'let');
@@ -78,8 +82,12 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning }: Props) {
     setArbejder(null);
   };
 
+  // Alt der hører med i en kopi. Ét sted, så eksport og import ikke kan komme
+  // til at dække hver sit.
+  const base = { items, grupper, ture, steder, personer: personerIBasen };
+
   const eksporter = () => {
-    const json = tilJson(lavSikkerhedskopi(items, grupper, ture));
+    const json = tilJson(lavSikkerhedskopi(base));
     const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
 
     const link = document.createElement('a');
@@ -88,7 +96,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning }: Props) {
     link.click();
     URL.revokeObjectURL(url);
 
-    setDataBesked({ slags: 'ok', tekst: `${poster(items.length + grupper.length + ture.length)} gemt i ${link.download}.` });
+    setDataBesked({ slags: 'ok', tekst: `${poster(antalIBasen(base))} gemt i ${link.download}.` });
   };
 
   const importer = async (fil: File) => {
@@ -96,12 +104,14 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning }: Props) {
     setDataBesked(null);
     try {
       const kopi = laesSikkerhedskopi(await fil.text());
-      const flettet = fletInd(kopi, { items, grupper, ture });
+      const flettet = fletInd(kopi, base);
 
-      await db.transaction('rw', db.items, db.grupper, db.ture, async () => {
+      await db.transaction('rw', db.items, db.grupper, db.ture, db.steder, db.personer, async () => {
         await db.items.bulkAdd(flettet.items);
         await db.grupper.bulkAdd(flettet.grupper);
         await db.ture.bulkAdd(flettet.ture);
+        await db.steder.bulkAdd(flettet.steder);
+        await db.personer.bulkAdd(flettet.personer);
       });
 
       setDataBesked({
@@ -204,6 +214,21 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning }: Props) {
         </section>
 
         <section>
+          <SektionsTitel>Personer</SektionsTitel>
+          <Kort>
+            <Personer />
+            <Hjaelp>
+              De du tager afsted med. Bliver en deltager knyttet til en person, tælles
+              turene sammen på tværs, og standardovernatningen udfyldes af sig selv.
+              Du kan stadig skrive et navn direkte på en tur uden at oprette nogen her.
+              Der gemmes kun navn, en valgfri e-mail og dine egne noter. Det bliver på
+              enheden og i din egen konto — intet deles med tredjepart, og gæster på en
+              tur ser kun navnet.
+            </Hjaelp>
+          </Kort>
+        </section>
+
+        <section>
           <SektionsTitel>Kroppen</SektionsTitel>
           <Kort>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
@@ -271,6 +296,8 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning }: Props) {
             <Raekke label="Gear" vaerdi={`${items.length}`} />
             <Raekke label="Grupper" vaerdi={`${grupper.length}`} />
             <Raekke label="Ture" vaerdi={`${ture.length}`} />
+            <Raekke label="Steder" vaerdi={`${steder.length}`} />
+            <Raekke label="Personer" vaerdi={`${personerIBasen.length}`} />
 
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '14px' }}>
               <Knap onClick={eksporter}>Gem en kopi</Knap>
@@ -352,6 +379,11 @@ function Navnefelt({ start, gem }: { start: string; gem: (v: string) => Promise<
       </div>
     </div>
   );
+}
+
+function antalIBasen(base: Baseindhold): number {
+  return base.items.length + base.grupper.length + base.ture.length
+    + base.steder.length + base.personer.length;
 }
 
 function poster(n: number): string {

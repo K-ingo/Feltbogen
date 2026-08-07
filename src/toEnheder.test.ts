@@ -131,7 +131,8 @@ describe('uid tildeles ved oprettelse', () => {
         navn: 'Emil',
         overnatning: null,
         personligt_gear_ids: [item.uid],
-        baerer_delt_ids: []
+        baerer_delt_ids: [],
+        person_uid: ''
       }]
     });
     await db.items.add(item);
@@ -238,7 +239,7 @@ describe('oprydning af eksisterende dubletter', () => {
 
     await db.ture.add(lavTur({
       loese_item_ids: [dubletUid],
-      deltagere: [{ id: 'd1', navn: 'Emil', overnatning: null, personligt_gear_ids: [dubletUid], baerer_delt_ids: [] }]
+      deltagere: [{ id: 'd1', navn: 'Emil', overnatning: null, personligt_gear_ids: [dubletUid], baerer_delt_ids: [], person_uid: '' }]
     }));
 
     await fjernDubletter();

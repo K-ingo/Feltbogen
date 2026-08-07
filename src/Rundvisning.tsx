@@ -344,13 +344,17 @@ function Komigang({ nytItem, nyTur, tilLogin, faerdig, kunOpslag, tilbage }: {
       const flettet = fletInd(kopi, {
         items: await db.items.toArray(),
         grupper: await db.grupper.toArray(),
-        ture: await db.ture.toArray()
+        ture: await db.ture.toArray(),
+        steder: await db.steder.toArray(),
+        personer: await db.personer.toArray()
       });
 
-      await db.transaction('rw', db.items, db.grupper, db.ture, async () => {
+      await db.transaction('rw', db.items, db.grupper, db.ture, db.steder, db.personer, async () => {
         await db.items.bulkAdd(flettet.items);
         await db.grupper.bulkAdd(flettet.grupper);
         await db.ture.bulkAdd(flettet.ture);
+        await db.steder.bulkAdd(flettet.steder);
+        await db.personer.bulkAdd(flettet.personer);
       });
 
       faerdig();

@@ -4,6 +4,7 @@ import type { TurStatus } from './db';
 import { formatterPeriode } from './datotekst';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
+import { useErDesktop } from './useMedie';
 import { Knap, Badge, ListeRaekke, SektionsTitel, TomListe } from './ui';
 
 // Farven signalerer hvor turen er i sit livsforløb.
@@ -23,6 +24,7 @@ interface Props {
 }
 
 function TureListe({ fane, skift, aabnTur, aabnDeltTur, nyTur }: Props) {
+  const erDesktop = useErDesktop();
   const ture = useLiveQuery(() => db.ture.orderBy('startdato').reverse().toArray());
   // Ture andre har delt med én. De ligger i deres egen tabel og kan ikke
   // redigeres, men de hører hjemme her — det er stadig ture man skal med på.
@@ -40,6 +42,16 @@ function TureListe({ fane, skift, aabnTur, aabnDeltTur, nyTur }: Props) {
       handlinger={<Knap variant="primaer" onClick={nyTur}>+ Ny tur</Knap>}
       fab={nyTur}
     >
+      {/* Steder står i sidebaren på PC, men har ikke plads i bundnavigationen.
+          Turlisten er der man er, når det er et sted man leder efter. */}
+      {!erDesktop && (
+        <div style={{ marginBottom: '12px' }}>
+          <Knap onClick={() => skift('steder')} style={{ fontSize: '12px', padding: '5px 12px' }}>
+            Se steder
+          </Knap>
+        </div>
+      )}
+
       {egne === 0 && antalDelte === 0 && <TomListe>Ingen ture endnu. Opret din første.</TomListe>}
 
       {ture?.map((t) => (

@@ -38,8 +38,8 @@ describe('lavSnapshot', () => {
     loese_item_ids: ['u-tarp'],
     besked_fra_ejer: 'Vi mødes ved P kl. 15',
     deltagere: [
-      { id: 'd1', navn: 'Emil', overnatning: null, personligt_gear_ids: [], baerer_delt_ids: [] },
-      { id: 'd2', navn: 'Mikkel', overnatning: null, personligt_gear_ids: [], baerer_delt_ids: [] }
+      { id: 'd1', navn: 'Emil', overnatning: null, personligt_gear_ids: [], baerer_delt_ids: [], person_uid: '' },
+      { id: 'd2', navn: 'Mikkel', overnatning: null, personligt_gear_ids: [], baerer_delt_ids: [], person_uid: '' }
     ]
   });
 
@@ -87,8 +87,8 @@ describe('lavSnapshot', () => {
     const medBaerer = lavTur({
       ...tur(),
       deltagere: [
-        { id: 'd1', navn: 'Emil', overnatning: null, personligt_gear_ids: [], baerer_delt_ids: ['u-tarp'] },
-        { id: 'd2', navn: 'Mikkel', overnatning: null, personligt_gear_ids: ['u-gryde'], baerer_delt_ids: [] }
+        { id: 'd1', navn: 'Emil', overnatning: null, personligt_gear_ids: [], baerer_delt_ids: ['u-tarp'], person_uid: '' },
+        { id: 'd2', navn: 'Mikkel', overnatning: null, personligt_gear_ids: ['u-gryde'], baerer_delt_ids: [], person_uid: '' }
       ]
     });
 

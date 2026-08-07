@@ -1,5 +1,5 @@
-import type { ItemStatus } from './db';
-import { opretItem, opretGruppe, opretTur } from './sync';
+import type { ItemStatus, Sted, Person } from './db';
+import { opretItem, opretGruppe, opretTur, opretSted, opretPerson } from './sync';
 import { mitNavn } from './pb';
 
 // Tomme poster med fornuftige standardværdier. De ligger her, fordi både
@@ -24,6 +24,8 @@ export function opretTomtItem(status: ItemStatus = 'ejer'): Promise<number> {
     koebslink: '',
     ordrenummer: '',
     garanti: null,
+    udlaan: null,
+    laant_af: null,
     noter: '',
     oprettet: nu,
     aendret: nu
@@ -49,6 +51,7 @@ export function opretTomTur(): Promise<number> {
   return opretTur({
     navn: '',
     sted: '',
+    sted_uid: '',
     koordinater: null,
     startdato: idag,
     slutdato: idag,
@@ -69,7 +72,8 @@ export function opretTomTur(): Promise<number> {
       navn: mitNavn(),
       overnatning: null,
       personligt_gear_ids: [],
-      baerer_delt_ids: []
+      baerer_delt_ids: [],
+      person_uid: ''
     }],
     budget_linjer: [],
     pak_af_tjek: null,
@@ -80,5 +84,34 @@ export function opretTomTur(): Promise<number> {
     dele_snapshot: '',
     oprettet: nu,
     aendret: nu
+  });
+}
+
+// Steder og personer oprettes ofte med et navn i hånden — fra stedsøgningen
+// på en tur, eller fra deltagerfeltet. Derfor tager de begge et navn med.
+export function opretTomtSted(felter: Partial<Sted> = {}): Promise<number> {
+  const nu = new Date();
+  return opretSted({
+    navn: '',
+    koordinater: null,
+    adresse: '',
+    tags: [],
+    noter: '',
+    oprettet: nu,
+    aendret: nu,
+    ...felter
+  });
+}
+
+export function opretTomPerson(felter: Partial<Person> = {}): Promise<number> {
+  const nu = new Date();
+  return opretPerson({
+    navn: '',
+    email: '',
+    standard_overnatning: null,
+    noter: '',
+    oprettet: nu,
+    aendret: nu,
+    ...felter
   });
 }

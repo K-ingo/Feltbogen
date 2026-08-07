@@ -13,6 +13,8 @@ import type {
   Deltager,
   BudgetLinje,
   PakAfTjek,
+  Person,
+  Sted,
   Reference
 } from './db';
 import {
@@ -55,6 +57,14 @@ import {
   Hvorfor
 } from './ui';
 import PakAfTjekSide from './PakAfTjekSide';
+import {
+  foreslaaPersoner,
+  antalTurePrPerson,
+  deltagerFraPerson,
+  deltagerFraNavn
+} from './personer';
+import { foreslaaSteder, besoegPrSted, besoegstekst, naermesteSted } from './steder';
+import { udlaansAdvarsler } from './udlaan';
 import { nytPakAfTjek, synkroniserLinjer, resumetekst } from './pakAfTjek';
 import { useValg, useKropsdata, PAK_AF_NIVEAU_VALG } from './indstillinger';
 import { nytDeletoken, lavSnapshot, deleLink, linkadvarsel, linkvaert } from './gaest';
@@ -64,6 +74,7 @@ import type { Deltagelse } from './deltagelse';
 import { layout } from './layout';
 import { useErDesktop, useErBredskaerm } from './useMedie';
 import { sletTur, opdaterTur } from './sync';
+import { opretTomtSted } from './opret';
 import { useRedigerbar } from './useRedigerbar';
 
 interface Props {
@@ -104,6 +115,11 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
 
   const items = useLiveQuery(() => db.items.toArray());
   const grupper = useLiveQuery(() => db.grupper.toArray());
+  // Steder og personer er genbrugsressourcer på tværs af turene, så de hentes
+  // hele vejen ind — forslagene bygger på dem.
+  const steder = useLiveQuery(() => db.steder.toArray()) ?? [];
+  const personer = useLiveQuery(() => db.personer.toArray()) ?? [];
+  const alleTure = useLiveQuery(() => db.ture.toArray()) ?? [];
 
   const { post: tur, opdater } = useRedigerbar(db.ture, turId, opdaterTur, {
     onIndlaest: (fundet) => {
@@ -182,6 +198,43 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
     }
   };
 
+  // Et gemt sted er bedre end et opslag: det bærer noterne fra sidst.
+  const vaelgGemtSted = async (gemt: Sted) => {
+    await opdater({
+      sted_uid: gemt.uid,
+      sted: gemt.navn,
+      ...(gemt.koordinater ? { koordinater: gemt.koordinater } : {})
+    });
+    if (gemt.koordinater) setKoordinatTekst(`${gemt.koordinater.lat}, ${gemt.koordinater.lng}`);
+    setStedForslag([]);
+    setKoordinatFejl('');
+  };
+
+  // Gemmer turens sted som en post man kan komme tilbage til. Ligger der
+  // allerede et sted på samme punkt, knyttes turen til det i stedet for at
+  // lave det igen.
+  const gemSomSted = async () => {
+    if (!tur?.sted.trim()) return;
+
+    const naer = tur.koordinater ? naermesteSted(steder, tur.koordinater) : null;
+    if (naer) {
+      await vaelgGemtSted(naer);
+      return;
+    }
+
+    const id = await opretTomtSted({
+      navn: tur.sted.trim(),
+      koordinater: tur.koordinater,
+      adresse: tur.sted.trim()
+    });
+    const nyt = await db.steder.get(id);
+    if (nyt) await opdater({ sted_uid: nyt.uid });
+  };
+
+  const frigoerSted = async () => {
+    await opdater({ sted_uid: '' });
+  };
+
   const vaelgSted = async (forslag: StedForslag) => {
     await opdater({ koordinater: { lat: forslag.lat, lng: forslag.lng } });
     setKoordinatTekst(`${forslag.lat}, ${forslag.lng}`);
@@ -224,19 +277,18 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
     await opdater({ loese_item_ids: vekslet(tur.loese_item_ids, itemUid) });
   };
 
-  const tilfoejDeltager = async () => {
+  // Fra person-tabellen: navnet og standardovernatningen følger med, og turen
+  // kan bagefter tælles med under "ture med Mikkel".
+  const tilfoejPerson = async (person: Person) => {
     if (!tur) return;
-    const navn = prompt('Navn på deltager:');
-    if (!navn?.trim()) return;
+    await opdater({ deltagere: [...tur.deltagere, deltagerFraPerson(person)] });
+  };
 
-    const nyDeltager: Deltager = {
-      id: crypto.randomUUID(),
-      navn: navn.trim(),
-      overnatning: null,
-      personligt_gear_ids: [],
-      baerer_delt_ids: []
-    };
-    await opdater({ deltagere: [...tur.deltagere, nyDeltager] });
+  // Skrevet ind i hånden. Det skal blive ved med at være nok — man skal kunne
+  // få en med på turen uden først at oprette hende som person.
+  const tilfoejNavn = async (navn: string) => {
+    if (!tur || !navn.trim()) return;
+    await opdater({ deltagere: [...tur.deltagere, deltagerFraNavn(navn)] });
   };
 
   const toggleGearHos = async (deltagerId: string, item: Item) => {
@@ -340,7 +392,11 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
     await opdater({ dele_token: '', dele_snapshot: '' });
   };
 
-  const advarsler = [...findAdvarsler(pakItems), ...overnatningsAdvarsler(tur, pakItems)];
+  const advarsler = [
+    ...findAdvarsler(pakItems),
+    ...overnatningsAdvarsler(tur, pakItems),
+    ...udlaansAdvarsler(pakItems)
+  ];
   const perItem = advarslerPrItem(advarsler);
   const beregninger = beregnForbrug(tur, kropsdata);
   const gruppeForslag = grupper ? foreslaaGrupper(tur, grupper) : [];
@@ -395,6 +451,12 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
       stedSoeger={stedSoeger}
       stedForslag={stedForslag}
       vaelgSted={vaelgSted}
+      gemteForslag={foreslaaSteder(steder, alleTure, tur.sted_uid ? '' : tur.sted)}
+      valgtSted={steder.find((s) => s.uid === tur.sted_uid) ?? null}
+      besoeg={besoegPrSted(alleTure)}
+      vaelgGemtSted={vaelgGemtSted}
+      gemSomSted={gemSomSted}
+      frigoerSted={frigoerSted}
       beregninger={beregninger}
     />
   );
@@ -429,7 +491,10 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
     <Deltagere
       deltagere={tur.deltagere}
       turensOvernatning={tur.overnatning}
-      tilfoej={tilfoejDeltager}
+      personer={personer}
+      ture={alleTure}
+      tilfoejPerson={tilfoejPerson}
+      tilfoejNavn={tilfoejNavn}
       fjern={fjernDeltager}
       saetOvernatning={saetDeltagerOvernatning}
     />
@@ -702,7 +767,9 @@ function Foldbar({ titel, resume, children, aabenFra, advarsel }: {
 
 function Turparametre({
   tur, opdater, skiftDato, koordinatTekst, koordinatFejl, opdaterKoordinater,
-  soegPaaSted, stedSoeger, stedForslag, vaelgSted, beregninger
+  soegPaaSted, stedSoeger, stedForslag, vaelgSted,
+  gemteForslag, valgtSted, besoeg, vaelgGemtSted, gemSomSted, frigoerSted,
+  beregninger
 }: {
   tur: Tur;
   opdater: (a: Partial<Tur>) => Promise<void>;
@@ -714,6 +781,12 @@ function Turparametre({
   stedSoeger: boolean;
   stedForslag: StedForslag[];
   vaelgSted: (f: StedForslag) => Promise<void>;
+  gemteForslag: Sted[];
+  valgtSted: Sted | null;
+  besoeg: Map<Reference, number>;
+  vaelgGemtSted: (s: Sted) => Promise<void>;
+  gemSomSted: () => Promise<void>;
+  frigoerSted: () => Promise<void>;
   beregninger: Beregninger;
 }) {
   return (
@@ -723,7 +796,7 @@ function Turparametre({
         <div style={{ display: 'flex', gap: '6px' }}>
           <input
             value={tur.sted}
-            onChange={(e) => opdater({ sted: e.target.value })}
+            onChange={(e) => opdater({ sted: e.target.value, sted_uid: '' })}
             placeholder="fx Palnatokesvej 22, Odense"
             style={{ flex: 1, minWidth: 0 }}
           />
@@ -731,6 +804,72 @@ function Turparametre({
             {stedSoeger ? 'Søger...' : 'Find'}
           </Knap>
         </div>
+
+        {/* Er turen knyttet til et gemt sted, står det man ved om stedet her —
+            det er hele pointen med at gemme det. */}
+        {valgtSted ? (
+          <div style={{
+            marginTop: '6px',
+            padding: '8px 10px',
+            borderRadius: '8px',
+            background: 'var(--accent-bg)',
+            border: '1px solid var(--accent-border)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+              <span style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 500 }}>
+                {valgtSted.navn}
+              </span>
+              <span style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)' }}>
+                {besoegstekst(besoeg.get(valgtSted.uid) ?? 0)}
+              </span>
+              <button
+                onClick={() => void frigoerSted()}
+                style={{ marginLeft: 'auto', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '11px', color: 'var(--tekst-svag)', textDecoration: 'underline' }}
+              >
+                frigør
+              </button>
+            </div>
+            {valgtSted.noter && (
+              <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginTop: '4px', lineHeight: 1.5 }}>
+                {valgtSted.noter}
+              </div>
+            )}
+          </div>
+        ) : (
+          tur.sted.trim() !== '' && (
+            <div style={{ marginTop: '6px' }}>
+              <Knap onClick={() => void gemSomSted()} style={{ fontSize: '11px', padding: '4px 10px' }}>
+                Gem som sted
+              </Knap>
+            </div>
+          )
+        )}
+
+        {/* Gemte steder står før opslaget udefra: de bærer noterne fra sidst. */}
+        {gemteForslag.length > 0 && (
+          <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {gemteForslag.map((g) => (
+              <button
+                key={g.uid}
+                onClick={() => void vaelgGemtSted(g)}
+                style={{
+                  padding: '5px 10px',
+                  fontSize: '11px',
+                  background: 'var(--bg-forhoejet)',
+                  color: 'var(--accent)',
+                  border: '1px solid var(--accent-border)',
+                  borderRadius: '14px',
+                  cursor: 'pointer'
+                }}
+              >
+                {g.navn}
+                <span style={{ color: 'var(--tekst-svag)', marginLeft: '5px' }}>
+                  {besoegstekst(besoeg.get(g.uid) ?? 0).toLowerCase()}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
         {stedForslag.length > 0 && (
           <div style={{ marginTop: '6px', background: 'var(--bg)', border: '1px solid var(--border-svag)', borderRadius: '8px', overflow: 'hidden' }}>
             {stedForslag.map((f, i) => (
@@ -1027,10 +1166,13 @@ function Vejrudsigt({ data, hentes, fejl, hent }: {
   );
 }
 
-function Deltagere({ deltagere, turensOvernatning, tilfoej, fjern, saetOvernatning }: {
+function Deltagere({ deltagere, turensOvernatning, personer, ture, tilfoejPerson, tilfoejNavn, fjern, saetOvernatning }: {
   deltagere: Deltager[];
   turensOvernatning: Overnatning;
-  tilfoej: () => Promise<void>;
+  personer: Person[];
+  ture: Tur[];
+  tilfoejPerson: (p: Person) => Promise<void>;
+  tilfoejNavn: (navn: string) => Promise<void>;
   fjern: (id: string) => Promise<void>;
   saetOvernatning: (id: string, form: Overnatning | null) => Promise<void>;
 }) {
@@ -1047,7 +1189,14 @@ function Deltagere({ deltagere, turensOvernatning, tilfoej, fjern, saetOvernatni
               key={d.id}
               style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 0', borderBottom: '1px solid var(--border-svag)' }}
             >
-              <span style={{ flex: 1, minWidth: 0, fontSize: '13px' }}>{d.navn}</span>
+              <span style={{ flex: 1, minWidth: 0, fontSize: '13px' }}>
+                {d.navn}
+                {/* Prikken viser at deltageren er den samme person som på de
+                    andre ture — ikke bare et navn der ligner. */}
+                {d.person_uid && (
+                  <span title="Knyttet til en person" style={{ color: 'var(--accent)', marginLeft: '6px', fontSize: '10px' }}>●</span>
+                )}
+              </span>
 
               <select
                 value={d.overnatning ?? ''}
@@ -1069,9 +1218,87 @@ function Deltagere({ deltagere, turensOvernatning, tilfoej, fjern, saetOvernatni
           ))}
         </div>
       )}
-      <Knap onClick={tilfoej}>+ Tilføj deltager</Knap>
+      <Deltagervaelger
+        personer={personer}
+        ture={ture}
+        alleredePaaTuren={deltagere.map((d) => d.person_uid)}
+        vaelgPerson={tilfoejPerson}
+        vaelgNavn={tilfoejNavn}
+      />
     </div>
   );
+}
+
+// Tilføjelse af en deltager. Man skriver et navn; findes personen i forvejen,
+// står hun som forslag, og så bliver turen talt med under hendes navn. Gør hun
+// ikke, er navnet i sig selv nok — man skal kunne komme afsted uden først at
+// føre kartotek.
+function Deltagervaelger({ personer, ture, alleredePaaTuren, vaelgPerson, vaelgNavn }: {
+  personer: Person[];
+  ture: Tur[];
+  alleredePaaTuren: Reference[];
+  vaelgPerson: (p: Person) => Promise<void>;
+  vaelgNavn: (navn: string) => Promise<void>;
+}) {
+  const [tekst, setTekst] = useState('');
+  const forslag = foreslaaPersoner(personer, ture, tekst, alleredePaaTuren);
+  const antal = antalTurePrPerson(ture);
+
+  // Er navnet allerede en kendt person, ville en fri-tekst-deltager lave en
+  // dublet der aldrig bliver talt med.
+  const kendt = forslag.find((p) => p.navn.toLowerCase() === tekst.trim().toLowerCase());
+
+  const tilfoej = async () => {
+    if (!tekst.trim()) return;
+    if (kendt) await vaelgPerson(kendt);
+    else await vaelgNavn(tekst);
+    setTekst('');
+  };
+
+  return (
+    <div style={{ display: 'grid', gap: '8px' }}>
+      <div style={{ display: 'flex', gap: '6px' }}>
+        <input
+          value={tekst}
+          onChange={(e) => setTekst(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') void tilfoej(); }}
+          placeholder="Navn på deltager"
+          style={{ flex: 1, minWidth: 0, fontSize: '13px' }}
+        />
+        <Knap onClick={() => void tilfoej()} disabled={!tekst.trim()}>+ Tilføj</Knap>
+      </div>
+
+      {tekst.trim() !== '' && forslag.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+          {forslag.map((p) => (
+            <button
+              key={p.uid}
+              onClick={() => { void vaelgPerson(p); setTekst(''); }}
+              style={{
+                padding: '5px 10px',
+                fontSize: '11px',
+                background: 'var(--bg-forhoejet)',
+                color: 'var(--accent)',
+                border: '1px solid var(--accent-border)',
+                borderRadius: '14px',
+                cursor: 'pointer'
+              }}
+            >
+              {p.navn}
+              <span style={{ color: 'var(--tekst-svag)', marginLeft: '5px' }}>
+                {turtekst(antal.get(p.uid) ?? 0)}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function turtekst(antal: number): string {
+  if (antal === 0) return 'ingen ture';
+  return `${antal} ${antal === 1 ? 'tur' : 'ture'}`;
 }
 
 const BUDGET_KATEGORIER = ['gear', 'forplejning', 'transport', 'andet'] as const;

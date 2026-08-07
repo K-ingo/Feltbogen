@@ -252,7 +252,7 @@ describe('begrundelser på advarsler', () => {
 
   it('forklarer en manglende soveløsning med hvad der blev søgt efter', () => {
     const tur = lavTur({
-      deltagere: [{ id: 'd1', navn: 'Emil', overnatning: 'telt', personligt_gear_ids: [], baerer_delt_ids: [] }]
+      deltagere: [{ id: 'd1', navn: 'Emil', overnatning: 'telt', personligt_gear_ids: [], baerer_delt_ids: [], person_uid: '' }]
     });
 
     const [a] = overnatningsAdvarsler(tur, [lavItem({ navn: 'Kop' })]);
@@ -466,7 +466,7 @@ describe('hvem bærer hvad', () => {
   const kniv = lavItem({ uid: 'u-kniv', navn: 'Kniv', vaegt_g: 40 });
 
   const deltager = (id: string, navn: string, felter = {}) => ({
-    id, navn, overnatning: null, personligt_gear_ids: [], baerer_delt_ids: [], ...felter
+    id, navn, overnatning: null, personligt_gear_ids: [], baerer_delt_ids: [], person_uid: '', ...felter
   });
 
   const turMed = (deltagere: ReturnType<typeof deltager>[]) => lavTur({ deltagere });
@@ -602,7 +602,7 @@ describe('hvem bærer hvad', () => {
 
 describe('overnatningsAdvarsler', () => {
   const sover = (navn: string, overnatning: 'telt' | 'haengekoeje' | 'shelter' | 'blandet' | null) => ({
-    id: navn, navn, overnatning, personligt_gear_ids: [], baerer_delt_ids: []
+    id: navn, navn, overnatning, personligt_gear_ids: [], baerer_delt_ids: [], person_uid: ''
   });
 
   it('siger til når en deltager ikke har noget at sove i', () => {

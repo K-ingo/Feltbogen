@@ -252,6 +252,64 @@ describe('handlinger', () => {
     });
   });
 
+  describe('lange udlån', () => {
+    const udlaant = (navn: string, udlaant_dato: string, forventet_retur = '') =>
+      lavItem({
+        navn: 'Moonquilt',
+        pris_kr: 0,
+        koebt_hos: 'Butik',
+        udlaan: { person_uid: '', navn, udlaant_dato, forventet_retur, noter: '' }
+      });
+
+    it('spørger til gear der har været ude af huset længe', () => {
+      const h = handlinger([udlaant('Mikkel', '2026-06-01')], [], [], NU);
+
+      expect(h).toHaveLength(1);
+      expect(h[0].type).toBe('udlaan_laenge');
+      expect(h[0].titel).toBe('Udlånt gear');
+      expect(h[0].detalje).toBe('Moonquilt · hos Mikkel i 8 uger');
+    });
+
+    // Et lån på et par dage er stadig et lån man har styr på.
+    it('tier om et lån der lige er begyndt', () => {
+      expect(handlinger([udlaant('Mikkel', '2026-07-25')], [], [], NU)).toEqual([]);
+    });
+
+    // Har nogen sagt en dato, er den passeret et andet slags problem end
+    // bare lang tid.
+    it('haster når en aftalt returdato er overskredet', () => {
+      const overskredet = udlaant('Mikkel', '2026-07-25', '2026-07-28');
+
+      const h = handlinger([overskredet], [], [], NU);
+
+      expect(h).toHaveLength(1);
+      expect(h[0].haster).toBe(true);
+      expect(h[0].begrundelse).toContain('skulle have været retur');
+    });
+
+    it('haster ikke af sig selv, bare fordi der er gået længe', () => {
+      expect(handlinger([udlaant('Mikkel', '2026-06-01')], [], [], NU)[0].haster).toBe(false);
+    });
+
+    it('rører ikke gear man ikke ejer', () => {
+      const solgt = lavItem({
+        status: 'solgt',
+        udlaan: { person_uid: '', navn: 'Mikkel', udlaant_dato: '2026-01-01', forventet_retur: '', noter: '' }
+      });
+
+      expect(handlinger([solgt], [], [], NU)).toEqual([]);
+    });
+
+    it('sætter det længste lån øverst', () => {
+      const kort = lavItem({ navn: 'Kop', pris_kr: 0, koebt_hos: 'Butik', udlaan: { person_uid: '', navn: 'Maja', udlaant_dato: '2026-06-20', forventet_retur: '', noter: '' } });
+      const langt = lavItem({ navn: 'Telt', pris_kr: 0, koebt_hos: 'Butik', udlaan: { person_uid: '', navn: 'Mikkel', udlaant_dato: '2026-03-01', forventet_retur: '', noter: '' } });
+
+      const h = handlinger([kort, langt], [], [], NU);
+
+      expect(h.map((x) => x.detalje.split(' ·')[0])).toEqual(['Telt', 'Kop']);
+    });
+  });
+
   it('stiller garanti før købsinfo før ubrugt', () => {
     const garanti = medGaranti('Garanti', '02/08/2026');
     const koeb = lavItem({ navn: 'Købsinfo', pris_kr: 400 });

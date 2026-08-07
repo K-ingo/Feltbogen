@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, ITEM_STATUS } from './db';
-import type { Item, Tur, Garanti } from './db';
+import type { Item, Tur, Garanti, Laant, Person, Udlaan } from './db';
 import TagsInput from './TagsInput';
 import { turePrItem } from './statistik';
 import { brugPrItem } from './pakAfTjek';
 import type { Brug } from './pakAfTjek';
+import { dageSiden, erOverskredet, laengde } from './udlaan';
 import { garantiAdvarsel } from './smartMotor';
 import {
   Felt,
   Feltkort,
+  Knap,
   Infokort,
   Kort,
   SektionsTitel,
@@ -39,7 +41,9 @@ function medStandardfelter(item: Item): Item {
     komplementer: item.komplementer ?? [],
     koebslink: item.koebslink ?? '',
     ordrenummer: item.ordrenummer ?? '',
-    garanti: item.garanti ?? null
+    garanti: item.garanti ?? null,
+    udlaan: item.udlaan ?? null,
+    laant_af: item.laant_af ?? null
   };
 }
 
@@ -52,6 +56,7 @@ function ItemDetalje({ itemId, tilbage, nyOprettet }: Props) {
 
   const ture = useLiveQuery(() => db.ture.toArray()) ?? [];
   const grupper = useLiveQuery(() => db.grupper.toArray()) ?? [];
+  const personer = useLiveQuery(() => db.personer.toArray()) ?? [];
 
   const opdaterGaranti = async (aendringer: Partial<Garanti>) => {
     if (!item) return;
@@ -120,6 +125,14 @@ function ItemDetalje({ itemId, tilbage, nyOprettet }: Props) {
         <Feltkort label="Dimensioner" value={item.dimensioner} onChange={(v) => opdater({ dimensioner: v })} placeholder="ø 33 × 15 cm" />
 
         <Brugsstatistik ture={turePaaItem} brug={brug} />
+
+        <Laanekort
+          udlaan={item.udlaan ?? null}
+          laant={item.laant_af ?? null}
+          personer={personer}
+          saetUdlaan={(u) => void opdater({ udlaan: u })}
+          saetLaant={(l) => void opdater({ laant_af: l })}
+        />
 
         <div style={{ height: '4px' }} />
         <SektionsTitel>Kompatibilitet</SektionsTitel>
@@ -287,6 +300,185 @@ function Brugsstatistik({ ture, brug }: { ture: Tur[]; brug: Brug | null }) {
         </>
       )}
     </Infokort>
+  );
+}
+
+// Låne-loggen. Gear der ikke er hjemme, skal ikke bare forsvinde ud af
+// bevidstheden — og det skal ikke stå på en pakkeliste som om det lå i skabet.
+function Laanekort({ udlaan, laant, personer, saetUdlaan, saetLaant }: {
+  udlaan: Udlaan | null;
+  laant: Laant | null;
+  personer: Person[];
+  saetUdlaan: (u: Udlaan | null) => void;
+  saetLaant: (l: Laant | null) => void;
+}) {
+  const idag = new Date().toISOString().slice(0, 10);
+
+  const startUdlaan = () =>
+    saetUdlaan({ person_uid: '', navn: '', udlaant_dato: idag, forventet_retur: '', noter: '' });
+
+  const startLaant = () =>
+    saetLaant({ person_uid: '', navn: '', laant_dato: idag, skal_retur: '' });
+
+  return (
+    <Infokort label="Låne-log" fremhaevet={!!udlaan || !!laant}>
+      {!udlaan && !laant && (
+        <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginBottom: '10px' }}>
+          Står hjemme.
+        </div>
+      )}
+
+      {udlaan ? (
+        <Laaneblok
+          titel="Udlånt til"
+          navn={udlaan.navn}
+          personUid={udlaan.person_uid}
+          personer={personer}
+          fra={udlaan.udlaant_dato}
+          fraLabel="Udlånt"
+          retur={udlaan.forventet_retur}
+          returLabel="Forventet retur"
+          dage={dageSiden(udlaan.udlaant_dato)}
+          overskredet={erOverskredet(udlaan.forventet_retur)}
+          saet={(a) => saetUdlaan({ ...udlaan, ...a })}
+          ryd={() => saetUdlaan(null)}
+          rydLabel="Kom retur"
+        >
+          <Tekstomraade
+            label="Noter"
+            value={udlaan.noter}
+            onChange={(v) => saetUdlaan({ ...udlaan, noter: v })}
+            raekker={1}
+          />
+        </Laaneblok>
+      ) : (
+        <Knap onClick={startUdlaan} style={{ fontSize: '11px', padding: '4px 10px', marginRight: '6px' }}>
+          Lån ud
+        </Knap>
+      )}
+
+      {laant ? (
+        <div style={{ marginTop: udlaan ? '14px' : 0 }}>
+          <Laaneblok
+            titel="Lånt af"
+            navn={laant.navn}
+            personUid={laant.person_uid}
+            personer={personer}
+            fra={laant.laant_dato}
+            fraLabel="Lånt"
+            retur={laant.skal_retur}
+            returLabel="Skal retur"
+            dage={dageSiden(laant.laant_dato)}
+            overskredet={erOverskredet(laant.skal_retur)}
+            saet={(a) => saetLaant({ ...laant, ...a })}
+            ryd={() => saetLaant(null)}
+            rydLabel="Afleveret"
+          />
+        </div>
+      ) : (
+        <Knap onClick={startLaant} style={{ fontSize: '11px', padding: '4px 10px' }}>
+          Lånt af en anden
+        </Knap>
+      )}
+    </Infokort>
+  );
+}
+
+// Den ene halvdel af låne-loggen. De to retninger har forskellige feltnavne,
+// men de udfyldes ens — derfor én blok med etiketterne udefra.
+function Laaneblok({
+  titel, navn, personUid, personer, fra, fraLabel, retur, returLabel,
+  dage, overskredet, saet, ryd, rydLabel, children
+}: {
+  titel: string;
+  navn: string;
+  personUid: string;
+  personer: Person[];
+  fra: string;
+  fraLabel: string;
+  retur: string;
+  returLabel: string;
+  dage: number | null;
+  overskredet: boolean;
+  saet: (a: { navn?: string; person_uid?: string } & Record<string, string>) => void;
+  ryd: () => void;
+  rydLabel: string;
+  children?: React.ReactNode;
+}) {
+  // Feltnavnene skifter mellem de to retninger, så de sættes af kalderen via
+  // saet(). Her holdes kun styr på hvad der står i felterne.
+  const erUdlaan = fraLabel === 'Udlånt';
+  const fraFelt = erUdlaan ? 'udlaant_dato' : 'laant_dato';
+  const returFelt = erUdlaan ? 'forventet_retur' : 'skal_retur';
+
+  return (
+    <div style={{ display: 'grid', gap: '10px' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+        <span style={{ fontSize: '12px', fontWeight: 600 }}>{titel}</span>
+        {dage !== null && (
+          <span style={{ fontSize: '11px', color: overskredet ? 'var(--advarsel)' : 'var(--tekst-dæmpet)' }}>
+            {laengde(dage)}{overskredet ? ' · over tiden' : ''}
+          </span>
+        )}
+        <button
+          onClick={ryd}
+          style={{ marginLeft: 'auto', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '11px', color: 'var(--accent)', textDecoration: 'underline' }}
+        >
+          {rydLabel}
+        </button>
+      </div>
+
+      <Felt label="Navn" value={navn} onChange={(v) => saet({ navn: v, person_uid: '' })} />
+
+      {/* Er navnet en kendt person, kan lånet knyttes til hende — så tæller
+          det med under hendes navn og ikke kun som en tekst. */}
+      {!personUid && navn.trim() !== '' && (
+        <Personforslag
+          personer={personer}
+          navn={navn}
+          vaelg={(p) => saet({ navn: p.navn, person_uid: p.uid })}
+        />
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+        <Felt label={fraLabel} type="date" value={fra} onChange={(v) => saet({ [fraFelt]: v })} />
+        <Felt label={returLabel} type="date" value={retur} onChange={(v) => saet({ [returFelt]: v })} />
+      </div>
+
+      {children}
+    </div>
+  );
+}
+
+function Personforslag({ personer, navn, vaelg }: {
+  personer: Person[];
+  navn: string;
+  vaelg: (p: Person) => void;
+}) {
+  const soeg = navn.trim().toLowerCase();
+  const traf = personer.filter((p) => p.navn.toLowerCase().includes(soeg)).slice(0, 3);
+  if (traf.length === 0) return null;
+
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+      {traf.map((p) => (
+        <button
+          key={p.uid}
+          onClick={() => vaelg(p)}
+          style={{
+            padding: '4px 10px',
+            fontSize: '11px',
+            background: 'var(--bg-forhoejet)',
+            color: 'var(--accent)',
+            border: '1px solid var(--accent-border)',
+            borderRadius: '14px',
+            cursor: 'pointer'
+          }}
+        >
+          knyt til {p.navn}
+        </button>
+      ))}
+    </div>
   );
 }
 

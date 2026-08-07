@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import AuthSide from './AuthSide';
 import { useAuth } from './useAuth';
-import { afstemMedServer, sendAfventende, sletItem, sletGruppe, sletTur } from './sync';
+import { afstemMedServer, sendAfventende, sletItem, sletGruppe, sletTur, sletSted } from './sync';
 import { db } from './db';
 import DashboardSide from './DashboardSide';
 import InventarSide from './InventarSide';
@@ -10,6 +10,8 @@ import GrupperListe from './GrupperListe';
 import GruppeDetalje from './GruppeDetalje';
 import TureListe from './TureListe';
 import TurDetalje from './TurDetalje';
+import StederListe from './StederListe';
+import StedDetalje from './StedDetalje';
 import DeltTurDetalje from './DeltTurDetalje';
 import StatistikSide from './StatistikSide';
 import IndstillingerSide from './IndstillingerSide';
@@ -19,7 +21,7 @@ import { tokenFraAdresse } from './gaest';
 // Kobler friskningen af delte ture på skrivninger. Importeres for sin
 // bivirkning — modulet melder sig selv til hos sync.
 import './delesnapshot';
-import { opretTomtItem, opretTomGruppe, opretTomTur } from './opret';
+import { opretTomtItem, opretTomGruppe, opretTomTur, opretTomtSted } from './opret';
 import { markerSet, useErSet, ONBOARDING_SET } from './indstillinger';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
@@ -41,12 +43,14 @@ function App() {
   const [valgtItem, setValgtItem] = useState<{ id: number; ny: boolean } | null>(null);
   const [valgtGruppe, setValgtGruppe] = useState<{ id: number; ny: boolean } | null>(null);
   const [valgtTur, setValgtTur] = useState<{ id: number; ny: boolean } | null>(null);
+  const [valgtSted, setValgtSted] = useState<{ id: number; ny: boolean } | null>(null);
   // En tur en anden har delt. Den kan ikke redigeres og har derfor ingen
   // ny-tilstand at rydde op efter.
   const [valgtDeltTur, setValgtDeltTur] = useState<number | null>(null);
   const aabnItem = (id: number, ny = false) => setValgtItem({ id, ny });
   const aabnGruppe = (id: number, ny = false) => setValgtGruppe({ id, ny });
   const aabnTur = (id: number, ny = false) => setValgtTur({ id, ny });
+  const aabnSted = (id: number, ny = false) => setValgtSted({ id, ny });
   const aabnDeltTur = (id: number) => setValgtDeltTur(id);
 
   // Nye poster åbnes med det samme — en tom post man skal lede efter bagefter
@@ -54,6 +58,7 @@ function App() {
   const nytItem = async () => aabnItem(await opretTomtItem(), true);
   const nyGruppe = async () => aabnGruppe(await opretTomGruppe(), true);
   const nyTur = async () => aabnTur(await opretTomTur(), true);
+  const nytSted = async () => aabnSted(await opretTomtSted(), true);
 
   // En navnløs post man lige har oprettet, kan ikke findes igen. Oprydningen
   // ligger her og ikke i detaljeskærmene, fordi man kan forlade dem ad to
@@ -62,12 +67,14 @@ function App() {
     const aabne = [
       { valgt: valgtItem, tabel: db.items, slet: sletItem },
       { valgt: valgtGruppe, tabel: db.grupper, slet: sletGruppe },
-      { valgt: valgtTur, tabel: db.ture, slet: sletTur }
+      { valgt: valgtTur, tabel: db.ture, slet: sletTur },
+      { valgt: valgtSted, tabel: db.steder, slet: sletSted }
     ];
 
     setValgtItem(null);
     setValgtGruppe(null);
     setValgtTur(null);
+    setValgtSted(null);
     setValgtDeltTur(null);
 
     for (const { valgt, tabel, slet } of aabne) {
@@ -196,6 +203,19 @@ function App() {
     );
   }
 
+  if (valgtSted !== null) {
+    return (
+      <Skal fane={fane} skift={skiftFane}>
+        <StedDetalje
+          stedId={valgtSted.id}
+          nyOprettet={valgtSted.ny}
+          tilbage={lukDetalje}
+          aabnTur={(id) => { setValgtSted(null); aabnTur(id); }}
+        />
+      </Skal>
+    );
+  }
+
   if (valgtDeltTur !== null) {
     return (
       <Skal fane={fane} skift={skiftFane}>
@@ -218,6 +238,7 @@ function App() {
       );
     case 'grupper': return <GrupperListe fane={fane} skift={skiftFane} aabnGruppe={aabnGruppe} nyGruppe={nyGruppe} />;
     case 'ture': return <TureListe fane={fane} skift={skiftFane} aabnTur={aabnTur} aabnDeltTur={aabnDeltTur} nyTur={nyTur} />;
+    case 'steder': return <StederListe fane={fane} skift={skiftFane} aabnSted={aabnSted} nytSted={nytSted} />;
     case 'statistik': return <StatistikSide fane={fane} skift={skiftFane} aabnItem={aabnItem} />;
     case 'inventar': return <InventarSide fane={fane} skift={skiftFane} aabnItem={aabnItem} />;
     case 'indstillinger':

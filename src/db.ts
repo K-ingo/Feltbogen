@@ -72,6 +72,25 @@ export interface Synkroniserbar {
 // Poster refererer til hinanden med uid, aldrig med lokale id'er.
 export type Reference = string;
 
+// Et stykke gear der er ude af huset. Personen kan være en post i person-
+// tabellen, men behøver ikke at være det — man låner også ud til folk man
+// ikke har tænkt sig at føre bog over.
+export interface Udlaan {
+  person_uid: Reference;
+  navn: string;
+  udlaant_dato: string;
+  forventet_retur: string;
+  noter: string;
+}
+
+// Den modsatte vej: noget man selv har lånt og skal huske at aflevere.
+export interface Laant {
+  person_uid: Reference;
+  navn: string;
+  laant_dato: string;
+  skal_retur: string;
+}
+
 export interface Item extends Synkroniserbar {
   id?: number;
   navn: string;
@@ -89,6 +108,10 @@ export interface Item extends Synkroniserbar {
   koebslink: string;
   ordrenummer: string;
   garanti: Garanti | null;
+  // null når gearet står hjemme. Ældre poster har feltet slet ikke — læs det
+  // altid med ?? null.
+  udlaan: Udlaan | null;
+  laant_af: Laant | null;
   noter: string;
   oprettet: Date;
   aendret: Date;
@@ -110,6 +133,40 @@ export interface Deltager {
   overnatning: Overnatning | null;
   personligt_gear_ids: Reference[];
   baerer_delt_ids: Reference[];
+  // Kobling til person-tabellen. Tom når deltageren bare er skrevet ind som
+  // fritekst — det skal blive ved med at være nok til at komme i gang.
+  person_uid: Reference;
+}
+
+// Et sted man kommer tilbage til. Steder er en genbrugsressource: shelteret i
+// Klosterheden er det samme shelter hver gang, og det appen ved om det —
+// kildevand mod øst, myg i juli — skal ikke skrives igen for hver tur.
+export interface Sted extends Synkroniserbar {
+  id?: number;
+  navn: string;
+  koordinater: { lat: number; lng: number } | null;
+  // Fra DAWA-opslaget, når stedet er fundet ad den vej.
+  adresse: string;
+  tags: string[];
+  noter: string;
+  oprettet: Date;
+  aendret: Date;
+}
+
+// En man tager på tur med. "Mikkel" på to ture er to fremmede for en app der
+// kun har fritekst; her bliver det den samme.
+//
+// Der gemmes kun navn, en valgfri e-mail og et par noter. Det bliver på
+// enheden og i brugerens egen PocketBase-konto — intet deles med tredjepart,
+// og gæster på en tur ser kun navnet.
+export interface Person extends Synkroniserbar {
+  id?: number;
+  navn: string;
+  email: string;
+  standard_overnatning: Overnatning | null;
+  noter: string;
+  oprettet: Date;
+  aendret: Date;
 }
 
 export interface BudgetLinje {
@@ -152,6 +209,9 @@ export interface Tur extends Synkroniserbar {
   id?: number;
   navn: string;
   sted: string;
+  // Peger på en post i sted-tabellen når turen er knyttet til et gemt sted.
+  // Er den tom, står stedet kun som den fritekst der altid har været her.
+  sted_uid: Reference;
   koordinater: { lat: number; lng: number } | null;
   startdato: string;
   slutdato: string;
@@ -231,6 +291,8 @@ export class FeltbogenDB extends Dexie {
   slettede!: Table<Slettet, number>;
   indstillinger!: Table<Indstilling, string>;
   delte_ture!: Table<DeltTur, number>;
+  steder!: Table<Sted, number>;
+  personer!: Table<Person, number>;
 
   constructor() {
     super('FeltbogenDB');
@@ -292,6 +354,21 @@ export class FeltbogenDB extends Dexie {
       slettede: '++id, samling, pb_id, [samling+pb_id]',
       indstillinger: '&noegle',
       delte_ture: '++id, &token, gemt'
+    });
+
+    // v9 lægger steder og personer til. Begge tabeller er tomme til at
+    // begynde med, og de felter der kobler dem til ture og gear er tomme
+    // strenge på ældre poster — hvilket er den rigtige værdi: de er ikke
+    // koblet til noget.
+    this.version(9).stores({
+      items: '++id, &uid, navn, status, oprettet',
+      grupper: '++id, &uid, navn, oprettet',
+      ture: '++id, &uid, navn, startdato, status, oprettet, dele_token',
+      slettede: '++id, samling, pb_id, [samling+pb_id]',
+      indstillinger: '&noegle',
+      delte_ture: '++id, &token, gemt',
+      steder: '++id, &uid, navn, oprettet',
+      personer: '++id, &uid, navn, oprettet'
     });
   }
 }

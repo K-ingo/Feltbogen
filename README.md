@@ -28,14 +28,23 @@ appen starter.
 
 | Lag | Fil | Ansvar |
 |---|---|---|
-| Datamodel | `src/db.ts` | Dexie-schema og typerne `Item`, `Gruppe`, `Tur` |
+| Datamodel | `src/db.ts` | Dexie-schema og typerne `Item`, `Gruppe`, `Tur`, `Sted`, `Person` |
 | Sync | `src/sync.ts` | CRUD mod IndexedDB + PocketBase, og oprydning af det der ikke nåede op |
 | Auth | `src/pb.ts`, `src/useAuth.ts` | PocketBase-klient og login-tilstand |
 | Domænelogik | `src/smartMotor.ts` | Vejr, forbrugsberegning, kompatibilitets-advarsler, gruppeforslag, stedsøgning |
 | Efterregnskab | `src/pakAfTjek.ts` | Pak-af-tjek: hvad blev brugt, hvad lå urørt, hvad gik i stykker |
+| Steder | `src/steder.ts` | Besøgstælling, stedforslag og afstandsmatch mod gemte steder |
+| Personer | `src/personer.ts` | Rejseselskabet og koblingen mellem deltagere og personer |
+| Låne-log | `src/udlaan.ts` | Hvad der er ude af huset, og hvad man har lånt |
 | Statistik | `src/statistik.ts` | Aggregeringer over inventar og ture |
 | UI-primitiver | `src/ui.tsx`, `src/layout.ts` | Knap, Kort, Felt, Chip, Badge, listerækker, detalje-header |
-| Skærme | `src/App.tsx` m.fl. | Inventar, Grupper, Ture, Statistik |
+| Skærme | `src/App.tsx` m.fl. | Inventar, Grupper, Ture, Steder, Statistik |
+
+Steder og personer er genbrugsressourcer på tværs af ture: et sted husker sine
+noter fra sidst, og en person samler sine ture. Begge koblinger er valgfrie —
+`Tur.sted_uid` og `Deltager.person_uid` er tomme som standard, og så falder
+turen tilbage på den fritekst der altid har været der. Man skal kunne komme
+afsted uden først at føre kartotek.
 
 Smart-motoren er rådgiver og ikke automat (fundament §15). Derfor bærer hver
 advarsel, hvert gruppeforslag og hvert forbrugstal en `begrundelse` — reglen bag
@@ -54,9 +63,16 @@ noget forskelligt to steder.
 > enige om hvilken post der er hvilken. Appen skriver en advarsel i konsollen
 > hvis den opdager det.
 >
-> Samlingen `ture` skal desuden have et JSON-felt `pak_af_tjek`. PocketBase
-> dropper lydløst felter der ikke findes i skemaet, så uden det bliver turens
-> efterregnskab liggende på den enhed det blev lavet på.
+> Samlingen `ture` skal desuden have JSON-felterne `pak_af_tjek` og et
+> tekstfelt `sted_uid`, og `items` skal have JSON-felterne `udlaan` og
+> `laant_af`. PocketBase dropper lydløst felter der ikke findes i skemaet, så
+> uden dem bliver efterregnskabet og låne-loggen liggende på den enhed de blev
+> lavet på.
+>
+> Der skal også være to nye samlinger, `steder` og `personer`, begge med et
+> tekstfelt `uid` og et `user`-felt som de øvrige. Felterne er:
+> `steder`: `navn`, `koordinater` (JSON), `adresse`, `tags` (JSON), `noter`.
+> `personer`: `navn`, `email`, `standard_overnatning`, `noter`.
 
 Hver post har også et `pb_id`: er det sat, findes posten i PocketBase; er det
 tomt, er den kun lokal endnu.
@@ -112,7 +128,8 @@ Der er ingen service worker under `npm run dev`. Test offline med
 ## Status
 
 V1 under udvikling. Bygget: inventar, grupper, ture med smart-motor, statistik,
-PWA, deling og gæsteview, dashboard, indstillinger, pak-af-tjek.
+PWA, deling og gæsteview, dashboard, indstillinger, pak-af-tjek, steder,
+personer, låne-log.
 Endnu ikke bygget: badges/notifikationer.
 
 Ideer til det videre arbejde ligger i [`IDEER.md`](./IDEER.md).

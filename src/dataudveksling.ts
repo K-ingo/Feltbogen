@@ -1,28 +1,39 @@
-import type { Item, Gruppe, Tur, Reference } from './db';
+import type { Item, Gruppe, Tur, Sted, Person, Reference } from './db';
 
 // Eksport og import af hele basen som én JSON-fil. Appen er offline-first, så
 // en enhed der går tabt tager alt med sig hvis der ikke er en kopi.
 
-export const KOPI_VERSION = 1;
+// v2 tog steder og personer med. En v1-fil kan stadig læses: de to lister er
+// bare tomme, hvilket er den rigtige værdi for en base der ikke havde dem.
+export const KOPI_VERSION = 2;
 
-export interface Sikkerhedskopi {
-  version: number;
-  lavet: string;
+// Alt der er i en kopi. Samlet ét sted, så en ny tabel ikke kan blive glemt i
+// den ene af de to retninger.
+export interface Baseindhold {
   items: Item[];
   grupper: Gruppe[];
   ture: Tur[];
+  steder: Sted[];
+  personer: Person[];
 }
 
-export function lavSikkerhedskopi(items: Item[], grupper: Gruppe[], ture: Tur[]): Sikkerhedskopi {
+export interface Sikkerhedskopi extends Baseindhold {
+  version: number;
+  lavet: string;
+}
+
+export function lavSikkerhedskopi(indhold: Baseindhold): Sikkerhedskopi {
   return {
     version: KOPI_VERSION,
     lavet: new Date().toISOString(),
     // id er lokalt for den enhed kopien blev lavet på, og pb_id peger på en
     // record der måske ikke findes mere. Kun uid følger med — det er
     // identiteten på tværs af enheder.
-    items: items.map(uden),
-    grupper: grupper.map(uden),
-    ture: ture.map(uden)
+    items: indhold.items.map(uden),
+    grupper: indhold.grupper.map(uden),
+    ture: indhold.ture.map(uden),
+    steder: indhold.steder.map(uden),
+    personer: indhold.personer.map(uden)
   };
 }
 
@@ -66,7 +77,9 @@ export function laesSikkerhedskopi(raa: string): Sikkerhedskopi {
     lavet: typeof k.lavet === 'string' ? k.lavet : '',
     items: laesPoster<Item>(k.items),
     grupper: laesPoster<Gruppe>(k.grupper),
-    ture: laesPoster<Tur>(k.ture)
+    ture: laesPoster<Tur>(k.ture),
+    steder: laesPoster<Sted>(k.steder),
+    personer: laesPoster<Person>(k.personer)
   };
 }
 
@@ -88,10 +101,7 @@ function somDato(v: unknown): Date {
   return Number.isNaN(d.getTime()) ? new Date() : d;
 }
 
-export interface Fletteresultat {
-  items: Item[];
-  grupper: Gruppe[];
-  ture: Tur[];
+export interface Fletteresultat extends Baseindhold {
   tilfoejet: number;
   fandtes: number;
 }
@@ -99,21 +109,25 @@ export interface Fletteresultat {
 // Importen lægger til, den overskriver aldrig. En post der allerede findes —
 // kendt på sit uid — springes over, så den samme kopi kan læses ind to gange
 // uden at fordoble noget, og så en nyere lokal udgave ikke ryger.
-export function fletInd(
-  kopi: Sikkerhedskopi,
-  eksisterende: { items: Item[]; grupper: Gruppe[]; ture: Tur[] }
-): Fletteresultat {
+export function fletInd(kopi: Sikkerhedskopi, eksisterende: Baseindhold): Fletteresultat {
   const items = nye(kopi.items, eksisterende.items);
   const grupper = nye(kopi.grupper, eksisterende.grupper);
   const ture = nye(kopi.ture, eksisterende.ture);
-  const tilfoejet = items.length + grupper.length + ture.length;
+  const steder = nye(kopi.steder, eksisterende.steder);
+  const personer = nye(kopi.personer, eksisterende.personer);
+
+  const tilfoejet = items.length + grupper.length + ture.length + steder.length + personer.length;
+  const iKopien = kopi.items.length + kopi.grupper.length + kopi.ture.length
+    + kopi.steder.length + kopi.personer.length;
 
   return {
     items,
     grupper,
     ture,
+    steder,
+    personer,
     tilfoejet,
-    fandtes: kopi.items.length + kopi.grupper.length + kopi.ture.length - tilfoejet
+    fandtes: iKopien - tilfoejet
   };
 }
 

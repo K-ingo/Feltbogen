@@ -24,7 +24,11 @@ import type {
   BudgetLinje,
   PakAfTjek,
   PakAfLinje,
-  KategoriNote
+  KategoriNote,
+  Udlaan,
+  Laant,
+  Sted,
+  Person
 } from './db';
 
 // Offline-first: alt skrives til IndexedDB først og sendes derefter til
@@ -98,7 +102,8 @@ function deltagere(v: unknown): Deltager[] {
         ? (d.overnatning as Deltager['overnatning'])
         : null,
       personligt_gear_ids: referencer(d.personligt_gear_ids),
-      baerer_delt_ids: referencer(d.baerer_delt_ids)
+      baerer_delt_ids: referencer(d.baerer_delt_ids),
+      person_uid: tekst(d.person_uid)
     };
   });
 }
@@ -153,6 +158,34 @@ function budgetLinjer(v: unknown): BudgetLinje[] {
       faktisk_kr: tal(l.faktisk_kr)
     };
   });
+}
+
+function udlaan(v: unknown): Udlaan | null {
+  if (!v || typeof v !== 'object') return null;
+  const u = v as Record<string, unknown>;
+  // Uden et navn er lånet ikke til nogen, og så er der intet at holde styr på.
+  if (!tekst(u.navn).trim()) return null;
+
+  return {
+    person_uid: tekst(u.person_uid),
+    navn: tekst(u.navn),
+    udlaant_dato: tekst(u.udlaant_dato),
+    forventet_retur: tekst(u.forventet_retur),
+    noter: tekst(u.noter)
+  };
+}
+
+function laantAf(v: unknown): Laant | null {
+  if (!v || typeof v !== 'object') return null;
+  const l = v as Record<string, unknown>;
+  if (!tekst(l.navn).trim()) return null;
+
+  return {
+    person_uid: tekst(l.person_uid),
+    navn: tekst(l.navn),
+    laant_dato: tekst(l.laant_dato),
+    skal_retur: tekst(l.skal_retur)
+  };
 }
 
 // PocketBase dropper lydløst felter der ikke findes i samlingens skema. Uden
@@ -220,6 +253,8 @@ const itemSamling: Samling<Item> = {
     koebslink: i.koebslink,
     ordrenummer: i.ordrenummer,
     garanti: i.garanti,
+    udlaan: i.udlaan ?? null,
+    laant_af: i.laant_af ?? null,
     noter: i.noter
   }),
   fraPb: (r) => ({
@@ -237,6 +272,8 @@ const itemSamling: Samling<Item> = {
     komplementer: tags(r.komplementer),
     koebt_hos: tekst(r.koebt_hos),
     koebsdato: tekst(r.koebsdato),
+    udlaan: udlaan(r.udlaan),
+    laant_af: laantAf(r.laant_af),
     koebslink: tekst(r.koebslink),
     ordrenummer: tekst(r.ordrenummer),
     garanti: garanti(r.garanti),
@@ -277,6 +314,7 @@ const turSamling: Samling<Tur> = {
     uid: t.uid,
     navn: t.navn,
     sted: t.sted,
+    sted_uid: t.sted_uid,
     koordinater: t.koordinater,
     startdato: t.startdato,
     slutdato: t.slutdato,
@@ -304,6 +342,7 @@ const turSamling: Samling<Tur> = {
     pb_id: r.id,
     navn: tekst(r.navn),
     sted: tekst(r.sted),
+    sted_uid: tekst(r.sted_uid),
     koordinater: koordinater(r.koordinater),
     startdato: tekst(r.startdato),
     slutdato: tekst(r.slutdato),
@@ -325,6 +364,56 @@ const turSamling: Samling<Tur> = {
     vejrsnapshot: tekst(r.vejrsnapshot),
     dele_token: tekst(r.dele_token),
     dele_snapshot: tekst(r.dele_snapshot),
+    oprettet: dato(r.created),
+    aendret: dato(r.updated)
+  })
+};
+
+const stedSamling: Samling<Sted> = {
+  pbNavn: 'steder',
+  tabel: db.steder,
+  tilPb: (s, user) => ({
+    user,
+    uid: s.uid,
+    navn: s.navn,
+    koordinater: s.koordinater,
+    adresse: s.adresse,
+    tags: s.tags,
+    noter: s.noter
+  }),
+  fraPb: (r) => ({
+    uid: uid(r),
+    pb_id: r.id,
+    navn: tekst(r.navn),
+    koordinater: koordinater(r.koordinater),
+    adresse: tekst(r.adresse),
+    tags: tags(r.tags),
+    noter: tekst(r.noter),
+    oprettet: dato(r.created),
+    aendret: dato(r.updated)
+  })
+};
+
+const personSamling: Samling<Person> = {
+  pbNavn: 'personer',
+  tabel: db.personer,
+  tilPb: (p, user) => ({
+    user,
+    uid: p.uid,
+    navn: p.navn,
+    email: p.email,
+    standard_overnatning: p.standard_overnatning,
+    noter: p.noter
+  }),
+  fraPb: (r) => ({
+    uid: uid(r),
+    pb_id: r.id,
+    navn: tekst(r.navn),
+    email: tekst(r.email),
+    standard_overnatning: OVERNATNING.includes(r.standard_overnatning as Person['standard_overnatning'] & string)
+      ? (r.standard_overnatning as Person['standard_overnatning'])
+      : null,
+    noter: tekst(r.noter),
     oprettet: dato(r.created),
     aendret: dato(r.updated)
   })
@@ -643,6 +732,14 @@ export const opretTur = (tur: Omit<Tur, 'id' | 'uid'>) => opret(turSamling, tur)
 export const opdaterTur = (id: number, aendringer: Partial<Tur>) => opdater(turSamling, id, aendringer);
 export const sletTur = (id: number) => slet(turSamling, id);
 
+export const opretSted = (sted: Omit<Sted, 'id' | 'uid'>) => opret(stedSamling, sted);
+export const opdaterSted = (id: number, aendringer: Partial<Sted>) => opdater(stedSamling, id, aendringer);
+export const sletSted = (id: number) => slet(stedSamling, id);
+
+export const opretPerson = (person: Omit<Person, 'id' | 'uid'>) => opret(personSamling, person);
+export const opdaterPerson = (id: number, aendringer: Partial<Person>) => opdater(personSamling, id, aendringer);
+export const sletPerson = (id: number) => slet(personSamling, id);
+
 // Sender alt der endnu ikke har nået PocketBase — både nye poster og
 // sletninger. Kaldes ved appstart, så det man lavede offline kommer op så
 // snart der er forbindelse igen.
@@ -656,6 +753,8 @@ export async function sendAltUsendt(): Promise<{ antal: number; fejl: number }> 
     await sendUsendte(itemSamling),
     await sendUsendte(gruppeSamling),
     await sendUsendte(turSamling),
+    await sendUsendte(stedSamling),
+    await sendUsendte(personSamling),
     await sendUsendteSletninger()
   ];
 
@@ -675,7 +774,9 @@ export async function hentFraPocketBase(): Promise<void> {
     await Promise.all([
       hent(itemSamling, bruger.id),
       hent(gruppeSamling, bruger.id),
-      hent(turSamling, bruger.id)
+      hent(turSamling, bruger.id),
+      hent(stedSamling, bruger.id),
+      hent(personSamling, bruger.id)
     ]);
   } catch (e) {
     console.error('Kunne ikke hente data fra PocketBase:', fejlDetaljer(e));
@@ -733,21 +834,37 @@ async function flytReferencer(omdoeb: Map<Reference, Reference>): Promise<void> 
   for (const tur of await db.ture.toArray()) {
     const grupper = flyt(tur.gruppe_ids);
     const loese = flyt(tur.loese_item_ids);
+    const sted_uid = omdoeb.get(tur.sted_uid) ?? tur.sted_uid;
     const deltagere = tur.deltagere.map((d) => ({
       ...d,
       personligt_gear_ids: flyt(d.personligt_gear_ids),
-      baerer_delt_ids: flyt(d.baerer_delt_ids)
+      baerer_delt_ids: flyt(d.baerer_delt_ids),
+      person_uid: omdoeb.get(d.person_uid) ?? d.person_uid
     }));
 
     const roert = aendret(tur.gruppe_ids, grupper)
       || aendret(tur.loese_item_ids, loese)
+      || sted_uid !== tur.sted_uid
       || tur.deltagere.some((d, i) =>
         aendret(d.personligt_gear_ids, deltagere[i].personligt_gear_ids)
-        || aendret(d.baerer_delt_ids, deltagere[i].baerer_delt_ids));
+        || aendret(d.baerer_delt_ids, deltagere[i].baerer_delt_ids)
+        || d.person_uid !== deltagere[i].person_uid);
 
     if (tur.id !== undefined && roert) {
-      await db.ture.update(tur.id, { gruppe_ids: grupper, loese_item_ids: loese, deltagere });
+      await db.ture.update(tur.id, { gruppe_ids: grupper, loese_item_ids: loese, sted_uid, deltagere });
     }
+  }
+
+  // Låne-loggen peger også på personer.
+  for (const item of await db.items.toArray()) {
+    const udlaanTil = omdoeb.get(item.udlaan?.person_uid ?? '');
+    const laantAfUid = omdoeb.get(item.laant_af?.person_uid ?? '');
+    if (item.id === undefined || (!udlaanTil && !laantAfUid)) continue;
+
+    await db.items.update(item.id, {
+      ...(udlaanTil && item.udlaan ? { udlaan: { ...item.udlaan, person_uid: udlaanTil } } : {}),
+      ...(laantAfUid && item.laant_af ? { laant_af: { ...item.laant_af, person_uid: laantAfUid } } : {})
+    });
   }
 }
 
@@ -759,7 +876,9 @@ export async function fjernDubletter(): Promise<number> {
   for (const kort of [
     await fjernDubletterI(itemSamling),
     await fjernDubletterI(gruppeSamling),
-    await fjernDubletterI(turSamling)
+    await fjernDubletterI(turSamling),
+    await fjernDubletterI(stedSamling),
+    await fjernDubletterI(personSamling)
   ]) {
     fjernet += kort.size;
     kort.forEach((til, fra) => omdoeb.set(fra, til));

@@ -8,13 +8,16 @@ import {
   KopiFejl,
   KOPI_VERSION
 } from './dataudveksling';
-import { lavItem, lavGruppe, lavTur } from './test/data';
+import { lavItem, lavGruppe, lavTur, lavSted, lavPerson } from './test/data';
 
-const tomBase = { items: [], grupper: [], ture: [] };
+const tomBase = { items: [], grupper: [], ture: [], steder: [], personer: [] };
+
+// Kopien tager fem tabeller; de fleste tests bruger kun en eller to af dem.
+const base = (dele: Partial<typeof tomBase> = {}) => ({ ...tomBase, ...dele });
 
 describe('lavSikkerhedskopi', () => {
-  it('tager alle tre tabeller med', () => {
-    const kopi = lavSikkerhedskopi([lavItem()], [lavGruppe()], [lavTur(), lavTur()]);
+  it('tager alle tabeller med', () => {
+    const kopi = lavSikkerhedskopi(base({ items: [lavItem()], grupper: [lavGruppe()], ture: [lavTur(), lavTur()] }));
 
     expect(kopi.version).toBe(KOPI_VERSION);
     expect(kopi.items).toHaveLength(1);
@@ -26,7 +29,7 @@ describe('lavSikkerhedskopi', () => {
   it('lader lokale id\'er og pb_id blive hjemme, men beholder uid', () => {
     const item = lavItem({ id: 7, uid: 'u-1', pb_id: 'pbXYZ' });
 
-    const [gemt] = lavSikkerhedskopi([item], [], []).items;
+    const [gemt] = lavSikkerhedskopi(base({ items: [item] })).items;
 
     expect(gemt.uid).toBe('u-1');
     expect('id' in gemt).toBe(false);
@@ -35,7 +38,7 @@ describe('lavSikkerhedskopi', () => {
 
   it('rører ikke posterne den får ind', () => {
     const item = lavItem({ id: 7, pb_id: 'pbXYZ' });
-    lavSikkerhedskopi([item], [], []);
+    lavSikkerhedskopi(base({ items: [item] }));
     expect(item.id).toBe(7);
     expect(item.pb_id).toBe('pbXYZ');
   });
@@ -46,7 +49,7 @@ describe('en kopi kan læses tilbage', () => {
     const item = lavItem({ uid: 'u-1', navn: 'Moonquilt', vaegt_g: 780, tags: ['søvn'] });
     const tur = lavTur({ uid: 'u-tur', navn: 'Rold Skov', loese_item_ids: ['u-1'] });
 
-    const tilbage = laesSikkerhedskopi(tilJson(lavSikkerhedskopi([item], [], [tur])));
+    const tilbage = laesSikkerhedskopi(tilJson(lavSikkerhedskopi(base({ items: [item], ture: [tur] }))));
 
     expect(tilbage.items[0].navn).toBe('Moonquilt');
     expect(tilbage.items[0].vaegt_g).toBe(780);
@@ -58,7 +61,7 @@ describe('en kopi kan læses tilbage', () => {
   it('gør datoerne til Date igen', () => {
     const item = lavItem({ oprettet: new Date('2026-03-01T10:00:00Z') });
 
-    const tilbage = laesSikkerhedskopi(tilJson(lavSikkerhedskopi([item], [], [])));
+    const tilbage = laesSikkerhedskopi(tilJson(lavSikkerhedskopi(base({ items: [item] }))));
 
     expect(tilbage.items[0].oprettet).toBeInstanceOf(Date);
     expect(tilbage.items[0].oprettet.toISOString()).toBe('2026-03-01T10:00:00.000Z');
@@ -98,9 +101,64 @@ describe('laesSikkerhedskopi afviser det den ikke kan bruge', () => {
   });
 });
 
+// Uden det her ville en sikkerhedskopi tabe stederne og personerne — og en
+// kopi der ikke rummer alt, er en kopi man opdager er utilstrækkelig for sent.
+describe('steder og personer i kopien', () => {
+  it('tager dem med ud', () => {
+    const kopi = lavSikkerhedskopi(base({
+      steder: [lavSted({ navn: 'Rold Skov' })],
+      personer: [lavPerson({ navn: 'Mikkel' })]
+    }));
+
+    expect(kopi.steder.map((s) => s.navn)).toEqual(['Rold Skov']);
+    expect(kopi.personer.map((p) => p.navn)).toEqual(['Mikkel']);
+  });
+
+  it('læser dem ind igen', () => {
+    const json = tilJson(lavSikkerhedskopi(base({
+      steder: [lavSted({ uid: 's-1' })],
+      personer: [lavPerson({ uid: 'p-1' })]
+    })));
+
+    const laest = laesSikkerhedskopi(json);
+
+    expect(laest.steder.map((s) => s.uid)).toEqual(['s-1']);
+    expect(laest.personer.map((p) => p.uid)).toEqual(['p-1']);
+  });
+
+  it('fletter dem ind uden at fordoble det man allerede har', () => {
+    const sted = lavSted({ uid: 's-1' });
+    const kopi = lavSikkerhedskopi(base({ steder: [sted, lavSted({ uid: 's-2' })] }));
+
+    const flettet = fletInd(kopi, base({ steder: [sted] }));
+
+    expect(flettet.steder.map((s) => s.uid)).toEqual(['s-2']);
+    expect(flettet.tilfoejet).toBe(1);
+    expect(flettet.fandtes).toBe(1);
+  });
+
+  // En kopi lavet før de to tabeller fandtes skal stadig kunne læses; de er
+  // bare tomme, og det er den rigtige værdi for en base der ikke havde dem.
+  it('læser en ældre kopi uden de to tabeller', () => {
+    const gammel = JSON.stringify({
+      version: 1,
+      lavet: '2026-01-01T00:00:00.000Z',
+      items: [lavItem({ uid: 'u-1' })],
+      grupper: [],
+      ture: []
+    });
+
+    const laest = laesSikkerhedskopi(gammel);
+
+    expect(laest.items).toHaveLength(1);
+    expect(laest.steder).toEqual([]);
+    expect(laest.personer).toEqual([]);
+  });
+});
+
 describe('fletInd', () => {
   it('lægger nye poster til', () => {
-    const kopi = lavSikkerhedskopi([lavItem({ uid: 'u-1' }), lavItem({ uid: 'u-2' })], [], []);
+    const kopi = lavSikkerhedskopi(base({ items: [lavItem({ uid: 'u-1' }), lavItem({ uid: 'u-2' })] }));
 
     const flettet = fletInd(kopi, tomBase);
 
@@ -111,7 +169,7 @@ describe('fletInd', () => {
 
   // Den samme kopi skal kunne læses ind to gange uden at fordoble noget.
   it('springer poster over der allerede findes', () => {
-    const kopi = lavSikkerhedskopi([lavItem({ uid: 'u-1' }), lavItem({ uid: 'u-2' })], [], []);
+    const kopi = lavSikkerhedskopi(base({ items: [lavItem({ uid: 'u-1' }), lavItem({ uid: 'u-2' })] }));
 
     const flettet = fletInd(kopi, { ...tomBase, items: [lavItem({ uid: 'u-1' })] });
 
@@ -122,7 +180,7 @@ describe('fletInd', () => {
 
   it('overskriver ikke en lokal post der er redigeret siden', () => {
     const lokal = lavItem({ uid: 'u-1', navn: 'Nyt navn' });
-    const kopi = lavSikkerhedskopi([lavItem({ uid: 'u-1', navn: 'Gammelt navn' })], [], []);
+    const kopi = lavSikkerhedskopi(base({ items: [lavItem({ uid: 'u-1', navn: 'Gammelt navn' })] }));
 
     fletInd(kopi, { ...tomBase, items: [lokal] });
 
@@ -130,14 +188,14 @@ describe('fletInd', () => {
   });
 
   it('lader ikke dubletter i selve kopien slippe igennem', () => {
-    const kopi = lavSikkerhedskopi([lavItem({ uid: 'u-1' }), lavItem({ uid: 'u-1' })], [], []);
+    const kopi = lavSikkerhedskopi(base({ items: [lavItem({ uid: 'u-1' }), lavItem({ uid: 'u-1' })] }));
 
     expect(fletInd(kopi, tomBase).items).toHaveLength(1);
   });
 
   // Uden pb_id findes posterne ikke på serveren og skal sendes op.
   it('markerer det importerede som usendt', () => {
-    const kopi = lavSikkerhedskopi([lavItem({ uid: 'u-1' })], [lavGruppe({ uid: 'g-1' })], [lavTur({ uid: 't-1' })]);
+    const kopi = lavSikkerhedskopi(base({ items: [lavItem({ uid: 'u-1' })], grupper: [lavGruppe({ uid: 'g-1' })], ture: [lavTur({ uid: 't-1' })] }));
 
     const flettet = fletInd(kopi, tomBase);
 
@@ -148,7 +206,7 @@ describe('fletInd', () => {
 
   it('holder de tre tabeller adskilt', () => {
     // Samme uid i to tabeller må ikke skygge for hinanden.
-    const kopi = lavSikkerhedskopi([lavItem({ uid: 'delt' })], [lavGruppe({ uid: 'delt' })], []);
+    const kopi = lavSikkerhedskopi(base({ items: [lavItem({ uid: 'delt' })], grupper: [lavGruppe({ uid: 'delt' })] }));
 
     const flettet = fletInd(kopi, tomBase);
 
