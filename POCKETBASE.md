@@ -163,22 +163,73 @@ user = @request.auth.id
 
 ## Trin 6 — Tjek at det virker
 
+### Tag en kopi først
+
+To steder, og det tager et minut:
+
+- **PocketBase → Settings → Backups → New backup.**
+- **Appen → Indstillinger → Data → Gem en kopi.** Den henter en JSON-fil med
+  alt hvad der ligger på enheden.
+
+Alt herunder er skrivebeskyttet eller til at fortryde, men en kopi koster
+ingenting og gør resten roligere at gå til.
+
+### Er nogen af samlingerne åbne for fremmede?
+
+```bash
+./scripts/tjek-pocketbase.sh https://din-server.dk
+```
+
+Prøven kalder som en uindlogget fremmed og skriver ikke noget.
+
+> **En regel i PocketBase er et filter, ikke en dør.** En uindlogget kalder
+> matcher ingen rækker, så det rigtige svar er `200` med en **tom liste** — ikke
+> 403. Det er det tomme resultat der er beviset.
+>
+> | Svar | Betyder |
+> |---|---|
+> | 200, tom liste | Reglen gør sit arbejde |
+> | 200, med rækker | **Regelfeltet står tomt — alle kan læse samlingen** |
+> | 403 | Låst til superusers; appen kan heller ikke bruge den |
+
+Prøven dækker kun læsning. Create, Update og Delete skal ses efter i hånden —
+de skal alle stå som `user = @request.auth.id`.
+
+### Virker appen stadig?
+
 1. Sæt `VITE_PB_URL` til serverens adresse — se `.env.example`.
-2. Log ind i appen.
+2. Log ind.
 3. **Indstillinger → Synkronisering → Synkronisér nu.** Der skal stå "Alt er
    synkroniseret". Står der et antal ændringer der ikke kunne sendes, står
    fejlen i browserens konsol.
 4. Samme sted vises advarslen om et manglende `uid`-felt, hvis den er udløst.
-5. Åbn en tur, lav et delelink, og åbn det i et privat vindue. Virker det, er
-   læsereglen rigtig.
-6. Prøv til sidst at hente en samling uden at være logget ind:
+5. Tjek at gear, grupper og ture stadig står der, og at tallene i
+   **Indstillinger → Data** passer med hvad du havde.
 
-   ```
-   https://din-server/api/collections/steder/records
-   ```
+### Går de nye felter faktisk op?
 
-   Får du **403**, er reglen rigtig. Får du en liste med data, står regelfeltet
-   tomt — gå tilbage til trin 1.
+Det er den ene ting der fejler tavst, så den er værd at se efter med egne øjne:
+
+1. Ret noget der bruger et nyt felt — lån et stykke gear ud, lav et
+   pak-af-tjek, gem et sted.
+2. Synkronisér.
+3. Find posten i PocketBase-admin og se at feltet har indhold. Står det tomt,
+   findes feltet ikke i skemaet, eller det hedder noget andet.
+
+### Virker delingen stadig?
+
+Læsereglen på `ture` er den eneste eksisterende regel der blev rørt, så den er
+den mest sandsynlige at have knækket:
+
+1. Åbn en tur → **Del med gæster** → lav et link.
+2. Åbn linket i et privat vindue. Turen skal kunne ses.
+3. Ret ét tegn i tokenet i adresselinjen. Der skal stå at turen ikke findes.
+
+Og det nye i samme regel:
+
+4. Sæt et hjemkomsttidspunkt på en tur → **Turkort til pårørende** → lav kortet.
+5. Åbn linket i et privat vindue. Der skal stå navn, sted og hjemkomst — og
+   intet andet fra turen.
 
 Har du kørt appen før felterne fandtes, ligger dataene stadig på enheden. De går
 op af sig selv ved næste synkronisering.
