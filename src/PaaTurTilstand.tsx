@@ -1,14 +1,17 @@
-import { useEffect } from 'react';
-import type { Tur } from './db';
+import { useEffect, useState } from 'react';
+import type { Feltnote, Tur } from './db';
 import type { VejrData } from './smartMotor';
 import { vejrIkonKode } from './smartMotor';
 import { fremdrift, manglende } from './afgangsTjek';
 import { dageTilbage, dagsnavn, naesteSkift, vejrForDag } from './paaTur';
+import { nyesteFoerst, tidstekst } from './feltnoter';
 
 interface Props {
   tur: Tur;
   vejr: VejrData | null;
-  saetNoter: (v: string) => void;
+  // Skriver en indgang i turlogen. Skærmen retter ikke i de gamle — det gør
+  // man hjemmefra, ikke med kolde fingre.
+  skrivNote: (tekst: string) => void;
   luk: () => void;
 }
 
@@ -27,7 +30,8 @@ const DAEMPET = '#8a8a82';
 const SVAG = '#5a5a55';
 const ACCENT = '#c8a55b';
 
-function PaaTurTilstand({ tur, vejr, saetNoter, luk }: Props) {
+function PaaTurTilstand({ tur, vejr, skrivNote, luk }: Props) {
+  const [udkast, setUdkast] = useState('');
   // Escape lukker. En skærm uden anden vej ud end en knap i et hjørne er
   // ubehagelig, og man kan komme til at åbne den.
   useEffect(() => {
@@ -41,6 +45,13 @@ function PaaTurTilstand({ tur, vejr, saetNoter, luk }: Props) {
   const tilbage = dageTilbage(tur, idag);
   const tjek = fremdrift(tur.afgangs_tjek);
   const mangler = manglende(tur.afgangs_tjek);
+  const noter = nyesteFoerst(tur.feltnoter ?? []);
+
+  const skriv = () => {
+    if (!udkast.trim()) return;
+    skrivNote(udkast);
+    setUdkast('');
+  };
 
   return (
     <div style={{
@@ -129,11 +140,11 @@ function PaaTurTilstand({ tur, vejr, saetNoter, luk }: Props) {
           </Blok>
         )}
 
-        <Blok titel="Feltnoter">
+        <Blok titel="Turlog">
           <textarea
-            value={tur.noter}
-            onChange={(e) => saetNoter(e.target.value)}
-            rows={7}
+            value={udkast}
+            onChange={(e) => setUdkast(e.target.value)}
+            rows={5}
             placeholder="Hvad skete der i dag?"
             style={{
               width: '100%',
@@ -147,9 +158,47 @@ function PaaTurTilstand({ tur, vejr, saetNoter, luk }: Props) {
               resize: 'vertical'
             }}
           />
+
+          <button
+            onClick={skriv}
+            disabled={!udkast.trim()}
+            style={{
+              marginTop: '8px',
+              width: '100%',
+              padding: '11px',
+              borderRadius: '8px',
+              border: 'none',
+              background: udkast.trim() ? ACCENT : '#1e201e',
+              color: udkast.trim() ? '#12140f' : SVAG,
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: udkast.trim() ? 'pointer' : 'default'
+            }}
+          >
+            Skriv i loggen
+          </button>
+
           <div style={{ fontSize: '11px', color: SVAG, marginTop: '6px' }}>
             Gemmes på turen med det samme — også uden dækning.
           </div>
+
+          {noter.length > 0 && (
+            <div style={{ marginTop: '18px', display: 'grid', gap: '12px' }}>
+              {/* Kun det man selv har skrevet på turen, nyeste først. Der er
+                  ingen redigering her — det gør man hjemmefra, ikke med kolde
+                  fingre i mørke. */}
+              {noter.map((note: Feltnote) => (
+                <div key={note.id}>
+                  <div style={{ fontSize: '11px', color: SVAG, marginBottom: '2px' }}>
+                    {tidstekst(note.tid)}
+                  </div>
+                  <div style={{ fontSize: '14px', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                    {note.tekst}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </Blok>
       </div>
     </div>

@@ -29,6 +29,8 @@ import type {
   Laant,
   AfgangsTjek,
   AfgangsLinje,
+  Feltnote,
+  Vedligehold,
   Sted,
   Person
 } from './db';
@@ -209,6 +211,36 @@ function laantAf(v: unknown): Laant | null {
   };
 }
 
+function vedligehold(v: unknown): Vedligehold[] {
+  if (!Array.isArray(v)) return [];
+
+  return v
+    .map((raa) => (raa ?? {}) as Record<string, unknown>)
+    // Uden et navn er handlingen ikke til at genkende, og så er der intet at
+    // minde om.
+    .filter((h) => tekst(h.navn).trim() !== '')
+    .map((h) => ({
+      id: tekst(h.id) || crypto.randomUUID(),
+      navn: tekst(h.navn),
+      sidst_udfoert: tekst(h.sidst_udfoert),
+      interval_maaneder: tal(h.interval_maaneder),
+      noter: tekst(h.noter)
+    }));
+}
+
+function feltnoter(v: unknown): Feltnote[] {
+  if (!Array.isArray(v)) return [];
+
+  return v
+    .map((raa) => (raa ?? {}) as Record<string, unknown>)
+    .filter((n) => tekst(n.tekst).trim() !== '')
+    .map((n) => ({
+      id: tekst(n.id) || crypto.randomUUID(),
+      tid: tekst(n.tid),
+      tekst: tekst(n.tekst)
+    }));
+}
+
 // PocketBase dropper lydløst felter der ikke findes i samlingens skema. Uden
 // et uid-felt kan to enheder ikke blive enige om hvilken post der er hvilken,
 // og det er værd at opdage med det samme frem for når data er rodet sammen.
@@ -276,6 +308,7 @@ const itemSamling: Samling<Item> = {
     garanti: i.garanti,
     udlaan: i.udlaan ?? null,
     laant_af: i.laant_af ?? null,
+    vedligehold: i.vedligehold ?? [],
     noter: i.noter
   }),
   fraPb: (r) => ({
@@ -295,6 +328,7 @@ const itemSamling: Samling<Item> = {
     koebsdato: tekst(r.koebsdato),
     udlaan: udlaan(r.udlaan),
     laant_af: laantAf(r.laant_af),
+    vedligehold: vedligehold(r.vedligehold),
     koebslink: tekst(r.koebslink),
     ordrenummer: tekst(r.ordrenummer),
     garanti: garanti(r.garanti),
@@ -353,6 +387,7 @@ const turSamling: Samling<Tur> = {
     budget_linjer: t.budget_linjer,
     pak_af_tjek: t.pak_af_tjek ?? null,
     afgangs_tjek: t.afgangs_tjek ?? null,
+    feltnoter: t.feltnoter ?? [],
     besked_fra_ejer: t.besked_fra_ejer,
     noter: t.noter,
     vejrsnapshot: t.vejrsnapshot,
@@ -386,6 +421,7 @@ const turSamling: Samling<Tur> = {
     budget_linjer: budgetLinjer(r.budget_linjer),
     pak_af_tjek: pakAfTjek(r.pak_af_tjek),
     afgangs_tjek: afgangsTjek(r.afgangs_tjek),
+    feltnoter: feltnoter(r.feltnoter),
     besked_fra_ejer: tekst(r.besked_fra_ejer),
     noter: tekst(r.noter),
     vejrsnapshot: tekst(r.vejrsnapshot),

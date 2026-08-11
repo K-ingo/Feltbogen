@@ -252,6 +252,52 @@ describe('handlinger', () => {
     });
   });
 
+  describe('forfaldent vedligehold', () => {
+    const medVedligehold = (navn: string, sidst_udfoert: string, interval_maaneder = 12) =>
+      lavItem({
+        navn,
+        pris_kr: 0,
+        koebt_hos: 'Butik',
+        vedligehold: [{ id: 'h-1', navn: 'Imprægnering', sidst_udfoert, interval_maaneder, noter: '' }]
+      });
+
+    it('minder om gear der snart skal passes', () => {
+      const h = handlinger([medVedligehold('DD Tarp', '08/2025')], [], [], NU);
+
+      expect(h).toHaveLength(1);
+      expect(h[0].type).toBe('vedligehold_forfalder');
+      expect(h[0].titel).toBe('Vedligehold forfalder');
+      expect(h[0].detalje).toBe('DD Tarp · imprægnering om 2 dage');
+    });
+
+    // Imprægnering skal helst ske inden turen, ikke bagefter.
+    it('varsler før forfald, ikke først bagefter', () => {
+      expect(handlinger([medVedligehold('Tarp', '08/2025')], [], [], NU)[0].haster).toBe(false);
+    });
+
+    // Forfaldent er ikke det samme som forsømt.
+    it('haster først når fristen er passeret', () => {
+      const bagud = handlinger([medVedligehold('Tarp', '01/2025')], [], [], NU);
+      expect(bagud[0].haster).toBe(true);
+      expect(bagud[0].detalje).toContain('overskredet');
+    });
+
+    it('tier om noget der ligger langt ude', () => {
+      expect(handlinger([medVedligehold('Tarp', '06/2026')], [], [], NU)).toEqual([]);
+    });
+
+    it('tier om gear der aldrig er blevet passet', () => {
+      expect(handlinger([medVedligehold('Tarp', '')], [], [], NU)).toEqual([]);
+    });
+
+    it('forklarer intervallet bag varslet', () => {
+      const [h] = handlinger([medVedligehold('Tarp', '08/2025')], [], [], NU);
+
+      expect(h.begrundelse).toContain('08/2025');
+      expect(h.begrundelse).toContain('hver 12. måned');
+    });
+  });
+
   describe('lange udlån', () => {
     const udlaant = (navn: string, udlaant_dato: string, forventet_retur = '') =>
       lavItem({

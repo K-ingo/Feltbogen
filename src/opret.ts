@@ -26,6 +26,7 @@ export function opretTomtItem(status: ItemStatus = 'ejer'): Promise<number> {
     garanti: null,
     udlaan: null,
     laant_af: null,
+    vedligehold: [],
     noter: '',
     oprettet: nu,
     aendret: nu
@@ -78,6 +79,7 @@ export function opretTomTur(): Promise<number> {
     budget_linjer: [],
     pak_af_tjek: null,
     afgangs_tjek: null,
+    feltnoter: [],
     besked_fra_ejer: '',
     noter: '',
     vejrsnapshot: '',

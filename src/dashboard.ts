@@ -3,6 +3,7 @@ import { itemUidsPaaTur, laesDanskDato, dageTil } from './smartMotor';
 import { filtrererTure } from './statistik';
 import { manglerPakAfTjek, dageSidenSlut, PAK_AF_FRIST_DAGE } from './pakAfTjek';
 import { udlaanteItems, dageUdlaant, erOverskredet, laengde, LANGT_UDLAAN_DAGE } from './udlaan';
+import { forfaldne, forfaldstekst, VARSEL_DAGE } from './vedligehold';
 
 // Logikken bag startskærmen. Alt herinde er rene funktioner, så rækkefølgen og
 // grænserne kan testes uden at rende skærmen igennem.
@@ -42,6 +43,7 @@ export type HandlingsType =
   | 'garanti'
   | 'kladde_naer_start'
   | 'pak_af_tjek_mangler'
+  | 'vedligehold_forfalder'
   | 'udlaan_laenge'
   | 'koebsinfo'
   | 'ubrugt';
@@ -119,6 +121,7 @@ export function handlinger(
     ...garantier,
     ...kladderNaerStart(ture, nu),
     ...manglendePakAfTjek(ture, nu),
+    ...forfaldentVedligehold(ejet, nu),
     ...langeUdlaan(ejet, nu),
     ...koebsinfo,
     ...ubrugt
@@ -176,6 +179,21 @@ function manglendePakAfTjek(ture: Tur[], nu: Date): Handling[] {
       // ikke længere en note man kan tage sig af i næste uge.
       haster: dage > PAK_AF_FRIST_DAGE
     }));
+}
+
+// Gear der skal passes. Det mest overskredne først — imprægneringen der er
+// et år bagud haster mere end den der forfalder i næste uge.
+function forfaldentVedligehold(ejet: Item[], nu: Date): Handling[] {
+  return forfaldne(ejet, nu).map(({ item, handling, dage }) => ({
+    type: 'vedligehold_forfalder' as const,
+    titel: 'Vedligehold forfalder',
+    detalje: `${item.navn} · ${handling.navn.toLowerCase()} ${forfaldstekst(dage)}`,
+    maal: { slags: 'item' as const, uid: item.uid },
+    begrundelse: `${handling.navn} blev sidst gjort ${handling.sidst_udfoert} og skal gøres hver ${handling.interval_maaneder}. måned. Varslet går ${VARSEL_DAGE} dage forud, så det kan nås inden en tur — en tarp imprægneres bedst før regnen og ikke efter.`,
+    // Forfaldent er ikke det samme som forsømt. Først når fristen er
+    // passeret, er det noget der skulle have været gjort.
+    haster: dage < 0
+  }));
 }
 
 // Gear der har været ude af huset længe, eller som skulle have været tilbage.

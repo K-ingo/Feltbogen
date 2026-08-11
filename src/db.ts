@@ -91,6 +91,18 @@ export interface Laant {
   skal_retur: string;
 }
 
+// Imprægnering af tarp, slibning af økse, olie i lygte. Det er den skjulte
+// grund til at gear går i stykker: det bliver ikke passet.
+export interface Vedligehold {
+  id: string;
+  navn: string;
+  // MM/ÅÅÅÅ som købsdatoen — man husker sjældent hvilken dag man
+  // imprægnerede, og måneden er præcis nok til et interval på et år.
+  sidst_udfoert: string;
+  interval_maaneder: number;
+  noter: string;
+}
+
 export interface Item extends Synkroniserbar {
   id?: number;
   navn: string;
@@ -112,6 +124,9 @@ export interface Item extends Synkroniserbar {
   // altid med ?? null.
   udlaan: Udlaan | null;
   laant_af: Laant | null;
+  // Tom liste når der ikke er noget at holde ved lige. Ældre poster har feltet
+  // slet ikke — læs det altid med ?? [].
+  vedligehold: Vedligehold[];
   noter: string;
   oprettet: Date;
   aendret: Date;
@@ -221,6 +236,16 @@ export interface AfgangsTjek {
   linjer: AfgangsLinje[];
 }
 
+// En dagbogsindgang fra turen. Feltbogens løfte står i navnet — turen er
+// andet end en pakkeliste.
+export interface Feltnote {
+  id: string;
+  // ISO. Indgangene står i den rækkefølge de blev skrevet, ikke i den
+  // rækkefølge de blev rettet.
+  tid: string;
+  tekst: string;
+}
+
 export interface Tur extends Synkroniserbar {
   id?: number;
   navn: string;
@@ -248,6 +273,8 @@ export interface Tur extends Synkroniserbar {
   pak_af_tjek: PakAfTjek | null;
   // null indtil listen er taget i brug på turen.
   afgangs_tjek: AfgangsTjek | null;
+  // Turlogen. Tom liste indtil man skriver den første indgang.
+  feltnoter: Feltnote[];
   besked_fra_ejer: string;
   noter: string;
   vejrsnapshot: string;

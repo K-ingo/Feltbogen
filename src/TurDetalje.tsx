@@ -14,6 +14,7 @@ import type {
   BudgetLinje,
   PakAfTjek,
   AfgangsTjek,
+  Feltnote,
   Person,
   Sted,
   Reference
@@ -58,6 +59,7 @@ import {
   Hvorfor
 } from './ui';
 import PakAfTjekSide from './PakAfTjekSide';
+import { Qrkode, Qrfuldskaerm } from './Qrkode';
 import PaaTurTilstand from './PaaTurTilstand';
 import {
   nytAfgangsTjek,
@@ -70,6 +72,14 @@ import {
   laesSkabelon
 } from './afgangsTjek';
 import { nytTurkorttoken, lavTurkort, turkortLink, returtekst } from './turkort';
+import {
+  tilfoej as tilfoejFeltnote,
+  saetTekst as saetFeltnote,
+  fjern as fjernFeltnote,
+  efterDag,
+  tidstekst,
+  resumetekst as feltnoteResume
+} from './feltnoter';
 import {
   foreslaaPersoner,
   antalTurePrPerson,
@@ -374,6 +384,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   };
 
   const gemAfgang = (nyt: AfgangsTjek) => void opdater({ afgangs_tjek: nyt });
+  const gemNoter = (nye: Feltnote[]) => void opdater({ feltnoter: nye });
 
   const gaaPaaTur = async () => {
     await sikrAfgangsTjek();
@@ -413,7 +424,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
       <PaaTurTilstand
         tur={tur}
         vejr={vejrData}
-        saetNoter={(v) => void opdater({ noter: v })}
+        skrivNote={(t) => void opdater({ feltnoter: tilfoejFeltnote(tur.feltnoter ?? [], t) })}
         luk={() => setViserPaaTur(false)}
       />
     );
@@ -636,6 +647,22 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
     </Foldbar>
   );
 
+  const feltnoteSektion = (
+    <Foldbar
+      titel="Turlog"
+      resume={feltnoteResume(tur.feltnoter ?? [])}
+      // På en tur der er i gang er det den man skal have fat i.
+      aabenFra={tur.status === 'aktiv'}
+    >
+      <Turlog
+        noter={tur.feltnoter ?? []}
+        tilfoej={(t) => gemNoter(tilfoejFeltnote(tur.feltnoter ?? [], t))}
+        saet={(id, t) => gemNoter(saetFeltnote(tur.feltnoter ?? [], id, t))}
+        fjern={(id) => gemNoter(fjernFeltnote(tur.feltnoter ?? [], id))}
+      />
+    </Foldbar>
+  );
+
   const turkortSektion = (
     <Foldbar titel="Turkort til pårørende" resume={tur.turkort_token ? 'Sendt' : 'Ikke lavet'}>
       <Turkort
@@ -698,6 +725,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
     <>
       {pakAfSektion}
       {afgangsSektion}
+      {feltnoteSektion}
       <Foldbar
         titel={`Deltagere (${tur.deltagere.length})`}
         resume={tur.deltagere.map((d) => d.navn).join(', ')}
@@ -785,6 +813,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
       <div style={{ display: 'grid', gap: '8px', marginTop: '16px' }}>
         {pakAfSektion}
         {afgangsSektion}
+        {feltnoteSektion}
         <Foldbar titel="Turparametre" resume={parametreResume}>{parametre}</Foldbar>
         {advarsler.length > 0 && (
           <Foldbar titel={`Advarsler (${advarsler.length})`} advarsel aabenFra>
@@ -1715,7 +1744,9 @@ function Deling({ token, snapshot, deltagelser, gearnavne, del, stop }: {
 
       {advarsel && <Linkfejl slags={advarsel} />}
 
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+      <Linkdeling link={link} />
+
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
         <Knap variant="primaer" onClick={kopier}>{kopieret ? 'Kopieret' : 'Kopiér link'}</Knap>
         <Knap variant="fare" onClick={stop}>Stop deling</Knap>
       </div>
@@ -1731,8 +1762,143 @@ function Deling({ token, snapshot, deltagelser, gearnavne, del, stop }: {
   );
 }
 
-// Hvem der er kommet med, og det man ikke kan aflæse af pakkelisten. Selve
-// grejet står dér — det er én tur og én liste.
+// Turlogen. Vejret som det faktisk var, hvad man så, hvad der virkede.
+//
+// Nyeste øverst og samlet pr. dag: en dagbog læses dagvis, og det man skrev i
+// aftes er det man har brug for at se først når man åbner turen igen.
+function Turlog({ noter, tilfoej, saet, fjern }: {
+  noter: Feltnote[];
+  tilfoej: (tekst: string) => void;
+  saet: (id: string, tekst: string) => void;
+  fjern: (id: string) => void;
+}) {
+  const [udkast, setUdkast] = useState('');
+
+  const skriv = () => {
+    if (!udkast.trim()) return;
+    tilfoej(udkast);
+    setUdkast('');
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'grid', gap: '8px', marginBottom: '16px' }}>
+        <Tekstomraade
+          label="Ny indgang"
+          value={udkast}
+          onChange={setUdkast}
+          raekker={3}
+          placeholder="Hvad skete der i dag?"
+        />
+        <div>
+          <Knap variant="primaer" onClick={skriv} disabled={!udkast.trim()}>
+            + Skriv i loggen
+          </Knap>
+        </div>
+      </div>
+
+      {noter.length === 0 ? (
+        <div style={{ fontSize: '13px', color: 'var(--tekst-svag)', lineHeight: 1.5 }}>
+          Ingen indgange endnu. Det behøver ikke være meget — "regn fra fire, tarp holdt"
+          er nok til at kunne huske turen om et år.
+        </div>
+      ) : (
+        efterDag(noter).map((dag) => (
+          <section key={dag.dato} style={{ marginBottom: '14px' }}>
+            <SektionsTitel>{overskriftFor(dag.dato)}</SektionsTitel>
+            <div style={{ display: 'grid', gap: '8px' }}>
+              {dag.indgange.map((note) => (
+                <div
+                  key={note.id}
+                  style={{
+                    border: '1px solid var(--border-svag)',
+                    borderRadius: '10px',
+                    padding: '10px 12px',
+                    background: 'var(--bg-forhoejet)'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '5px' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--tekst-svag)' }}>
+                      {tidstekst(note.tid)}
+                    </span>
+                    <button
+                      onClick={() => fjern(note.id)}
+                      aria-label="Slet indgangen"
+                      style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: 'var(--fejl)', cursor: 'pointer', fontSize: '14px', padding: '0 2px' }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  {/* Indgangen kan rettes, men tidsstemplet bliver stående —
+                      det er stadig den samme aften. */}
+                  <textarea
+                    value={note.tekst}
+                    onChange={(e) => saet(note.id, e.target.value)}
+                    rows={Math.min(8, Math.max(2, note.tekst.split('\n').length))}
+                    style={{
+                      width: '100%',
+                      fontSize: '13px',
+                      lineHeight: 1.55,
+                      border: 'none',
+                      background: 'transparent',
+                      padding: 0,
+                      resize: 'vertical',
+                      color: 'var(--tekst)'
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
+        ))
+      )}
+    </div>
+  );
+}
+
+// "Tirsdag 4. august" — eller datoen som den står, hvis den ikke kan læses.
+function overskriftFor(dato: string): string {
+  const d = new Date(dato);
+  if (!dato || Number.isNaN(d.getTime())) return 'Uden dato';
+
+  const dage = ['Søndag', 'Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag'];
+  const maaneder = [
+    'januar', 'februar', 'marts', 'april', 'maj', 'juni',
+    'juli', 'august', 'september', 'oktober', 'november', 'december'
+  ];
+
+  return `${dage[d.getDay()]} ${d.getDate()}. ${maaneder[d.getMonth()]}`;
+}
+
+// QR ved siden af et link. Ved bålet uden dækning er en kode mærkbart bedre
+// end at læse 32 hex-tegn op — og den anden har ikke nødvendigvis noget at
+// skrive på.
+//
+// På PC står koden fremme; der er plads, og skærmen er stor nok til at skanne
+// fra. På mobil ville den æde sektionen, så den ligger bag en knap og åbner i
+// fuld skærm — en lille kode på en telefon er svær at fange med en anden.
+function Linkdeling({ link }: { link: string }) {
+  const erDesktop = useErDesktop();
+  const [viserFuld, setViserFuld] = useState(false);
+
+  if (erDesktop) {
+    return (
+      <div style={{ marginTop: '10px' }}>
+        <Qrkode vaerdi={link} />
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div style={{ marginTop: '10px' }}>
+        <Knap onClick={() => setViserFuld(true)}>Vis QR-kode</Knap>
+      </div>
+      {viserFuld && <Qrfuldskaerm vaerdi={link} luk={() => setViserFuld(false)} />}
+    </>
+  );
+}
+
 // Afgangs-tjeklisten. Alt det man glemmer, som ikke er gear.
 function Afgangstjekliste({ tjek, opret, gem }: {
   tjek: AfgangsTjek | null;
@@ -1866,6 +2032,8 @@ function Turkort({ tur, stednavn, opdater, lav, stop }: {
           }}>
             {link}
           </div>
+          <Linkdeling link={link} />
+
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <Knap onClick={() => void kopier()}>{kopieret ? 'Kopieret' : 'Kopiér link'}</Knap>
             {/* Retter man tidspunktet eller beskeden, skal kortet bygges om —
@@ -1894,6 +2062,8 @@ function Turkort({ tur, stednavn, opdater, lav, stop }: {
   );
 }
 
+// Hvem der er kommet med, og det man ikke kan aflæse af pakkelisten. Selve
+// grejet står dér — det er én tur og én liste.
 function Meldtind({ deltagelser, gearnavne }: {
   deltagelser: Deltagelse[];
   gearnavne: Map<Reference, string>;

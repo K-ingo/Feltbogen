@@ -39,6 +39,8 @@ appen starter.
 | Afgangs-tjek | `src/afgangsTjek.ts` | Huskelisten der ikke handler om gear, og dens skabelon |
 | På tur | `src/paaTur.ts` | Næste vejrskift, dage tilbage — det man skal vide i felten |
 | Turkort | `src/turkort.ts` | Ét link til én pårørende: hvor og hvornår hjemme |
+| Turlog | `src/feltnoter.ts` | Dagbogen fra turen, samlet pr. dag |
+| Vedligehold | `src/vedligehold.ts` | Imprægnering, slibning — intervaller der går i ring |
 | Statistik | `src/statistik.ts` | Aggregeringer over inventar og ture |
 | UI-primitiver | `src/ui.tsx`, `src/layout.ts` | Knap, Kort, Felt, Chip, Badge, listerækker, detalje-header |
 | Skærme | `src/App.tsx` m.fl. | Inventar, Grupper, Ture, Steder, Statistik |
@@ -128,11 +130,15 @@ Der er ingen service worker under `npm run dev`. Test offline med
 - **open-meteo.com** — vejrudsigt og geocoding. Gratis, ingen nøgle.
 - **api.dataforsyningen.dk (DAWA)** — danske adresser og stednavne. Gratis, ingen nøgle.
 
+QR-koderne tegnes lokalt af `qrcode` og går ikke over nettet — et delelink skal
+kunne vises ved bålet uden dækning.
+
 ## Status
 
 V1 under udvikling. Bygget: inventar, grupper, ture med smart-motor, statistik,
 PWA, deling og gæsteview, dashboard, indstillinger, pak-af-tjek, steder,
-personer, låne-log, afgangs-tjek, på-tur-tilstand, turkort til pårørende.
+personer, låne-log, afgangs-tjek, på-tur-tilstand, turkort til pårørende,
+turlog, vedligeholds-log, QR-koder.
 Endnu ikke bygget: badges/notifikationer.
 
 Ideer til det videre arbejde ligger i [`IDEER.md`](./IDEER.md).

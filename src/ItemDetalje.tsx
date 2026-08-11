@@ -1,12 +1,23 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, ITEM_STATUS } from './db';
-import type { Item, Tur, Garanti, Laant, Person, Udlaan } from './db';
+import type { Item, Tur, Garanti, Laant, Person, Udlaan, Vedligehold } from './db';
 import TagsInput from './TagsInput';
 import { turePrItem } from './statistik';
 import { brugPrItem } from './pakAfTjek';
 import type { Brug } from './pakAfTjek';
 import { dageSiden, erOverskredet, laengde } from './udlaan';
+import {
+  FORSLAG,
+  dageTilForfald,
+  erForfalden,
+  fjernHandling,
+  forfaldstekst,
+  nyHandling,
+  opdaterHandling,
+  statustekst,
+  skrivMaaned
+} from './vedligehold';
 import { garantiAdvarsel } from './smartMotor';
 import {
   Felt,
@@ -43,7 +54,8 @@ function medStandardfelter(item: Item): Item {
     ordrenummer: item.ordrenummer ?? '',
     garanti: item.garanti ?? null,
     udlaan: item.udlaan ?? null,
-    laant_af: item.laant_af ?? null
+    laant_af: item.laant_af ?? null,
+    vedligehold: item.vedligehold ?? []
   };
 }
 
@@ -132,6 +144,11 @@ function ItemDetalje({ itemId, tilbage, nyOprettet }: Props) {
           personer={personer}
           saetUdlaan={(u) => void opdater({ udlaan: u })}
           saetLaant={(l) => void opdater({ laant_af: l })}
+        />
+
+        <Vedligeholdskort
+          handlinger={item.vedligehold ?? []}
+          gem={(nye) => void opdater({ vedligehold: nye })}
         />
 
         <div style={{ height: '4px' }} />
@@ -478,6 +495,139 @@ function Personforslag({ personer, navn, vaelg }: {
           knyt til {p.navn}
         </button>
       ))}
+    </div>
+  );
+}
+
+// Vedligeholds-loggen. Samme mønster som garantien — en dato og et interval —
+// men hvor garantien løber ud én gang, går det her i ring.
+function Vedligeholdskort({ handlinger, gem }: {
+  handlinger: Vedligehold[];
+  gem: (nye: Vedligehold[]) => void;
+}) {
+  const forfaldne = handlinger.filter((h) => erForfalden(h));
+
+  return (
+    <Infokort label="Vedligehold" fremhaevet={forfaldne.length > 0}>
+      {handlinger.length === 0 ? (
+        <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginBottom: '10px', lineHeight: 1.5 }}>
+          Imprægnering, slibning, olie. Det er den skjulte grund til at gear går i
+          stykker — det bliver ikke passet.
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: '10px', marginBottom: '12px' }}>
+          {handlinger.map((h) => (
+            <Vedligeholdsraekke
+              key={h.id}
+              handling={h}
+              saet={(a) => gem(opdaterHandling(handlinger, h.id, a))}
+              fjern={() => gem(fjernHandling(handlinger, h.id))}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Forslagene er genveje, ikke en liste man skal holde sig til. */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+        {FORSLAG.filter((f) => !handlinger.some((h) => h.navn === f.navn)).map((f) => (
+          <button
+            key={f.navn}
+            onClick={() => gem([...handlinger, nyHandling(f.navn, f.interval_maaneder)])}
+            style={{
+              padding: '4px 10px',
+              fontSize: '11px',
+              background: 'var(--bg-forhoejet)',
+              color: 'var(--accent)',
+              border: '1px solid var(--accent-border)',
+              borderRadius: '14px',
+              cursor: 'pointer'
+            }}
+          >
+            + {f.navn}
+          </button>
+        ))}
+        <button
+          onClick={() => gem([...handlinger, nyHandling()])}
+          style={{
+            padding: '4px 10px',
+            fontSize: '11px',
+            background: 'transparent',
+            color: 'var(--tekst-dæmpet)',
+            border: '1px dashed var(--border)',
+            borderRadius: '14px',
+            cursor: 'pointer'
+          }}
+        >
+          + Andet
+        </button>
+      </div>
+    </Infokort>
+  );
+}
+
+function Vedligeholdsraekke({ handling, saet, fjern }: {
+  handling: Vedligehold;
+  saet: (a: Partial<Vedligehold>) => void;
+  fjern: () => void;
+}) {
+  const dage = dageTilForfald(handling);
+  const forfalden = erForfalden(handling);
+
+  return (
+    <div style={{
+      border: '1px solid var(--border-svag)',
+      borderLeft: `3px solid ${forfalden ? 'var(--advarsel)' : 'var(--border-svag)'}`,
+      borderRadius: '10px',
+      padding: '10px 12px',
+      display: 'grid',
+      gap: '8px'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+        <input
+          value={handling.navn}
+          onChange={(e) => saet({ navn: e.target.value })}
+          placeholder="Hvad skal gøres"
+          style={{ flex: 1, minWidth: 0, fontSize: '13px', border: 'none', background: 'transparent', padding: 0 }}
+        />
+        <button
+          onClick={fjern}
+          aria-label={`Fjern ${handling.navn}`}
+          style={{ background: 'transparent', border: 'none', color: 'var(--fejl)', cursor: 'pointer', fontSize: '14px', padding: '0 2px' }}
+        >
+          ×
+        </button>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+        <Felt
+          label="Sidst udført"
+          value={handling.sidst_udfoert}
+          onChange={(v) => saet({ sidst_udfoert: v })}
+          hjaelp="MM/ÅÅÅÅ"
+        />
+        <Felt
+          label="Hver"
+          type="number"
+          value={handling.interval_maaneder}
+          onChange={(v) => saet({ interval_maaneder: Number(v) || 0 })}
+          hjaelp="måneder"
+        />
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '11px', color: forfalden ? 'var(--advarsel)' : 'var(--tekst-dæmpet)' }}>
+          {statustekst(handling)}
+          {dage !== null && ` · ${forfaldstekst(dage)}`}
+        </span>
+        {/* Det man gør oftest: sætte datoen til nu, fordi man lige har gjort
+            det. Så skal man ikke slå måneden op. */}
+        <Knap
+          onClick={() => saet({ sidst_udfoert: skrivMaaned(new Date()) })}
+          style={{ marginLeft: 'auto', fontSize: '11px', padding: '3px 9px' }}
+        >
+          Gjort nu
+        </Knap>
+      </div>
     </div>
   );
 }
