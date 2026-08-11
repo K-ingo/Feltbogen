@@ -160,6 +160,12 @@ Denne har **ikke** et `uid`-felt; den synkroniseres ikke som de andre.
 
 ## 3. API-regler
 
+> **Opret felterne før reglerne.** PocketBase validerer en regel mod de felter
+> samlingen har, så skriver du `user = @request.auth.id` på API rules-fanen
+> inden `user`-feltet findes, får du
+> `Invalid rule. Raw error: invalid left operand "user" - unknown field "user"`
+> og kan ikke trykke Create. Udfyld Fields-fanen først, så validerer reglerne.
+
 > **En tom regel betyder "alle må", ikke "ingen må".** Det er den farligste
 > faldgrube i hele opsætningen, fordi den fejler tavst: lader du et regelfelt
 > stå blankt, kan hvem som helst på internettet både læse og skrive i
