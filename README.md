@@ -41,6 +41,8 @@ appen starter.
 | Turkort | `src/turkort.ts` | Ét link til én pårørende: hvor og hvornår hjemme |
 | Turlog | `src/feltnoter.ts` | Dagbogen fra turen, samlet pr. dag |
 | Vedligehold | `src/vedligehold.ts` | Imprægnering, slibning — intervaller der går i ring |
+| Vægt-brydere | `src/vaegtbrydere.ts` | Lettere alternativer i skabet, og tags ingen gruppe har |
+| Ligesom sidst | `src/ligesomSidst.ts` | Tidligere ture der lignede, som grej kan kopieres fra |
 | Statistik | `src/statistik.ts` | Aggregeringer over inventar og ture |
 | UI-primitiver | `src/ui.tsx`, `src/layout.ts` | Knap, Kort, Felt, Chip, Badge, listerækker, detalje-header |
 | Skærme | `src/App.tsx` m.fl. | Inventar, Grupper, Ture, Steder, Statistik |
@@ -138,7 +140,7 @@ kunne vises ved bålet uden dækning.
 V1 under udvikling. Bygget: inventar, grupper, ture med smart-motor, statistik,
 PWA, deling og gæsteview, dashboard, indstillinger, pak-af-tjek, steder,
 personer, låne-log, afgangs-tjek, på-tur-tilstand, turkort til pårørende,
-turlog, vedligeholds-log, QR-koder.
+turlog, vedligeholds-log, QR-koder, vægt-brydere, "ligesom sidst".
 Endnu ikke bygget: badges/notifikationer.
 
 Ideer til det videre arbejde ligger i [`IDEER.md`](./IDEER.md).

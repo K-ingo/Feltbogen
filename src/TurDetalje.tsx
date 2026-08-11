@@ -88,6 +88,10 @@ import {
 } from './personer';
 import { foreslaaSteder, sorterEfterBesoeg, besoegPrSted, besoegstekst, naermesteSted } from './steder';
 import { udlaansAdvarsler } from './udlaan';
+import { vaegtbrydere, samletBesparelse, manglendeTags } from './vaegtbrydere';
+import type { Vaegtbryder } from './vaegtbrydere';
+import { foreslaaKopi, kopierGrej, antalNye } from './ligesomSidst';
+import type { Kopiforslag } from './ligesomSidst';
 import { nytPakAfTjek, synkroniserLinjer, resumetekst } from './pakAfTjek';
 import { useValg, useKropsdata, useTekst, PAK_AF_NIVEAU_VALG, AFGANGS_SKABELON } from './indstillinger';
 import { nytDeletoken, lavSnapshot, deleLink, linkadvarsel, linkvaert } from './gaest';
@@ -476,6 +480,18 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   const perItem = advarslerPrItem(advarsler);
   const beregninger = beregnForbrug(tur, kropsdata);
   const gruppeForslag = grupper ? foreslaaGrupper(tur, grupper) : [];
+  const savnedeTags = grupper ? manglendeTags(tur, grupper) : [];
+  const brydere = vaegtbrydere(tur, grupper ?? [], items ?? [], pakItems);
+
+  // Kun på en tur der ikke er pakket endnu. Har man allerede valgt sit grej,
+  // er et forslag om at kopiere en anden tur i vejen.
+  const kopiforslag = pakItems.length === 0 && tur.status === 'kladde'
+    ? foreslaaKopi(tur, alleTure, grupper ?? [])
+    : [];
+
+  const kopierFra = async (fra: Tur) => {
+    await opdater(kopierGrej(fra, tur));
+  };
 
   // Deltagernes eget grej hører til i den samme liste som ens eget — det er
   // én tur, og man pakker efter én liste.
@@ -555,6 +571,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
       tur={tur}
       paaTuren={itemUidsPaaDenneTur}
       gruppeForslag={gruppeForslag}
+      savnedeTags={savnedeTags}
       toggleGruppe={toggleGruppe}
       toggleLoestItem={toggleLoestItem}
     />
@@ -594,6 +611,15 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
       personer={tur.personer}
       baaret={vaegtPrDeltager(tur, pakItems)}
     />
+  );
+
+  const vaegtbryderSektion = brydere.length > 0 && (
+    <Foldbar
+      titel="Kan vægten ned?"
+      resume={`${kg(samletBesparelse(brydere))} kg at hente`}
+    >
+      <Vaegtbrydere brydere={brydere} byt={toggleLoestItem} />
+    </Foldbar>
   );
 
   const fordeling = (
@@ -761,6 +787,15 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
           marginTop: '22px'
         }}>
           <div style={{ display: 'grid', gap: '10px' }}>
+            {kopiforslag.length > 0 && (
+              <Ligesomsidst
+                forslag={kopiforslag}
+                tur={tur}
+                grupper={grupper ?? []}
+                items={items ?? []}
+                kopier={kopierFra}
+              />
+            )}
             {pakkeliste}
             <Foldbar titel="Vælg gear">{valgAfIndhold}</Foldbar>
           </div>
@@ -772,6 +807,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
             <Foldbar titel="Vejrudsigt" resume={vejrResume(vejrData)}>{vejr}</Foldbar>
             {advarsler.length > 0 && <Advarsler advarsler={advarsler} />}
             {vaegt}
+            {vaegtbryderSektion}
             {!erBred && sidespalte}
           </div>
 
@@ -810,6 +846,18 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
         {handling.label}
       </Knap>
 
+      {kopiforslag.length > 0 && (
+        <div style={{ marginTop: '16px' }}>
+          <Ligesomsidst
+            forslag={kopiforslag}
+            tur={tur}
+            grupper={grupper ?? []}
+            items={items ?? []}
+            kopier={kopierFra}
+          />
+        </div>
+      )}
+
       <div style={{ display: 'grid', gap: '8px', marginTop: '16px' }}>
         {pakAfSektion}
         {afgangsSektion}
@@ -824,6 +872,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
         <Foldbar titel="Vægt" resume={`${kg(vaegtPrPerson)} kg${tur.personer > 1 ? ' / pers' : ''}`}>
           {vaegt}
         </Foldbar>
+        {vaegtbryderSektion}
         <Foldbar titel="Vælg gear">{valgAfIndhold}</Foldbar>
         <Foldbar titel="Vejrudsigt" resume={vejrResume(vejrData)}>{vejr}</Foldbar>
         <Foldbar
@@ -1511,12 +1560,13 @@ function Budget({ linjer, tilfoej, opdater, fjern }: {
   );
 }
 
-function Indholdsvalg({ grupper, items, tur, paaTuren, gruppeForslag, toggleGruppe, toggleLoestItem }: {
+function Indholdsvalg({ grupper, items, tur, paaTuren, gruppeForslag, savnedeTags, toggleGruppe, toggleLoestItem }: {
   grupper: Gruppe[];
   items: Item[];
   tur: Tur;
   paaTuren: Set<Reference>;
   gruppeForslag: GruppeForslag[];
+  savnedeTags: string[];
   toggleGruppe: (uid: Reference) => Promise<void>;
   toggleLoestItem: (uid: Reference) => Promise<void>;
 }) {
@@ -1541,6 +1591,25 @@ function Indholdsvalg({ grupper, items, tur, paaTuren, gruppeForslag, toggleGrup
           <div style={{ marginTop: '6px' }}>
             <Hvorfor begrundelse={gruppeForslag.map((f) => f.begrundelse).join(' ')} />
           </div>
+        </div>
+      )}
+
+      {savnedeTags.length > 0 && (
+        <div style={{
+          padding: '9px 11px',
+          marginBottom: '16px',
+          borderRadius: '8px',
+          border: '1px dashed var(--border)',
+          fontSize: '11px',
+          color: 'var(--tekst-dæmpet)',
+          lineHeight: 1.55
+        }}>
+          {/* Uden det her tier motoren bare, og man tror den ikke har noget at
+              sige — i stedet for at den mangler et tag at sige det med. */}
+          Turen er markeret <strong style={{ fontWeight: 500 }}>{savnedeTags.map(etiket).join(', ')}</strong>,
+          men {savnedeTags.length === 1 ? 'det tag har' : 'de tags har'} ingen af dine grupper.
+          Sæt {savnedeTags.length === 1 ? 'det' : 'dem'} på en gruppe, så kan den foreslås
+          næste gang.
         </div>
       )}
 
@@ -1759,6 +1828,119 @@ function Deling({ token, snapshot, deltagelser, gearnavne, del, stop }: {
 
       <Meldtind deltagelser={deltagelser} gearnavne={gearnavne} />
     </div>
+  );
+}
+
+// Hvor sækken kan blive lettere. Forslagene er kandidater og ikke svar:
+// motoren kender kun tags og gram, ikke om de to ting faktisk kan det samme.
+function Vaegtbrydere({ brydere, byt }: {
+  brydere: Vaegtbryder[];
+  byt: (uid: Reference) => Promise<void>;
+}) {
+  return (
+    <div style={{ display: 'grid', gap: '12px' }}>
+      <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', lineHeight: 1.55 }}>
+        Lettere gear i dit inventar der deler tags med det tunge. Om de kan det samme,
+        er dit valg — tilføj det lette her, og tag det tunge af pakkelisten.
+      </div>
+
+      {brydere.map(({ tung, alternativer, begrundelse }) => (
+        <div
+          key={tung.uid}
+          style={{
+            border: '1px solid var(--border-svag)',
+            borderRadius: '10px',
+            padding: '10px 12px',
+            background: 'var(--bg-forhoejet)'
+          }}
+        >
+          <div style={{ fontSize: '13px', marginBottom: '2px' }}>
+            {tung.navn}
+            <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '11px', marginLeft: '8px' }}>
+              {tung.vaegt_g} g
+            </span>
+          </div>
+
+          <div style={{ display: 'grid', gap: '4px', marginTop: '8px' }}>
+            {alternativer.map((a) => (
+              <div
+                key={a.item.uid}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}
+              >
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  {a.item.navn}
+                  <span style={{ color: 'var(--tekst-svag)', marginLeft: '6px' }}>
+                    {a.item.vaegt_g} g
+                  </span>
+                </span>
+                <span style={{ color: 'var(--accent)', whiteSpace: 'nowrap' }}>
+                  −{a.sparet_g} g
+                </span>
+                <Knap
+                  onClick={() => void byt(a.item.uid)}
+                  style={{ fontSize: '11px', padding: '3px 9px' }}
+                >
+                  Tilføj
+                </Knap>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ marginTop: '6px' }}>
+            <Hvorfor begrundelse={begrundelse} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// "Ligesom sidst": kopiér grejet fra en tidligere tur der lignede.
+//
+// Boksen står kun på en tom kladde og forsvinder så snart der er valgt noget.
+// Den kræver et tryk — motoren er rådgiver og ikke automat.
+function Ligesomsidst({ forslag, tur, grupper, items, kopier }: {
+  forslag: Kopiforslag[];
+  tur: Tur;
+  grupper: Gruppe[];
+  items: Item[];
+  kopier: (fra: Tur) => Promise<void>;
+}) {
+  return (
+    <Infokort label="Ligesom sidst" fremhaevet>
+      <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', lineHeight: 1.55, marginBottom: '10px' }}>
+        Turen ligner nogle du har været på før. Kopiér grejet, og ret bagefter.
+      </div>
+
+      <div style={{ display: 'grid', gap: '8px' }}>
+        {forslag.map((f) => {
+          const nye = antalNye(f.tur, tur, grupper, items);
+
+          return (
+            <div key={f.tur.uid}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ flex: 1, minWidth: 0, fontSize: '13px' }}>
+                  {f.tur.navn || 'Uden navn'}
+                  <span style={{ color: 'var(--tekst-svag)', fontSize: '11px', marginLeft: '6px' }}>
+                    matcher {f.score} af {f.maks}
+                  </span>
+                </span>
+                <Knap
+                  onClick={() => void kopier(f.tur)}
+                  disabled={nye === 0}
+                  style={{ fontSize: '11px', padding: '4px 10px' }}
+                >
+                  {nye === 0 ? 'Alt er med' : `Kopiér ${nye} stk.`}
+                </Knap>
+              </div>
+              <div style={{ marginTop: '3px' }}>
+                <Hvorfor begrundelse={f.begrundelse} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </Infokort>
   );
 }
 
