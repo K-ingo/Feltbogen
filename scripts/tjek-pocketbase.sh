@@ -42,14 +42,20 @@ echo "Kalder $SERVER som uindlogget fremmed"
 echo
 
 for samling in $SAMLINGER; do
+  # Fejlteksten fra curl gemmes med, så en blokering kan skelnes fra en
+  # forkert adresse. "Kunne ikke nås" alene siger ikke hvad man skal rette.
+  curlfejl=$(mktemp)
   svar=$(curl -sS -m 15 -w '\n%{http_code}' \
-    "$SERVER/api/collections/$samling/records?perPage=1" 2>/dev/null)
+    "$SERVER/api/collections/$samling/records?perPage=1" 2>"$curlfejl")
+  status=$?
 
-  if [ $? -ne 0 ]; then
-    printf '  %-16s kunne ikke nås\n' "$samling"
+  if [ "$status" -ne 0 ]; then
+    printf '  %-16s kunne ikke nås — %s\n' "$samling" "$(tr -d '\n' <"$curlfejl")"
+    rm -f "$curlfejl"
     advarsler=$((advarsler + 1))
     continue
   fi
+  rm -f "$curlfejl"
 
   kode=$(printf '%s' "$svar" | tail -n1)
   krop=$(printf '%s' "$svar" | sed '$d')
