@@ -160,6 +160,22 @@ Denne har **ikke** et `uid`-felt; den synkroniseres ikke som de andre.
 
 ## 3. API-regler
 
+> **En tom regel betyder "alle må", ikke "ingen må".** Det er den farligste
+> faldgrube i hele opsætningen, fordi den fejler tavst: lader du et regelfelt
+> stå blankt, kan hvem som helst på internettet både læse og skrive i
+> samlingen, og appen opfører sig præcis som om alt er i orden.
+>
+> Hvert regelfelt har tre tilstande:
+>
+> | Tilstand | Hvem der må |
+> |---|---|
+> | Lukket hængelås | Kun superusers — appen kan ikke bruge samlingen |
+> | Åben hængelås, tomt felt | **Alle på internettet** |
+> | Åben hængelås, med en regel | Dem reglen passer på |
+>
+> Der skal altså stå noget i felterne. Gå dem igennem én gang mere når du tror
+> du er færdig.
+
 ### `items`, `grupper`, `steder`, `personer`
 
 Alle fem regler (List, View, Create, Update, Delete) sættes til det samme:
@@ -168,7 +184,8 @@ Alle fem regler (List, View, Create, Update, Delete) sættes til det samme:
 user = @request.auth.id
 ```
 
-Ingen andre end ejeren skal nogensinde kunne se sit gear.
+Ingen andre end ejeren skal nogensinde kunne se sit gear, sine steder eller
+sine personer. De fire samlinger har ingen delefunktion — kun `ture` har det.
 
 ### `ture`
 
