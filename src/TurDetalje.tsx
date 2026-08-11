@@ -76,7 +76,7 @@ import {
   deltagerFraPerson,
   deltagerFraNavn
 } from './personer';
-import { foreslaaSteder, besoegPrSted, besoegstekst, naermesteSted } from './steder';
+import { foreslaaSteder, sorterEfterBesoeg, besoegPrSted, besoegstekst, naermesteSted } from './steder';
 import { udlaansAdvarsler } from './udlaan';
 import { nytPakAfTjek, synkroniserLinjer, resumetekst } from './pakAfTjek';
 import { useValg, useKropsdata, useTekst, PAK_AF_NIVEAU_VALG, AFGANGS_SKABELON } from './indstillinger';
@@ -517,6 +517,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
       stedForslag={stedForslag}
       vaelgSted={vaelgSted}
       gemteForslag={foreslaaSteder(steder, alleTure, tur.sted_uid ? '' : tur.sted)}
+      alleSteder={sorterEfterBesoeg(steder, alleTure)}
       valgtSted={steder.find((s) => s.uid === tur.sted_uid) ?? null}
       besoeg={besoegPrSted(alleTure)}
       vaelgGemtSted={vaelgGemtSted}
@@ -880,7 +881,7 @@ function Foldbar({ titel, resume, children, aabenFra, advarsel }: {
 function Turparametre({
   tur, opdater, skiftDato, koordinatTekst, koordinatFejl, opdaterKoordinater,
   soegPaaSted, stedSoeger, stedForslag, vaelgSted,
-  gemteForslag, valgtSted, besoeg, vaelgGemtSted, gemSomSted, frigoerSted,
+  gemteForslag, alleSteder, valgtSted, besoeg, vaelgGemtSted, gemSomSted, frigoerSted,
   beregninger
 }: {
   tur: Tur;
@@ -894,6 +895,7 @@ function Turparametre({
   stedForslag: StedForslag[];
   vaelgSted: (f: StedForslag) => Promise<void>;
   gemteForslag: Sted[];
+  alleSteder: Sted[];
   valgtSted: Sted | null;
   besoeg: Map<Reference, number>;
   vaelgGemtSted: (s: Sted) => Promise<void>;
@@ -901,6 +903,10 @@ function Turparametre({
   frigoerSted: () => Promise<void>;
   beregninger: Beregninger;
 }) {
+  // Skriver man sig frem, står træfferne; ellers kan hele listen slås op.
+  const [viserAlleSteder, setViserAlleSteder] = useState(false);
+  const gemteSteder = viserAlleSteder ? alleSteder : gemteForslag;
+
   return (
     <div style={{ display: 'grid', gap: '12px' }}>
       <div>
@@ -957,13 +963,37 @@ function Turparametre({
           )
         )}
 
-        {/* Gemte steder står før opslaget udefra: de bærer noterne fra sidst. */}
-        {gemteForslag.length > 0 && (
+        {/* Gemte steder står før opslaget udefra: de bærer noterne fra sidst.
+            To veje ind — skriv navnet, eller slå hele listen op. Man kan ikke
+            altid huske hvad man kaldte stedet. */}
+        {!valgtSted && alleSteder.length > 0 && (
+          <div style={{ marginTop: '6px' }}>
+            <button
+              onClick={() => setViserAlleSteder(!viserAlleSteder)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                padding: 0,
+                fontSize: '11px',
+                cursor: 'pointer',
+                color: 'var(--accent)',
+                textDecoration: 'underline',
+                textUnderlineOffset: '2px'
+              }}
+            >
+              {viserAlleSteder
+                ? 'Skjul mine steder'
+                : `Vælg blandt mine ${alleSteder.length} steder`}
+            </button>
+          </div>
+        )}
+
+        {gemteSteder.length > 0 && (
           <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-            {gemteForslag.map((g) => (
+            {gemteSteder.map((g) => (
               <button
                 key={g.uid}
-                onClick={() => void vaelgGemtSted(g)}
+                onClick={() => { void vaelgGemtSted(g); setViserAlleSteder(false); }}
                 style={{
                   padding: '5px 10px',
                   fontSize: '11px',

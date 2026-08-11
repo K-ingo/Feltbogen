@@ -3,6 +3,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import TagsInput from './TagsInput';
 import { besoegstekst, turePaaSted } from './steder';
+import { soegSted } from './smartMotor';
+import type { StedForslag } from './smartMotor';
 import { formatterPeriode } from './datotekst';
 import { sletSted, opdaterSted } from './sync';
 import { useRedigerbar } from './useRedigerbar';
@@ -10,6 +12,7 @@ import { layout } from './layout';
 import {
   DetaljeHeader,
   Felt,
+  Knap,
   Indlaeser,
   Kort,
   Label,
@@ -40,6 +43,8 @@ function StedDetalje({ stedId, tilbage, aabnTur, nyOprettet }: Props) {
 
   const [koordinatTekst, setKoordinatTekst] = useState('');
   const [koordinatFejl, setKoordinatFejl] = useState('');
+  const [forslag, setForslag] = useState<StedForslag[]>([]);
+  const [soeger, setSoeger] = useState(false);
 
   const ture = useLiveQuery(() => db.ture.toArray()) ?? [];
 
@@ -58,6 +63,43 @@ function StedDetalje({ stedId, tilbage, aabnTur, nyOprettet }: Props) {
       return;
     }
     setKoordinatFejl('Format: 55.66, 10.05');
+  };
+
+  // Slår adressen op og henter koordinaterne, så man ikke skal finde dem selv.
+  // Der søges på adressen når der står noget i den, ellers på navnet — "Rold
+  // Skov" er lige så godt et opslag som en vejadresse.
+  const soegning = () => (sted?.adresse.trim() || sted?.navn.trim() || '');
+
+  const findKoordinater = async () => {
+    const q = soegning();
+    if (!q) return;
+
+    setSoeger(true);
+    setForslag([]);
+    setKoordinatFejl('');
+
+    const resultater = await soegSted(q);
+    setSoeger(false);
+
+    // Ét resultat er et svar, ikke et valg.
+    if (resultater.length === 1) {
+      await vaelgForslag(resultater[0]);
+    } else if (resultater.length > 1) {
+      setForslag(resultater);
+    } else {
+      setKoordinatFejl('Ingen resultater');
+    }
+  };
+
+  const vaelgForslag = async (f: StedForslag) => {
+    await opdater({
+      koordinater: { lat: f.lat, lng: f.lng },
+      // Har stedet ingen adresse endnu, er den fundne den bedste vi har.
+      ...(sted?.adresse.trim() ? {} : { adresse: f.detalje || f.navn })
+    });
+    setKoordinatTekst(`${f.lat}, ${f.lng}`);
+    setForslag([]);
+    setKoordinatFejl('');
   };
 
   const slet = async () => {
@@ -109,12 +151,49 @@ function StedDetalje({ stedId, tilbage, aabnTur, nyOprettet }: Props) {
 
         <div>
           <Label fejl={koordinatFejl || undefined}>Koordinater</Label>
-          <input
-            value={koordinatTekst}
-            onChange={(e) => void opdaterKoordinater(e.target.value)}
-            placeholder="55.66, 10.05"
-            style={{ width: '100%' }}
-          />
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <input
+              value={koordinatTekst}
+              onChange={(e) => void opdaterKoordinater(e.target.value)}
+              placeholder="55.66, 10.05"
+              style={{ flex: 1, minWidth: 0 }}
+            />
+            <Knap
+              variant="primaer"
+              onClick={() => void findKoordinater()}
+              disabled={soeger || !soegning()}
+            >
+              {soeger ? 'Søger...' : 'Find'}
+            </Knap>
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', marginTop: '4px' }}>
+            Find slår adressen op — eller navnet, hvis der ikke står en adresse.
+          </div>
+
+          {forslag.length > 0 && (
+            <div style={{ marginTop: '6px', background: 'var(--bg)', border: '1px solid var(--border-svag)', borderRadius: '8px', overflow: 'hidden' }}>
+              {forslag.map((f, i) => (
+                <button
+                  key={`${f.lat},${f.lng}`}
+                  onClick={() => void vaelgForslag(f)}
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    padding: '10px 12px',
+                    background: 'transparent',
+                    border: 'none',
+                    borderBottom: i < forslag.length - 1 ? '1px solid var(--border-svag)' : 'none',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    color: 'var(--tekst)'
+                  }}
+                >
+                  <div style={{ fontSize: '13px', fontWeight: 500 }}>{f.navn}</div>
+                  {f.detalje && <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)' }}>{f.detalje}</div>}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <TagsInput

@@ -47,21 +47,27 @@ export function besoegstekst(antal: number): string {
   return `Været her ${antal} gange`;
 }
 
-// Gemte steder der matcher det man er ved at skrive. De steder man kommer
-// mest, står øverst — det er dem man leder efter.
+// Alle steder, mest besøgte først. Det er den rækkefølge man leder i: stedet
+// man kommer hvert år står før det man så på én gang.
+export function sorterEfterBesoeg(steder: Sted[], ture: Tur[]): Sted[] {
+  const besoeg = besoegPrSted(ture);
+
+  return [...steder].sort((a, b) => {
+    const forskel = (besoeg.get(b.uid) ?? 0) - (besoeg.get(a.uid) ?? 0);
+    return forskel !== 0 ? forskel : a.navn.localeCompare(b.navn, 'da');
+  });
+}
+
+// Gemte steder der matcher det man er ved at skrive.
 export function foreslaaSteder(steder: Sted[], ture: Tur[], soegetekst: string): Sted[] {
   const soeg = soegetekst.trim().toLowerCase();
   if (!soeg) return [];
 
-  const besoeg = besoegPrSted(ture);
+  const traf = steder.filter(
+    (s) => s.navn.toLowerCase().includes(soeg) || s.adresse.toLowerCase().includes(soeg)
+  );
 
-  return steder
-    .filter((s) => s.navn.toLowerCase().includes(soeg) || s.adresse.toLowerCase().includes(soeg))
-    .sort((a, b) => {
-      const forskel = (besoeg.get(b.uid) ?? 0) - (besoeg.get(a.uid) ?? 0);
-      return forskel !== 0 ? forskel : a.navn.localeCompare(b.navn, 'da');
-    })
-    .slice(0, MAKS_FORSLAG);
+  return sorterEfterBesoeg(traf, ture).slice(0, MAKS_FORSLAG);
 }
 
 // Det gemte sted man allerede står på, hvis der er et. Bruges når koordinater

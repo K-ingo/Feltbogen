@@ -5,6 +5,7 @@ import {
   besoegstekst,
   foreslaaSteder,
   naermesteSted,
+  sorterEfterBesoeg,
   stedForTur,
   turePaaSted
 } from './steder';
@@ -97,6 +98,33 @@ describe('foreslaaSteder', () => {
   it('holder listen kort nok til at være et forslag', () => {
     const mange = Array.from({ length: 12 }, (_, n) => lavSted({ navn: `Shelter ${n}` }));
     expect(foreslaaSteder(mange, [], 'shelter')).toHaveLength(5);
+  });
+});
+
+describe('sorterEfterBesoeg', () => {
+  it('sætter de mest besøgte først', () => {
+    const sjaelden = lavSted({ uid: 's-1', navn: 'Sjælden' });
+    const fast = lavSted({ uid: 's-2', navn: 'Fast' });
+    const ture = [lavTur({ sted_uid: 's-2' }), lavTur({ sted_uid: 's-2' }), lavTur({ sted_uid: 's-1' })];
+
+    expect(sorterEfterBesoeg([sjaelden, fast], ture).map((s) => s.navn)).toEqual(['Fast', 'Sjælden']);
+  });
+
+  it('sorterer på navn når besøgene står lige', () => {
+    const steder = [lavSted({ navn: 'Ørnen' }), lavSted({ navn: 'Bøgen' }), lavSted({ navn: 'Asken' })];
+    expect(sorterEfterBesoeg(steder, []).map((s) => s.navn)).toEqual(['Asken', 'Bøgen', 'Ørnen']);
+  });
+
+  // Knappen "vælg blandt mine steder" viser hele listen — den må ikke skæres af.
+  it('tager alle med, også når der er mange', () => {
+    const mange = Array.from({ length: 20 }, (_, n) => lavSted({ navn: `Sted ${n}` }));
+    expect(sorterEfterBesoeg(mange, [])).toHaveLength(20);
+  });
+
+  it('rører ikke den liste den får ind', () => {
+    const steder = [lavSted({ navn: 'B' }), lavSted({ navn: 'A' })];
+    sorterEfterBesoeg(steder, []);
+    expect(steder.map((s) => s.navn)).toEqual(['B', 'A']);
   });
 });
 
