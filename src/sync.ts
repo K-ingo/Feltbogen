@@ -13,6 +13,7 @@ import {
   KATEGORI_VURDERING
 } from './db';
 import { pb, nuvaerendeBruger } from './pb';
+import { fejlDetaljer } from './pbFejl';
 import type {
   Item,
   Gruppe,
@@ -260,30 +261,6 @@ function advarHvisUidTabt(skabt: RecordModel, forventet: string, pbNavn: string)
     'tekstfelt "uid" til samlingen — uden det peger grupper og pakkelister på ' +
     'forkert gear når appen bruges fra mere end én enhed.'
   );
-}
-
-// PocketBase-fejl bærer detaljerne i svarets krop: `data` peger på det felt der
-// blev afvist, og `message` forklarer de fejl der ikke handler om ét felt. Vi
-// tog kun `data` før, og så stod der `{}` i konsollen når det var den anden
-// slags — altså intet at gå efter. Begge dele skal med, sammen med status og
-// URL, så en fejlet sync kan diagnosticeres fra en skærmdump af konsollen.
-function fejlDetaljer(e: unknown): unknown {
-  if (!e || typeof e !== 'object') return e;
-
-  const fejl = e as {
-    status?: number;
-    url?: string;
-    response?: { message?: string; data?: unknown };
-    message?: string;
-  };
-  if (!fejl.response) return e;
-
-  return {
-    status: fejl.status,
-    url: fejl.url,
-    besked: fejl.response.message ?? fejl.message,
-    felter: fejl.response.data
-  };
 }
 
 // ─────────────────────────────────────────────

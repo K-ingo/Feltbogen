@@ -1,20 +1,8 @@
 import { useState } from 'react';
 import { opretKonto, logInd } from './pb';
+import { loginFejlBesked, fejlDetaljer } from './pbFejl';
 import { Knap, Label } from './ui';
 import { layout } from './layout';
-
-// Oversætter PocketBase-fejl til noget en bruger kan handle på.
-function fejlBesked(e: unknown): string {
-  const raa = e as { data?: { message?: string }; message?: string } | null;
-  const besked = raa?.data?.message || raa?.message || 'Der skete en fejl';
-  const lav = besked.toLowerCase();
-
-  if (lav.includes('failed to authenticate')) return 'Forkert email eller password';
-  if (lav.includes('already in use') || lav.includes('already exists')) {
-    return 'Email er allerede registreret';
-  }
-  return besked;
-}
 
 interface Props {
   // Appen kan bruges uden konto, så login kan fortrydes. Udelades den, er der
@@ -49,7 +37,11 @@ function AuthSide({ fortryd, startTilstand = 'login' }: Props) {
         await logInd(email.trim(), password);
       }
     } catch (e) {
-      setFejl(fejlBesked(e));
+      // Skærmen viser den korte udgave; konsollen får hele svaret. Uden det
+      // står der kun "400 Bad Request" i netværksfanen, og så kan et login der
+      // bliver ved med at fejle ikke fejlsøges bagefter.
+      console.error(tilstand === 'opret' ? 'Kontooprettelse fejlede:' : 'Login fejlede:', fejlDetaljer(e));
+      setFejl(loginFejlBesked(e));
     }
     setIndlaeser(false);
   };
