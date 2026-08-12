@@ -6,16 +6,16 @@ export type Fane = 'dashboard' | 'inventar' | 'grupper' | 'ture' | 'steder' | 's
 
 // `kort` bruges i bundnavigationen, hvor fanerne skal dele skærmbredden.
 //
-// Indstillinger og Steder står kun i sidebaren på PC. På mobil er der ikke
-// plads til flere end fem faner i bunden uden at de bliver for smalle at ramme
-// — indstillinger nås fra tandhjulet i topbaren, og steder fra turlisten, hvor
-// man alligevel er når et sted er det man leder efter.
+// Seks faner deler bredden. På den smalleste telefon der er værd at regne med
+// (360 px) bliver hver fane 60 px — bredere end de 44 px en finger skal have,
+// og "Inventar" er stadig det længste ord der kan stå på én linje. Flere end
+// seks kan der ikke være: indstillinger nås fra tandhjulet i topbaren.
 const FANER: { id: Fane; label: string; kort: string; iBundnav: boolean }[] = [
   { id: 'dashboard', label: 'Dashboard', kort: 'Hjem', iBundnav: true },
   { id: 'inventar', label: 'Inventar', kort: 'Inventar', iBundnav: true },
   { id: 'grupper', label: 'Grupper', kort: 'Grupper', iBundnav: true },
   { id: 'ture', label: 'Ture', kort: 'Ture', iBundnav: true },
-  { id: 'steder', label: 'Steder', kort: 'Steder', iBundnav: false },
+  { id: 'steder', label: 'Steder', kort: 'Steder', iBundnav: true },
   { id: 'statistik', label: 'Statistik', kort: 'Stat', iBundnav: true },
   { id: 'indstillinger', label: 'Indstillinger', kort: 'Mere', iBundnav: false }
 ];
@@ -249,7 +249,14 @@ function BundNav({ fane, skift }: { fane: Fane; skift: (f: Fane) => void }) {
               color: erAktiv ? 'var(--accent)' : 'var(--tekst-dæmpet)',
               fontWeight: erAktiv ? 600 : 500,
               textTransform: 'uppercase',
-              letterSpacing: '0.5px',
+              // Var 0,5. Med seks faner står "INVENTAR" og "GRUPPER" næsten op
+              // ad hinanden på en 360 px skærm, og de her to tiendedele er
+              // luften imellem dem.
+              letterSpacing: '0.3px',
+              // Bliver det alligevel for trangt, skal ordet hellere klippes end
+              // brække om på to linjer og gøre baren høj og ujævn.
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
               borderTop: erAktiv ? '2px solid var(--accent)' : '2px solid transparent',
               transition: 'color 0.15s'
             }}
