@@ -262,13 +262,28 @@ function advarHvisUidTabt(skabt: RecordModel, forventet: string, pbNavn: string)
   );
 }
 
-// PocketBase-fejl bærer detaljerne i response.data — resten er støj.
+// PocketBase-fejl bærer detaljerne i svarets krop: `data` peger på det felt der
+// blev afvist, og `message` forklarer de fejl der ikke handler om ét felt. Vi
+// tog kun `data` før, og så stod der `{}` i konsollen når det var den anden
+// slags — altså intet at gå efter. Begge dele skal med, sammen med status og
+// URL, så en fejlet sync kan diagnosticeres fra en skærmdump af konsollen.
 function fejlDetaljer(e: unknown): unknown {
-  if (e && typeof e === 'object') {
-    const fejl = e as { response?: { data?: unknown }; data?: unknown };
-    return fejl.response?.data ?? fejl.data ?? e;
-  }
-  return e;
+  if (!e || typeof e !== 'object') return e;
+
+  const fejl = e as {
+    status?: number;
+    url?: string;
+    response?: { message?: string; data?: unknown };
+    message?: string;
+  };
+  if (!fejl.response) return e;
+
+  return {
+    status: fejl.status,
+    url: fejl.url,
+    besked: fejl.response.message ?? fejl.message,
+    felter: fejl.response.data
+  };
 }
 
 // ─────────────────────────────────────────────
