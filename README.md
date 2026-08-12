@@ -90,6 +90,16 @@ Redigeringer skrives til IndexedDB ved hvert tastetryk, men sync udskydes
 bliver de prøvet igen, hvis appen lukkes inden køen er tømt.
 `sendAfventende()` tømmer køen med det samme, og kaldes når appen skjules.
 
+En udløbet session tæller ikke som at være logget ind. `authStore.record`
+bliver liggende i localStorage efter tokenet er udløbet, så `nuvaerendeBruger()`
+spørger til `authStore.isValid` og ikke til om der ligger en konto. Ellers
+troede appen den var logget ind, mens PocketBase afviste hver skrivning — og
+fordi en `createRule` afvises med `400` og en **tom** fejlkrop, stod der intet
+i konsollen at gå efter. `fornyLogin()` forlænger sessionen ved opstart og når
+forbindelsen kommer tilbage; afviser serveren tokenet, ryddes det, så appen
+beder om login. En netværksfejl rører det ikke — man skal ikke logges ud af at
+stå uden dækning.
+
 Sletninger bruger tabellen `slettede` som spor. Kan PocketBase ikke nås når man
 sletter, bliver postens `pb_id` liggende der, indtil serveren har bekræftet
 sletningen. Sporet gør to ting: det holder posten ude af `hentFraPocketBase()`,

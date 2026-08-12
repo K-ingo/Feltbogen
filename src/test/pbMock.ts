@@ -188,6 +188,10 @@ export const nuvaerendeBruger = () => ({
 export let testNavn = '';
 export function saetTestNavn(navn: string) { testNavn = navn; }
 
+// Testenes session udløber ikke, så der er intet at forny.
+export const erLoggetInd = () => true;
+export const fornyLogin = async () => {};
+
 export const mitNavn = () => testNavn.trim();
 export const gemNavn = async (navn: string) => { testNavn = navn.trim(); };
 export const logUd = () => { testNavn = ''; };

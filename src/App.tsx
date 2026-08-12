@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import AuthSide from './AuthSide';
 import { useAuth } from './useAuth';
+import { fornyLogin } from './pb';
 import { afstemMedServer, sendAfventende, sletItem, sletGruppe, sletTur, sletSted } from './sync';
 import { db } from './db';
 import DashboardSide from './DashboardSide';
@@ -113,11 +114,20 @@ function App() {
   // Afstem med serveren ved opstart — og igen når forbindelsen kommer tilbage.
   // En tur kan vare timer uden dækning med appen åben hele tiden; uden
   // online-lytteren ville det usendte først gå op ved næste opstart.
+  //
+  // Sessionen fornys først: udløber tokenet mens appen står åben, sker det på
+  // uret og ikke på en hændelse, og så ville afstemningen sende af sted med et
+  // dødt token og blive afvist tavst.
   useEffect(() => {
     if (!erLoggetInd) return;
-    void afstemMedServer();
 
-    const naarOnline = () => void afstemMedServer();
+    const afstem = async () => {
+      await fornyLogin();
+      await afstemMedServer();
+    };
+    void afstem();
+
+    const naarOnline = () => void afstem();
     window.addEventListener('online', naarOnline);
     return () => window.removeEventListener('online', naarOnline);
   }, [erLoggetInd]);
