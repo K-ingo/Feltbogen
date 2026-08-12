@@ -7,9 +7,11 @@ export const layout = {
     padding: '20px',
     maxWidth: '640px',
     margin: '0 auto',
-    // Holder indhold fri af den faste bundnavigation — plus hakket i toppen og
-    // home-baren i bunden når appen kører installeret.
+    // Holder indhold fri af hakket i toppen og home-baren i bunden når appen
+    // kører installeret. Der skal ikke længere gøres plads til
+    // bundnavigationen: den ligger som en række i skallen og lægger sig ikke
+    // hen over indholdet.
     paddingTop: 'calc(20px + env(safe-area-inset-top))',
-    paddingBottom: 'calc(90px + env(safe-area-inset-bottom))'
+    paddingBottom: 'calc(28px + env(safe-area-inset-bottom))'
   } as CSSProperties
 };
