@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import type { Item, Gruppe, Tur } from './db';
 import { naesteTur, naarBegynder, handlinger, tureIAar, sidstTilfoejede } from './dashboard';
+import { aarsopgoerelseAtSe } from './aarsopgoerelse';
 import type { Handling } from './dashboard';
 import { itemsPaaTur, findAdvarsler } from './smartMotor';
 import { samletInventarvaerdi, samletVaegt } from './statistik';
@@ -15,6 +16,7 @@ interface Props {
   skift: (f: Fane) => void;
   aabnItem: (id: number, nyOprettet?: boolean) => void;
   aabnTur: (id: number, nyOprettet?: boolean) => void;
+  aabnAar: (aar: number) => void;
   nytItem: () => void;
   nyTur: () => void;
 }
@@ -25,7 +27,7 @@ const MAKS_HANDLINGER = 4;
 const MAKS_SIDST_TILFOEJET = 5;
 
 // Fast rækkefølge: Næste tur → Handlinger → Nøgletal → Sidst tilføjet.
-function DashboardSide({ fane, skift, aabnItem, aabnTur, nytItem, nyTur }: Props) {
+function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur }: Props) {
   const erDesktop = useErDesktop();
 
   const items = useLiveQuery(() => db.items.toArray()) ?? [];
@@ -36,6 +38,7 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, nytItem, nyTur }: Props
   const alleHandlinger = handlinger(items, ture, grupper);
   const aar = tureIAar(ture);
   const nyeste = sidstTilfoejede(items, MAKS_SIDST_TILFOEJET);
+  const opgoerelse = aarsopgoerelseAtSe(ture);
 
   // Kortet fører hen til den post det handler om — gear eller tur. Findes den
   // ikke længere, sker der ingenting; listen bygges om ved næste render.
@@ -71,6 +74,10 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, nytItem, nyTur }: Props
           aabn={() => tur?.id !== undefined && aabnTur(tur.id)}
           opret={nyTur}
         />
+
+        {opgoerelse !== null && (
+          <Aarskort aar={opgoerelse} aabn={() => aabnAar(opgoerelse)} />
+        )}
 
         {alleHandlinger.length > 0 && (
           <section>
@@ -272,6 +279,41 @@ function hilsen(): string {
 // 21400 → "21.400", som tal skrives på dansk.
 function kroner(beloeb: number): string {
   return Math.round(beloeb).toLocaleString('da-DK');
+}
+
+// Tilbageblikket i januar. Det er ikke en handling og hører derfor ikke til
+// blandt dem — det er en invitation til at kigge tilbage, og den skal se ud
+// som noget andet end en huskeseddel.
+function Aarskort({ aar, aabn }: { aar: number; aabn: () => void }) {
+  return (
+    <button
+      onClick={aabn}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '12px',
+        width: '100%',
+        padding: '16px',
+        borderRadius: '12px',
+        background: 'var(--accent-bg)',
+        border: '1px solid var(--accent-border)',
+        cursor: 'pointer',
+        textAlign: 'left',
+        color: 'var(--tekst)'
+      }}
+    >
+      <span>
+        <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '18px' }}>
+          Sådan gik {aar}
+        </span>
+        <span style={{ display: 'block', fontSize: '12px', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
+          Årsopgørelsen er klar
+        </span>
+      </span>
+      <span style={{ color: 'var(--accent)', fontSize: '18px' }}>›</span>
+    </button>
+  );
 }
 
 export default DashboardSide;

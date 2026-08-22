@@ -18,11 +18,13 @@ import {
   fordelingPrGruppe
 } from './statistik';
 import type { Periode } from './statistik';
+import { aarMedTure } from './aarsopgoerelse';
 
 interface Props {
   fane: Fane;
   skift: (f: Fane) => void;
   aabnItem: (id: number, nyOprettet?: boolean) => void;
+  aabnAar: (aar: number) => void;
 }
 
 const PERIODER: readonly Periode[] = ['i_aar', 'sidste_aar', 'alt'];
@@ -39,13 +41,14 @@ const MAANED_ETIKETTER = [0, 3, 6, 9, 11];
 
 const MAKS_MEST_BRUGTE = 5;
 
-function StatistikSide({ fane, skift, aabnItem }: Props) {
+function StatistikSide({ fane, skift, aabnItem, aabnAar }: Props) {
   const erDesktop = useErDesktop();
   const [periode, setPeriode] = useState<Periode>('i_aar');
 
   const items = useLiveQuery(() => db.items.toArray()) ?? [];
   const alleTure = useLiveQuery(() => db.ture.toArray()) ?? [];
   const grupper = useLiveQuery(() => db.grupper.toArray()) ?? [];
+  const aarene = aarMedTure(alleTure);
 
   const nu = new Date();
   const ture = filtrererTure(alleTure, periode);
@@ -86,6 +89,11 @@ function StatistikSide({ fane, skift, aabnItem }: Props) {
           <Segment vaerdier={PERIODER} valgt={periode} vaelg={(p) => setPeriode(p)} formater={(p) => PERIODE_LABEL[p]} kompakt />
         </div>
       )}
+
+      {/* Årsopgørelsen er den samme data læst som en beretning frem for som
+          måleinstrumenter. Den ligger her, fordi det er her man i forvejen er
+          når man vil vide hvordan det gik. */}
+      {aarene.length > 0 && <Aarsknap aar={aarene[0]} aabn={() => aabnAar(aarene[0])} />}
 
       <div style={{
         display: 'grid',
@@ -386,6 +394,39 @@ function tilvaekstTekst(tilvaekst: number | null, periode: Periode, vaegt: numbe
 
 function kroner(beloeb: number): string {
   return Math.round(beloeb).toLocaleString('da-DK');
+}
+
+function Aarsknap({ aar, aabn }: { aar: number; aabn: () => void }) {
+  return (
+    <button
+      onClick={aabn}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '12px',
+        width: '100%',
+        padding: '14px 16px',
+        marginBottom: '14px',
+        borderRadius: '12px',
+        background: 'var(--accent-bg)',
+        border: '1px solid var(--accent-border)',
+        cursor: 'pointer',
+        textAlign: 'left',
+        color: 'var(--tekst)'
+      }}
+    >
+      <span>
+        <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '17px' }}>
+          Årsopgørelse {aar}
+        </span>
+        <span style={{ display: 'block', fontSize: '12px', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
+          Året talt op — nætter, steder, selskab og grej
+        </span>
+      </span>
+      <span style={{ color: 'var(--accent)', fontSize: '18px' }}>›</span>
+    </button>
+  );
 }
 
 export default StatistikSide;

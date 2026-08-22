@@ -45,6 +45,7 @@ appen starter.
 | Ligesom sidst | `src/ligesomSidst.ts` | Tidligere ture der lignede, som grej kan kopieres fra |
 | Fortryd sletning | `src/fortryd.ts` | Vinduet på 25 sekunder efter en sletning |
 | Statistik | `src/statistik.ts` | Aggregeringer over inventar og ture |
+| Årsopgørelse | `src/aarsopgoerelse.ts` | Året talt op: nætter, vejr, steder, selskab og grej |
 | UI-primitiver | `src/ui.tsx`, `src/layout.ts` | Knap, Kort, Felt, Chip, Badge, listerækker, detalje-header |
 | Skærme | `src/App.tsx` m.fl. | Inventar, Grupper, Ture, Steder, Statistik |
 
@@ -60,6 +61,15 @@ nødvendigt, fordi en læseregel i PocketBase gælder hele posten — alt hvad
 modtageren ikke skal se, må ikke ligge i det hun kan hente. `delesnapshot.ts`
 bygger begge øjebliksbilleder om efter hver skrivning, så et afsluttet tur-kort
 holder op med at sige at turen er i gang.
+
+Årsopgørelsen bygger udelukkende på data der allerede står i appen, og den
+siger hvad den bygger på. Kladder tælles ikke med — en kladde er en plan man
+aldrig gjorde færdig — men en tur man glemte at sætte til afsluttet gør, for
+ellers ville opgørelsen afhænge af oprydning frem for af hvad der skete. Vejret
+er det eneste sted appen kunne komme til at love mere end den ved:
+`vejrsnapshot` er den *udsigt* der blev hentet ved planlægningen, ikke en
+måling, og derfor står der "efter udsigten" på den koldeste nat og den vådeste
+tur.
 
 Smart-motoren er rådgiver og ikke automat (fundament §15). Derfor bærer hver
 advarsel, hvert gruppeforslag og hvert forbrugstal en `begrundelse` — reglen bag
@@ -171,7 +181,7 @@ V1 under udvikling. Bygget: inventar, grupper, ture med smart-motor, statistik,
 PWA, deling og gæsteview, dashboard, indstillinger, pak-af-tjek, steder,
 personer, låne-log, afgangs-tjek, på-tur-tilstand, turkort til pårørende,
 turlog, vedligeholds-log, QR-koder, vægt-brydere, "ligesom sidst",
-fortryd sletning.
+fortryd sletning, årsopgørelse.
 Endnu ikke bygget: badges/notifikationer.
 
 Ideer til det videre arbejde ligger i [`IDEER.md`](./IDEER.md).

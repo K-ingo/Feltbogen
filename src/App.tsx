@@ -15,6 +15,7 @@ import StederListe from './StederListe';
 import StedDetalje from './StedDetalje';
 import DeltTurDetalje from './DeltTurDetalje';
 import StatistikSide from './StatistikSide';
+import AarsopgoerelseSide from './AarsopgoerelseSide';
 import IndstillingerSide from './IndstillingerSide';
 import Rundvisning from './Rundvisning';
 import GaesteSide from './GaesteSide';
@@ -53,6 +54,9 @@ function App() {
   // En tur en anden har delt. Den kan ikke redigeres og har derfor ingen
   // ny-tilstand at rydde op efter.
   const [valgtDeltTur, setValgtDeltTur] = useState<number | null>(null);
+  // Årsopgørelsen er en skærm man åbner og lukker igen, ikke en fane. Året
+  // ligger i tilstanden, så man kan bladre mellem årene uden at gå ud først.
+  const [valgtAar, setValgtAar] = useState<number | null>(null);
   const aabnItem = (id: number, ny = false) => setValgtItem({ id, ny });
   const aabnGruppe = (id: number, ny = false) => setValgtGruppe({ id, ny });
   const aabnTur = (id: number, ny = false) => setValgtTur({ id, ny });
@@ -82,6 +86,7 @@ function App() {
     setValgtTur(null);
     setValgtSted(null);
     setValgtDeltTur(null);
+    setValgtAar(null);
 
     for (const { valgt, tabel, slet } of aabne) {
       if (!valgt?.ny) continue;
@@ -245,6 +250,20 @@ function App() {
     );
   }
 
+  if (valgtAar !== null) {
+    return (
+      <Skal fane={fane} skift={skiftFane}>
+        <AarsopgoerelseSide
+          aar={valgtAar}
+          vaelgAar={setValgtAar}
+          tilbage={lukDetalje}
+          aabnTur={aabnTur}
+          aabnItem={aabnItem}
+        />
+      </Skal>
+    );
+  }
+
   switch (fane) {
     case 'dashboard':
       return (
@@ -253,6 +272,7 @@ function App() {
           skift={skiftFane}
           aabnItem={aabnItem}
           aabnTur={aabnTur}
+          aabnAar={setValgtAar}
           nytItem={nytItem}
           nyTur={nyTur}
         />
@@ -260,7 +280,7 @@ function App() {
     case 'grupper': return <GrupperListe fane={fane} skift={skiftFane} aabnGruppe={aabnGruppe} nyGruppe={nyGruppe} />;
     case 'ture': return <TureListe fane={fane} skift={skiftFane} aabnTur={aabnTur} aabnDeltTur={aabnDeltTur} nyTur={nyTur} />;
     case 'steder': return <StederListe fane={fane} skift={skiftFane} aabnSted={aabnSted} nytSted={nytSted} />;
-    case 'statistik': return <StatistikSide fane={fane} skift={skiftFane} aabnItem={aabnItem} />;
+    case 'statistik': return <StatistikSide fane={fane} skift={skiftFane} aabnItem={aabnItem} aabnAar={setValgtAar} />;
     case 'inventar': return <InventarSide fane={fane} skift={skiftFane} aabnItem={aabnItem} />;
     case 'indstillinger':
       return (
