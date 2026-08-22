@@ -7,6 +7,7 @@ import { soegSted } from './smartMotor';
 import type { StedForslag } from './smartMotor';
 import { formatterPeriode } from './datotekst';
 import { sletSted, opdaterSted } from './sync';
+import { meldSletning } from './fortryd';
 import { useRedigerbar } from './useRedigerbar';
 import { layout } from './layout';
 import {
@@ -113,7 +114,8 @@ function StedDetalje({ stedId, tilbage, aabnTur, nyOprettet }: Props) {
       : `Slet stedet "${sted.navn}"?`;
 
     if (!confirm(advarsel)) return;
-    await sletSted(sted.id);
+    const genskab = await sletSted(sted.id);
+    if (genskab) meldSletning({ slags: 'Stedet', navn: sted.navn, genskab });
     tilbage();
   };
 

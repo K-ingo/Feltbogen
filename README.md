@@ -43,6 +43,7 @@ appen starter.
 | Vedligehold | `src/vedligehold.ts` | Imprægnering, slibning — intervaller der går i ring |
 | Vægt-brydere | `src/vaegtbrydere.ts` | Lettere alternativer i skabet, og tags ingen gruppe har |
 | Ligesom sidst | `src/ligesomSidst.ts` | Tidligere ture der lignede, som grej kan kopieres fra |
+| Fortryd sletning | `src/fortryd.ts` | Vinduet på 25 sekunder efter en sletning |
 | Statistik | `src/statistik.ts` | Aggregeringer over inventar og ture |
 | UI-primitiver | `src/ui.tsx`, `src/layout.ts` | Knap, Kort, Felt, Chip, Badge, listerækker, detalje-header |
 | Skærme | `src/App.tsx` m.fl. | Inventar, Grupper, Ture, Steder, Statistik |
@@ -89,6 +90,14 @@ Redigeringer skrives til IndexedDB ved hvert tastetryk, men sync udskydes
 `usendt_aendring` markerer poster hvor serveren ikke har kvitteret endnu — så
 bliver de prøvet igen, hvis appen lukkes inden køen er tømt.
 `sendAfventende()` tømmer køen med det samme, og kaldes når appen skjules.
+
+En sletning kan fortrydes i 25 sekunder, men den bliver udført med det samme.
+Den udskydes altså ikke — `slet()` giver i stedet en `Genskab`, der lægger
+posten tilbage. Den anden vej rundt ville efterlade noget man troede var væk,
+hvis appen blev lukket inden vinduet var ude, og det er den værste af de to
+fejl. Genskabelsen beholder postens `uid`, så grejet dukker op igen i præcis de
+grupper og ture det lå i; `pb_id` ryddes derimod, for posten på serveren er
+slettet og skal oprettes på ny.
 
 En udløbet session tæller ikke som at være logget ind. `authStore.record`
 bliver liggende i localStorage efter tokenet er udløbet, så `nuvaerendeBruger()`
@@ -150,7 +159,8 @@ kunne vises ved bålet uden dækning.
 V1 under udvikling. Bygget: inventar, grupper, ture med smart-motor, statistik,
 PWA, deling og gæsteview, dashboard, indstillinger, pak-af-tjek, steder,
 personer, låne-log, afgangs-tjek, på-tur-tilstand, turkort til pårørende,
-turlog, vedligeholds-log, QR-koder, vægt-brydere, "ligesom sidst".
+turlog, vedligeholds-log, QR-koder, vægt-brydere, "ligesom sidst",
+fortryd sletning.
 Endnu ikke bygget: badges/notifikationer.
 
 Ideer til det videre arbejde ligger i [`IDEER.md`](./IDEER.md).

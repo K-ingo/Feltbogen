@@ -627,13 +627,54 @@ async function opdater<T extends Post>(
   planlaegSync(samling, id);
 }
 
-async function slet<T extends Post>(samling: Samling<T>, id: number): Promise<void> {
+// Lægger en slettet post tilbage, som den var.
+//
+// uid'et følger med. Det er postens identitet, og alt der peger på den —
+// gruppernes `item_ids`, pakkelistens `loese_item_ids`, deltagernes gear —
+// peger på uid. Derfor er en fortrudt sletning hel og ikke bare en ny post
+// der ligner: grejet dukker op igen i præcis de grupper og ture det lå i.
+//
+// Det lokale id følger også med, så en skærm der stadig peger på posten,
+// finder den igen. Dexies tæller genbruger aldrig et id, så der er intet at
+// støde sammen med.
+//
+// `pb_id` ryddes derimod. Posten deroppe er slettet — eller står til at blive
+// det via `slettede`-sporet — så den skal oprettes på ny og have sit eget id.
+// `server_aendret` hørte til den gamle post og ryddes med.
+async function genopret<T extends Post>(samling: Samling<T>, post: T): Promise<void> {
+  const { pb_id, server_aendret, ...resten } = post;
+  void pb_id;
+  void server_aendret;
+
+  const id = await samling.tabel.add({
+    ...resten,
+    aendret: new Date(),
+    usendt_aendring: true
+  } as T);
+  efterSkrivning?.();
+  await synkroniser(samling, id);
+}
+
+// Fortryder sletningen. Findes kun så længe nogen holder fast i den.
+export type Genskab = () => Promise<void>;
+
+// Sletter posten, og giver en vej tilbage.
+//
+// Sletningen sker med det samme og bliver ved med at være sket — den ligger
+// ikke og venter på at fortrydelsesvinduet løber ud. Det er den rigtige vej
+// rundt: en udskudt sletning, der forsvandt fordi telefonen røg i lommen,
+// ville efterlade noget man troede var væk. Fortrydelsen genskaber i stedet.
+//
+// Kaldere der ikke tilbyder en fortrydelse, kan roligt se bort fra svaret.
+async function slet<T extends Post>(samling: Samling<T>, id: number): Promise<Genskab | null> {
   const post = await samling.tabel.get(id);
   await samling.tabel.delete(id);
   efterSkrivning?.();
 
+  const genskab = post ? () => genopret(samling, post) : null;
+
   // Nåede posten aldrig op i PocketBase, er der intet at gøre deroppe.
-  if (!post?.pb_id) return;
+  if (!post?.pb_id) return genskab;
 
   // Sporet lægges før forsøget, så sletningen ikke kan gå tabt hvis appen
   // lukkes midt i kaldet.
@@ -646,6 +687,8 @@ async function slet<T extends Post>(samling: Samling<T>, id: number): Promise<vo
   if (await sletIPb(samling.pbNavn, post.pb_id)) {
     await db.slettede.delete(sporId);
   }
+
+  return genskab;
 }
 
 // Returnerer om posten nu er væk i PocketBase. En 404 tæller som succes —

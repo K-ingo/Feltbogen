@@ -239,6 +239,72 @@ describe('slet', () => {
   });
 });
 
+describe('fortryd sletning', () => {
+  it('lægger posten tilbage med samme uid', async () => {
+    const id = await opretItem(lavItem({ navn: 'Fortrudt', vaegt_g: 640 }));
+    const uid = (await db.items.get(id))?.uid;
+
+    const genskab = await sletItem(id);
+    expect(await db.items.count()).toBe(0);
+
+    await genskab?.();
+
+    const tilbage = await db.items.get(id);
+    expect(tilbage?.navn).toBe('Fortrudt');
+    expect(tilbage?.vaegt_g).toBe(640);
+    expect(tilbage?.uid).toBe(uid);
+  });
+
+  // Det egentlige argument for at beholde uid'et: grupper og pakkelister
+  // peger på det, og en fortrudt sletning skal være hel.
+  it('får grejet tilbage i de grupper det lå i', async () => {
+    const itemId = await opretItem(lavItem({ navn: 'Tarp' }));
+    const uid = (await db.items.get(itemId))!.uid;
+    await opretGruppe(lavGruppe({ navn: 'Sommer', item_ids: [uid] }));
+
+    const genskab = await sletItem(itemId);
+    await genskab?.();
+
+    const gruppe = (await db.grupper.toArray())[0];
+    const item = await db.items.get(itemId);
+    expect(gruppe.item_ids).toContain(item?.uid);
+  });
+
+  it('opretter posten på ny i PocketBase', async () => {
+    const id = await opretItem(lavItem({ navn: 'Op igen' }));
+
+    const genskab = await sletItem(id);
+    expect(pbMock.ids('items')).toEqual([]);
+
+    await genskab?.();
+
+    expect(pbMock.ids('items')).toHaveLength(1);
+    // Den gamle post deroppe er væk, så den genskabte skal have sit eget id.
+    expect(await db.items.get(id)).toMatchObject({ pb_id: 'pb2' });
+  });
+
+  // Sletningen står ved magt indtil den fortrydes. Sker det aldrig, må
+  // sporet stadig få serveren til at glemme posten.
+  it('lader sporet fjerne den gamle post når sletningen skete offline', async () => {
+    const id = await opretItem(lavItem({ navn: 'Slettet uden dækning' }));
+    pbMock.offline = true;
+    const genskab = await sletItem(id);
+
+    pbMock.offline = false;
+    await genskab?.();
+    await sendAltUsendt();
+
+    // Den gamle pb1 er væk, den genskabte har sit eget id — og der er kun én.
+    expect(pbMock.ids('items')).toEqual(['pb2']);
+    expect(await db.slettede.count()).toBe(0);
+    expect(await db.items.count()).toBe(1);
+  });
+
+  it('giver ingen vej tilbage når der ikke var noget at slette', async () => {
+    expect(await sletItem(9999)).toBeNull();
+  });
+});
+
 // Kernen i fejlen: en post slettet offline blev hentet tilbage ved næste start.
 describe('slettede poster genopstår ikke', () => {
   it('henter ikke en offline-slettet post tilbage', async () => {

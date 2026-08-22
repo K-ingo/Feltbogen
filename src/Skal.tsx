@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useErDesktop } from './useMedie';
 import { markerSet, useErSet, FAB_TIP_SET } from './indstillinger';
+import { FortrydToast } from './FortrydToast';
 
 export type Fane = 'dashboard' | 'inventar' | 'grupper' | 'ture' | 'steder' | 'statistik' | 'indstillinger';
 
@@ -69,6 +70,7 @@ export function Skal({ fane, skift, titel, undertitel, handlinger, fab, children
           )}
           {children}
         </main>
+        <FortrydToast bund="24px" />
       </div>
     );
   }
@@ -91,6 +93,7 @@ export function Skal({ fane, skift, titel, undertitel, handlinger, fab, children
       </div>
       {fab && <Fab onClick={fab} />}
       {fab && <FabTip />}
+      <FortrydToast bund="calc(136px + env(safe-area-inset-bottom))" />
       <BundNav fane={fane} skift={skift} />
     </>
   );

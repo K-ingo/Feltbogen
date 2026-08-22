@@ -5,6 +5,7 @@ import type { Overnatning, Person } from './db';
 import { antalTurePrPerson, ukendteNavne } from './personer';
 import { opretTomPerson } from './opret';
 import { opdaterPerson, sletPerson } from './sync';
+import { meldSletning } from './fortryd';
 import { Knap, Felt, Segment, Tekstomraade } from './ui';
 
 // Rejseselskabet. Personer bor i indstillingerne og ikke i en fane for sig:
@@ -48,7 +49,8 @@ function Personer() {
       : `Slet ${person.navn}?`;
 
     if (!confirm(advarsel)) return;
-    await sletPerson(person.id);
+    const genskab = await sletPerson(person.id);
+    if (genskab) meldSletning({ slags: 'Personen', navn: person.navn, genskab });
   };
 
   return (

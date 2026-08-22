@@ -12,6 +12,7 @@ import {
 } from './ui';
 import { layout } from './layout';
 import { sletGruppe, opdaterGruppe } from './sync';
+import { meldSletning } from './fortryd';
 import { useRedigerbar } from './useRedigerbar';
 
 interface Props {
@@ -30,7 +31,8 @@ function GruppeDetalje({ gruppeId, tilbage, nyOprettet }: Props) {
   const slet = async () => {
     if (gruppe?.id === undefined) return;
     if (confirm(`Slet gruppen "${gruppe.navn}"?`)) {
-      await sletGruppe(gruppe.id);
+      const genskab = await sletGruppe(gruppe.id);
+      if (genskab) meldSletning({ slags: 'Gruppen', navn: gruppe.navn, genskab });
       tilbage();
     }
   };

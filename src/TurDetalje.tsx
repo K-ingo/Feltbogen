@@ -101,6 +101,7 @@ import type { Deltagelse } from './deltagelse';
 import { layout } from './layout';
 import { useErDesktop, useErBredskaerm } from './useMedie';
 import { sletTur, opdaterTur } from './sync';
+import { meldSletning } from './fortryd';
 import { opretTomtSted } from './opret';
 import { useRedigerbar } from './useRedigerbar';
 
@@ -291,7 +292,8 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   const slet = async () => {
     if (tur?.id === undefined) return;
     if (confirm(`Slet turen "${tur.navn}"?`)) {
-      await sletTur(tur.id);
+      const genskab = await sletTur(tur.id);
+      if (genskab) meldSletning({ slags: 'Turen', navn: tur.navn, genskab });
       tilbage();
     }
   };
