@@ -16,6 +16,7 @@ import StedDetalje from './StedDetalje';
 import DeltTurDetalje from './DeltTurDetalje';
 import StatistikSide from './StatistikSide';
 import AarsopgoerelseSide from './AarsopgoerelseSide';
+import FeltbogSide from './FeltbogSide';
 import IndstillingerSide from './IndstillingerSide';
 import Rundvisning from './Rundvisning';
 import GaesteSide from './GaesteSide';
@@ -57,6 +58,9 @@ function App() {
   // Årsopgørelsen er en skærm man åbner og lukker igen, ikke en fane. Året
   // ligger i tilstanden, så man kan bladre mellem årene uden at gå ud først.
   const [valgtAar, setValgtAar] = useState<number | null>(null);
+  // Feltbogen ligger uden for Skal: alt der ikke er bogen, ville komme med
+  // på papiret.
+  const [feltbogAar, setFeltbogAar] = useState<number | null>(null);
   const aabnItem = (id: number, ny = false) => setValgtItem({ id, ny });
   const aabnGruppe = (id: number, ny = false) => setValgtGruppe({ id, ny });
   const aabnTur = (id: number, ny = false) => setValgtTur({ id, ny });
@@ -87,6 +91,7 @@ function App() {
     setValgtSted(null);
     setValgtDeltTur(null);
     setValgtAar(null);
+    setFeltbogAar(null);
 
     for (const { valgt, tabel, slet } of aabne) {
       if (!valgt?.ny) continue;
@@ -250,12 +255,17 @@ function App() {
     );
   }
 
+  if (feltbogAar !== null) {
+    return <FeltbogSide aar={feltbogAar} tilbage={() => setFeltbogAar(null)} />;
+  }
+
   if (valgtAar !== null) {
     return (
       <Skal fane={fane} skift={skiftFane}>
         <AarsopgoerelseSide
           aar={valgtAar}
           vaelgAar={setValgtAar}
+          aabnFeltbog={setFeltbogAar}
           tilbage={lukDetalje}
           aabnTur={aabnTur}
           aabnItem={aabnItem}

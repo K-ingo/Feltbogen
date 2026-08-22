@@ -23,6 +23,7 @@ import {
 interface Props {
   aar: number;
   vaelgAar: (aar: number) => void;
+  aabnFeltbog: (aar: number) => void;
   tilbage: () => void;
   aabnTur: (id: number) => void;
   aabnItem: (id: number) => void;
@@ -42,7 +43,7 @@ const MAKS = 3;
 //
 // Alt bygger på data appen allerede har. Der er ingen tal her som ikke kan
 // spores tilbage til noget der er skrevet ind.
-function AarsopgoerelseSide({ aar, vaelgAar, tilbage, aabnTur, aabnItem }: Props) {
+function AarsopgoerelseSide({ aar, vaelgAar, aabnFeltbog, tilbage, aabnTur, aabnItem }: Props) {
   const alleTure = useLiveQuery(() => db.ture.toArray()) ?? [];
   const items = useLiveQuery(() => db.items.toArray()) ?? [];
   const grupper = useLiveQuery(() => db.grupper.toArray()) ?? [];
@@ -175,6 +176,14 @@ function AarsopgoerelseSide({ aar, vaelgAar, tilbage, aabnTur, aabnItem }: Props
           )}
 
           <Andele ture={ture} />
+
+          {/* Bogen er årets ture skrevet ud, ikke tallene. Den hører til
+              nederst: man læser opgørelsen først og trykker den bagefter. */}
+          <div style={{ marginTop: '26px' }}>
+            <Knap variant="primaer" onClick={() => aabnFeltbog(aar)}>
+              Årets feltbog — til print og PDF
+            </Knap>
+          </div>
 
           <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', lineHeight: 1.6, marginTop: '26px' }}>
             Talt op over de {tal.ture} {tal.ture === 1 ? 'tur' : 'ture'} der står på {aar}.

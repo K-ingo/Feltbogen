@@ -127,3 +127,71 @@ button {
   from { transform: scaleX(1); }
   to   { transform: scaleX(0); }
 }
+
+/* ─────────────────────────────────────────────
+   Print — årets feltbog
+
+   Det eneste sted i appen der bruger klasser. Resten er inline-styles, men
+   @media print kan ikke ramme dem: en printregel skal kunne overskrive, og
+   inline vinder altid. Klasserne holdes derfor til det her ene formål.
+   ───────────────────────────────────────────── */
+
+/* Sideskiftet skal også virke på skærmen, hvor bogen kan læses igennem inden
+   den trykkes. break-after er den nye stavemåde; page-break-after holder
+   ældre Safari med. */
+.feltbog-side {
+  page-break-after: always;
+  break-after: page;
+}
+
+.feltbog-side:last-child {
+  page-break-after: auto;
+  break-after: auto;
+}
+
+/* En overskrift skal ikke stå alene nederst på en side. */
+.feltbog-side h2, .feltbog-side h3 {
+  page-break-after: avoid;
+  break-after: avoid-page;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 18mm 16mm;
+  }
+
+  /* Papiret er hvidt uanset hvilket tema skærmen står i, og teksten skal
+     være sort — de dæmpede farver forsvinder i en printer. */
+  :root, :root[data-theme="dark"] {
+    --bg: #ffffff;
+    --bg-forhoejet: #ffffff;
+    --bg-topbar: #ffffff;
+    --tekst: #000000;
+    --tekst-dæmpet: #333333;
+    --tekst-svag: #555555;
+    --border: #999999;
+    --border-svag: #cccccc;
+    --accent: #2f3a1c;
+    --accent-bg: #ffffff;
+    --accent-border: #999999;
+    --skygge: transparent;
+  }
+
+  body {
+    background: #ffffff;
+    font-size: 10.5pt;
+  }
+
+  /* Alt der ikke er bogen selv. Navigation, knapper og beskeder hører ikke
+     til på et ark der skal ligge på hylden om ti år. */
+  .kun-skaerm {
+    display: none !important;
+  }
+
+  /* Links trykkes som tekst; en understreget URL uden klikbarhed er støj. */
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
+}
