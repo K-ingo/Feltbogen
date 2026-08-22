@@ -18,6 +18,10 @@ export interface Fortrydelse {
   // Hvad der blev slettet, som sætningen begynder: "Gearet", "Turen".
   slags: string;
   navn: string;
+  // Følgen der er værd at vide bagefter — "3 ture mistede koblingen". Den
+  // stod før i bekræftelsesdialogen; nu hvor sletningen kan fortrydes, hører
+  // den til i kvitteringen frem for i et spørgsmål stillet på forhånd.
+  detalje?: string;
   genskab: Genskab;
 }
 

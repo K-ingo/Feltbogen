@@ -54,18 +54,23 @@ export function FortrydToast({ bund }: Props) {
         gap: '10px',
         padding: '12px 8px 12px 14px'
       }}>
-        <span style={{
-          flex: 1,
-          minWidth: 0,
-          fontSize: '13px',
-          lineHeight: 1.4,
-          // Et langt gearnavn må ikke skubbe knapperne ud af skærmen.
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap'
-        }}>
-          {fortrydBesked(fortrydelse)}
-        </span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontSize: '13px',
+            lineHeight: 1.4,
+            // Et langt gearnavn må ikke skubbe knapperne ud af skærmen.
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
+          }}>
+            {fortrydBesked(fortrydelse)}
+          </div>
+          {fortrydelse.detalje && (
+            <div style={{ fontSize: '11px', lineHeight: 1.4, opacity: 0.75, marginTop: '1px' }}>
+              {fortrydelse.detalje}
+            </div>
+          )}
+        </div>
 
         <button
           onClick={() => void fortrydSletning()}

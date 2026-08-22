@@ -291,11 +291,9 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
 
   const slet = async () => {
     if (tur?.id === undefined) return;
-    if (confirm(`Slet turen "${tur.navn}"?`)) {
-      const genskab = await sletTur(tur.id);
-      if (genskab) meldSletning({ slags: 'Turen', navn: tur.navn, genskab });
-      tilbage();
-    }
+    const genskab = await sletTur(tur.id);
+    if (genskab) meldSletning({ slags: 'Turen', navn: tur.navn, genskab });
+    tilbage();
   };
 
   const toggleGruppe = async (gruppeUid: Reference) => {

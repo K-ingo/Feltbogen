@@ -85,11 +85,9 @@ function ItemDetalje({ itemId, tilbage, nyOprettet }: Props) {
 
   const slet = async () => {
     if (item?.id === undefined) return;
-    if (confirm(`Slet "${item.navn}"?`)) {
-      const genskab = await sletItem(item.id);
-      if (genskab) meldSletning({ slags: 'Gearet', navn: item.navn, genskab });
-      tilbage();
-    }
+    const genskab = await sletItem(item.id);
+    if (genskab) meldSletning({ slags: 'Gearet', navn: item.navn, genskab });
+    tilbage();
   };
 
   if (!item) return <Indlaeser />;

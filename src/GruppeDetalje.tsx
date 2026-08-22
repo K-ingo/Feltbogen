@@ -30,11 +30,9 @@ function GruppeDetalje({ gruppeId, tilbage, nyOprettet }: Props) {
 
   const slet = async () => {
     if (gruppe?.id === undefined) return;
-    if (confirm(`Slet gruppen "${gruppe.navn}"?`)) {
-      const genskab = await sletGruppe(gruppe.id);
-      if (genskab) meldSletning({ slags: 'Gruppen', navn: gruppe.navn, genskab });
-      tilbage();
-    }
+    const genskab = await sletGruppe(gruppe.id);
+    if (genskab) meldSletning({ slags: 'Gruppen', navn: gruppe.navn, genskab });
+    tilbage();
   };
 
   const toggleItem = async (itemUid: string) => {

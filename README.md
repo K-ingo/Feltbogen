@@ -99,6 +99,17 @@ fejl. Genskabelsen beholder postens `uid`, så grejet dukker op igen i præcis d
 grupper og ture det lå i; `pb_id` ryddes derimod, for posten på serveren er
 slettet og skal oprettes på ny.
 
+Fortrydelsen erstatter bekræftelsesdialogen — at spørge på forhånd *og* tilbyde
+en fortrydelse bagefter er friktion to gange for den samme sikkerhed, og
+dialogen er den af de to der er i vejen. Sletteknappen ligger allerede bag en
+menu eller en foldet række, så et tryk ved et uheld er der ikke. Det dialogen
+kunne fortælle — at ture mister koblingen til et slettet sted, men bliver
+stående — står nu i beskeden bagefter i stedet.
+
+Dialogen bliver stående de steder hvor der ikke er noget at fortryde: når et
+delelink eller et turkort trækkes tilbage, er det sket hos modtageren, og når
+et pak-af-tjek slettes, er der ingen post at lægge tilbage.
+
 En udløbet session tæller ikke som at være logget ind. `authStore.record`
 bliver liggende i localStorage efter tokenet er udløbet, så `nuvaerendeBruger()`
 spørger til `authStore.isValid` og ikke til om der ligger en konto. Ellers

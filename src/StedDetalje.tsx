@@ -109,13 +109,12 @@ function StedDetalje({ stedId, tilbage, aabnTur, nyOprettet }: Props) {
     // Turene bliver stående; de mister bare koblingen og falder tilbage på
     // deres egen fritekst. Et sted man sletter er ikke en tur man aflyser.
     const besoeg = turePaaSted(ture, sted.uid).length;
-    const advarsel = besoeg > 0
-      ? `Slet stedet "${sted.navn}"? ${besoeg} ${besoeg === 1 ? 'tur' : 'ture'} mister koblingen, men bliver stående.`
-      : `Slet stedet "${sted.navn}"?`;
+    const detalje = besoeg > 0
+      ? `${besoeg} ${besoeg === 1 ? 'tur' : 'ture'} mistede koblingen, men blev stående.`
+      : undefined;
 
-    if (!confirm(advarsel)) return;
     const genskab = await sletSted(sted.id);
-    if (genskab) meldSletning({ slags: 'Stedet', navn: sted.navn, genskab });
+    if (genskab) meldSletning({ slags: 'Stedet', navn: sted.navn, detalje, genskab });
     tilbage();
   };
 

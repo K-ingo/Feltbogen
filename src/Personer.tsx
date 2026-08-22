@@ -43,14 +43,15 @@ function Personer() {
   const fjern = async (person: Person) => {
     if (person.id === undefined) return;
 
+    // Navnet står skrevet på turene som fritekst og bliver stående; det er
+    // kun koblingen til kartoteket der forsvinder.
     const paaTure = antal.get(person.uid) ?? 0;
-    const advarsel = paaTure > 0
-      ? `Slet ${person.navn}? Navnet bliver stående på ${paaTure} ${paaTure === 1 ? 'tur' : 'ture'}, men koblingen forsvinder.`
-      : `Slet ${person.navn}?`;
+    const detalje = paaTure > 0
+      ? `Navnet blev stående på ${paaTure} ${paaTure === 1 ? 'tur' : 'ture'}.`
+      : undefined;
 
-    if (!confirm(advarsel)) return;
     const genskab = await sletPerson(person.id);
-    if (genskab) meldSletning({ slags: 'Personen', navn: person.navn, genskab });
+    if (genskab) meldSletning({ slags: 'Personen', navn: person.navn, detalje, genskab });
   };
 
   return (
