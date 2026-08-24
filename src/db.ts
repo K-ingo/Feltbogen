@@ -153,6 +153,36 @@ export interface Deltager {
   person_uid: Reference;
 }
 
+// Et foto fra en tur.
+//
+// Billederne hører til turen gennem `tur_uid` og ikke gennem en liste på
+// turen. Med en liste ville der være to steder at holde styr på det samme, og
+// et billede taget på én enhed ville først dukke op på en anden når *turen*
+// var synkroniseret. Rækkefølgen er `tid` — en turdagbog læses kronologisk,
+// og der er ikke noget at flytte rundt på.
+//
+// `blob` er billedet som det ligger på denne enhed, og `url` er det samme
+// billede i PocketBase. Enheden der tog billedet, har begge dele. En anden
+// enhed har kun url'en, indtil billedet vises første gang og hentes ned.
+// Mindst én af dem skal være sat, ellers er posten ikke et billede.
+export interface Billede extends Synkroniserbar {
+  id?: number;
+  // Filnavnet det kom ind med. Det er også postens `navn` i sync-laget, hvor
+  // det bruges i fejlbeskeder — "kunne ikke sende billeder \"IMG_0421.jpg\"".
+  navn: string;
+  tur_uid: Reference;
+  // Da billedet blev taget, hvis filen ved det — ellers da det blev lagt ind.
+  tid: string;
+  bredde: number;
+  hoejde: number;
+  byte: number;
+  blob: Blob | null;
+  url: string;
+  beskrivelse: string;
+  oprettet: Date;
+  aendret: Date;
+}
+
 // Et sted man kommer tilbage til. Steder er en genbrugsressource: shelteret i
 // Klosterheden er det samme shelter hver gang, og det appen ved om det —
 // kildevand mod øst, myg i juli — skal ikke skrives igen for hver tur.
@@ -296,6 +326,11 @@ export interface Tur extends Synkroniserbar {
   turkort_retur: string;
   turkort_besked: string;
   turkort_snapshot: string;
+  // Billedet der bruges som forside i turlisten og på gæstesiden. Tomt
+  // betyder det ældste — det første man tog. Feltet peger på et uid og ikke
+  // på et indeks: et indeks ville pege på noget andet, så snart et billede
+  // blev slettet på en anden enhed.
+  hero_billede: Reference;
   oprettet: Date;
   aendret: Date;
 }
@@ -350,6 +385,7 @@ export class FeltbogenDB extends Dexie {
   delte_ture!: Table<DeltTur, number>;
   steder!: Table<Sted, number>;
   personer!: Table<Person, number>;
+  billeder!: Table<Billede, number>;
 
   constructor() {
     super('FeltbogenDB');
@@ -426,6 +462,25 @@ export class FeltbogenDB extends Dexie {
       delte_ture: '++id, &token, gemt',
       steder: '++id, &uid, navn, oprettet',
       personer: '++id, &uid, navn, oprettet'
+    });
+
+    // v10 giver plads til fotos. Ingen upgrade: tabellen er tom, og
+    // `hero_billede` mangler på ældre ture — hvilket er den rigtige værdi.
+    // Tomt betyder "det ældste billede", og ture uden billeder har ingen.
+    //
+    // Der er ikke noget indeks på `blob`. Man slår aldrig et billede op på
+    // dets indhold, og et indeks på binære data ville koste plads uden at
+    // give noget.
+    this.version(10).stores({
+      items: '++id, &uid, navn, status, oprettet',
+      grupper: '++id, &uid, navn, oprettet',
+      ture: '++id, &uid, navn, startdato, status, oprettet, dele_token',
+      slettede: '++id, samling, pb_id, [samling+pb_id]',
+      indstillinger: '&noegle',
+      delte_ture: '++id, &token, gemt',
+      steder: '++id, &uid, navn, oprettet',
+      personer: '++id, &uid, navn, oprettet',
+      billeder: '++id, &uid, tur_uid, tid, oprettet'
     });
   }
 }

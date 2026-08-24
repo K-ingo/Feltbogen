@@ -9,7 +9,7 @@ import {
   linkvaert,
   SNAPSHOT_VERSION
 } from './gaest';
-import { lavItem, lavGruppe, lavTur } from './test/data';
+import { lavBillede, lavItem, lavGruppe, lavTur } from './test/data';
 
 describe('nytDeletoken', () => {
   it('giver 32 hex-tegn', () => {
@@ -237,5 +237,74 @@ describe('linkvaert', () => {
   it('viser værten gæsten lander på', () => {
     expect(linkvaert('https://feltbogen.vercel.app')).toBe('feltbogen.vercel.app');
     expect(linkvaert('http://localhost:4173')).toBe('localhost:4173');
+  });
+});
+
+describe('billeder i snapshottet', () => {
+  it('tager billederne med, forsiden først', () => {
+    const tur = lavTur({ uid: 't-1', hero_billede: 'b-2' });
+    const billeder = [
+      lavBillede({ uid: 'b-1', tur_uid: 't-1', tid: '2026-07-10T08:00:00Z', url: 'https://pb/a.jpg' }),
+      lavBillede({ uid: 'b-2', tur_uid: 't-1', tid: '2026-07-11T08:00:00Z', url: 'https://pb/b.jpg', beskrivelse: 'Bålet' })
+    ];
+
+    const snapshot = lavSnapshot(tur, [], [], new Date(), billeder);
+
+    expect(snapshot.billeder).toEqual([
+      { url: 'https://pb/b.jpg', beskrivelse: 'Bålet' },
+      { url: 'https://pb/a.jpg', beskrivelse: '' }
+    ]);
+  });
+
+  // Et billede der kun ligger på ejerens telefon, har ingen adresse gæsten
+  // kan hente det fra.
+  it('udelader billeder der ikke er nået op endnu', () => {
+    const tur = lavTur({ uid: 't-1' });
+    const billeder = [
+      lavBillede({ uid: 'b-1', tur_uid: 't-1', url: '', blob: new Blob(['x']) }),
+      lavBillede({ uid: 'b-2', tur_uid: 't-1', url: 'https://pb/b.jpg' })
+    ];
+
+    expect(lavSnapshot(tur, [], [], new Date(), billeder).billeder)
+      .toEqual([{ url: 'https://pb/b.jpg', beskrivelse: '' }]);
+  });
+
+  it('tager ikke billeder fra andre ture med', () => {
+    const tur = lavTur({ uid: 't-1' });
+    const fremmed = lavBillede({ tur_uid: 't-2', url: 'https://pb/x.jpg' });
+
+    expect(lavSnapshot(tur, [], [], new Date(), [fremmed]).billeder).toEqual([]);
+  });
+
+  it('giver en tom liste når turen ingen billeder har', () => {
+    expect(lavSnapshot(lavTur(), [], []).billeder).toEqual([]);
+  });
+});
+
+describe('laesSnapshot og billeder', () => {
+  const grund = { ...lavSnapshot(lavTur({ navn: 'Tur' }), [], []) };
+
+  // Snapshottet kommer fra serveren og lægges direkte i en src.
+  it('kaster adresser der ikke er http eller https væk', () => {
+    const raa = JSON.stringify({
+      ...grund,
+      billeder: [
+        { url: 'https://pb/ok.jpg', beskrivelse: '' },
+        { url: 'javascript:alert(1)', beskrivelse: '' },
+        { url: 'data:image/svg+xml,<svg onload="alert(1)"/>', beskrivelse: '' }
+      ]
+    });
+
+    expect(laesSnapshot(raa)?.billeder).toEqual([{ url: 'https://pb/ok.jpg', beskrivelse: '' }]);
+  });
+
+  it('klarer et snapshot fra før billederne fandtes', () => {
+    const gammelt = JSON.stringify({ ...grund, version: 2, billeder: undefined });
+    expect(laesSnapshot(gammelt)?.billeder).toEqual([]);
+  });
+
+  it('klarer at billed-feltet er vrøvl', () => {
+    expect(laesSnapshot(JSON.stringify({ ...grund, billeder: 'nej' }))?.billeder).toEqual([]);
+    expect(laesSnapshot(JSON.stringify({ ...grund, billeder: [null, 7] }))?.billeder).toEqual([]);
   });
 });

@@ -194,4 +194,17 @@ button {
     text-decoration: none;
     color: inherit;
   }
+
+  /* Billeder skal trykkes med, ikke droppes som baggrund. Browsere udelader
+     som udgangspunkt alt der ligner dekoration. */
+  img {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Et billede må ikke blive delt over to ark. */
+  .feltbog-side img {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
 }

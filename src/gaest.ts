@@ -1,6 +1,7 @@
 import { pb } from './pb';
 import { db } from './db';
-import type { Item, Gruppe, Tur, DeltTur } from './db';
+import type { Billede, Item, Gruppe, Tur, DeltTur } from './db';
+import { billederPaaTur } from './billeder';
 import { pakkelisteEfterGruppe, baererAf } from './smartMotor';
 import type { VejrData } from './smartMotor';
 
@@ -20,7 +21,7 @@ import type { VejrData } from './smartMotor';
 // 2 gav hvert stykke gear sit uid med, så en deltager kan sige "jeg tager
 // den". Ældre snapshots læses stadig — de har bare ingen uid'er, og så kan
 // deres grej ikke fordeles.
-export const SNAPSHOT_VERSION = 2;
+export const SNAPSHOT_VERSION = 3;
 
 export interface GaesteItem {
   // Ejerens uid for gearet. Tomt i snapshots fra version 1.
@@ -38,6 +39,17 @@ export interface GaesteAfsnit {
   items: GaesteItem[];
 }
 
+// Et billede som gæsten ser det: en url og en billedtekst, ikke mere.
+//
+// Kun billeder der er nået op i PocketBase kommer med — et billede der endnu
+// kun ligger på ejerens telefon, har ingen adresse nogen anden kan hente det
+// fra. Snapshottet bygges om efter hver skrivning, så billederne dukker op af
+// sig selv når uploaden er sket.
+export interface GaesteBillede {
+  url: string;
+  beskrivelse: string;
+}
+
 export interface Gaestesnapshot {
   version: number;
   navn: string;
@@ -53,6 +65,8 @@ export interface Gaestesnapshot {
   deltagere: string[];
   vejr: VejrData | null;
   afsnit: GaesteAfsnit[];
+  // Tom i snapshots fra version 1 og 2.
+  billeder: GaesteBillede[];
   vaegt_i_alt_g: number;
   delt_den: string;
 }
@@ -68,7 +82,8 @@ export function lavSnapshot(
   tur: Tur,
   grupper: Gruppe[],
   pakItems: Item[],
-  nu: Date = new Date()
+  nu: Date = new Date(),
+  billeder: Billede[] = []
 ): Gaestesnapshot {
   const baerer = baererAf(tur);
   const navnPaa = new Map(tur.deltagere.map((d) => [d.id, d.navn]));
@@ -100,9 +115,22 @@ export function lavSnapshot(
     deltagere: tur.deltagere.map((d) => d.navn).filter(Boolean),
     vejr: laesVejr(tur.vejrsnapshot),
     afsnit,
+    billeder: gaestebilleder(tur, billeder),
     vaegt_i_alt_g: pakItems.reduce((s, i) => s + i.vaegt_g, 0),
     delt_den: nu.toISOString()
   };
+}
+
+// Forsidebilledet først, resten i kronologisk orden — det er sådan turen
+// blev oplevet.
+function gaestebilleder(tur: Tur, billeder: Billede[]): GaesteBillede[] {
+  const paaTuren = billederPaaTur(billeder, tur.uid).filter((b) => b.url);
+  const forside = paaTuren.find((b) => b.uid === tur.hero_billede);
+  const raekkefoelge = forside
+    ? [forside, ...paaTuren.filter((b) => b !== forside)]
+    : paaTuren;
+
+  return raekkefoelge.map((b) => ({ url: b.url, beskrivelse: b.beskrivelse }));
 }
 
 function laesVejr(raa: string): VejrData | null {
@@ -145,9 +173,22 @@ export function laesSnapshot(raa: unknown): Gaestesnapshot | null {
     deltagere: Array.isArray(s.deltagere) ? s.deltagere.map(String).filter(Boolean) : [],
     vejr: vejr(s.vejr),
     afsnit: afsnit(s.afsnit),
+    billeder: gaestebillederFra(s.billeder),
     vaegt_i_alt_g: tal(s.vaegt_i_alt_g),
     delt_den: tekst(s.delt_den)
   };
+}
+
+// Snapshottet krydser en tillidsgrænse: det er hentet fra serveren og lægges
+// direkte i en `src`. Kun http og https slipper igennem — et `javascript:`
+// eller `data:` i et billedfelt har intet ærinde her, uanset hvor det kom fra.
+function gaestebillederFra(v: unknown): GaesteBillede[] {
+  if (!Array.isArray(v)) return [];
+
+  return v
+    .map((raa) => (raa ?? {}) as Record<string, unknown>)
+    .map((b) => ({ url: tekst(b.url), beskrivelse: tekst(b.beskrivelse) }))
+    .filter((b) => /^https?:\/\//i.test(b.url));
 }
 
 function tekst(v: unknown): string {

@@ -47,6 +47,7 @@ appen starter.
 | Statistik | `src/statistik.ts` | Aggregeringer over inventar og ture |
 | Årsopgørelse | `src/aarsopgoerelse.ts` | Året talt op: nætter, vejr, steder, selskab og grej |
 | Årets feltbog | `src/feltbog.ts` | Én side pr. tur, sat op til at blive trykt |
+| Billeder | `src/billeder.ts` | Skalering, forsidevalg og turens galleri |
 | UI-primitiver | `src/ui.tsx`, `src/layout.ts` | Knap, Kort, Felt, Chip, Badge, listerækker, detalje-header |
 | Skærme | `src/App.tsx` m.fl. | Inventar, Grupper, Ture, Steder, Statistik |
 
@@ -79,6 +80,27 @@ komme med på papiret, og betjeningen bærer klassen `kun-skaerm` så den
 forsvinder i printet. PDF'en laves af browserens egen print-dialog; `@media
 print` i `index.css` er det eneste sted i appen der bruger klasser, fordi en
 printregel skal kunne overskrive, og en inline-style altid vinder.
+
+Fotos følger den samme regel som resten: enheden først. Filen skaleres til
+1600 px og komprimeres som JPEG i browseren, og lægges i IndexedDB **inden**
+der bliver spurgt om net — man tager billeder i en skov uden dækning, og de
+skal ligge der når man kommer hjem. Skaleringen er skrevet i `billeder.ts`
+frem for hentet ind som pakke; det er canvas plus en skaleringsregel, og
+`imageOrientation: 'from-image'` er det der får telefonfotos til at vende
+rigtigt.
+
+Billederne hører til turen gennem `Billede.tur_uid` og ikke gennem en liste på
+turen. Med en liste ville der være to steder at holde styr på det samme.
+Rækkefølgen er optagetidspunktet, og `Tur.hero_billede` peger på forsiden —
+et uid og ikke et indeks, for et indeks ville pege på noget andet så snart et
+billede blev slettet på en anden enhed.
+
+Et billede findes to steder: som `blob` på den enhed der tog det, og som `url`
+i PocketBase. Sync henter kun url'en ned; selve billedet hentes først når det
+skal vises, og lægges så på plads — en enhed skal ikke trække et helt
+turgalleri ned for at tegne en liste. Gæsten får kun url'erne, frosset ind i
+`dele_snapshot` sammen med resten, og `laesSnapshot` kaster alt der ikke er
+http(s) væk: snapshottet krydser en tillidsgrænse og ender i en `src`.
 
 Smart-motoren er rådgiver og ikke automat (fundament §15). Derfor bærer hver
 advarsel, hvert gruppeforslag og hvert forbrugstal en `begrundelse` — reglen bag
@@ -190,7 +212,7 @@ V1 under udvikling. Bygget: inventar, grupper, ture med smart-motor, statistik,
 PWA, deling og gæsteview, dashboard, indstillinger, pak-af-tjek, steder,
 personer, låne-log, afgangs-tjek, på-tur-tilstand, turkort til pårørende,
 turlog, vedligeholds-log, QR-koder, vægt-brydere, "ligesom sidst",
-fortryd sletning, årsopgørelse, feltbog til print.
+fortryd sletning, årsopgørelse, feltbog til print, fotos på turen.
 Endnu ikke bygget: badges/notifikationer.
 
 Ideer til det videre arbejde ligger i [`IDEER.md`](./IDEER.md).

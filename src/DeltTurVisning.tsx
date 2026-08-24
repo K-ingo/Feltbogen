@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Gaestesnapshot } from './gaest';
+import type { GaesteBillede, Gaestesnapshot } from './gaest';
 import type { Deltagelse } from './deltagelse';
 import { baererePrGear, samletMedbragtVaegt, visningsnavn } from './deltagelse';
 import { vejrIkonKode, linjerEfterPerson, medDeltagernes, samletVaegt, linjeAfMedbragt } from './smartMotor';
@@ -75,6 +75,14 @@ function DeltTurVisning({ snapshot, deltagelser = [] }: {
           </a>
         )}
       </div>
+
+      {/* Billederne står før beskeden: de er det første man gerne vil se, når
+          nogen har delt en tur med én. Gæsten henter dem direkte fra
+          PocketBase — url'erne er det eneste hun får, aldrig resten af
+          turen. */}
+      {(snapshot.billeder ?? []).length > 0 && (
+        <Gaestegalleri billeder={snapshot.billeder} navn={snapshot.navn} />
+      )}
 
       {snapshot.besked_fra_ejer && (
         <div style={{
@@ -191,6 +199,55 @@ function baererAf(uid: string, fraEjeren: string, meldte: Map<string, string[]>)
   const navne = [...(uid ? meldte.get(uid) ?? [] : [])];
   if (fraEjeren && !navne.includes(fraEjeren)) navne.unshift(fraEjeren);
   return navne;
+}
+
+// Forsidebilledet stort, resten som en stribe under. Snapshottet har allerede
+// lagt dem i den rækkefølge.
+function Gaestegalleri({ billeder, navn }: { billeder: GaesteBillede[]; navn: string }) {
+  const [forside, ...resten] = billeder;
+
+  return (
+    <div>
+      <img
+        src={forside.url}
+        alt={forside.beskrivelse || navn}
+        style={{
+          width: '100%',
+          maxHeight: '260px',
+          objectFit: 'cover',
+          borderRadius: '10px',
+          display: 'block',
+          background: 'var(--bg-forhoejet)'
+        }}
+      />
+      {forside.beskrivelse && (
+        <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', marginTop: '4px' }}>
+          {forside.beskrivelse}
+        </div>
+      )}
+
+      {resten.length > 0 && (
+        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', marginTop: '8px', paddingBottom: '2px' }}>
+          {resten.map((b) => (
+            <img
+              key={b.url}
+              src={b.url}
+              alt={b.beskrivelse || navn}
+              loading="lazy"
+              style={{
+                width: '84px',
+                height: '84px',
+                flexShrink: 0,
+                objectFit: 'cover',
+                borderRadius: '8px',
+                background: 'var(--bg-forhoejet)'
+              }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default DeltTurVisning;

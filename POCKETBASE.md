@@ -108,7 +108,7 @@ på alle fem, som de formentlig allerede er.
 
 ---
 
-## Trin 4 — Tilføj otte felter til `ture`
+## Trin 4 — Tilføj ni felter til `ture`
 
 Åbn `ture` → **Fields** → tilføj:
 
@@ -122,13 +122,55 @@ på alle fem, som de formentlig allerede er.
 | `turkort_retur` | Plain text |
 | `turkort_besked` | Plain text |
 | `turkort_snapshot` | Plain text |
+| `hero_billede` | Plain text |
 
 > `turkort_snapshot` skal være **Plain text**, selvom indholdet er JSON. Se
 > faldgruberne nederst.
 
 ---
 
-## Trin 5 — Ret læsereglen på `ture`
+## Trin 5 — Opret samlingen `billeder`
+
+Fotos ligger ikke i `ture`. Et billede er sin egen post, så en tur med tredive
+billeder ikke bliver en tredive megabyte stor record der skal sendes frem og
+tilbage hver gang nogen retter en dato.
+
+**New collection** → navn `billeder` → type **Base**.
+
+Opret felterne **først**, og reglerne bagefter — en regel der nævner et felt
+der ikke findes endnu, bliver afvist.
+
+| Navn | Type | Bemærkning |
+|---|---|---|
+| `user` | Relation → `users` | Single |
+| `uid` | Plain text | — |
+| `navn` | Plain text | Filnavnet det kom ind med |
+| `tur_uid` | Plain text | Turen billedet hører til |
+| `tid` | Plain text | **Ikke** Date — se faldgruberne |
+| `bredde` | Number | — |
+| `hoejde` | Number | — |
+| `byte` | Number | — |
+| `beskrivelse` | Plain text | — |
+| `fil` | **File** | Max select **1**, max size **5 MB** |
+
+`fil` er den eneste File-type i hele skemaet. Sæt **Max select til 1** — med
+flere bliver feltet et array, og appen sender ét billede pr. post.
+
+**Lad `fil` være _ikke_ protected.** Et protected filfelt kræver et token for
+at hente billedet, og gæsten på et delelink har ingen konto. Adresserne er
+uforudsigelige og står kun i det link du selv sender.
+
+Så **API rules** — de samme fem som de andre samlinger:
+
+```
+@request.auth.id != "" && user = @request.auth.id
+```
+
+i alle fem felter.
+
+---
+
+## Trin 6 — Ret læsereglen på `ture`
 
 Stadig i `ture` → **API rules**.
 
@@ -163,7 +205,7 @@ user = @request.auth.id
 
 ---
 
-## Trin 6 — Tjek at det virker
+## Trin 7 — Tjek at det virker
 
 ### Tag en kopi først
 
@@ -249,6 +291,13 @@ og så holder datoerne op med at passe.
 af appen selv, og læses tilbage som strenge. Gør du dem til JSON-felter, får
 appen et objekt hvor den venter tekst, og øjebliksbillederne bliver tomme.
 
+**`tid` på et billede skal også være Plain text.** Det er den samme fælde som
+datoerne: appen skriver en ISO-streng og sammenligner den som tekst, når
+galleriet sorteres kronologisk.
+
+**`fil` må ikke være protected.** Så kan gæsten på et delelink ikke hente
+billedet, og galleriet står tomt hos hende — uden fejl nogen af stederne.
+
 **`uid` er den vigtigste enkeltstående ting.** Uden den kan to enheder ikke
 blive enige om hvilken post der er hvilken, og dine egne poster bliver hentet
 ned igen som dubletter ved hver opstart.
@@ -284,7 +333,13 @@ står herunder.
 `feltnoter` json ·
 `besked_fra_ejer` text · `noter` text · `vejrsnapshot` text ·
 `dele_token` text · `dele_snapshot` text · `turkort_token` text ·
-`turkort_retur` text · `turkort_besked` text · `turkort_snapshot` text
+`turkort_retur` text · `turkort_besked` text · `turkort_snapshot` text ·
+`hero_billede` text
+
+### `billeder`
+
+`navn` text · `tur_uid` text · `tid` text · `bredde` number · `hoejde` number ·
+`byte` number · `beskrivelse` text · `fil` **file** (max select 1, ikke protected)
 
 ### `steder`
 

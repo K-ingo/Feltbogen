@@ -1,8 +1,9 @@
-import type { BudgetLinje, Gruppe, Item, Sted, Tur } from './db';
+import type { Billede, BudgetLinje, Gruppe, Item, Sted, Tur } from './db';
 import { etiket } from './db';
 import type { VejrDag } from './smartMotor';
 import { formatterPeriode } from './datotekst';
 import { efterDag } from './feltnoter';
+import { billederPaaTur, hero } from './billeder';
 import type { Dag } from './feltnoter';
 import {
   aarsoverskrift,
@@ -46,6 +47,10 @@ export interface Turside {
   pakkeliste: Pakkedel[];
   vaegt_g: number;
   budget: Budget | null;
+  // Forsidebilledet først, resten kronologisk. Billeder uden både blob og
+  // url udelades: de kan ikke tegnes, og en tom firkant på papiret er værre
+  // end ingen firkant.
+  billeder: Billede[];
   // Feltnoterne i den rækkefølge de blev skrevet. `efterDag` sorterer
   // nyeste først til skærmen; en dagbog læses forfra.
   dage: Dag[];
@@ -63,7 +68,8 @@ export function bygFeltbog(
   ture: Tur[],
   items: Item[],
   grupper: Gruppe[],
-  steder: Sted[]
+  steder: Sted[],
+  billeder: Billede[] = []
 ): Feltbog {
   const tal = aarstalFor(ture, items, aar);
 
@@ -71,11 +77,17 @@ export function bygFeltbog(
     aar,
     tal,
     overskrift: aarsoverskrift(tal),
-    sider: tureIAaret(ture, aar).map((tur) => turside(tur, items, grupper, steder))
+    sider: tureIAaret(ture, aar).map((tur) => turside(tur, items, grupper, steder, billeder))
   };
 }
 
-export function turside(tur: Tur, items: Item[], grupper: Gruppe[], steder: Sted[]): Turside {
+export function turside(
+  tur: Tur,
+  items: Item[],
+  grupper: Gruppe[],
+  steder: Sted[],
+  billeder: Billede[] = []
+): Turside {
   const pakkeliste = pakkedele(tur, items, grupper);
 
   return {
@@ -88,6 +100,7 @@ export function turside(tur: Tur, items: Item[], grupper: Gruppe[], steder: Sted
     pakkeliste,
     vaegt_g: pakkeliste.reduce((s, d) => s + d.vaegt_g, 0),
     budget: budget(tur.budget_linjer ?? []),
+    billeder: tilTryk(tur, billeder),
     dage: [...efterDag(tur.feltnoter ?? [])].reverse()
   };
 }
@@ -152,6 +165,15 @@ function pakkedele(tur: Tur, items: Item[], grupper: Gruppe[]): Pakkedel[] {
   saml('Løst grej', tur.loese_item_ids ?? []);
 
   return dele;
+}
+
+// Forsidebilledet først. Resten står i den rækkefølge de blev taget.
+function tilTryk(tur: Tur, billeder: Billede[]): Billede[] {
+  const paaTuren = billederPaaTur(billeder, tur.uid).filter((b) => b.blob || b.url);
+  const forside = hero(paaTuren, tur);
+  if (!forside) return [];
+
+  return [forside, ...paaTuren.filter((b) => b !== forside)];
 }
 
 function budget(linjer: BudgetLinje[]): Budget | null {

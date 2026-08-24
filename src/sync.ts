@@ -14,6 +14,7 @@ import {
 } from './db';
 import { pb, nuvaerendeBruger } from './pb';
 import type {
+  Billede,
   Item,
   Gruppe,
   Tur,
@@ -298,6 +299,9 @@ interface Samling<T extends Post> {
   tabel: Table<T, number>;
   tilPb(post: T, brugerId: string): Record<string, unknown>;
   fraPb(record: RecordModel): T;
+  // Kaldes efter serveren har kvitteret, hvis der er noget i svaret der kun
+  // kan komme derfra. Billeder bruger den til url'en efter en upload.
+  efterSvar?(id: number, record: RecordModel): Promise<void>;
 }
 
 const itemSamling: Samling<Item> = {
@@ -446,6 +450,7 @@ const turSamling: Samling<Tur> = {
     turkort_retur: tekst(r.turkort_retur),
     turkort_besked: tekst(r.turkort_besked),
     turkort_snapshot: tekst(r.turkort_snapshot),
+    hero_billede: tekst(r.hero_billede),
     oprettet: dato(r.created),
     aendret: dato(r.updated)
   })
@@ -501,6 +506,61 @@ const personSamling: Samling<Person> = {
   })
 };
 
+// Billeder følger den samme maskine som alt andet, men skiller sig ud på to
+// punkter, og begge er værd at kende:
+//
+// 1. Filen sendes kun ved oprettelsen. PocketBase-SDK'en laver selv FormData
+//    af et objekt der indeholder en Blob, så `tilPb` behøver ikke en egen vej
+//    op — men en *opdatering* med `fil` sat ville lægge billedet op én gang
+//    til. Derfor udelades feltet, så snart posten har et pb_id.
+//
+// 2. `blob` kommer ikke ned fra serveren. `fraPb` sætter kun url'en; selve
+//    billedet hentes først når det skal vises, og lægges så på plads. En
+//    enhed skal ikke trække et helt turgalleri ned for at vise en liste.
+const billedSamling: Samling<Billede> = {
+  pbNavn: 'billeder',
+  tabel: db.billeder,
+  tilPb: (b, user) => ({
+    user,
+    uid: b.uid,
+    navn: b.navn,
+    tur_uid: b.tur_uid,
+    tid: b.tid,
+    bredde: b.bredde,
+    hoejde: b.hoejde,
+    byte: b.byte,
+    beskrivelse: b.beskrivelse,
+    ...(b.pb_id || !b.blob ? {} : { fil: new File([b.blob], filnavnTil(b), { type: b.blob.type }) })
+  }),
+  fraPb: (r) => ({
+    uid: uid(r),
+    pb_id: r.id,
+    navn: tekst(r.navn),
+    tur_uid: tekst(r.tur_uid),
+    tid: tekst(r.tid),
+    bredde: tal(r.bredde),
+    hoejde: tal(r.hoejde),
+    byte: tal(r.byte),
+    beskrivelse: tekst(r.beskrivelse),
+    blob: null,
+    url: tekst(r.fil) ? pb.files.getURL(r, tekst(r.fil)) : '',
+    oprettet: dato(r.created),
+    aendret: dato(r.updated)
+  }),
+  // Url'en kommer først med serverens svar. Uden den ville billedet blive
+  // stående som "ikke sendt" og blive lagt op igen ved næste afstemning.
+  efterSvar: async (id, record) => {
+    const fil = tekst(record.fil);
+    if (fil) await db.billeder.update(id, { url: pb.files.getURL(record, fil) });
+  }
+};
+
+// PocketBase renser selv filnavnet, men et navn uden endelse giver en fil
+// uden type når den hentes igen.
+function filnavnTil(b: Billede): string {
+  return `${b.uid}.jpg`;
+}
+
 // ─────────────────────────────────────────────
 // Generiske operationer
 // ─────────────────────────────────────────────
@@ -524,6 +584,8 @@ async function synkroniser<T extends Post>(samling: Samling<T>, id: number): Pro
       svar = await pb.collection(samling.pbNavn).create(payload);
       advarHvisUidTabt(svar, post.uid, samling.pbNavn);
     }
+
+    await samling.efterSvar?.(id, svar);
 
     // Er posten redigeret igen mens kaldet var i luften, står der en ny sync i
     // køen, og så skal flaget blive — ellers ville den ændring kunne tabes.
@@ -855,7 +917,30 @@ export const sletGruppe = (id: number) => slet(gruppeSamling, id);
 
 export const opretTur = (tur: Omit<Tur, 'id' | 'uid'>) => opret(turSamling, tur);
 export const opdaterTur = (id: number, aendringer: Partial<Tur>) => opdater(turSamling, id, aendringer);
-export const sletTur = (id: number) => slet(turSamling, id);
+// Billederne kan ikke leve uden deres tur, så de følger med i sletningen —
+// og med tilbage, hvis man fortryder. Ellers ville et galleri blive liggende
+// i basen for evigt uden noget at høre til.
+export async function sletTur(id: number): Promise<Genskab | null> {
+  const tur = await db.ture.get(id);
+  const billeder = tur
+    ? await db.billeder.where('tur_uid').equals(tur.uid).toArray()
+    : [];
+
+  const genskabBilleder: Genskab[] = [];
+  for (const billede of billeder) {
+    if (billede.id === undefined) continue;
+    const tilbage = await slet(billedSamling, billede.id);
+    if (tilbage) genskabBilleder.push(tilbage);
+  }
+
+  const genskabTuren = await slet(turSamling, id);
+  if (!genskabTuren) return null;
+
+  return async () => {
+    await genskabTuren();
+    for (const tilbage of genskabBilleder) await tilbage();
+  };
+}
 
 export const opretSted = (sted: Omit<Sted, 'id' | 'uid'>) => opret(stedSamling, sted);
 export const opdaterSted = (id: number, aendringer: Partial<Sted>) => opdater(stedSamling, id, aendringer);
@@ -864,6 +949,14 @@ export const sletSted = (id: number) => slet(stedSamling, id);
 export const opretPerson = (person: Omit<Person, 'id' | 'uid'>) => opret(personSamling, person);
 export const opdaterPerson = (id: number, aendringer: Partial<Person>) => opdater(personSamling, id, aendringer);
 export const sletPerson = (id: number) => slet(personSamling, id);
+
+// Billeder oprettes og slettes, men redigeres ikke — der er ingen
+// opdaterBillede. Beskrivelsen er det eneste der kan rettes, og den går
+// gennem opdater() med samlingen, hvor `tilPb` sørger for ikke at sende
+// filen igen.
+export const opretBillede = (billede: Omit<Billede, 'id' | 'uid'>) => opret(billedSamling, billede);
+export const opdaterBillede = (id: number, aendringer: Partial<Billede>) => opdater(billedSamling, id, aendringer);
+export const sletBillede = (id: number) => slet(billedSamling, id);
 
 // Sender alt der endnu ikke har nået PocketBase — både nye poster og
 // sletninger. Kaldes ved appstart, så det man lavede offline kommer op så
@@ -880,6 +973,7 @@ export async function sendAltUsendt(): Promise<{ antal: number; fejl: number }> 
     await sendUsendte(turSamling),
     await sendUsendte(stedSamling),
     await sendUsendte(personSamling),
+    await sendUsendte(billedSamling),
     await sendUsendteSletninger()
   ];
 
@@ -901,7 +995,8 @@ export async function hentFraPocketBase(): Promise<void> {
       hent(gruppeSamling, bruger.id),
       hent(turSamling, bruger.id),
       hent(stedSamling, bruger.id),
-      hent(personSamling, bruger.id)
+      hent(personSamling, bruger.id),
+      hent(billedSamling, bruger.id)
     ]);
   } catch (e) {
     console.error('Kunne ikke hente data fra PocketBase:', fejlDetaljer(e));
@@ -960,6 +1055,7 @@ async function flytReferencer(omdoeb: Map<Reference, Reference>): Promise<void> 
     const grupper = flyt(tur.gruppe_ids);
     const loese = flyt(tur.loese_item_ids);
     const sted_uid = omdoeb.get(tur.sted_uid) ?? tur.sted_uid;
+    const hero_billede = omdoeb.get(tur.hero_billede) ?? tur.hero_billede;
     const deltagere = tur.deltagere.map((d) => ({
       ...d,
       personligt_gear_ids: flyt(d.personligt_gear_ids),
@@ -970,13 +1066,22 @@ async function flytReferencer(omdoeb: Map<Reference, Reference>): Promise<void> 
     const roert = aendret(tur.gruppe_ids, grupper)
       || aendret(tur.loese_item_ids, loese)
       || sted_uid !== tur.sted_uid
+      || hero_billede !== tur.hero_billede
       || tur.deltagere.some((d, i) =>
         aendret(d.personligt_gear_ids, deltagere[i].personligt_gear_ids)
         || aendret(d.baerer_delt_ids, deltagere[i].baerer_delt_ids)
         || d.person_uid !== deltagere[i].person_uid);
 
     if (tur.id !== undefined && roert) {
-      await db.ture.update(tur.id, { gruppe_ids: grupper, loese_item_ids: loese, sted_uid, deltagere });
+      await db.ture.update(tur.id, { gruppe_ids: grupper, loese_item_ids: loese, sted_uid, hero_billede, deltagere });
+    }
+  }
+
+  // Billederne peger på deres tur.
+  for (const billede of await db.billeder.toArray()) {
+    const tur_uid = omdoeb.get(billede.tur_uid);
+    if (billede.id !== undefined && tur_uid) {
+      await db.billeder.update(billede.id, { tur_uid });
     }
   }
 
@@ -1003,7 +1108,8 @@ export async function fjernDubletter(): Promise<number> {
     await fjernDubletterI(gruppeSamling),
     await fjernDubletterI(turSamling),
     await fjernDubletterI(stedSamling),
-    await fjernDubletterI(personSamling)
+    await fjernDubletterI(personSamling),
+    await fjernDubletterI(billedSamling)
   ]) {
     fjernet += kort.size;
     kort.forEach((til, fra) => omdoeb.set(fra, til));

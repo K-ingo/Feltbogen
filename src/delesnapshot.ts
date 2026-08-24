@@ -1,5 +1,5 @@
 import { db } from './db';
-import type { Tur, Gruppe, Item, Sted } from './db';
+import type { Billede, Tur, Gruppe, Item, Sted } from './db';
 import { lavSnapshot } from './gaest';
 import type { Gaestesnapshot } from './gaest';
 import { lavTurkort } from './turkort';
@@ -43,15 +43,16 @@ export async function friskDelteSnapshots(nu: Date = new Date()): Promise<number
     .toArray();
   if (delte.length === 0) return 0;
 
-  const [items, grupper, steder] = await Promise.all([
+  const [items, grupper, steder, billeder] = await Promise.all([
     db.items.toArray(),
     db.grupper.toArray(),
-    db.steder.toArray()
+    db.steder.toArray(),
+    db.billeder.toArray()
   ]);
 
   let skrevet = 0;
   for (const tur of delte) {
-    if (await friskEn(tur, grupper, items, steder, nu)) skrevet++;
+    if (await friskEn(tur, grupper, items, steder, billeder, nu)) skrevet++;
   }
   return skrevet;
 }
@@ -61,6 +62,7 @@ async function friskEn(
   grupper: Gruppe[],
   items: Item[],
   steder: Sted[],
+  billeder: Billede[],
   nu: Date
 ): Promise<boolean> {
   if (tur.id === undefined) return false;
@@ -68,7 +70,7 @@ async function friskEn(
   const aendringer: Partial<Tur> = {};
 
   if (tur.dele_token) {
-    const frisk = lavSnapshot(tur, grupper, itemsPaaTur(tur, grupper, items), nu);
+    const frisk = lavSnapshot(tur, grupper, itemsPaaTur(tur, grupper, items), nu, billeder);
     if (!uaendret(tur.dele_snapshot, frisk)) aendringer.dele_snapshot = JSON.stringify(frisk);
   }
 

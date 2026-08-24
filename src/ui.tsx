@@ -403,11 +403,13 @@ interface ListeRaekkeProps {
   titel: ReactNode;
   detalje?: ReactNode;
   onClick?: () => void;
+  // Til venstre for teksten, fx en turs forsidebillede.
+  foran?: ReactNode;
   // Ekstra indhold under detaljelinjen, fx tag-chips.
   children?: ReactNode;
 }
 
-export function ListeRaekke({ titel, detalje, onClick, children }: ListeRaekkeProps) {
+export function ListeRaekke({ titel, detalje, onClick, foran, children }: ListeRaekkeProps) {
   return (
     <div
       onClick={onClick}
@@ -417,10 +419,12 @@ export function ListeRaekke({ titel, detalje, onClick, children }: ListeRaekkePr
         cursor: onClick ? 'pointer' : 'default',
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
+        gap: '10px'
       }}
     >
-      <div style={{ flex: 1 }}>
+      {foran}
+      <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 500, color: 'var(--tekst)', fontSize: '14px' }}>{titel}</div>
         {detalje && (
           <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>

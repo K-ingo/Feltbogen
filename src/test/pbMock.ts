@@ -99,6 +99,13 @@ export const pb = {
   filter: (raa: string, params: Record<string, unknown> = {}) =>
     raa.replace(/\{:(\w+)\}/g, (_, n) => JSON.stringify(params[n])),
 
+  // Filadresser. Den rigtige klient bygger den af collectionId og record-id;
+  // her er formen ligegyldig, så længe den er stabil og entydig.
+  files: {
+    getURL: (record: { id?: string }, filnavn: string) =>
+      filnavn ? `https://test.pb/api/files/${record.id}/${filnavn}` : ''
+  },
+
   collection: (navn: string) => ({
     async getFullList(opts: { filter?: string } = {}) {
       pbMock.kald.push({ metode: 'getFullList', samling: navn });
@@ -121,7 +128,7 @@ export const pb = {
       kraevOnline();
       const id = `pb${naesteId++}`;
       const nu = tik();
-      const record = { id, created: nu, updated: nu, ...gemtData(data) };
+      const record = { id, created: nu, updated: nu, ...gemtData(medFilnavne(data)) };
       samlingAf(pbMock, navn).set(id, record);
       return record;
     },
@@ -139,7 +146,7 @@ export const pb = {
 
       const eksisterende = samlingAf(pbMock, navn).get(id);
       if (!eksisterende) throw ikkeFundet();
-      const record = { ...eksisterende, ...gemtData(data), id, updated: tik() };
+      const record = { ...eksisterende, ...gemtData(medFilnavne(data)), id, updated: tik() };
       samlingAf(pbMock, navn).set(id, record);
       return record;
     },
@@ -160,6 +167,18 @@ function filtreret(poster: Record<string, unknown>[], filter?: string) {
   const m = /^(\w+)\s*=\s*(.+)$/.exec(filter ?? '');
   if (!m) return poster;
   return poster.filter((r) => JSON.stringify(r[m[1]] ?? '') === m[2].trim());
+}
+
+// PocketBase gemmer filnavnet i feltet, ikke filen. Mocken gør det samme, så
+// en test kan se forskel på "filen blev sendt" og "filen blev sendt igen".
+function medFilnavne(data: Record<string, unknown>): Record<string, unknown> {
+  const ud: Record<string, unknown> = {};
+  for (const [felt, vaerdi] of Object.entries(data)) {
+    ud[felt] = vaerdi instanceof File ? vaerdi.name
+      : vaerdi instanceof Blob ? 'fil.jpg'
+        : vaerdi;
+  }
+  return ud;
 }
 
 // Felter uden for skemaet forsvinder, præcis som i PocketBase.

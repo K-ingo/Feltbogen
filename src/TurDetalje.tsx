@@ -102,6 +102,8 @@ import { layout } from './layout';
 import { useErDesktop, useErBredskaerm } from './useMedie';
 import { sletTur, opdaterTur } from './sync';
 import { meldSletning } from './fortryd';
+import BilledSektion from './BilledSektion';
+import { billederPaaTur } from './billeder';
 import { opretTomtSted } from './opret';
 import { useRedigerbar } from './useRedigerbar';
 
@@ -149,6 +151,9 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   const steder = useLiveQuery(() => db.steder.toArray()) ?? [];
   const personer = useLiveQuery(() => db.personer.toArray()) ?? [];
   const alleTure = useLiveQuery(() => db.ture.toArray()) ?? [];
+  // Kun antallet bruges her — selve billederne hentes af BilledSektion, som
+  // også er den der viser dem.
+  const alleBilleder = useLiveQuery(() => db.billeder.toArray()) ?? [];
 
   const { post: tur, opdater } = useRedigerbar(db.ture, turId, opdaterTur, {
     onIndlaest: (fundet) => {
@@ -463,7 +468,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   const del = async () => {
     await opdater({
       dele_token: tur.dele_token || nytDeletoken(),
-      dele_snapshot: JSON.stringify(lavSnapshot(tur, grupper ?? [], pakItems))
+      dele_snapshot: JSON.stringify(lavSnapshot(tur, grupper ?? [], pakItems, new Date(), alleBilleder))
     });
   };
 
@@ -689,6 +694,22 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
     </Foldbar>
   );
 
+  const antalBilleder = billederPaaTur(alleBilleder, tur.uid).length;
+  const billedResume = antalBilleder === 0
+    ? 'Ingen'
+    : `${antalBilleder} ${antalBilleder === 1 ? 'billede' : 'billeder'}`;
+
+  const billedSektion = (
+    <Foldbar
+      titel="Billeder"
+      resume={billedResume}
+      // På en tur der er i gang er det den man har fat i telefonen for.
+      aabenFra={tur.status === 'aktiv'}
+    >
+      <BilledSektion tur={tur} saetHero={(uid) => void opdater({ hero_billede: uid })} />
+    </Foldbar>
+  );
+
   const turkortSektion = (
     <Foldbar titel="Turkort til pårørende" resume={tur.turkort_token ? 'Sendt' : 'Ikke lavet'}>
       <Turkort
@@ -752,6 +773,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
       {pakAfSektion}
       {afgangsSektion}
       {feltnoteSektion}
+      {billedSektion}
       <Foldbar
         titel={`Deltagere (${tur.deltagere.length})`}
         resume={tur.deltagere.map((d) => d.navn).join(', ')}
@@ -862,6 +884,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
         {pakAfSektion}
         {afgangsSektion}
         {feltnoteSektion}
+        {billedSektion}
         <Foldbar titel="Turparametre" resume={parametreResume}>{parametre}</Foldbar>
         {advarsler.length > 0 && (
           <Foldbar titel={`Advarsler (${advarsler.length})`} advarsel aabenFra>

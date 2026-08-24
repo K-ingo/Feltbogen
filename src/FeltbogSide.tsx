@@ -2,7 +2,9 @@ import { useEffect } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
+import type { Billede } from './db';
 import { Knap } from './ui';
+import { Billedvisning } from './BilledSektion';
 import { kortDag } from './datotekst';
 import { bygFeltbog, filnavn, temperaturspand, vejrord } from './feltbog';
 import type { Turside } from './feltbog';
@@ -25,6 +27,7 @@ function FeltbogSide({ aar, tilbage }: Props) {
   const items = useLiveQuery(() => db.items.toArray()) ?? [];
   const grupper = useLiveQuery(() => db.grupper.toArray()) ?? [];
   const steder = useLiveQuery(() => db.steder.toArray()) ?? [];
+  const billeder = useLiveQuery(() => db.billeder.toArray()) ?? [];
 
   // Browseren foreslår sidens titel som filnavn når man gemmer som PDF.
   // Uden det her hedder filen "Feltbogen" — appens navn — uanset hvilket år
@@ -35,7 +38,7 @@ function FeltbogSide({ aar, tilbage }: Props) {
     return () => { document.title = foer; };
   }, [aar]);
 
-  const bog = bygFeltbog(aar, ture, items, grupper, steder);
+  const bog = bygFeltbog(aar, ture, items, grupper, steder, billeder);
 
   return (
     <div style={{ maxWidth: '820px', margin: '0 auto', padding: '24px 20px 60px' }}>
@@ -116,6 +119,8 @@ function Tursider({ side }: { side: Turside }) {
       <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginBottom: '18px' }}>
         {[side.periode, side.sted].filter(Boolean).join(' · ')}
       </div>
+
+      {side.billeder.length > 0 && <Billedstribe billeder={side.billeder} />}
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '18px 26px', marginBottom: '20px' }}>
         {side.fakta.map((f) => (
@@ -227,6 +232,47 @@ function Tursider({ side }: { side: Turside }) {
   );
 }
 
+// Forsidebilledet bredt, resten som en række under. Billederne er det der
+// gør siden til et minde frem for et regnskab, så de står øverst.
+function Billedstribe({ billeder }: { billeder: Billede[] }) {
+  const [forside, ...resten] = billeder;
+
+  return (
+    <div style={{ marginBottom: '18px' }}>
+      <div style={{
+        height: '190px',
+        borderRadius: '6px',
+        overflow: 'hidden',
+        background: 'var(--bg-forhoejet)'
+      }}>
+        <Billedvisning billede={forside} />
+      </div>
+      {forside.beskrivelse && (
+        <div style={{ ...etiketStil, marginTop: '4px', textTransform: 'none', letterSpacing: 0, fontSize: '11px' }}>
+          {forside.beskrivelse}
+        </div>
+      )}
+
+      {resten.length > 0 && (
+        <div style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
+          {resten.slice(0, MAKS_SMAA).map((b) => (
+            <div key={b.uid} style={{
+              width: '78px',
+              height: '78px',
+              flexShrink: 0,
+              borderRadius: '5px',
+              overflow: 'hidden',
+              background: 'var(--bg-forhoejet)'
+            }}>
+              <Billedvisning billede={b} />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Afsnit({ titel, children }: { titel: string; children: ReactNode }) {
   return (
     <div style={{ marginBottom: '18px' }}>
@@ -235,6 +281,10 @@ function Afsnit({ titel, children }: { titel: string; children: ReactNode }) {
     </div>
   );
 }
+
+// Så mange små billeder er der plads til på en linje under forsidebilledet
+// uden at siden skal skifte størrelse.
+const MAKS_SMAA = 6;
 
 const serif = "'Fraunces', Georgia, serif";
 

@@ -1,11 +1,13 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
-import type { TurStatus } from './db';
+import type { Billede, Tur, TurStatus } from './db';
 import { formatterPeriode } from './datotekst';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
 import { useErDesktop } from './useMedie';
 import { Knap, Badge, ListeRaekke, SektionsTitel, TomListe } from './ui';
+import { Billedvisning } from './BilledSektion';
+import { hero } from './billeder';
 
 // Farven signalerer hvor turen er i sit livsforløb.
 const STATUS_NIVEAU: Record<TurStatus, 'info' | 'accent' | 'advarsel'> = {
@@ -29,6 +31,7 @@ function TureListe({ fane, skift, aabnTur, aabnDeltTur, nyTur }: Props) {
   // Ture andre har delt med én. De ligger i deres egen tabel og kan ikke
   // redigeres, men de hører hjemme her — det er stadig ture man skal med på.
   const delte = useLiveQuery(() => db.delte_ture.orderBy('gemt').reverse().toArray());
+  const billeder = useLiveQuery(() => db.billeder.toArray()) ?? [];
 
   const egne = ture?.length ?? 0;
   const antalDelte = delte?.length ?? 0;
@@ -58,6 +61,7 @@ function TureListe({ fane, skift, aabnTur, aabnDeltTur, nyTur }: Props) {
         <ListeRaekke
           key={t.uid}
           onClick={() => t.id !== undefined && aabnTur(t.id)}
+          foran={<Forsidebillede tur={t} billeder={billeder} />}
           titel={
             <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               {t.navn}
@@ -103,6 +107,27 @@ function TureListe({ fane, skift, aabnTur, aabnDeltTur, nyTur }: Props) {
 function undertitel(egne: number, delte: number): string {
   const mine = `${egne} ${egne === 1 ? 'tur' : 'ture'}`;
   return delte > 0 ? `${mine} · ${delte} delt med dig` : mine;
+}
+
+// Turens forsidebillede som en lille firkant. Har turen ingen billeder, står
+// der ingenting — en tom pladsholder ville give listen en spalte af huller.
+function Forsidebillede({ tur, billeder }: { tur: Tur; billeder: Billede[] }) {
+  const forside = hero(billeder, tur);
+  if (!forside) return null;
+
+  return (
+    <div style={{
+      width: '46px',
+      height: '46px',
+      flexShrink: 0,
+      borderRadius: '7px',
+      overflow: 'hidden',
+      background: 'var(--bg-forhoejet)',
+      border: '1px solid var(--border-svag)'
+    }}>
+      <Billedvisning billede={forside} />
+    </div>
+  );
 }
 
 export default TureListe;

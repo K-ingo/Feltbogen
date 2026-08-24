@@ -89,6 +89,7 @@ export function opretTomTur(): Promise<number> {
     turkort_retur: '',
     turkort_besked: '',
     turkort_snapshot: '',
+    hero_billede: '',
     oprettet: nu,
     aendret: nu
   });
