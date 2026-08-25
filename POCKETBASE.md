@@ -280,6 +280,34 @@ op af sig selv ved næste synkronisering.
 
 ---
 
+## Hvis login fejler med 400
+
+`POST /api/collections/users/auth-with-password` svarer **400 på tre helt
+forskellige ting**, og netværksfanen viser kun tallet. Svaret står under
+**Network → den fejlede kald → Response**, og appen skriver det samme i
+konsollen (`Login fejlede: {status, url, besked, felter}`).
+
+| Svarets krop | Betyder | Hvad der skal gøres |
+|---|---|---|
+| `"message": "Failed to authenticate."` | Kontoen findes ikke, kodeordet er forkert, **eller** samlingens auth-regel afviser kontoen | Prøv en konto du ved findes. Bliver den også afvist, se de to næste rækker |
+| `"data": { "identity": … }` | Feltet manglede eller validerede ikke | Fejlen er i appen, ikke i opsætningen |
+| `"message": "Something went wrong."` og status **0** | Serveren blev aldrig nået | Railway-instansen sover eller er væk — tjek `VITE_PB_URL` |
+
+To ting i PocketBase kan give "Failed to authenticate." for en konto der
+findes, og begge sidder på `users`-samlingen under **Options**:
+
+- **Identity/Password er slået fra.** Så kan ingen logge ind med kodeord.
+- **Auth-reglen kræver noget kontoen ikke opfylder** — typisk
+  `verified = true`. Feltbogen sender ikke bekræftelsesmails, så en konto
+  oprettet i appen bliver aldrig `verified`, og login vil fejle for alle.
+  Feltet skal stå tomt.
+
+PocketBase skelner med vilje ikke mellem "findes ikke" og "forkert kodeord" i
+svaret — ellers kunne man afprøve sig frem til hvilke e-mails der er oprettet.
+Derfor er admin-panelet det eneste sted forskellen kan ses.
+
+---
+
 ## Faldgruber
 
 **Datoer skal være Plain text.** `startdato` og `slutdato` gemmes som

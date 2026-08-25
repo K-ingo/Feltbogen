@@ -15,6 +15,50 @@ export function useErBredskaerm(): boolean {
   return useBredereEnd(BREDSKAERM_FRA);
 }
 
+// Højden på det man faktisk kan se, i px.
+//
+// `100vh` og `100dvh` bygger på browserens layout-viewport, og den kan på iOS
+// stå og være forkert: efter tastaturet har været fremme, eller når appen
+// startes fra hjemmeskærmen mens systemet stadig animerer. Så måler den for
+// lavt uden at rette sig igen, og alt der er hængt op på skærmens bund —
+// bundnavigationen, plus-knappen — lander midt inde i listen mens indholdet
+// tegnes hele vejen ned. `visualViewport` måler det synlige felt direkte og
+// siger til hver gang det ændrer sig, tastaturet iberegnet.
+export function useSynligHoejde(): number | null {
+  const [hoejde, setHoejde] = useState<number | null>(() => maal());
+
+  useEffect(() => {
+    const opdater = () => setHoejde(maal());
+    const vv = window.visualViewport;
+
+    // Målingen lige efter montering: er vinduet blevet et andet siden første
+    // render, er det her den bliver fanget.
+    opdater();
+
+    window.addEventListener('resize', opdater);
+    window.addEventListener('orientationchange', opdater);
+    // Tilbage fra baggrunden — iOS genbruger siden uden en resize.
+    window.addEventListener('pageshow', opdater);
+    vv?.addEventListener('resize', opdater);
+
+    return () => {
+      window.removeEventListener('resize', opdater);
+      window.removeEventListener('orientationchange', opdater);
+      window.removeEventListener('pageshow', opdater);
+      vv?.removeEventListener('resize', opdater);
+    };
+  }, []);
+
+  return hoejde;
+}
+
+function maal(): number | null {
+  if (typeof window === 'undefined') return null;
+  // Afrundet, så en brøkdel af en pixel ikke sender React en ny værdi ved
+  // hvert eneste scroll.
+  return Math.round(window.visualViewport?.height ?? window.innerHeight);
+}
+
 // Navnet starter med "use", fordi det er en hook — den bruger state og en
 // effekt, og skal følge de samme regler som de to ovenfor.
 function useBredereEnd(px: number): boolean {

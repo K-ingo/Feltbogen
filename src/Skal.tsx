@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useErDesktop } from './useMedie';
+import { useErDesktop, useSynligHoejde } from './useMedie';
 import { markerSet, useErSet, FAB_TIP_SET } from './indstillinger';
 import { FortrydToast } from './FortrydToast';
 
@@ -7,16 +7,16 @@ export type Fane = 'dashboard' | 'inventar' | 'grupper' | 'ture' | 'steder' | 's
 
 // `kort` bruges i bundnavigationen, hvor fanerne skal dele skærmbredden.
 //
-// Indstillinger og Steder står kun i sidebaren på PC. På mobil er der ikke
-// plads til flere end fem faner i bunden uden at de bliver for smalle at ramme
-// — indstillinger nås fra tandhjulet i topbaren, og steder fra turlisten, hvor
-// man alligevel er når et sted er det man leder efter.
+// Seks faner deler bredden. På den smalleste telefon der er værd at regne med
+// (360 px) bliver hver fane 60 px — bredere end de 44 px en finger skal have,
+// og "Inventar" er stadig det længste ord der kan stå på én linje. Flere end
+// seks kan der ikke være: indstillinger nås fra tandhjulet i topbaren.
 const FANER: { id: Fane; label: string; kort: string; iBundnav: boolean }[] = [
   { id: 'dashboard', label: 'Dashboard', kort: 'Hjem', iBundnav: true },
   { id: 'inventar', label: 'Inventar', kort: 'Inventar', iBundnav: true },
   { id: 'grupper', label: 'Grupper', kort: 'Grupper', iBundnav: true },
   { id: 'ture', label: 'Ture', kort: 'Ture', iBundnav: true },
-  { id: 'steder', label: 'Steder', kort: 'Steder', iBundnav: false },
+  { id: 'steder', label: 'Steder', kort: 'Steder', iBundnav: true },
   { id: 'statistik', label: 'Statistik', kort: 'Stat', iBundnav: true },
   { id: 'indstillinger', label: 'Indstillinger', kort: 'Mere', iBundnav: false }
 ];
@@ -42,6 +42,7 @@ interface Props {
 // Detaljeskærme har deres egen header og bruger ikke Skal.
 export function Skal({ fane, skift, titel, undertitel, handlinger, fab, children }: Props) {
   const erDesktop = useErDesktop();
+  const synligHoejde = useSynligHoejde();
 
   if (erDesktop) {
     return (
@@ -75,39 +76,68 @@ export function Skal({ fane, skift, titel, undertitel, handlinger, fab, children
     );
   }
 
+  // Skallen er en kasse på præcis skærmens højde: topbar, et indhold der
+  // scroller for sig selv, og bundnavigationen nederst som en helt almindelig
+  // række. Før lå navigationen og FAB'en som `position: fixed` og hang dermed
+  // på browserens mål af vinduet — og målte den forkert, som iOS kan finde på,
+  // lagde de sig midt inde i listen mens indholdet blev tegnet hele vejen ned
+  // bag dem. Nu er der ikke noget at måle forkert: navigationen er bunden af
+  // kassen, og indholdet kan ikke nå uden om den.
   return (
-    <>
+    <div style={{
+      height: synligHoejde ? `${synligHoejde}px` : '100dvh',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+      // Containing block for FAB'en og dens tip.
+      position: 'relative'
+    }}>
       {titel && <Topbar titel={titel} tilIndstillinger={() => skift('indstillinger')} />}
+
       <div style={{
-        padding: '16px 20px',
-        maxWidth: '640px',
-        margin: '0 auto',
-        paddingBottom: 'calc(90px + env(safe-area-inset-bottom))'
+        flex: 1,
+        // Uden den her kan et flex-barn ikke blive lavere end sit indhold, og
+        // så scroller kassen i stedet for indholdet.
+        minHeight: 0,
+        overflowY: 'auto',
+        // Elastikken i enderne bliver inde i indholdet og trækker ikke hele
+        // skallen med.
+        overscrollBehaviorY: 'contain',
+        WebkitOverflowScrolling: 'touch'
       }}>
-        {undertitel && (
-          <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginBottom: '14px' }}>
-            {undertitel}
-          </div>
-        )}
-        {children}
+        <div style={{
+          padding: '16px 20px',
+          maxWidth: '640px',
+          margin: '0 auto',
+          // Kun FAB'en skal der gøres plads til nu — den svæver 72 px over
+          // bunden og er 54 px høj, og lå ellers oven på den sidste linje.
+          paddingBottom: fab ? '140px' : '24px'
+        }}>
+          {undertitel && (
+            <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginBottom: '14px' }}>
+              {undertitel}
+            </div>
+          )}
+          {children}
+        </div>
       </div>
+
       {fab && <Fab onClick={fab} />}
       {fab && <FabTip />}
       <FortrydToast bund="calc(136px + env(safe-area-inset-bottom))" />
       <BundNav fane={fane} skift={skift} />
-    </>
+    </div>
   );
 }
 
 function Topbar({ titel, tilIndstillinger }: { titel: string; tilIndstillinger: () => void }) {
   return (
     <div style={{
-      position: 'sticky',
-      top: 0,
-      zIndex: 15,
+      // Ikke længere sticky: topbaren er en række i skallen, og indholdet
+      // scroller under den af sig selv.
+      flexShrink: 0,
       background: 'var(--bg-topbar)',
       borderBottom: '1px solid var(--border)',
-      backdropFilter: 'blur(8px)',
       paddingTop: 'env(safe-area-inset-top)'
     }}>
       <div style={{
@@ -194,18 +224,16 @@ function Sidebar({ fane, skift }: { fane: Fane; skift: (f: Fane) => void }) {
 function BundNav({ fane, skift }: { fane: Fane; skift: (f: Fane) => void }) {
   return (
     <div style={{
-      position: 'fixed',
-      bottom: 0,
-      left: 0,
-      right: 0,
       display: 'flex',
+      flexShrink: 0,
       background: 'var(--bg-topbar)',
       borderTop: '1px solid var(--border)',
       boxShadow: '0 -4px 12px var(--skygge)',
-      backdropFilter: 'blur(8px)',
+      // Ingen backdrop-filter mere. `--bg-topbar` er uigennemsigtig, så
+      // sløringen var alligevel ikke til at se — men den tvang baren op i sit
+      // eget kompositionslag, og dem tegner iOS ikke altid det rigtige sted.
       // Holder knapperne fri af home-baren når appen kører installeret på iOS.
-      paddingBottom: 'env(safe-area-inset-bottom)',
-      zIndex: 20
+      paddingBottom: 'env(safe-area-inset-bottom)'
     }}>
       {BUNDFANER.map(({ id, kort }) => {
         const erAktiv = fane === id;
@@ -224,7 +252,14 @@ function BundNav({ fane, skift }: { fane: Fane; skift: (f: Fane) => void }) {
               color: erAktiv ? 'var(--accent)' : 'var(--tekst-dæmpet)',
               fontWeight: erAktiv ? 600 : 500,
               textTransform: 'uppercase',
-              letterSpacing: '0.5px',
+              // Var 0,5. Med seks faner står "INVENTAR" og "GRUPPER" næsten op
+              // ad hinanden på en 360 px skærm, og de her to tiendedele er
+              // luften imellem dem.
+              letterSpacing: '0.3px',
+              // Bliver det alligevel for trangt, skal ordet hellere klippes end
+              // brække om på to linjer og gøre baren høj og ujævn.
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
               borderTop: erAktiv ? '2px solid var(--accent)' : '2px solid transparent',
               transition: 'color 0.15s'
             }}
@@ -246,7 +281,8 @@ function FabTip() {
 
   return (
     <div style={{
-      position: 'fixed',
+      // Absolut og ikke fast: den hører til i skallen, ikke i vinduet.
+      position: 'absolute',
       right: '20px',
       bottom: 'calc(150px + env(safe-area-inset-bottom))',
       maxWidth: '230px',
@@ -288,7 +324,7 @@ function Fab({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       aria-label="Tilføj"
       style={{
-        position: 'fixed',
+        position: 'absolute',
         right: '20px',
         bottom: 'calc(72px + env(safe-area-inset-bottom))',
         width: '54px',

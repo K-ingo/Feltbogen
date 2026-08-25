@@ -74,6 +74,15 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Slår elastikken fra i begge ender af siden. iOS flytter først faste
+     elementer når gestussen slipper, så under et gummi-træk bliver
+     bundnavigationen stående midt i listen mens siden glider videre — og bliver
+     man stående der, står den der på skærmbilledet. Uden overtræk er der ikke
+     noget at blive stående i. Det slår samtidig træk-for-at-genindlæse fra,
+     hvilket er det rigtige for en app der gemmer lokalt: en genindlæsning
+     midt i en redigering er ikke en hjælp. */
+  overscroll-behavior-y: none;
 }
 
 h1, h2, h3 {
