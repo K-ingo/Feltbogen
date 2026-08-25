@@ -188,3 +188,29 @@ describe('billeder følger turen', () => {
     expect((await db.billeder.toArray()).map((b) => b.navn)).toEqual(['fremmed.jpg']);
   });
 });
+
+describe('originalen må ikke vælte billedet', () => {
+  // Sker fx hvis `original`-feltet ikke findes i PocketBase, eller hvis
+  // serveren ikke vil tage imod fire megabyte. Visningskopien er den vigtige.
+  it('sender billedet op uden originalen når det første forsøg afvises', async () => {
+    pbMock.afvisNaesteCreate = 'billeder';
+
+    const id = await opretBillede(foto());
+
+    const gemt = await db.billeder.get(id);
+    expect(gemt?.pb_id).toBe('pb1');
+    expect(gemt?.url).toContain('pb1');
+    // Originalen kom ikke op, og den lokale kopi bliver derfor liggende.
+    expect(gemt?.original_url).toBe('');
+    expect(gemt?.original_blob).toBeInstanceOf(Blob);
+    expect(pbMock.records.get('billeder')?.get('pb1')?.original).toBeUndefined();
+  });
+
+  it('giver op når det andet forsøg også fejler', async () => {
+    pbMock.offline = true;
+
+    const id = await opretBillede(foto());
+
+    expect((await db.billeder.get(id))?.pb_id).toBeUndefined();
+  });
+});

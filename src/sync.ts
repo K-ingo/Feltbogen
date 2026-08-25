@@ -279,6 +279,11 @@ interface Samling<T extends Post> {
   // Kaldes efter serveren har kvitteret, hvis der er noget i svaret der kun
   // kan komme derfra. Billeder bruger den til url'en efter en upload.
   efterSvar?(id: number, record: RecordModel): Promise<void>;
+  // Et lettere forsøg, når det første blev afvist — eller null hvis der ikke
+  // er noget at skære fra. Billeder bruger den til at komme op uden
+  // originalen: visningskopien er den vigtige, og en server der ikke vil tage
+  // imod fire megabyte, skal ikke koste hele billedet.
+  udenTungeFelter?(payload: Record<string, unknown>): Record<string, unknown> | null;
 }
 
 const itemSamling: Samling<Item> = {
@@ -533,6 +538,16 @@ const billedSamling: Samling<Billede> = {
   }),
   // Url'en kommer først med serverens svar. Uden den ville billedet blive
   // stående som "ikke sendt" og blive lagt op igen ved næste afstemning.
+  // Originalen er en bonus. Kan den ikke komme op, skal visningskopien stadig
+  // kunne — ellers ville et manglende `original`-felt i PocketBase koste hele
+  // billedfunktionen.
+  udenTungeFelter: (payload) => {
+    if (!('original' in payload)) return null;
+
+    const { original, ...resten } = payload;
+    void original;
+    return resten;
+  },
   efterSvar: async (id, record) => {
     const aendringer: Partial<Billede> = {};
 
@@ -571,6 +586,31 @@ function originalnavnTil(b: Billede): string {
 
 // Sender én post op: opdaterer hvis den kendes i PocketBase, opretter ellers.
 // Returnerer om den nu ligger deroppe.
+// Opretter posten, og prøver igen med mindre i hvis det første blev afvist.
+//
+// Det er der for billedernes skyld. En upload med originalen er fire megabyte
+// hvor visningskopien er tre hundrede kilobyte, og afviser serveren den —
+// fordi feltet ikke findes, eller fordi den er for stor — så skal billedet
+// stadig kunne komme op. Fejlen skrives ud, så det ikke sker i det skjulte.
+async function opretIPb<T extends Post>(
+  samling: Samling<T>,
+  payload: Record<string, unknown>,
+  navn: string
+): Promise<RecordModel> {
+  try {
+    return await pb.collection(samling.pbNavn).create(payload);
+  } catch (e) {
+    const lettere = samling.udenTungeFelter?.(payload);
+    if (!lettere) throw e;
+
+    console.warn(
+      `"${navn}" blev afvist af ${samling.pbNavn}. Prøver igen uden det tungeste:`,
+      fejlDetaljer(e)
+    );
+    return pb.collection(samling.pbNavn).create(lettere);
+  }
+}
+
 async function synkroniser<T extends Post>(samling: Samling<T>, id: number): Promise<boolean> {
   const bruger = nuvaerendeBruger();
   if (!bruger) return false;
@@ -585,7 +625,7 @@ async function synkroniser<T extends Post>(samling: Samling<T>, id: number): Pro
     if (post.pb_id) {
       svar = await pb.collection(samling.pbNavn).update(post.pb_id, payload);
     } else {
-      svar = await pb.collection(samling.pbNavn).create(payload);
+      svar = await opretIPb(samling, payload, post.navn);
       advarHvisUidTabt(svar, post.uid, samling.pbNavn);
     }
 

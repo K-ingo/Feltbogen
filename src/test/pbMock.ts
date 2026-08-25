@@ -9,6 +9,10 @@ export interface PbMock {
   // Efterligner en samling uden uid-felt i skemaet: PocketBase dropper
   // lydløst felter den ikke kender.
   udenUidFelt: boolean;
+  // Afviser næste create mod den navngivne samling én gang. Bruges til at
+  // ramme det tilfælde hvor serveren siger nej til en for stor eller ukendt
+  // fil, og appen skal prøve igen med mindre i.
+  afvisNaesteCreate: string | null;
   kald: { metode: string; samling: string; id?: string }[];
   reset(): void;
   seed(samling: string, id: string, data?: Record<string, unknown>): void;
@@ -39,12 +43,14 @@ export const pbMock: PbMock = {
   records: new Map(),
   offline: false,
   udenUidFelt: false,
+  afvisNaesteCreate: null,
   kald: [],
 
   reset() {
     this.records = new Map();
     this.offline = false;
     this.udenUidFelt = false;
+    this.afvisNaesteCreate = null;
     this.kald = [];
     naesteId = 1;
     ur = Date.parse('2026-07-01T10:00:00Z');
@@ -126,6 +132,14 @@ export const pb = {
     async create(data: Record<string, unknown>) {
       pbMock.kald.push({ metode: 'create', samling: navn });
       kraevOnline();
+
+      if (pbMock.afvisNaesteCreate === navn) {
+        pbMock.afvisNaesteCreate = null;
+        const fejl = new Error('Failed to create record.') as Error & { status: number };
+        fejl.status = 400;
+        throw fejl;
+      }
+
       const id = `pb${naesteId++}`;
       const nu = tik();
       const record = { id, created: nu, updated: nu, ...gemtData(medFilnavne(data)) };
