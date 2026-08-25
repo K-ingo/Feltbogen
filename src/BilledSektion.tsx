@@ -41,7 +41,11 @@ function BilledSektion({ tur, saetHero }: Props) {
 
     const afviste: string[] = [];
     for (const fil of Array.from(filer)) {
-      if (!erBillede(fil.type) || fil.size > MAKS_BYTE) {
+      // En fil valgt fra iCloud Drive på iOS kan komme helt uden type. Den
+      // skal ikke afvises på det grundlag — kan afkoderen læse den, er det et
+      // billede, og kan den ikke, bliver den afvist et par linjer længere nede
+      // med den samme besked.
+      if ((fil.type !== '' && !erBillede(fil.type)) || fil.size > MAKS_BYTE) {
         afviste.push(fil.name);
         setArbejder((n) => n - 1);
         continue;

@@ -59,17 +59,53 @@ export interface Skaleret {
   hoejde: number;
 }
 
-// Skalerer og komprimerer. Kaster hvis filen ikke kan læses som et billede.
+// Billedet afkodet, med EXIF-rotationen anvendt.
 //
 // `imageOrientation: 'from-image'` er det der får telefonfotos til at vende
-// rigtigt. EXIF-rotationen ligger i filen, og tegner man bare pixels over på
-// et canvas uden den, ender halvdelen af billederne på siden.
+// rigtigt: rotationen ligger i filen, og tegner man bare pixels over på et
+// canvas uden den, ender halvdelen af billederne på siden.
+//
+// Ældre Safari tager ikke imod options-objektet, og et iPhone-foto er
+// præcis den fil der har brug for det. Derfor tre forsøg i rækkefølge, og
+// det sidste — et <img>-element — virker overalt: browseren anvender
+// orienteringen selv, fordi CSS'ens `image-orientation` som standard er
+// `from-image`.
+async function afkod(fil: Blob): Promise<CanvasImageSource & { width: number; height: number; close?: () => void }> {
+  if (typeof createImageBitmap === 'function') {
+    try {
+      return await createImageBitmap(fil, { imageOrientation: 'from-image' });
+    } catch {
+      // Options-objektet blev afvist. Uden det vender billedet måske forkert,
+      // men et billede der vender skævt er bedre end intet billede.
+      try {
+        return await createImageBitmap(fil);
+      } catch {
+        // Formatet kan ikke afkodes ad den vej. Så prøver vi som <img>.
+      }
+    }
+  }
+
+  const url = URL.createObjectURL(fil);
+  try {
+    const billede = new Image();
+    await new Promise<void>((ok, fejl) => {
+      billede.onload = () => ok();
+      billede.onerror = () => fejl(new Error('Kunne ikke læse billedet'));
+      billede.src = url;
+    });
+    return billede;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+// Skalerer og komprimerer. Kaster hvis filen ikke kan læses som et billede.
 export async function skaler(
   fil: Blob,
   maks: number = MAKS_KANT,
   kvalitet: number = KVALITET
 ): Promise<Skaleret> {
-  const kilde = await createImageBitmap(fil, { imageOrientation: 'from-image' });
+  const kilde = await afkod(fil);
   const maal = beregnMaal(kilde.width, kilde.height, maks);
 
   try {
@@ -90,7 +126,8 @@ export async function skaler(
 
     return { blob, bredde: maal.bredde, hoejde: maal.hoejde };
   } finally {
-    kilde.close();
+    // Kun en ImageBitmap skal lukkes; et <img> rydder browseren selv op efter.
+    kilde.close?.();
   }
 }
 
