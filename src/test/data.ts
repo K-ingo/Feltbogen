@@ -133,6 +133,7 @@ export function lavTur(felter: Partial<Tur> = {}): Tur {
     turkort_besked: '',
     turkort_snapshot: '',
     hero_billede: '',
+    booking: null,
     oprettet: nu,
     aendret: nu,
     ...felter

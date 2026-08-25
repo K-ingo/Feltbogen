@@ -10,6 +10,7 @@ import type {
   Aktivitet,
   Terraen,
   Erfaring,
+  Booking,
   Deltager,
   BudgetLinje,
   PakAfTjek,
@@ -41,7 +42,7 @@ import {
   tildelGear,
   soegSted
 } from './smartMotor';
-import type { VejrData, StedForslag, Advarsel, Pakkelinje, Pakkeafsnit, Beregninger, Baerevaegt, GruppeForslag } from './smartMotor';
+import type { VejrDag, VejrData, StedForslag, Advarsel, Pakkelinje, Pakkeafsnit, Beregninger, Baerevaegt, GruppeForslag } from './smartMotor';
 import {
   Knap,
   Felt,
@@ -102,6 +103,9 @@ import { layout } from './layout';
 import { useErDesktop, useErBredskaerm } from './useMedie';
 import { sletTur, opdaterTur } from './sync';
 import { meldSletning } from './fortryd';
+import { soltider, skumringstekst } from './soltider';
+import { baaltjek, FORBUD_LINK } from './baalforbud';
+import { jagtvarsel, JAGTDAGE_LINK, JAGTTIDER_LINK } from './jagt';
 import BilledSektion from './BilledSektion';
 import { billederPaaTur } from './billeder';
 import { opretTomtSted } from './opret';
@@ -583,7 +587,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   );
 
   const vejr = (
-    <Vejrudsigt data={vejrData} hentes={vejrHentes} fejl={vejrFejl} hent={hentVejrForTur} />
+    <Vejrudsigt tur={tur} data={vejrData} hentes={vejrHentes} fejl={vejrFejl} hent={hentVejrForTur} />
   );
 
   const deltagere = (
@@ -695,6 +699,15 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   );
 
   const antalBilleder = billederPaaTur(alleBilleder, tur.uid).length;
+  const bookingSektion = (
+    <Foldbar
+      titel="Booking"
+      resume={tur.booking?.booket ? 'Booket' : tur.booking ? 'Ikke booket endnu' : 'Ingen'}
+    >
+      <Bookingfelter booking={tur.booking ?? null} gem={(b) => void opdater({ booking: b })} />
+    </Foldbar>
+  );
+
   const billedResume = antalBilleder === 0
     ? 'Ingen'
     : `${antalBilleder} ${antalBilleder === 1 ? 'billede' : 'billeder'}`;
@@ -772,6 +785,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
     <>
       {pakAfSektion}
       {afgangsSektion}
+      {bookingSektion}
       {feltnoteSektion}
       {billedSektion}
       <Foldbar
@@ -795,6 +809,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
       <div>
         <DetaljeHeader tilbage={tilbage} sletLabel="Slet tur" slet={slet} />
         {titelblok}
+        <Jagtboks tur={tur} />
 
         {/* Er der plads til det, deles sidekortene i to spalter frem for at
             stå i én lang strimmel. Pakkelisten er den man arbejder i, så den
@@ -847,6 +862,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
     <div style={layout.container}>
       <DetaljeHeader tilbage={tilbage} sletLabel="Slet tur" slet={slet} />
       {titelblok}
+      <Jagtboks tur={tur} />
 
       {/* På en aktiv tur er på-tur-skærmen den man skal have fat i, ikke
           knappen der afslutter turen. */}
@@ -883,6 +899,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
       <div style={{ display: 'grid', gap: '8px', marginTop: '16px' }}>
         {pakAfSektion}
         {afgangsSektion}
+        {bookingSektion}
         {feltnoteSektion}
         {billedSektion}
         <Foldbar titel="Turparametre" resume={parametreResume}>{parametre}</Foldbar>
@@ -1357,7 +1374,8 @@ function Vaegt({ prPerson, delt, personligt, personer, baaret }: {
   );
 }
 
-function Vejrudsigt({ data, hentes, fejl, hent }: {
+function Vejrudsigt({ tur, data, hentes, fejl, hent }: {
+  tur: Tur;
   data: VejrData | null;
   hentes: boolean;
   fejl: string;
@@ -1394,6 +1412,9 @@ function Vejrudsigt({ data, hentes, fejl, hent }: {
               <span>Sol ned {data.dage[0].sol_ned}</span>
             </div>
           )}
+
+          <Skumring tur={tur} />
+          <Baaltjek dage={data.dage} />
           {data.observationer.length > 0 && (
             <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid var(--border-svag)' }}>
               {data.observationer.map((obs, i) => (
@@ -2425,6 +2446,142 @@ function formatterDag(dato: string): string {
   const d = new Date(dato);
   const dage = ['søn', 'man', 'tir', 'ons', 'tor', 'fre', 'lør'];
   return `${dage[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}`;
+}
+
+
+// Skumringen. Solnedgang er ikke det samme som mørkt, og forskellen er den
+// tid man har til at få tarpen op.
+//
+// Tiderne regnes på enheden ud fra turens koordinater — de virker uden
+// dækning, og de kræver ikke et ekstra felt i vejrkaldet.
+function Skumring({ tur }: { tur: Tur }) {
+  if (!tur.koordinater || !tur.startdato) return null;
+
+  const tider = soltider(tur.startdato, tur.koordinater.lat, tur.koordinater.lng);
+  if (!tider) return null;
+
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px', fontSize: '11px', color: 'var(--tekst-dæmpet)', marginTop: '4px' }}>
+      <span>{tider.daggry && `Lyst fra ${tider.daggry}`}</span>
+      <span>{skumringstekst(tider)}</span>
+    </div>
+  );
+}
+
+// Tørke og bål. Ikke DMI's skovbrandindeks — en observation på den udsigt
+// appen allerede har hentet, og et link til dem der bestemmer.
+function Baaltjek({ dage }: { dage: VejrDag[] }) {
+  const tjek = baaltjek(dage);
+  if (!tjek) return null;
+
+  const toert = tjek.toerhed === 'toert';
+
+  return (
+    <div style={{
+      marginTop: '10px',
+      paddingTop: '10px',
+      borderTop: '1px solid var(--border-svag)',
+      fontSize: '11px',
+      color: toert ? 'var(--advarsel)' : 'var(--tekst-dæmpet)',
+      lineHeight: 1.5
+    }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+        <span style={{ flex: 1 }}>{toert && '⚠ '}{tjek.tekst}</span>
+        <Hvorfor begrundelse={tjek.begrundelse} />
+      </div>
+      <a href={FORBUD_LINK} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>
+        Se gældende afbrændingsforbud
+      </a>
+    </div>
+  );
+}
+
+// Jagtvarsel. Appen ved ikke om der er jagt netop dér den dag — den kender
+// sæsonerne og peger på dem der offentliggør jagtdagene.
+function Jagtboks({ tur }: { tur: Tur }) {
+  const varsel = jagtvarsel(tur);
+  if (!varsel) return null;
+
+  return (
+    <div style={{
+      padding: '10px 12px',
+      marginBottom: '14px',
+      background: 'var(--advarsel-bg)',
+      border: '1px solid var(--advarsel-border)',
+      borderRadius: '10px',
+      fontSize: '12px',
+      color: 'var(--advarsel)',
+      lineHeight: 1.5
+    }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+        <span style={{ flex: 1, fontWeight: 500 }}>
+          Turen ligger i {varsel.saesoner.map((s) => s.navn.toLowerCase()).join(' og ')}
+        </span>
+        <Hvorfor begrundelse={varsel.begrundelse} />
+      </div>
+      {varsel.saesoner.map((s) => (
+        <div key={s.navn} style={{ marginTop: '4px', opacity: 0.9 }}>{s.betydning}</div>
+      ))}
+      <div style={{ marginTop: '6px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+        <a href={JAGTDAGE_LINK} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>
+          Jagtdage i statsskovene
+        </a>
+        <a href={JAGTTIDER_LINK} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>
+          Jagttider
+        </a>
+      </div>
+    </div>
+  );
+}
+
+// Booking af shelter eller lejrplads. Det er ikke et opslag i Udinaturen —
+// det er de tre felter der fjerner "shit, det havde jeg glemt".
+function Bookingfelter({ booking, gem }: {
+  booking: Booking | null;
+  gem: (b: Booking | null) => void;
+}) {
+  const nu: Booking = booking ?? { link: '', booket: false, reference: '' };
+
+  // Er alle tre tomme igen, er der ikke taget stilling — og så skal feltet
+  // ikke stå som et halvt udfyldt løfte.
+  const saet = (aendringer: Partial<Booking>) => {
+    const naeste = { ...nu, ...aendringer };
+    const tomt = !naeste.link.trim() && !naeste.reference.trim() && !naeste.booket;
+    gem(tomt ? null : naeste);
+  };
+
+  return (
+    <div style={{ display: 'grid', gap: '12px' }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', cursor: 'pointer' }}>
+        <input
+          type="checkbox"
+          checked={nu.booket}
+          onChange={(e) => saet({ booket: e.target.checked })}
+          style={{ width: 'auto' }}
+        />
+        Pladsen er booket
+      </label>
+
+      <Felt
+        label="Link til booking"
+        value={nu.link}
+        onChange={(v) => saet({ link: v })}
+        placeholder="https://udinaturen.dk/..."
+      />
+      <Felt
+        label="Reference"
+        value={nu.reference}
+        onChange={(v) => saet({ reference: v })}
+        placeholder="Bookingnummer eller lignende"
+      />
+
+      {nu.link.trim() && (
+        <a href={nu.link} target="_blank" rel="noreferrer" style={{ fontSize: '12px', color: 'var(--accent)' }}>
+          Åbn bookingen
+        </a>
+      )}
+    </div>
+  );
 }
 
 export default TurDetalje;

@@ -23,6 +23,7 @@ import type {
   Reference,
   Garanti,
   Deltager,
+  Booking,
   BudgetLinje,
   PakAfTjek,
   PakAfLinje,
@@ -230,6 +231,20 @@ function vedligehold(v: unknown): Vedligehold[] {
     }));
 }
 
+// Ture fra før booking-felterne fandtes har ingen, og det er den rigtige
+// værdi: man har ikke taget stilling.
+function booking(v: unknown): Booking | null {
+  if (!v || typeof v !== 'object') return null;
+  const b = v as Record<string, unknown>;
+
+  const link = tekst(b.link).trim();
+  const reference = tekst(b.reference).trim();
+  const booket = b.booket === true;
+
+  // Er der hverken link, reference eller flueben, er der ikke taget stilling.
+  return link || reference || booket ? { link, booket, reference } : null;
+}
+
 function feltnoter(v: unknown): Feltnote[] {
   if (!Array.isArray(v)) return [];
 
@@ -433,6 +448,7 @@ const turSamling: Samling<Tur> = {
     turkort_besked: tekst(r.turkort_besked),
     turkort_snapshot: tekst(r.turkort_snapshot),
     hero_billede: tekst(r.hero_billede),
+    booking: booking(r.booking),
     oprettet: dato(r.created),
     aendret: dato(r.updated)
   })

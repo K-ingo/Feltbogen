@@ -108,7 +108,7 @@ på alle fem, som de formentlig allerede er.
 
 ---
 
-## Trin 4 — Tilføj ni felter til `ture`
+## Trin 4 — Tilføj ti felter til `ture`
 
 Åbn `ture` → **Fields** → tilføj:
 
@@ -123,6 +123,7 @@ på alle fem, som de formentlig allerede er.
 | `turkort_besked` | Plain text |
 | `turkort_snapshot` | Plain text |
 | `hero_billede` | Plain text |
+| `booking` | JSON |
 
 > `turkort_snapshot` skal være **Plain text**, selvom indholdet er JSON. Se
 > faldgruberne nederst.
@@ -392,7 +393,7 @@ står herunder.
 `besked_fra_ejer` text · `noter` text · `vejrsnapshot` text ·
 `dele_token` text · `dele_snapshot` text · `turkort_token` text ·
 `turkort_retur` text · `turkort_besked` text · `turkort_snapshot` text ·
-`hero_billede` text
+`hero_billede` text · `booking` json
 
 ### `billeder`
 

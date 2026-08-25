@@ -153,6 +153,17 @@ export interface Deltager {
   person_uid: Reference;
 }
 
+// Booking af shelter eller lejrplads.
+//
+// Oplæggets MVP (§5.2): et link, et flueben og en reference. Den fulde
+// udgave slår op i Udinaturens data, men de felter her er det der fjerner
+// "shit, det havde jeg glemt" — og de virker uden noget API.
+export interface Booking {
+  link: string;
+  booket: boolean;
+  reference: string;
+}
+
 // Et foto fra en tur.
 //
 // Billederne hører til turen gennem `tur_uid` og ikke gennem en liste på
@@ -341,6 +352,8 @@ export interface Tur extends Synkroniserbar {
   // på et indeks: et indeks ville pege på noget andet, så snart et billede
   // blev slettet på en anden enhed.
   hero_billede: Reference;
+  // null indtil man har taget stilling til om der skal bookes.
+  booking: Booking | null;
   oprettet: Date;
   aendret: Date;
 }

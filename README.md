@@ -48,6 +48,9 @@ appen starter.
 | Årsopgørelse | `src/aarsopgoerelse.ts` | Året talt op: nætter, vejr, steder, selskab og grej |
 | Årets feltbog | `src/feltbog.ts` | Én side pr. tur, sat op til at blive trykt |
 | Billeder | `src/billeder.ts` | Skalering, forsidevalg og turens galleri |
+| Sol og skumring | `src/soltider.ts` | Hvornår det bliver lyst og mørkt, regnet på enheden |
+| Jagtvarsel | `src/jagt.ts` | Om turen ligger i en jagtsæson, og hvad det betyder |
+| Tørke og bål | `src/baalforbud.ts` | Om udsigten er tør nok til at tjekke for afbrændingsforbud |
 | UI-primitiver | `src/ui.tsx`, `src/layout.ts` | Knap, Kort, Felt, Chip, Badge, listerækker, detalje-header |
 | Skærme | `src/App.tsx` m.fl. | Inventar, Grupper, Ture, Steder, Statistik |
 
@@ -109,6 +112,32 @@ skal vises, og lægges så på plads — en enhed skal ikke trække et helt
 turgalleri ned for at tegne en liste. Gæsten får kun url'erne, frosset ind i
 `dele_snapshot` sammen med resten, og `laesSnapshot` kaster alt der ikke er
 http(s) væk: snapshottet krydser en tillidsgrænse og ender i en `src`.
+
+Den danske kontekst (§5 i `IDEER.md`) er bygget der hvor den kan bygges
+ærligt, og udeladt hvor den ikke kan.
+
+Skumringen regnes på enheden i `soltider.ts` frem for at hentes fra
+open-meteo. To grunde: en ukendt parameter får open-meteo til at svare 400,
+og så ryger *hele* vejrudsigten for to klokkeslæts skyld — og skumring er
+regnestykke, ikke data, så det virker uden dækning. Testene efterprøver
+regnestykket mod almanakværdier ved begge solhverv og mod den egenskab at
+dagen er tolv timer ved jævndøgn uanset breddegrad.
+
+Jagtvarslet kender de grove sæsoner og siger hvad de betyder — ikke en
+artstabel. Der findes ikke et åbent API over danske jagttider, og
+bekendtgørelsen ændres; en tabel skrevet af i dag ville være forkert om et
+år uden at sige det. Varslet peger derfor på Naturstyrelsens jagtdage, som er
+det der afgør om skoven er lukket den dag man kommer.
+
+Tørketjekket er **ikke** DMI's skovbrandindeks og udgiver sig ikke for at
+være det. Det indeks kræver en API-nøgle, og afbrændingsforbud udstedes af de
+enkelte beredskaber uden centralt feed. I stedet er det en observation på den
+udsigt appen allerede har hentet — tørre dage og højeste temperatur — med et
+link til dem der bestemmer. Vurderingen tælles i dage og ikke i millimeter
+lagt sammen: en sum kan gøres våd af én skybrudsdag, mens resten er knastørre.
+
+Tidevand (§5.4) er ikke bygget. Det kræver DMI's API med nøgle plus et opslag
+af nærmeste havn, og appens øvrige tjenester er gratis og uden nøgle.
 
 Smart-motoren er rådgiver og ikke automat (fundament §15). Derfor bærer hver
 advarsel, hvert gruppeforslag og hvert forbrugstal en `begrundelse` — reglen bag
@@ -220,7 +249,8 @@ V1 under udvikling. Bygget: inventar, grupper, ture med smart-motor, statistik,
 PWA, deling og gæsteview, dashboard, indstillinger, pak-af-tjek, steder,
 personer, låne-log, afgangs-tjek, på-tur-tilstand, turkort til pårørende,
 turlog, vedligeholds-log, QR-koder, vægt-brydere, "ligesom sidst",
-fortryd sletning, årsopgørelse, feltbog til print, fotos på turen.
+fortryd sletning, årsopgørelse, feltbog til print, fotos på turen,
+skumring, jagtvarsel, tørketjek, booking.
 Endnu ikke bygget: badges/notifikationer.
 
 Ideer til det videre arbejde ligger i [`IDEER.md`](./IDEER.md).
