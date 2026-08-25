@@ -151,13 +151,19 @@ der ikke findes endnu, bliver afvist.
 | `hoejde` | Number | — |
 | `byte` | Number | — |
 | `beskrivelse` | Plain text | — |
-| `fil` | **File** | Max select **1**, max size **5 MB** |
-| `original` | **File** | Max select **1**, max size **25 MB** |
+| `fil` | **File** | Max select **1** · Max file size **5242880** |
+| `original` | **File** | Max select **1** · Max file size **26214400** |
 | `original_byte` | Number | — |
 
 `fil` og `original` er de eneste File-typer i hele skemaet. Sæt **Max select
 til 1** på begge — med flere bliver feltet et array, og appen sender ét
 billede pr. post.
+
+> **Max file size er i _bytes_, ikke megabyte.** Skriver du `5`, er grænsen
+> fem bytes, og så kan intet billede nogensinde komme op — hvert eneste
+> forsøg svarer `400 Failed to create record.` med
+> `validation_file_size_limit`. Tallene ovenfor er de rigtige:
+> `5242880` = 5 MB og `26214400` = 25 MB.
 
 To filer pr. billede, med hver sin opgave:
 
@@ -165,8 +171,8 @@ To filer pr. billede, med hver sin opgave:
   JPEG, så et galleri kan tegnes uden at hente megabytes.
 - **`original`** er filen som den kom ind, urørt. Den vises aldrig — den er
   der for at kunne hentes ned igen i fuld kvalitet, af én selv eller af de
-  andre på turen. Sæt **max size til 25 MB**; et telefonfoto ligger typisk på
-  3–8 MB, og det er den grænse appen selv afviser ved.
+  andre på turen. Grænsen på `26214400` bytes er 25 MB; et telefonfoto ligger
+  typisk på 3–8 MB, og 25 MB er også den grænse appen selv afviser ved.
 
 Det betyder at hvert billede fylder originalens størrelse plus et par hundrede
 kilobyte på serverens disk. Et turgalleri på tredive billeder bliver altså
@@ -341,6 +347,11 @@ appen et objekt hvor den venter tekst, og øjebliksbillederne bliver tomme.
 datoerne: appen skriver en ISO-streng og sammenligner den som tekst, når
 galleriet sorteres kronologisk.
 
+**Max file size tælles i bytes.** Det er det felt der oftest bliver sat
+forkert: `5` betyder fem bytes og ikke fem megabyte, og så afvises hvert
+eneste billede med `validation_file_size_limit`. Skriv `5242880` og
+`26214400`.
+
 **`fil` og `original` må ikke være protected.** Så kan gæsten på et delelink
 hverken se billedet eller hente det, og galleriet står tomt hos hende — uden
 fejl nogen af stederne.
@@ -386,9 +397,9 @@ står herunder.
 ### `billeder`
 
 `navn` text · `tur_uid` text · `tid` text · `bredde` number · `hoejde` number ·
-`byte` number · `beskrivelse` text · `fil` **file** (max select 1, 5 MB, ikke
-protected) · `original` **file** (max select 1, 25 MB, ikke protected) ·
-`original_byte` number
+`byte` number · `beskrivelse` text · `fil` **file** (max select 1, max size
+5242880 bytes, ikke protected) · `original` **file** (max select 1, max size
+26214400 bytes, ikke protected) · `original_byte` number
 
 ### `steder`
 
