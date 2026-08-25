@@ -507,7 +507,11 @@ const billedSamling: Samling<Billede> = {
     hoejde: b.hoejde,
     byte: b.byte,
     beskrivelse: b.beskrivelse,
-    ...(b.pb_id || !b.blob ? {} : { fil: new File([b.blob], filnavnTil(b), { type: b.blob.type }) })
+    original_byte: b.original_byte,
+    ...(b.pb_id || !b.blob ? {} : { fil: new File([b.blob], filnavnTil(b), { type: b.blob.type }) }),
+    ...(b.original_url || !b.original_blob
+      ? {}
+      : { original: new File([b.original_blob], originalnavnTil(b), { type: b.original_blob.type }) })
   }),
   fraPb: (r) => ({
     uid: uid(r),
@@ -521,14 +525,30 @@ const billedSamling: Samling<Billede> = {
     beskrivelse: tekst(r.beskrivelse),
     blob: null,
     url: tekst(r.fil) ? pb.files.getURL(r, tekst(r.fil)) : '',
+    original_blob: null,
+    original_url: tekst(r.original) ? pb.files.getURL(r, tekst(r.original)) : '',
+    original_byte: tal(r.original_byte),
     oprettet: dato(r.created),
     aendret: dato(r.updated)
   }),
   // Url'en kommer først med serverens svar. Uden den ville billedet blive
   // stående som "ikke sendt" og blive lagt op igen ved næste afstemning.
   efterSvar: async (id, record) => {
+    const aendringer: Partial<Billede> = {};
+
     const fil = tekst(record.fil);
-    if (fil) await db.billeder.update(id, { url: pb.files.getURL(record, fil) });
+    if (fil) aendringer.url = pb.files.getURL(record, fil);
+
+    // Originalen er nået op, og så skal den lokale kopi væk. Den der tog
+    // billedet, har det i forvejen i kamerarullen, og et turgalleri i fuld
+    // størrelse ville fylde IndexedDB op uden at give noget.
+    const original = tekst(record.original);
+    if (original) {
+      aendringer.original_url = pb.files.getURL(record, original);
+      aendringer.original_blob = null;
+    }
+
+    if (Object.keys(aendringer).length > 0) await db.billeder.update(id, aendringer);
   }
 };
 
@@ -536,6 +556,13 @@ const billedSamling: Samling<Billede> = {
 // uden type når den hentes igen.
 function filnavnTil(b: Billede): string {
   return `${b.uid}.jpg`;
+}
+
+// Originalen beholder sin egen endelse — den kan være HEIC, PNG eller noget
+// helt fjerde, og den skal kunne åbnes af det program den hører til.
+function originalnavnTil(b: Billede): string {
+  const endelse = /\.([a-z0-9]{1,5})$/i.exec(b.navn)?.[1]?.toLowerCase() ?? 'jpg';
+  return `${b.uid}-original.${endelse}`;
 }
 
 // ─────────────────────────────────────────────

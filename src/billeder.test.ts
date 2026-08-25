@@ -5,8 +5,11 @@ import {
   billederPaaTur,
   erBillede,
   filstoerrelse,
+  hentelink,
+  hentenavn,
   hero,
   kanVises,
+  medOriginal,
   optagetid,
   usendte
 } from './billeder';
@@ -152,5 +155,47 @@ describe('usendte', () => {
 
     expect(usendte(billeder)).toBe(2);
     expect(usendte([])).toBe(0);
+  });
+});
+
+describe('hentelink', () => {
+  // Uden download=1 åbner browseren billedet i en fane. På en telefon er det
+  // forskellen på at have billedet og at kigge på det.
+  it('beder serveren om at sende filen som en download', () => {
+    const b = lavBillede({ original_url: 'https://pb/api/files/x/y/foto.jpg' });
+    expect(hentelink(b)).toBe('https://pb/api/files/x/y/foto.jpg?download=1');
+  });
+
+  it('sætter det efter en adresse der allerede har en forespørgsel', () => {
+    const b = lavBillede({ original_url: 'https://pb/f.jpg?token=abc' });
+    expect(hentelink(b)).toBe('https://pb/f.jpg?token=abc&download=1');
+  });
+
+  it('giver intet link når originalen ikke er nået op', () => {
+    expect(hentelink(lavBillede({ original_url: '' }))).toBe('');
+  });
+});
+
+describe('hentenavn', () => {
+  it('bruger filens eget navn', () => {
+    expect(hentenavn(lavBillede({ navn: 'IMG_0421.HEIC' }))).toBe('IMG_0421.HEIC');
+  });
+
+  it('finder på et navn når filen ikke havde et', () => {
+    expect(hentenavn(lavBillede({ uid: 'abc', navn: '  ' }))).toBe('abc.jpg');
+  });
+});
+
+describe('medOriginal', () => {
+  // Billeder lagt ind før originalen blev gemt, har ingen — og den kommer
+  // ikke igen. Der skal ikke loves noget der ikke holder.
+  it('tæller kun dem der faktisk kan hentes', () => {
+    const billeder = [
+      lavBillede({ original_url: 'https://pb/a.jpg' }),
+      lavBillede({ original_url: '' }),
+      lavBillede({ original_url: 'https://pb/c.jpg' })
+    ];
+
+    expect(medOriginal(billeder)).toHaveLength(2);
   });
 });

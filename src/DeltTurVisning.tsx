@@ -225,29 +225,60 @@ function Gaestegalleri({ billeder, navn }: { billeder: GaesteBillede[]; navn: st
           {forside.beskrivelse}
         </div>
       )}
+      <Hent billede={forside} />
 
       {resten.length > 0 && (
-        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', marginTop: '8px', paddingBottom: '2px' }}>
+        <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', marginTop: '10px', paddingBottom: '2px' }}>
           {resten.map((b) => (
-            <img
-              key={b.url}
-              src={b.url}
-              alt={b.beskrivelse || navn}
-              loading="lazy"
-              style={{
-                width: '84px',
-                height: '84px',
-                flexShrink: 0,
-                objectFit: 'cover',
-                borderRadius: '8px',
-                background: 'var(--bg-forhoejet)'
-              }}
-            />
+            <div key={b.url} style={{ flexShrink: 0, width: '84px' }}>
+              <img
+                src={b.url}
+                alt={b.beskrivelse || navn}
+                loading="lazy"
+                style={{
+                  width: '84px',
+                  height: '84px',
+                  objectFit: 'cover',
+                  borderRadius: '8px',
+                  background: 'var(--bg-forhoejet)',
+                  display: 'block'
+                }}
+              />
+              <Hent billede={b} kort />
+            </div>
           ))}
         </div>
       )}
     </div>
   );
+}
+
+// Vejen til originalen. `?download=1` er allerede sat af den der delte, og
+// den er det der gør at filen bliver gemt frem for åbnet i en fane.
+function Hent({ billede, kort }: { billede: GaesteBillede; kort?: boolean }) {
+  if (!billede.original) return null;
+
+  return (
+    <a
+      href={billede.original}
+      download
+      style={{
+        display: 'inline-block',
+        marginTop: '4px',
+        fontSize: kort ? '11px' : '12px',
+        color: 'var(--accent)'
+      }}
+    >
+      {kort ? 'Hent' : `Hent i fuld kvalitet${billede.original_byte > 0 ? ` (${megabyte(billede.original_byte)})` : ''}`}
+    </a>
+  );
+}
+
+// Gæstesiden har ikke resten af appens hjælpere til rådighed — den skal kunne
+// stå alene med et snapshot og ingenting andet.
+function megabyte(byte: number): string {
+  if (byte < 1024 * 1024) return `${Math.round(byte / 1024)} kB`;
+  return `${(byte / (1024 * 1024)).toFixed(1).replace('.', ',')} MB`;
 }
 
 export default DeltTurVisning;

@@ -169,6 +169,37 @@ export function kanVises(billede: Billede, online: boolean = true): boolean {
   return billede.blob !== null || (billede.url !== '' && online);
 }
 
+// ─────────────────────────────────────────────
+// Originalen
+// ─────────────────────────────────────────────
+
+// Adressen man kan hente originalen fra, eller tom hvis den ikke er nået op.
+//
+// `?download=1` får PocketBase til at sende filen med Content-Disposition:
+// attachment. Uden den åbner browseren billedet i en fane i stedet for at
+// gemme det — og på en telefon er det forskellen på at have billedet og at
+// kigge på det.
+export function hentelink(billede: Billede): string {
+  if (!billede.original_url) return '';
+
+  const adskiller = billede.original_url.includes('?') ? '&' : '?';
+  return `${billede.original_url}${adskiller}download=1`;
+}
+
+// Filnavnet originalen skal hedde når den er hentet ned. Postens eget navn er
+// det filen kom ind med, og det er det man kender den på.
+export function hentenavn(billede: Billede): string {
+  return billede.navn.trim() || `${billede.uid}.jpg`;
+}
+
+// Hvor mange af turens billeder man kan hente i fuld kvalitet.
+//
+// Billeder lagt ind før originalen blev gemt, har ingen — og den kommer ikke
+// igen. Derfor tælles der frem for at love noget der ikke holder.
+export function medOriginal(billeder: Billede[]): Billede[] {
+  return billeder.filter((b) => b.original_url !== '');
+}
+
 // Hvor mange der endnu ikke er nået op. Vises som en linje i galleriet, så
 // man ved at der stadig er noget i kø.
 export function usendte(billeder: Billede[]): number {

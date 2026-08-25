@@ -21,7 +21,7 @@ import type { VejrData } from './smartMotor';
 // 2 gav hvert stykke gear sit uid med, så en deltager kan sige "jeg tager
 // den". Ældre snapshots læses stadig — de har bare ingen uid'er, og så kan
 // deres grej ikke fordeles.
-export const SNAPSHOT_VERSION = 3;
+export const SNAPSHOT_VERSION = 4;
 
 export interface GaesteItem {
   // Ejerens uid for gearet. Tomt i snapshots fra version 1.
@@ -48,6 +48,10 @@ export interface GaesteAfsnit {
 export interface GaesteBillede {
   url: string;
   beskrivelse: string;
+  // Originalen i fuld kvalitet. Tom hvis den ikke er nået op — eller hvis
+  // billedet blev lagt ind før originalen blev gemt.
+  original: string;
+  original_byte: number;
 }
 
 export interface Gaestesnapshot {
@@ -130,7 +134,12 @@ function gaestebilleder(tur: Tur, billeder: Billede[]): GaesteBillede[] {
     ? [forside, ...paaTuren.filter((b) => b !== forside)]
     : paaTuren;
 
-  return raekkefoelge.map((b) => ({ url: b.url, beskrivelse: b.beskrivelse }));
+  return raekkefoelge.map((b) => ({
+    url: b.url,
+    beskrivelse: b.beskrivelse,
+    original: b.original_url,
+    original_byte: b.original_byte
+  }));
 }
 
 function laesVejr(raa: string): VejrData | null {
@@ -187,7 +196,14 @@ function gaestebillederFra(v: unknown): GaesteBillede[] {
 
   return v
     .map((raa) => (raa ?? {}) as Record<string, unknown>)
-    .map((b) => ({ url: tekst(b.url), beskrivelse: tekst(b.beskrivelse) }))
+    .map((b) => ({
+      url: tekst(b.url),
+      beskrivelse: tekst(b.beskrivelse),
+      // Originalen skal igennem den samme si som visningsadressen — den
+      // ender i et href og er lige så meget en vej ind som en src.
+      original: /^https?:\/\//i.test(tekst(b.original)) ? tekst(b.original) : '',
+      original_byte: tal(b.original_byte)
+    }))
     .filter((b) => /^https?:\/\//i.test(b.url));
 }
 

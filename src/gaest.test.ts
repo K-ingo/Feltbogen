@@ -245,14 +245,17 @@ describe('billeder i snapshottet', () => {
     const tur = lavTur({ uid: 't-1', hero_billede: 'b-2' });
     const billeder = [
       lavBillede({ uid: 'b-1', tur_uid: 't-1', tid: '2026-07-10T08:00:00Z', url: 'https://pb/a.jpg' }),
-      lavBillede({ uid: 'b-2', tur_uid: 't-1', tid: '2026-07-11T08:00:00Z', url: 'https://pb/b.jpg', beskrivelse: 'Bålet' })
+      lavBillede({
+        uid: 'b-2', tur_uid: 't-1', tid: '2026-07-11T08:00:00Z', url: 'https://pb/b.jpg',
+        beskrivelse: 'Bålet', original_url: 'https://pb/b-org.jpg', original_byte: 4_200_000
+      })
     ];
 
     const snapshot = lavSnapshot(tur, [], [], new Date(), billeder);
 
     expect(snapshot.billeder).toEqual([
-      { url: 'https://pb/b.jpg', beskrivelse: 'Bålet' },
-      { url: 'https://pb/a.jpg', beskrivelse: '' }
+      { url: 'https://pb/b.jpg', beskrivelse: 'Bålet', original: 'https://pb/b-org.jpg', original_byte: 4_200_000 },
+      { url: 'https://pb/a.jpg', beskrivelse: '', original: '', original_byte: 0 }
     ]);
   });
 
@@ -266,7 +269,7 @@ describe('billeder i snapshottet', () => {
     ];
 
     expect(lavSnapshot(tur, [], [], new Date(), billeder).billeder)
-      .toEqual([{ url: 'https://pb/b.jpg', beskrivelse: '' }]);
+      .toEqual([{ url: 'https://pb/b.jpg', beskrivelse: '', original: '', original_byte: 0 }]);
   });
 
   it('tager ikke billeder fra andre ture med', () => {
@@ -289,13 +292,19 @@ describe('laesSnapshot og billeder', () => {
     const raa = JSON.stringify({
       ...grund,
       billeder: [
-        { url: 'https://pb/ok.jpg', beskrivelse: '' },
-        { url: 'javascript:alert(1)', beskrivelse: '' },
-        { url: 'data:image/svg+xml,<svg onload="alert(1)"/>', beskrivelse: '' }
+        { url: 'https://pb/ok.jpg', beskrivelse: '', original: 'https://pb/ok-org.jpg', original_byte: 12 },
+        // Visningsadressen er god, men originalen er det ikke — den skal
+        // falde bort for sig, uden at tage billedet med.
+        { url: 'https://pb/to.jpg', beskrivelse: '', original: 'javascript:alert(1)', original_byte: 0 },
+        { url: 'javascript:alert(1)', beskrivelse: '', original: '', original_byte: 0 },
+        { url: 'data:image/svg+xml,<svg onload="alert(1)"/>', beskrivelse: '', original: '', original_byte: 0 }
       ]
     });
 
-    expect(laesSnapshot(raa)?.billeder).toEqual([{ url: 'https://pb/ok.jpg', beskrivelse: '' }]);
+    expect(laesSnapshot(raa)?.billeder).toEqual([
+      { url: 'https://pb/ok.jpg', beskrivelse: '', original: 'https://pb/ok-org.jpg', original_byte: 12 },
+      { url: 'https://pb/to.jpg', beskrivelse: '', original: '', original_byte: 0 }
+    ]);
   });
 
   it('klarer et snapshot fra før billederne fandtes', () => {

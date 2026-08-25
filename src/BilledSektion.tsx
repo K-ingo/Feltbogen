@@ -10,6 +10,8 @@ import {
   billederPaaTur,
   erBillede,
   filstoerrelse,
+  hentelink,
+  hentenavn,
   optagetid,
   skaler,
   usendte
@@ -62,6 +64,11 @@ function BilledSektion({ tur, saetHero }: Props) {
           byte: blob.size,
           blob,
           url: '',
+          // Originalen gemmes urørt, så den kan hentes i fuld kvalitet af de
+          // andre på turen. Den lokale kopi ryddes når uploaden er lykkedes.
+          original_blob: fil,
+          original_url: '',
+          original_byte: fil.size,
           beskrivelse: '',
           oprettet: new Date(),
           aendret: new Date()
@@ -279,6 +286,8 @@ function Billedpanel({ billede, erHero, saetHero, fjern, luk }: {
         {!billede.url && ' · ikke sendt endnu'}
       </div>
 
+      <Hentelinje billede={billede} />
+
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
         <Knap onClick={saetHero} disabled={erHero}>
           {erHero ? 'Er forsidebillede' : 'Brug som forside'}
@@ -287,6 +296,40 @@ function Billedpanel({ billede, erHero, saetHero, fjern, luk }: {
         <Knap variant="tekst" onClick={luk}>Luk</Knap>
       </div>
     </div>
+  );
+}
+
+// Vejen til originalen i fuld kvalitet.
+//
+// Det er et almindeligt link og ikke en knap: en browser henter en fil ned
+// ved at følge et link, og på en telefon er det den vej der ender med
+// billedet i kamerarullen frem for i en fane.
+export function Hentelinje({ billede }: { billede: Billede }) {
+  const link = hentelink(billede);
+
+  if (!link) {
+    return (
+      <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', marginBottom: '10px' }}>
+        {billede.original_blob
+          ? 'Originalen er ikke sendt op endnu — den kan hentes når den er.'
+          : 'Der er ingen original gemt for det her billede.'}
+      </div>
+    );
+  }
+
+  return (
+    <a
+      href={link}
+      download={hentenavn(billede)}
+      style={{
+        display: 'inline-block',
+        marginBottom: '10px',
+        fontSize: '12px',
+        color: 'var(--accent)'
+      }}
+    >
+      Hent i fuld kvalitet{billede.original_byte > 0 && ` (${filstoerrelse(billede.original_byte)})`}
+    </a>
   );
 }
 

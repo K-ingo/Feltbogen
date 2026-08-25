@@ -95,8 +95,16 @@ Rækkefølgen er optagetidspunktet, og `Tur.hero_billede` peger på forsiden —
 et uid og ikke et indeks, for et indeks ville pege på noget andet så snart et
 billede blev slettet på en anden enhed.
 
-Et billede findes to steder: som `blob` på den enhed der tog det, og som `url`
-i PocketBase. Sync henter kun url'en ned; selve billedet hentes først når det
+Hvert billede gemmes i to udgaver. Visningskopien er skaleret til 1600 px, og
+originalen ligger urørt ved siden af — den vises aldrig, men kan hentes ned i
+fuld kvalitet, også af gæsterne på et delelink. `?download=1` på adressen får
+PocketBase til at sende filen som en download; uden den åbner browseren bare
+billedet i en fane, og på en telefon er det forskellen på at have billedet og
+at kigge på det. Den lokale kopi af originalen ryddes så snart uploaden er
+lykkedes: den der tog billedet, har det i forvejen i sin kamerarulle.
+
+Visningskopien findes to steder: som `blob` på den enhed der tog den, og som
+`url` i PocketBase. Sync henter kun url'en ned; selve billedet hentes først når det
 skal vises, og lægges så på plads — en enhed skal ikke trække et helt
 turgalleri ned for at tegne en liste. Gæsten får kun url'erne, frosset ind i
 `dele_snapshot` sammen med resten, og `laesSnapshot` kaster alt der ikke er

@@ -178,6 +178,16 @@ export interface Billede extends Synkroniserbar {
   byte: number;
   blob: Blob | null;
   url: string;
+  // Originalen, urørt, som den kom ind. Den vises aldrig — den er kun til at
+  // hente ned igen i fuld kvalitet, af én selv eller af de andre på turen.
+  //
+  // `original_blob` er kun med indtil uploaden er lykkedes, og ryddes så: den
+  // der tog billedet, har det i forvejen i sin kamerarulle, og et helt
+  // turgalleri i fuld størrelse ville fylde IndexedDB op. Er den aldrig nået
+  // op, bliver den liggende — ellers ville originalen gå tabt for altid.
+  original_blob: Blob | null;
+  original_url: string;
+  original_byte: number;
   beskrivelse: string;
   oprettet: Date;
   aendret: Date;

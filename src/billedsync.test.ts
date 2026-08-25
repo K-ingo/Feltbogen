@@ -32,6 +32,9 @@ const foto = (felter: Record<string, unknown> = {}) => ({
   byte: 240_000,
   blob: new Blob(['billeddata'], { type: 'image/jpeg' }),
   url: '',
+  original_blob: new Blob(['den fulde original, meget stoerre'], { type: 'image/jpeg' }),
+  original_url: '',
+  original_byte: 4_200_000,
   beskrivelse: '',
   oprettet: new Date(),
   aendret: new Date(),
@@ -90,6 +93,44 @@ describe('billeder op i PocketBase', () => {
     expect(oppe?.beskrivelse).toBe('Frost i tarpen');
     // Filnavnet står stadig som det gjorde efter oprettelsen.
     expect(oppe?.fil).toContain('.jpg');
+  });
+
+  it('sender originalen med og rydder den lokale kopi bagefter', async () => {
+    const id = await opretBillede(foto());
+
+    const gemt = await db.billeder.get(id);
+    expect(gemt?.original_url).toContain('pb1');
+    // Den der tog billedet, har det i forvejen i kamerarullen. En kopi mere
+    // ville fylde IndexedDB op uden at give noget.
+    expect(gemt?.original_blob).toBeNull();
+    expect(pbMock.records.get('billeder')?.get('pb1')?.original).toContain('-original.');
+  });
+
+  // Originalen maa ikke gaa tabt, bare fordi der ikke var daekning.
+  it('beholder originalen lokalt indtil den er naaet op', async () => {
+    pbMock.offline = true;
+    const id = await opretBillede(foto());
+
+    expect((await db.billeder.get(id))?.original_blob).toBeInstanceOf(Blob);
+
+    pbMock.offline = false;
+    await sendAltUsendt();
+
+    const efter = await db.billeder.get(id);
+    expect(efter?.original_url).toContain('pb1');
+    expect(efter?.original_blob).toBeNull();
+  });
+
+  // Begge filer fylder. En rettelse af beskrivelsen maa ikke sende dem igen.
+  it('sender ikke originalen igen ved en opdatering', async () => {
+    const id = await opretBillede(foto());
+    const foer = pbMock.records.get('billeder')?.get('pb1')?.original;
+
+    await opdaterBillede(id, { beskrivelse: 'Udsigten' });
+    await new Promise((r) => setTimeout(r, FORSINKELSE + 60));
+
+    expect(billedKald('create')).toBe(1);
+    expect(pbMock.records.get('billeder')?.get('pb1')?.original).toBe(foer);
   });
 
   it('sletter billedet begge steder', async () => {

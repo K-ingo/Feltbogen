@@ -152,11 +152,29 @@ der ikke findes endnu, bliver afvist.
 | `byte` | Number | — |
 | `beskrivelse` | Plain text | — |
 | `fil` | **File** | Max select **1**, max size **5 MB** |
+| `original` | **File** | Max select **1**, max size **25 MB** |
+| `original_byte` | Number | — |
 
-`fil` er den eneste File-type i hele skemaet. Sæt **Max select til 1** — med
-flere bliver feltet et array, og appen sender ét billede pr. post.
+`fil` og `original` er de eneste File-typer i hele skemaet. Sæt **Max select
+til 1** på begge — med flere bliver feltet et array, og appen sender ét
+billede pr. post.
 
-**Lad `fil` være _ikke_ protected.** Et protected filfelt kræver et token for
+To filer pr. billede, med hver sin opgave:
+
+- **`fil`** er visningskopien. Appen skalerer til 1600 px og komprimerer som
+  JPEG, så et galleri kan tegnes uden at hente megabytes.
+- **`original`** er filen som den kom ind, urørt. Den vises aldrig — den er
+  der for at kunne hentes ned igen i fuld kvalitet, af én selv eller af de
+  andre på turen. Sæt **max size til 25 MB**; et telefonfoto ligger typisk på
+  3–8 MB, og det er den grænse appen selv afviser ved.
+
+Det betyder at hvert billede fylder originalens størrelse plus et par hundrede
+kilobyte på serverens disk. Et turgalleri på tredive billeder bliver altså
+omkring 150 MB. Vil du hellere spare pladsen end kunne hente i fuld kvalitet,
+kan du undlade `original`-feltet — appen sender det stadig, PocketBase dropper
+det lydløst, og "Hent i fuld kvalitet" står bare ikke frem nogen steder.
+
+**Lad hverken `fil` eller `original` være protected.** Et protected filfelt kræver et token for
 at hente billedet, og gæsten på et delelink har ingen konto. Adresserne er
 uforudsigelige og står kun i det link du selv sender.
 
@@ -323,8 +341,9 @@ appen et objekt hvor den venter tekst, og øjebliksbillederne bliver tomme.
 datoerne: appen skriver en ISO-streng og sammenligner den som tekst, når
 galleriet sorteres kronologisk.
 
-**`fil` må ikke være protected.** Så kan gæsten på et delelink ikke hente
-billedet, og galleriet står tomt hos hende — uden fejl nogen af stederne.
+**`fil` og `original` må ikke være protected.** Så kan gæsten på et delelink
+hverken se billedet eller hente det, og galleriet står tomt hos hende — uden
+fejl nogen af stederne.
 
 **`uid` er den vigtigste enkeltstående ting.** Uden den kan to enheder ikke
 blive enige om hvilken post der er hvilken, og dine egne poster bliver hentet
@@ -367,7 +386,9 @@ står herunder.
 ### `billeder`
 
 `navn` text · `tur_uid` text · `tid` text · `bredde` number · `hoejde` number ·
-`byte` number · `beskrivelse` text · `fil` **file** (max select 1, ikke protected)
+`byte` number · `beskrivelse` text · `fil` **file** (max select 1, 5 MB, ikke
+protected) · `original` **file** (max select 1, 25 MB, ikke protected) ·
+`original_byte` number
 
 ### `steder`
 
