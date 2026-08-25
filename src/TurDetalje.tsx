@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, etiket, TUR_STATUS, OVERNATNING, AKTIVITET, TERRAEN, ERFARING, PAK_AF_NIVEAU } from './db';
 import type {
@@ -130,10 +131,31 @@ const NAESTE_TILSTAND: Record<TurStatus, { label: string; naeste: TurStatus } | 
 
 type Visning = 'gruppe' | 'tag' | 'person';
 
+// Turens faner. Rækkefølgen er turens egen: først rammerne om den, så
+// pakningen og listen man går rundt med, så selskabet, så dagene undervejs —
+// og til sidst det praktiske omkring det hele.
+//
+// Seks faner er loftet. Skal der en syvende til, hører den sandsynligvis
+// hjemme inde i en af de seks.
+type Turfane = 'overblik' | 'pakning' | 'pakkeliste' | 'deltagere' | 'undervejs' | 'praktisk';
+
+const FANEBLADE: { id: Turfane; label: string }[] = [
+  { id: 'overblik', label: 'Overblik' },
+  { id: 'pakning', label: 'Pakning' },
+  { id: 'pakkeliste', label: 'Pakkeliste' },
+  { id: 'deltagere', label: 'Deltagere' },
+  { id: 'undervejs', label: 'Undervejs' },
+  { id: 'praktisk', label: 'Praktisk' }
+];
+
 function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   const erDesktop = useErDesktop();
   const erBred = useErBredskaerm();
   const [visning, setVisning] = useState<Visning>('gruppe');
+  // Man lander altid på overblikket. En fane man stod på sidst ville være et
+  // gæt på hvad man kom for, og gættet ville være forkert lige så tit som det
+  // var rigtigt.
+  const [fane, setFane] = useState<Turfane>('overblik');
   // Pak-af-tjekket lægger sig over turskærmen frem for at være en fane for
   // sig: man kommer dertil fra turen, og man skal tilbage til den bagefter.
   const [viserPakAfTjek, setViserPakAfTjek] = useState(false);
@@ -779,113 +801,42 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
     </div>
   );
 
-  // Kortene der flytter sig mellem spalterne alt efter pladsen. Ét sted, så
-  // de to opstillinger ikke kan komme til at vise forskellige ting.
-  const sidespalte = (
-    <>
-      {pakAfSektion}
-      {afgangsSektion}
-      {bookingSektion}
-      {feltnoteSektion}
-      {billedSektion}
-      <Foldbar
-        titel={`Deltagere (${tur.deltagere.length})`}
-        resume={tur.deltagere.map((d) => d.navn).join(', ')}
-      >
-        {deltagere}
-      </Foldbar>
-      {tur.deltagere.length > 0 && pakItems.length > 0 && (
-        <Foldbar titel="Fordel gear" resume={fordelingsResume(tur, pakItems)}>{fordeling}</Foldbar>
-      )}
-      <Foldbar titel="Budget" resume={`${totalFaktisk} / ${totalForventet} kr`}>{budget}</Foldbar>
-      <Foldbar titel="Del med gæster" resume={tur.dele_token ? 'Delt' : 'Ikke delt'}>{deling}</Foldbar>
-      {turkortSektion}
-      <Foldbar titel="Noter">{noter}</Foldbar>
-    </>
+  // Fanerne bærer turen nu. Før stod alt om en tur i én strimmel af foldbare
+  // kort, og på telefonen skulle man forbi femten sektioner for at nå
+  // noterne. Nu fylder ét område ad gangen, og fanerækken står fast, så man
+  // kan lære hvor tingene er i stedet for at lede efter dem hver gang.
+  //
+  // Sektionerne selv er uændrede — det er kun sammensætningen der er ny.
+  // Derfor kan et kort flyttes til en anden fane uden at røre indholdet.
+  const spalter = (venstre: ReactNode, hoejre: ReactNode) => (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: erBred
+        ? 'minmax(0, 1.3fr) minmax(320px, 1fr)'
+        : erDesktop
+          ? 'minmax(0, 1.2fr) minmax(300px, 1fr)'
+          : '1fr',
+      gap: erDesktop ? '20px' : '8px',
+      alignItems: 'start'
+    }}>
+      {/* minWidth: 0 er ikke til pynt. Et grid-barn må som udgangspunkt ikke
+          blive smallere end sit indhold, og så skubber et bredt felt inde i et
+          kort hele spalten ud over skærmkanten i stedet for at give efter. */}
+      <div style={{ display: 'grid', gap: erDesktop ? '10px' : '8px', alignContent: 'start', minWidth: 0 }}>
+        {venstre}
+      </div>
+      <div style={{ display: 'grid', gap: erDesktop ? '10px' : '8px', alignContent: 'start', minWidth: 0 }}>
+        {hoejre}
+      </div>
+    </div>
   );
 
-  if (erDesktop) {
-    return (
-      <div>
-        <DetaljeHeader tilbage={tilbage} sletLabel="Slet tur" slet={slet} />
-        {titelblok}
-        <Jagtboks tur={tur} />
-
-        {/* Er der plads til det, deles sidekortene i to spalter frem for at
-            stå i én lang strimmel. Pakkelisten er den man arbejder i, så den
-            beholder mest plads. */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: erBred
-            ? 'minmax(0, 1.5fr) minmax(280px, 1fr) minmax(280px, 1fr)'
-            : 'minmax(0, 1.9fr) minmax(300px, 1fr)',
-          gap: '24px',
-          alignItems: 'start',
-          marginTop: '22px'
-        }}>
-          <div style={{ display: 'grid', gap: '10px' }}>
-            {kopiforslag.length > 0 && (
-              <Ligesomsidst
-                forslag={kopiforslag}
-                tur={tur}
-                grupper={grupper ?? []}
-                items={items ?? []}
-                kopier={kopierFra}
-              />
-            )}
-            {pakkeliste}
-            <Foldbar titel="Vælg gear">{valgAfIndhold}</Foldbar>
-          </div>
-
-          {/* Det man kigger på mens man planlægger: rammerne om turen og det
-              der er galt. */}
-          <div style={{ display: 'grid', gap: '10px' }}>
-            <Foldbar titel="Turparametre" resume={parametreResume}>{parametre}</Foldbar>
-            <Foldbar titel="Vejrudsigt" resume={vejrResume(vejrData)}>{vejr}</Foldbar>
-            {advarsler.length > 0 && <Advarsler advarsler={advarsler} />}
-            {vaegt}
-            {vaegtbryderSektion}
-            {!erBred && sidespalte}
-          </div>
-
-          {/* Det man tager fat i, når rammerne er på plads. Står i sin egen
-              spalte når der er plads, og under den første når der ikke er. */}
-          {erBred && <div style={{ display: 'grid', gap: '10px' }}>{sidespalte}</div>}
-        </div>
-      </div>
-    );
-  }
-
-  // Foldetilstandene følger fundamentets §13: det man har brug for under
-  // planlægningen står åbent, resten er foldet sammen.
-  return (
-    <div style={layout.container}>
-      <DetaljeHeader tilbage={tilbage} sletLabel="Slet tur" slet={slet} />
-      {titelblok}
-      <Jagtboks tur={tur} />
-
-      {/* På en aktiv tur er på-tur-skærmen den man skal have fat i, ikke
-          knappen der afslutter turen. */}
-      {tur.status === 'aktiv' && (
-        <Knap
-          variant="primaer"
-          onClick={() => void gaaPaaTur()}
-          style={{ width: '100%', marginTop: '14px', padding: '11px' }}
-        >
-          Åbn på-tur-skærmen
-        </Knap>
-      )}
-
-      <Knap
-        variant={tur.status === 'aktiv' ? 'sekundaer' : 'primaer'}
-        onClick={handling.gaa}
-        style={{ width: '100%', marginTop: tur.status === 'aktiv' ? '8px' : '14px', padding: '11px' }}
-      >
-        {handling.label}
-      </Knap>
-
-      {kopiforslag.length > 0 && (
-        <div style={{ marginTop: '16px' }}>
+  const fanensIndhold: Record<Turfane, ReactNode> = {
+    // Rammerne om turen: hvor, hvornår, hvem med — og det appen har set, som
+    // man skal vide inden man tager afsted.
+    overblik: spalter(
+      <>
+        {kopiforslag.length > 0 && (
           <Ligesomsidst
             forslag={kopiforslag}
             tur={tur}
@@ -893,42 +844,117 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
             items={items ?? []}
             kopier={kopierFra}
           />
-        </div>
-      )}
-
-      <div style={{ display: 'grid', gap: '8px', marginTop: '16px' }}>
-        {pakAfSektion}
-        {afgangsSektion}
-        {bookingSektion}
-        {feltnoteSektion}
-        {billedSektion}
-        <Foldbar titel="Turparametre" resume={parametreResume}>{parametre}</Foldbar>
-        {advarsler.length > 0 && (
-          <Foldbar titel={`Advarsler (${advarsler.length})`} advarsel aabenFra>
-            <Advarselsliste advarsler={advarsler} />
-          </Foldbar>
         )}
-        <Foldbar titel={`Pakkeliste (${pakItems.length})`} aabenFra>{pakkeliste}</Foldbar>
-        <Foldbar titel="Vægt" resume={`${kg(vaegtPrPerson)} kg${tur.personer > 1 ? ' / pers' : ''}`}>
-          {vaegt}
+        {/* På en kladde er parametrene det første der skal udfyldes, så der
+            står den åben. Senere er den et opslag. */}
+        <Foldbar titel="Turparametre" resume={parametreResume} aabenFra={tur.status === 'kladde'}>
+          {parametre}
         </Foldbar>
-        {vaegtbryderSektion}
-        <Foldbar titel="Vælg gear">{valgAfIndhold}</Foldbar>
+        {bookingSektion}
+      </>,
+      <>
+        {advarsler.length > 0 && <Advarsler advarsler={advarsler} />}
         <Foldbar titel="Vejrudsigt" resume={vejrResume(vejrData)}>{vejr}</Foldbar>
+      </>
+    ),
+
+    // Arbejdsfladen: her vælges grejet, og vægten svarer igen med det samme.
+    pakning: spalter(
+      <Infokort label="Vælg gear">{valgAfIndhold}</Infokort>,
+      <>
+        {vaegt}
+        {vaegtbryderSektion}
+      </>
+    ),
+
+    // Listen man har fremme mens man pakker. Den skal fylde det hele — der er
+    // ikke noget andet at kigge på her.
+    pakkeliste: <Infokort label={`Pakkeliste (${pakItems.length})`}>{pakkeliste}</Infokort>,
+
+    deltagere: spalter(
+      <>
         <Foldbar
           titel={`Deltagere (${tur.deltagere.length})`}
           resume={tur.deltagere.map((d) => d.navn).join(', ')}
+          aabenFra
         >
           {deltagere}
         </Foldbar>
         {tur.deltagere.length > 0 && pakItems.length > 0 && (
           <Foldbar titel="Fordel gear" resume={fordelingsResume(tur, pakItems)}>{fordeling}</Foldbar>
         )}
+      </>,
+      <Foldbar titel="Del med gæster" resume={tur.dele_token ? 'Delt' : 'Ikke delt'}>{deling}</Foldbar>
+    ),
+
+    // Dagene selv: det sidste tjek inden afgang, og det der bliver skrevet og
+    // fotograferet undervejs. Pak-af-tjekket lukker kredsløbet bagefter.
+    undervejs: spalter(
+      <>
+        {afgangsSektion}
+        {feltnoteSektion}
+      </>,
+      <>
+        {billedSektion}
+        {pakAfSektion}
+      </>
+    ),
+
+    praktisk: spalter(
+      <>
+        <Foldbar titel="Noter" aabenFra>{noter}</Foldbar>
         <Foldbar titel="Budget" resume={`${totalFaktisk} / ${totalForventet} kr`}>{budget}</Foldbar>
-        <Foldbar titel="Del med gæster" resume={tur.dele_token ? 'Delt' : 'Ikke delt'}>{deling}</Foldbar>
-        {turkortSektion}
-        <Foldbar titel="Noter">{noter}</Foldbar>
-      </div>
+      </>,
+      turkortSektion
+    )
+  };
+
+  // Tallene står i fanerækken, så man kan aflæse turen uden at åbne hver fane.
+  // Nul vises ikke — en tom fane skal ikke råbe op om at være tom.
+  const fanetal: Partial<Record<Turfane, number>> = {
+    pakkeliste: pakItems.length,
+    deltagere: tur.deltagere.length
+  };
+
+  return (
+    <div style={erDesktop ? undefined : layout.container}>
+      <DetaljeHeader tilbage={tilbage} sletLabel="Slet tur" slet={slet} />
+      {titelblok}
+      <Jagtboks tur={tur} />
+
+      {/* På PC står handlingsknapperne i titelblokken. På telefonen er der
+          ikke plads ved siden af titlen, så de står for sig — og på en aktiv
+          tur er på-tur-skærmen den man skal have fat i, ikke knappen der
+          afslutter turen. */}
+      {!erDesktop && (
+        <>
+          {tur.status === 'aktiv' && (
+            <Knap
+              variant="primaer"
+              onClick={() => void gaaPaaTur()}
+              style={{ width: '100%', marginTop: '14px', padding: '11px' }}
+            >
+              Åbn på-tur-skærmen
+            </Knap>
+          )}
+          <Knap
+            variant={tur.status === 'aktiv' ? 'sekundaer' : 'primaer'}
+            onClick={handling.gaa}
+            style={{ width: '100%', marginTop: tur.status === 'aktiv' ? '8px' : '14px', padding: '11px' }}
+          >
+            {handling.label}
+          </Knap>
+        </>
+      )}
+
+      <Faner valgt={fane} vaelg={setFane} tal={fanetal} />
+
+      {/* Nøglen er ikke til pynt. Uden den genbruger React kortene på tværs
+          af fanerne, fordi de står på samme plads i træet — og så arver
+          afgangs-tjekket den foldede-ud-tilstand fra turparametrene, man
+          efterlod på overblikket. Nøglen skifter med fanen, så det gamle træ
+          bliver pillet ned frem for at blive brugt igen. */}
+      <div key={fane}>{fanensIndhold[fane]}</div>
     </div>
   );
 }
@@ -936,6 +962,68 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
 // ─────────────────────────────────────────────
 // Rammer
 // ─────────────────────────────────────────────
+
+// Turens fanerække. Den bryder linjen frem for at scrolle vandret: en fane
+// man skal skubbe frem for at få øje på, er lige så skjult som en post i en
+// dropdown, og det var netop dét fanerne skulle af med.
+//
+// Markeringen er en streg under den valgte fane og ikke kun en farve — den
+// skal også kunne aflæses af én der ikke skelner farverne.
+function Faner({ valgt, vaelg, tal }: {
+  valgt: Turfane;
+  vaelg: (f: Turfane) => void;
+  tal: Partial<Record<Turfane, number>>;
+}) {
+  return (
+    <div
+      role="tablist"
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '2px',
+        marginTop: '18px',
+        marginBottom: '16px',
+        borderBottom: '1px solid var(--border-svag)'
+      }}
+    >
+      {FANEBLADE.map((f) => {
+        const erAktiv = f.id === valgt;
+        const antal = tal[f.id];
+
+        return (
+          <button
+            key={f.id}
+            role="tab"
+            aria-selected={erAktiv}
+            onClick={() => vaelg(f.id)}
+            style={{
+              // 44 px høj: den skal kunne rammes med en handske på.
+              minHeight: '44px',
+              padding: '0 12px',
+              background: 'transparent',
+              border: 'none',
+              // Stregen ligger oven i kassens egen, så fanerækken ikke
+              // hopper en pixel når man skifter fane.
+              borderBottom: `2px solid ${erAktiv ? 'var(--accent)' : 'transparent'}`,
+              marginBottom: '-1px',
+              color: erAktiv ? 'var(--tekst)' : 'var(--tekst-dæmpet)',
+              fontSize: '13px',
+              fontWeight: erAktiv ? 600 : 500,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {f.label}
+            {antal ? (
+              <span style={{ color: 'var(--tekst-dæmpet)', fontWeight: 500 }}> {antal}</span>
+            ) : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 
 // En sektion man kan folde ud. Resuméet står fremme uanset foldetilstand, så
 // man kan aflæse turen uden at åbne alt.
@@ -1167,17 +1255,17 @@ function Turparametre({
         />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '10px' }}>
         <Felt label="Startdato" type="date" value={tur.startdato} onChange={(v) => skiftDato({ startdato: v })} />
         <Felt label="Slutdato" type="date" value={tur.slutdato} onChange={(v) => skiftDato({ slutdato: v })} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '10px' }}>
         <Felt label="Personer" type="number" value={tur.personer} onChange={(v) => opdater({ personer: Number(v) || 1 })} />
         <Felt label="Bæreafstand (km)" type="number" value={tur.baereafstand_km} onChange={(v) => opdater({ baereafstand_km: Number(v) || 0 })} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '10px' }}>
         <Dropdown label="Overnatning" value={tur.overnatning} onChange={(v) => opdater({ overnatning: v as Overnatning })} options={OVERNATNING} formater={etiket} />
         <Dropdown label="Aktivitet" value={tur.aktivitet} onChange={(v) => opdater({ aktivitet: v as Aktivitet })} options={AKTIVITET} formater={etiket} />
         <Dropdown label="Terræn" value={tur.terraen} onChange={(v) => opdater({ terraen: v as Terraen })} options={TERRAEN} formater={etiket} />
@@ -1185,7 +1273,7 @@ function Turparametre({
       </div>
 
       <Infokort label="Forventet forbrug">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', textAlign: 'center' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '10px', textAlign: 'center' }}>
           <Noegletal vaerdi={`${beregninger.vand_liter} L`} label="Vand" />
           <Noegletal vaerdi={`${beregninger.mad_kg} kg`} label="Mad" />
           <Noegletal vaerdi={`${beregninger.gas_g} g`} label="Gas" />
@@ -1395,7 +1483,7 @@ function Vejrudsigt({ tur, data, hentes, fejl, hent }: {
         <>
           <div style={{ display: 'grid', gap: '4px', fontSize: '13px' }}>
             {data.dage.map((d) => (
-              <div key={d.dato} style={{ display: 'grid', gridTemplateColumns: '54px 22px 1fr auto auto', gap: '8px', alignItems: 'center', padding: '3px 0' }}>
+              <div key={d.dato} style={{ display: 'grid', gridTemplateColumns: '54px 22px minmax(0, 1fr) auto auto', gap: '8px', alignItems: 'center', padding: '3px 0' }}>
                 <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '11px' }}>{formatterDag(d.dato)}</span>
                 <span style={{ fontSize: '15px' }}>{vejrIkonKode(d.vejrkode)}</span>
                 <span>{d.temp_min}–{d.temp_max}°C</span>
@@ -1582,13 +1670,13 @@ function Budget({ linjer, tilfoej, opdater, fjern }: {
       )}
       {linjer.map((l) => (
         <div key={l.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--border-svag)', display: 'grid', gap: '6px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '6px' }}>
             <select value={l.kategori} onChange={(e) => opdater(l.id, { kategori: e.target.value })} style={{ padding: '6px', fontSize: '12px', textTransform: 'capitalize' }}>
               {BUDGET_KATEGORIER.map((k) => <option key={k} value={k}>{k}</option>)}
             </select>
             <input placeholder="Beskrivelse" value={l.beskrivelse} onChange={(e) => opdater(l.id, { beskrivelse: e.target.value })} style={{ padding: '6px', fontSize: '12px', minWidth: 0 }} />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '6px', alignItems: 'center' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) auto', gap: '6px', alignItems: 'center' }}>
             <Talinput placeholder="Forventet" value={l.forventet_kr} onChange={(v) => opdater(l.id, { forventet_kr: Number(v) || 0 })} style={{ padding: '6px', fontSize: '12px', minWidth: 0 }} />
             <Talinput placeholder="Faktisk" value={l.faktisk_kr} onChange={(v) => opdater(l.id, { faktisk_kr: Number(v) || 0 })} style={{ padding: '6px', fontSize: '12px', minWidth: 0 }} />
             <button onClick={() => fjern(l.id)} style={{ background: 'transparent', border: 'none', color: 'var(--fejl)', cursor: 'pointer', fontSize: '14px', padding: '0 6px' }}>
