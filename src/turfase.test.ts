@@ -142,4 +142,48 @@ describe('turfase — det sidste inden afgang', () => {
   it('nævner ingen mangler mens turen er i gang', () => {
     expect(turfase(lavTur({ status: 'aktiv' }), []).mangler).toEqual([]);
   });
+
+  it('siger hvor meget der mangler i tasken', () => {
+    const grej = [lavItem({ navn: 'Telt' }), lavItem({ navn: 'Sovepose' }), lavItem({ navn: 'Trangia' })];
+    const tur = lavTur({
+      status: 'klar',
+      loese_item_ids: grej.map((i) => i.uid),
+      pakkede_item_uids: [grej[0].uid]
+    });
+
+    expect(turfase(tur, []).mangler[0]).toBe('Pakning: 2 af 3 mangler i tasken');
+  });
+
+  it('nævner ikke pakningen når alt er i tasken', () => {
+    const grej = [lavItem({ navn: 'Telt' })];
+    const tur = lavTur({
+      status: 'klar',
+      loese_item_ids: grej.map((i) => i.uid),
+      pakkede_item_uids: grej.map((i) => i.uid)
+    });
+
+    expect(turfase(tur, []).mangler.some((m) => m.startsWith('Pakning'))).toBe(false);
+  });
+
+  it('nævner ikke pakningen når der ikke er valgt grej', () => {
+    // Der er ingenting at pakke. Kladden har allerede sagt til om det.
+    const tur = lavTur({ status: 'klar', loese_item_ids: [] });
+
+    expect(tur.pakkede_item_uids).toEqual([]);
+    expect(turfase(tur, []).mangler.some((m) => m.startsWith('Pakning'))).toBe(false);
+  });
+
+  it('sætter pakningen først — det er den der tager tid', () => {
+    const grej = [lavItem({ navn: 'Telt' })];
+    const tur = lavTur({
+      status: 'klar',
+      loese_item_ids: grej.map((i) => i.uid),
+      afgangs_tjek: { linjer: [{ id: 'a', tekst: 'Nøgler', afkrydset: false, fra_skabelon: false }] }
+    });
+
+    const mangler = turfase(tur, []).mangler;
+    expect(mangler).toHaveLength(2);
+    expect(mangler[0]).toContain('Pakning');
+    expect(mangler[1]).toContain('Afgangs-tjek');
+  });
 });

@@ -267,10 +267,19 @@ appen?
 Alle fem skridt er taget. Det, der ligger og venter, i den rækkefølge det
 sandsynligvis er værd at tage:
 
-**Pakkeprogression (specens §7 og §8).** Det største stykke, og det eneste,
-der kræver en ændring i datamodellen: et felt pr. item pr. tur, som skal
-synkroniseres og indgå i konfliktstrategien. Uden det kan turen ikke sige
-"36 af 42 pakket", og hele pakke-arbejdsfladen i §7 mangler sit fundament.
+**~~Pakkeprogression (specens §7 og §8).~~** ✅ Bygget som
+`pakkede_item_uids` på turen — en liste med uid'er, ikke en tabel for sig.
+Det følger mønsteret fra `loese_item_ids`, synkroniserer med turen som alt
+andet og krævede hverken ny tabel eller ny konfliktstrategi. Fremdriften er
+derived og gemmes ikke.
+
+To tilstande og ikke specens fire: "blocked" og "optional" kan appen ikke
+selv udfylde, og en tilstand man skal sætte i hånden for at få noget ud af,
+er en tilstand de fleste aldrig sætter.
+
+**Feltet skal oprettes i PocketBase** (`pakkede_item_uids`, JSON — se
+POCKETBASE.md trin 4). Mangler det, kan man stadig krydse af, men
+afkrydsningen bliver på den enhed man står med, og der kommer ingen fejl.
 
 **Ruter og højdemeter (specens §12).** Kilometer og højdemeter har ingen
 datakilde. Det er et nyt datadomæne — GPX eller lignende — ikke en

@@ -108,7 +108,7 @@ på alle fem, som de formentlig allerede er.
 
 ---
 
-## Trin 4 — Tilføj ti felter til `ture`
+## Trin 4 — Tilføj elleve felter til `ture`
 
 Åbn `ture` → **Fields** → tilføj:
 
@@ -118,12 +118,18 @@ på alle fem, som de formentlig allerede er.
 | `pak_af_tjek` | JSON |
 | `afgangs_tjek` | JSON |
 | `feltnoter` | JSON |
+| `pakkede_item_uids` | JSON |
 | `turkort_token` | Plain text |
 | `turkort_retur` | Plain text |
 | `turkort_besked` | Plain text |
 | `turkort_snapshot` | Plain text |
 | `hero_billede` | Plain text |
 | `booking` | JSON |
+
+> `pakkede_item_uids` er nyt. Mangler det, kan man stadig krydse af — men
+> afkrydsningen bliver på den enhed, man står med, og forsvinder tilsyneladende
+> af sig selv, næste gang turen hentes ned fra en anden enhed. Det er den
+> værste slags fejl at lede efter, fordi der ikke kommer nogen.
 
 > `turkort_snapshot` skal være **Plain text**, selvom indholdet er JSON. Se
 > faldgruberne nederst.
@@ -389,7 +395,7 @@ står herunder.
 `baereafstand_km` number · `erfaring` text · `status` text ·
 `gruppe_ids` json · `loese_item_ids` json · `deltagere` json ·
 `budget_linjer` json · `pak_af_tjek` json · `afgangs_tjek` json ·
-`feltnoter` json ·
+`feltnoter` json · `pakkede_item_uids` json ·
 `besked_fra_ejer` text · `noter` text · `vejrsnapshot` text ·
 `dele_token` text · `dele_snapshot` text · `turkort_token` text ·
 `turkort_retur` text · `turkort_besked` text · `turkort_snapshot` text ·

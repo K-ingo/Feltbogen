@@ -317,6 +317,10 @@ export interface Tur extends Synkroniserbar {
   status: TurStatus;
   gruppe_ids: Reference[];
   loese_item_ids: Reference[];
+  // Det grej der er lagt i tasken. En delmængde af det grej turen har — ikke
+  // en liste for sig. Ture fra før feltet fandtes har det slet ikke, så læs
+  // det altid med ?? []; se pakning.ts.
+  pakkede_item_uids: Reference[];
   deltagere: Deltager[];
   budget_linjer: BudgetLinje[];
   // null indtil turen er gjort op. Ture fra før feltet fandtes har det slet

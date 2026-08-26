@@ -40,6 +40,7 @@ appen starter.
 | På tur | `src/paaTur.ts` | Næste vejrskift, dage tilbage — det man skal vide i felten |
 | Turkort | `src/turkort.ts` | Ét link til én pårørende: hvor og hvornår hjemme |
 | Turfase | `src/turfase.ts` | Hvor turen er i sit forløb, og hvad næste skridt er |
+| Pakning | `src/pakning.ts` | Hvad der er lagt i tasken, og hvor langt man er |
 | Turlog | `src/feltnoter.ts` | Dagbogen fra turen, samlet pr. dag |
 | Vedligehold | `src/vedligehold.ts` | Imprægnering, slibning — intervaller der går i ring |
 | Vægt-brydere | `src/vaegtbrydere.ts` | Lettere alternativer i skabet, og tags ingen gruppe har |
@@ -55,6 +56,16 @@ appen starter.
 | Design tokens | `src/index.css` | Farver, afstande, runding, skriftstørrelser og rørehøjde |
 | UI-primitiver | `src/ui.tsx`, `src/layout.ts` | Knap, Kort, Felt, Chip, Badge, listerækker, detalje-header |
 | Skærme | `src/App.tsx` m.fl. | Hjem, Ture, Grej, Folk, Mere — og skærmene derunder |
+
+Turen skelner mellem det grej der er *valgt* til den (`loese_item_ids` og
+`gruppe_ids`) og det der er *pakket* (`pakkede_item_uids`). Det første er en
+plan, det andet er en status man står med tasken og opdaterer. Fremdriften
+gemmes ikke — den regnes ud af de to lister, så tallet og listen ikke kan
+komme ud af trit.
+
+Specens §7.1 har fire pakketilstande; her er der to. "Blocked" og "optional"
+kan appen ikke selv udfylde, og en tilstand man skal sætte i hånden for at få
+noget ud af, er en tilstand de fleste aldrig sætter.
 
 En tur går gennem kladde → klar → på tur → afsluttet → gjort op. De fire
 første er `Tur.status` i basen; den femte er udledt af, om pak-af-tjekket er

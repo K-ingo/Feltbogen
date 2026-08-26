@@ -66,6 +66,7 @@ export function opretTomTur(): Promise<number> {
     status: 'kladde',
     gruppe_ids: [],
     loese_item_ids: [],
+    pakkede_item_uids: [],
     // Den der opretter turen skal selv med på den. Uden det stod ejeren ikke
     // på sin egen deltagerliste, og hendes eget grej kunne ikke fordeles.
     deltagere: [{

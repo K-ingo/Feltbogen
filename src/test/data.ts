@@ -118,6 +118,7 @@ export function lavTur(felter: Partial<Tur> = {}): Tur {
     status: 'kladde',
     gruppe_ids: [],
     loese_item_ids: [],
+    pakkede_item_uids: [],
     deltagere: [],
     budget_linjer: [],
     pak_af_tjek: null,

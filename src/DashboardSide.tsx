@@ -15,6 +15,7 @@ import type { Handling, Turforslag, Syncstatus } from './dashboard';
 import { itemsPaaTur, findAdvarsler } from './smartMotor';
 import { samletInventarvaerdi, samletVaegt } from './statistik';
 import { fremdriftstekst } from './afgangsTjek';
+import { fremdrift as pakkefremdrift, fremdriftstekst as pakketekst } from './pakning';
 import { usendtAntal } from './sync';
 import { useAuth } from './useAuth';
 import { Skal } from './Skal';
@@ -216,11 +217,7 @@ function NaesteTurKort({ tur, items, grupper, aabn, opret }: {
 
   const advarsler = findAdvarsler(paaTuren);
 
-  // Specen vil have en pakkeprogression her — 36 af 42 pakket. Den findes
-  // ikke: der er ingen pakket-tilstand pr. item i datamodellen, kun hvilket
-  // grej der er valgt til turen. Et tal der lader som om, er værre end intet
-  // tal, så her står det appen faktisk ved: hvor meget grej der er valgt, og
-  // hvor langt afgangs-tjekket er — det er en rigtig liste med rigtige kryds.
+  const pakning = pakkefremdrift(tur, paaTuren);
   const afgang = tur.afgangs_tjek;
 
   return (
@@ -243,11 +240,7 @@ function NaesteTurKort({ tur, items, grupper, aabn, opret }: {
         display: 'grid',
         gap: '2px'
       }}>
-        <span>
-          {paaTuren.length === 0
-            ? 'Intet grej valgt endnu'
-            : `${paaTuren.length} ${paaTuren.length === 1 ? 'ting' : 'ting'} valgt`}
-        </span>
+        <span>{pakketekst(pakning)}</span>
         {afgang && <span>Afgangs-tjek: {fremdriftstekst(afgang).toLowerCase()}</span>}
       </div>
 
@@ -261,7 +254,7 @@ function NaesteTurKort({ tur, items, grupper, aabn, opret }: {
           {/* Knappen siger, hvad man skal, og ikke bare hvor man kommer hen.
               Er der ikke valgt grej endnu, er det dét, turen mangler. */}
           <Knap variant="primaer" onClick={aabn}>
-            {paaTuren.length === 0 ? 'Vælg grej' : 'Åbn tur'}
+            {paaTuren.length === 0 ? 'Vælg grej' : pakning.faerdig ? 'Åbn tur' : 'Fortsæt pakning'}
           </Knap>
         </div>
       </div>

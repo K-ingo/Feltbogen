@@ -97,6 +97,15 @@ import type { Kopiforslag } from './ligesomSidst';
 import { nytPakAfTjek, synkroniserLinjer, resumetekst } from './pakAfTjek';
 import { turfase } from './turfase';
 import type { Turfase } from './turfase';
+import {
+  pakkede,
+  veksl as vekslPakket,
+  pakAlle,
+  ryd as rydPakning,
+  fremdrift as pakkefremdrift,
+  fremdriftstekst as pakketekst
+} from './pakning';
+import type { Pakkefremdrift } from './pakning';
 import { useValg, useKropsdata, useTekst, PAK_AF_NIVEAU_VALG, AFGANGS_SKABELON } from './indstillinger';
 import { nytDeletoken, lavSnapshot, deleLink, linkadvarsel, linkvaert } from './gaest';
 import { formatterPeriode } from './datotekst';
@@ -577,6 +586,11 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
     />
   );
 
+  // Pakketilstanden. Krydset gemmes med det samme som alt andet på turen —
+  // man står med tasken i hånden og skal ikke også trykke gem.
+  const pakning = pakkefremdrift(tur, pakItems);
+  const afkrydsede = pakkede(tur);
+
   const pakkeliste = (
     <Pakkeliste
       afsnit={afsnit}
@@ -584,6 +598,11 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
       visning={visning}
       setVisning={setVisning}
       antal={pakItems.length}
+      pakning={pakning}
+      pakkede={afkrydsede}
+      veksl={(uid) => void opdater({ pakkede_item_uids: vekslPakket(tur, uid) })}
+      pakAlle={() => void opdater({ pakkede_item_uids: pakAlle(pakItems) })}
+      ryd={() => void opdater({ pakkede_item_uids: rydPakning() })}
     />
   );
 
@@ -854,6 +873,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
     pakning: spalter(
       <Infokort label="Vælg gear">{valgAfIndhold}</Infokort>,
       <>
+        <Pakkekort pakning={pakning} tilListen={() => setFane('pakkeliste')} />
         {vaegt}
         {vaegtbryderSektion}
       </>
@@ -957,6 +977,69 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
 // Rammer
 // ─────────────────────────────────────────────
 
+// Hvor langt pakningen er, og hvad der står tilbage.
+//
+// Tallet er derived state og gemmes ikke: det regnes ud af hvilket grej der
+// er på turen, og hvilket der er krydset af. Gemtes det også som et felt,
+// ville de to kunne komme ud af trit — og så er det feltet man tror på, mens
+// listen er den der er rigtig.
+function Pakkekort({ pakning, tilListen }: { pakning: Pakkefremdrift; tilListen: () => void }) {
+  if (pakning.ialt === 0) return null;
+
+  // Højst så mange manglende nævnes ved navn. Resten tælles — en liste over
+  // fyrre ting man ikke har pakket, er bare pakkelisten en gang til.
+  const NAEVNES = 5;
+  const foerste = pakning.mangler.slice(0, NAEVNES);
+  const resten = pakning.mangler.length - foerste.length;
+
+  return (
+    <Infokort label="Pakning" fremhaevet={pakning.faerdig}>
+      <div style={{
+        fontSize: 'var(--skrift-tal)',
+        fontWeight: 500,
+        fontFamily: "'Fraunces', Georgia, serif",
+        color: pakning.faerdig ? 'var(--succes)' : 'var(--tekst)'
+      }}>
+        {pakning.faerdig ? 'Alt er pakket' : `${pakning.pakket} af ${pakning.ialt}`}
+      </div>
+
+      {/* En stribe frem for en ring: den kan læses lige så hurtigt og fylder
+          ikke en hel spalte i bredden. */}
+      <div style={{
+        height: '5px',
+        borderRadius: 'var(--runding-pille)',
+        background: 'var(--border-svag)',
+        overflow: 'hidden',
+        margin: 'var(--plads-2) 0'
+      }}>
+        <div style={{
+          width: `${pakning.procent}%`,
+          height: '100%',
+          background: pakning.faerdig ? 'var(--succes)' : 'var(--accent)',
+          transition: 'width 0.2s'
+        }} />
+      </div>
+
+      {!pakning.faerdig && (
+        <>
+          <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginBottom: 'var(--plads-1)' }}>
+            Mangler i tasken
+          </div>
+          <div style={{ display: 'grid', gap: '2px', fontSize: 'var(--skrift-detalje)' }}>
+            {foerste.map((i) => <span key={i.uid}>{i.navn || 'Uden navn'}</span>)}
+            {resten > 0 && (
+              <span style={{ color: 'var(--tekst-svag)' }}>
+                + {resten} {resten === 1 ? 'ting mere' : 'ting mere'}
+              </span>
+            )}
+          </div>
+          <Knap onClick={tilListen} style={{ marginTop: 'var(--plads-3)' }}>Gå til pakkelisten</Knap>
+        </>
+      )}
+    </Infokort>
+  );
+}
+
 // Hvad turen mangler, før det næste skridt giver mening.
 //
 // Den står lige under knappen og ikke inde på en fane: det er dér, man er ved
@@ -979,9 +1062,10 @@ function Naesteskridt({ fase }: { fase: Turfase }) {
       color: 'var(--tekst-dæmpet)'
     }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: 'var(--plads-1)' }}>
-        <span style={{ flex: 1, fontWeight: 500 }}>
-          {fase.mangler.length === 1 ? 'Én ting mangler' : `${fase.mangler.length} ting mangler`}
-        </span>
+        {/* Ikke et tal. Overskriften stod før som "2 ting mangler" lige over
+            "Pakning: 4 af 6 mangler i tasken", og de to tal tæller ikke det
+            samme — det ene linjer, det andet ting. */}
+        <span style={{ flex: 1, fontWeight: 500 }}>Værd at gøre først</span>
         <Hvorfor begrundelse={fase.begrundelse} />
       </div>
       <ul style={{ margin: 0, paddingLeft: '18px', display: 'grid', gap: '2px' }}>
@@ -1344,12 +1428,17 @@ function baerernavne(tur: Tur): Map<Reference, string> {
   return pr;
 }
 
-function Pakkeliste({ afsnit, perItem, visning, setVisning, antal }: {
+function Pakkeliste({ afsnit, perItem, visning, setVisning, antal, pakning, pakkede, veksl, pakAlle, ryd }: {
   afsnit: Pakkeafsnit[];
   perItem: Map<Reference, Advarsel[]>;
   visning: Visning;
   setVisning: (v: Visning) => void;
   antal: number;
+  pakning: Pakkefremdrift;
+  pakkede: Set<Reference>;
+  veksl: (uid: Reference) => void;
+  pakAlle: () => void;
+  ryd: () => void;
 }) {
   if (antal === 0) {
     return (
@@ -1361,6 +1450,8 @@ function Pakkeliste({ afsnit, perItem, visning, setVisning, antal }: {
 
   return (
     <div>
+      <Pakkestatus pakning={pakning} pakAlle={pakAlle} ryd={ryd} />
+
       <div style={{ marginBottom: '14px' }}>
         <Segment
           vaerdier={VISNINGER}
@@ -1378,6 +1469,10 @@ function Pakkeliste({ afsnit, perItem, visning, setVisning, antal }: {
             <Pakkeraekke
               key={`${linje.uid || linje.navn}-${n}`}
               linje={linje}
+              pakket={!!linje.uid && pakkede.has(linje.uid)}
+              // Kun ens eget grej kan krydses af. En deltagers ting står på
+              // listen, men den er hendes at pakke — ikke ens egen.
+              veksl={linje.uid && linje.egen ? () => veksl(linje.uid) : null}
               // Deltagernes eget grej har ingen advarsler — de bygger på tags
               // fra ejerens inventar, og det kender vi ikke for deres ting.
               advarsler={linje.uid ? perItem.get(linje.uid) ?? [] : []}
@@ -1394,25 +1489,93 @@ function Pakkeliste({ afsnit, perItem, visning, setVisning, antal }: {
   );
 }
 
-function Pakkeraekke({ linje, advarsler, visBaerer }: {
-  linje: Pakkelinje;
-  advarsler: Advarsel[];
-  visBaerer: boolean;
+// Status og de to knapper der gælder hele listen. Specens §8 har dem i en
+// fod; her står de i toppen, fordi det er tallet man kommer for, og fordi en
+// fod under en lang liste er et sted man skal scrolle hen for at finde.
+function Pakkestatus({ pakning, pakAlle, ryd }: {
+  pakning: Pakkefremdrift;
+  pakAlle: () => void;
+  ryd: () => void;
 }) {
-  // Er der flere huller på samme item, vejer det røde tungest.
-  const vaerst = advarsler.find((a) => a.niveau === 'roed') ?? advarsler[0];
-
   return (
     <div style={{
       display: 'flex',
       alignItems: 'center',
-      gap: '8px',
-      padding: '7px 0',
-      borderBottom: '1px solid var(--border-svag)',
-      fontSize: '13px',
-      background: vaerst ? 'var(--advarsel-bg)' : 'transparent'
+      gap: 'var(--plads-2)',
+      flexWrap: 'wrap',
+      marginBottom: 'var(--plads-3)',
+      paddingBottom: 'var(--plads-3)',
+      borderBottom: '1px solid var(--border-svag)'
     }}>
-      <span style={{ flex: 1, minWidth: 0, color: 'var(--tekst)' }}>{linje.navn || 'Uden navn'}</span>
+      <span style={{
+        flex: 1,
+        minWidth: '120px',
+        fontSize: 'var(--skrift-brod)',
+        fontWeight: 500,
+        color: pakning.faerdig ? 'var(--succes)' : 'var(--tekst)'
+      }}>
+        {pakketekst(pakning)}
+      </span>
+
+      {pakning.faerdig ? (
+        <Knap onClick={ryd}>Ryd afkrydsning</Knap>
+      ) : (
+        <Knap onClick={pakAlle}>Markér alle som pakket</Knap>
+      )}
+    </div>
+  );
+}
+
+function Pakkeraekke({ linje, advarsler, visBaerer, pakket, veksl }: {
+  linje: Pakkelinje;
+  advarsler: Advarsel[];
+  visBaerer: boolean;
+  pakket: boolean;
+  // null for en deltagers eget grej, som ikke er ens eget at krydse af.
+  veksl: (() => void) | null;
+}) {
+  // Er der flere huller på samme item, vejer det røde tungest.
+  const vaerst = advarsler.find((a) => a.niveau === 'roed') ?? advarsler[0];
+
+  const raekke: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '7px 0',
+    borderBottom: '1px solid var(--border-svag)',
+    fontSize: '13px',
+    background: vaerst ? 'var(--advarsel-bg)' : 'transparent'
+  };
+
+  // Hele rækken er trykfladen, ikke bare selve firkanten. Et afkrydsningsfelt
+  // er 13 px bredt, og man står med tasken i den ene hånd — skal man ramme 13
+  // px for at sige "den er pakket", ryger halvdelen af trykkene ved siden af.
+  // En label gør navnet, vægten og luften imellem til det samme mål.
+  const Ramme = veksl ? 'label' : 'div';
+
+  return (
+    <Ramme style={{ ...raekke, cursor: veksl ? 'pointer' : 'default' }}>
+      {/* Pladsen holdes også når der ikke er noget at krydse af, så
+          navnene står på linje ned gennem listen. */}
+      {veksl ? (
+        <input
+          type="checkbox"
+          checked={pakket}
+          onChange={veksl}
+          style={{ width: 'auto', flexShrink: 0 }}
+        />
+      ) : (
+        <span style={{ width: '13px', flexShrink: 0 }} />
+      )}
+
+      <span style={{
+        flex: 1,
+        minWidth: 0,
+        color: pakket ? 'var(--tekst-svag)' : 'var(--tekst)',
+        textDecoration: pakket ? 'line-through' : 'none'
+      }}>
+        {linje.navn || 'Uden navn'}
+      </span>
 
       {vaerst && (
         <span title={`${vaerst.besked}. ${vaerst.detalje}`}>
@@ -1429,7 +1592,7 @@ function Pakkeraekke({ linje, advarsler, visBaerer }: {
       <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '12px', minWidth: '52px', textAlign: 'right' }}>
         {linje.vaegt_g} g
       </span>
-    </div>
+    </Ramme>
   );
 }
 

@@ -1,6 +1,7 @@
 import type { Gruppe, Tur, TurStatus } from './db';
 import { itemUidsPaaTur } from './smartMotor';
 import { fremdrift } from './afgangsTjek';
+import { pakkede } from './pakning';
 
 // Hvor turen er i sit forløb, og hvad det næste skridt er.
 //
@@ -80,7 +81,7 @@ export function turfase(tur: Tur, grupper: Gruppe[]): Turfase {
         naeste: { slags: 'status', til: 'aktiv', label: 'Start tur' },
         begrundelse:
           'Turen er lagt. Når du starter den, skifter appen til på-tur-skærmen: store knapper, vejret, dagens noter — og ikke redigering af gear og indstillinger.',
-        mangler: klarmangler(tur)
+        mangler: klarmangler(tur, grupper)
       };
 
     case 'aktiv':
@@ -142,13 +143,28 @@ function kladdemangler(tur: Tur, grupper: Gruppe[]): string[] {
   return mangler;
 }
 
-// Det sidste inden afgang. Afgangs-tjekket er den eneste liste, appen kan
-// måle på — resten af "er du klar?" ved den ikke noget om.
-function klarmangler(tur: Tur): string[] {
-  const { afkrydsede, ialt, faerdig } = fremdrift(tur.afgangs_tjek ?? null);
+// Det sidste inden afgang: er grejet i tasken, og er huskelisten kørt
+// igennem. To lister, og appen kan måle på dem begge.
+//
+// Pakningen først. Det er den, der tager tid, og den man opdager for sent at
+// man ikke er færdig med.
+function klarmangler(tur: Tur, grupper: Gruppe[]): string[] {
+  const mangler: string[] = [];
 
-  if (ialt === 0) return ['Afgangs-tjekket er ikke taget i brug'];
-  if (!faerdig) return [`Afgangs-tjek: ${ialt - afkrydsede} tilbage af ${ialt}`];
+  const paaTuren = itemUidsPaaTur(tur, grupper);
+  const afkrydset = pakkede(tur);
+  const ipakket = [...paaTuren].filter((u) => afkrydset.has(u)).length;
 
-  return [];
+  if (paaTuren.size > 0 && ipakket < paaTuren.size) {
+    mangler.push(`Pakning: ${paaTuren.size - ipakket} af ${paaTuren.size} mangler i tasken`);
+  }
+
+  const tjek = fremdrift(tur.afgangs_tjek ?? null);
+  if (tjek.ialt === 0) {
+    mangler.push('Afgangs-tjekket er ikke taget i brug');
+  } else if (!tjek.faerdig) {
+    mangler.push(`Afgangs-tjek: ${tjek.ialt - tjek.afkrydsede} tilbage af ${tjek.ialt}`);
+  }
+
+  return mangler;
 }
