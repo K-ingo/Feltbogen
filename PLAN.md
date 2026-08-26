@@ -163,11 +163,36 @@ får det rigtige mål uden at nogen skal huske reglen. De skærme, der endnu
 skriver deres egne tal, kan flyttes over efterhånden — tokensne gælder, så
 snart en værdi bliver slået op i stedet for skrevet ind.
 
-### Skridt 3 — Dashboardet rettes ind
+### Skridt 3 — Dashboardet rettes ind ✅
 
-`DashboardSide.tsx` findes. Den skal svare på specens fire spørgsmål på under
-fem sekunder: næste tur, hvad kræver opmærksomhed, hvad foreslås, er der styr
-på grejet. Det er en tilretning, ikke en ombygning.
+`DashboardSide.tsx` fandtes allerede med næste tur, handlinger og nøgletal.
+Det, der manglede, var to af specens fire spørgsmål: **Feltbogen foreslår** og
+**sync-status**.
+
+Forslagene er bygget på motorens egne funktioner — `foreslaaKopi`,
+`foreslaaGrupper` og `vaegtbrydere` — og der er ikke lavet nye regler. De
+skriver ingenting: kortet fører hen til turen, hvor man selv siger ja. Et
+forslag, der ændrer data, når man trykker på det, er ikke et forslag.
+
+Sync-linjen står nederst og ikke øverst, og kun en rigtig fejl får en farve.
+At have ændringer liggende uden dækning er den normale tilstand for en app,
+man bruger i skoven — den skal ikke blinke rødt, fordi man er kommet ud, hvor
+der ikke er signal.
+
+**Et fund undervejs, som har betydning for resten:** specen vil have en
+pakkeprogression på turkortet — 36 af 42 pakket — og hele §7 og §8 bygger på
+den. Den findes ikke. Der er ingen pakket-tilstand pr. item i datamodellen,
+kun hvilket grej der er *valgt* til turen. `Pakkelinje` har hverken `pakket`
+eller `status`, og `afkrydset` findes kun på afgangs-tjekkets linjer.
+
+Specens §7.1 (unchecked / packed / blocked / optional) er altså en **ny
+funktion med en datamodelændring**, ikke en ny præsentation af noget, appen
+allerede ved. Startskærmen viser derfor det, der er sandt: hvor meget grej der
+er valgt, og hvor langt afgangs-tjekket er — det er en rigtig liste med
+rigtige kryds. Et tal, der lader som om, er værre end intet tal.
+
+Skal pakkeprogressionen bygges, er det sit eget skridt: et felt pr. item pr.
+tur, som skal synkroniseres og indgå i konfliktstrategien.
 
 ### Skridt 4 — Navigationen fra seks faner til fem
 

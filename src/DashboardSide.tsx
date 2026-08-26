@@ -1,14 +1,25 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import type { Item, Gruppe, Tur } from './db';
-import { naesteTur, naarBegynder, handlinger, tureIAar, sidstTilfoejede } from './dashboard';
+import {
+  naesteTur,
+  naarBegynder,
+  handlinger,
+  turforslag,
+  syncstatus,
+  tureIAar,
+  sidstTilfoejede
+} from './dashboard';
 import { aarsopgoerelseAtSe } from './aarsopgoerelse';
-import type { Handling } from './dashboard';
+import type { Handling, Turforslag, Syncstatus } from './dashboard';
 import { itemsPaaTur, findAdvarsler } from './smartMotor';
 import { samletInventarvaerdi, samletVaegt } from './statistik';
+import { fremdriftstekst } from './afgangsTjek';
+import { usendtAntal } from './sync';
+import { useAuth } from './useAuth';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
-import { useErDesktop } from './useMedie';
+import { useErDesktop, useErOnline } from './useMedie';
 import { Knap, Chip, Infokort, SektionsTitel, ListeRaekke, TomListe, Hvorfor } from './ui';
 
 interface Props {
@@ -26,16 +37,29 @@ interface Props {
 const MAKS_HANDLINGER = 4;
 const MAKS_SIDST_TILFOEJET = 5;
 
-// Fast rækkefølge: Næste tur → Handlinger → Nøgletal → Sidst tilføjet.
+// Fast rækkefølge, og den er specens: næste tur, hvad der kræver
+// opmærksomhed, hvad Feltbogen foreslår, hvordan man står — og til sidst om
+// det er nået op på serveren.
+//
+// De fire første spørgsmål skal kunne besvares på under fem sekunder. Derfor
+// er der loft over både handlinger og forslag: en startskærm der ruller, er
+// en opgaveliste, og en opgaveliste lukker man.
 function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur }: Props) {
   const erDesktop = useErDesktop();
+
+  const { erLoggetInd } = useAuth();
+  const online = useErOnline();
 
   const items = useLiveQuery(() => db.items.toArray()) ?? [];
   const grupper = useLiveQuery(() => db.grupper.toArray()) ?? [];
   const ture = useLiveQuery(() => db.ture.toArray()) ?? [];
+  // Tælles om når basen ændrer sig, så tallet ikke står og lyver efter en sync.
+  const usendt = useLiveQuery(usendtAntal, [], 0);
 
   const tur = naesteTur(ture);
   const alleHandlinger = handlinger(items, ture, grupper);
+  const forslag = turforslag(tur, grupper, items, ture);
+  const sync = syncstatus(usendt, online, erLoggetInd);
   const aar = tureIAar(ture);
   const nyeste = sidstTilfoejede(items, MAKS_SIDST_TILFOEJET);
   const opgoerelse = aarsopgoerelseAtSe(ture);
@@ -103,6 +127,25 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
           </section>
         )}
 
+        {forslag.length > 0 && (
+          <section>
+            <SektionsTitel>Feltbogen foreslår</SektionsTitel>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: erDesktop ? 'repeat(auto-fit, minmax(230px, 1fr))' : '1fr',
+              gap: 'var(--plads-2)'
+            }}>
+              {forslag.map((f) => (
+                <ForslagsKort
+                  key={f.type}
+                  forslag={f}
+                  aabn={() => tur?.id !== undefined && aabnTur(tur.id)}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
         <section>
           <SektionsTitel>Nøgletal</SektionsTitel>
           <div style={{
@@ -135,6 +178,8 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
             ))
           )}
         </section>
+
+        <Synclinje status={sync} />
       </div>
     </Skal>
   );
@@ -171,12 +216,19 @@ function NaesteTurKort({ tur, items, grupper, aabn, opret }: {
 
   const advarsler = findAdvarsler(paaTuren);
 
+  // Specen vil have en pakkeprogression her — 36 af 42 pakket. Den findes
+  // ikke: der er ingen pakket-tilstand pr. item i datamodellen, kun hvilket
+  // grej der er valgt til turen. Et tal der lader som om, er værre end intet
+  // tal, så her står det appen faktisk ved: hvor meget grej der er valgt, og
+  // hvor langt afgangs-tjekket er — det er en rigtig liste med rigtige kryds.
+  const afgang = tur.afgangs_tjek;
+
   return (
     <Infokort label={`Næste tur · ${naarBegynder(tur)}`} fremhaevet>
       <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '20px', marginBottom: '3px' }}>
         {tur.navn || 'Uden navn'}
       </div>
-      <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', marginBottom: '10px' }}>
+      <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)', marginBottom: 'var(--plads-2)' }}>
         {[
           `${tur.naetter} ${tur.naetter === 1 ? 'nat' : 'nætter'}`,
           `${tur.personer} ${tur.personer === 1 ? 'person' : 'personer'}`,
@@ -184,17 +236,112 @@ function NaesteTurKort({ tur, items, grupper, aabn, opret }: {
         ].join(' · ')}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+      <div style={{
+        fontSize: 'var(--skrift-detalje)',
+        color: 'var(--tekst-dæmpet)',
+        marginBottom: 'var(--plads-3)',
+        display: 'grid',
+        gap: '2px'
+      }}>
+        <span>
+          {paaTuren.length === 0
+            ? 'Intet grej valgt endnu'
+            : `${paaTuren.length} ${paaTuren.length === 1 ? 'ting' : 'ting'} valgt`}
+        </span>
+        {afgang && <span>Afgangs-tjek: {fremdriftstekst(afgang).toLowerCase()}</span>}
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--plads-2)', flexWrap: 'wrap' }}>
         {advarsler.length > 0 && (
           <Chip farve={advarsler.some((a) => a.niveau === 'roed') ? 'fejl' : 'advarsel'} storrelse="lille">
             ⚠ {advarsler.length} {advarsler.length === 1 ? 'advarsel' : 'advarsler'}
           </Chip>
         )}
         <div style={{ marginLeft: 'auto' }}>
-          <Knap onClick={aabn}>Åbn tur</Knap>
+          {/* Knappen siger, hvad man skal, og ikke bare hvor man kommer hen.
+              Er der ikke valgt grej endnu, er det dét, turen mangler. */}
+          <Knap variant="primaer" onClick={aabn}>
+            {paaTuren.length === 0 ? 'Vælg grej' : 'Åbn tur'}
+          </Knap>
         </div>
       </div>
     </Infokort>
+  );
+}
+
+// Et forslag ser med vilje anderledes ud end en handling: handlingen er noget
+// der er gået skævt, forslaget er noget appen ville gøre, hvis den måtte.
+// Derfor accentfarven og ikke advarselsfarven.
+//
+// Kortet skriver ingenting. Det fører hen til turen, hvor man selv siger ja —
+// et forslag der ændrer data, når man trykker på det, er ikke et forslag.
+function ForslagsKort({ forslag, aabn }: { forslag: Turforslag; aabn: () => void }) {
+  return (
+    <div style={{
+      padding: '11px 13px',
+      borderRadius: 'var(--runding-lille)',
+      border: '1px solid var(--accent-border)',
+      background: 'var(--accent-bg)'
+    }}>
+      <button
+        onClick={aabn}
+        style={{
+          display: 'block',
+          width: '100%',
+          textAlign: 'left',
+          padding: 0,
+          border: 'none',
+          background: 'transparent',
+          cursor: 'pointer'
+        }}
+      >
+        <div style={{ fontSize: 'var(--skrift-knap)', fontWeight: 600, color: 'var(--accent)' }}>
+          {forslag.titel}
+        </div>
+        <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
+          {forslag.detalje}
+        </div>
+      </button>
+      <div style={{ marginTop: 'var(--plads-1)' }}>
+        <Hvorfor begrundelse={forslag.begrundelse} />
+      </div>
+    </div>
+  );
+}
+
+// Sync-status. Fundamentet siger, den skal være synlig uden at være
+// dominerende, og derfor er den en linje nederst og ikke et kort øverst.
+//
+// Kun en rigtig fejl får en farve. At have ændringer liggende uden dækning er
+// den normale tilstand for en app, man bruger i skoven — den skal ikke stå og
+// blinke rødt, fordi man er kommet ud, hvor der ikke er signal.
+function Synclinje({ status }: { status: Syncstatus }) {
+  const prik = {
+    synkroniseret: 'var(--succes)',
+    venter: 'var(--accent)',
+    offline: 'var(--tekst-svag)',
+    kun_lokalt: 'var(--tekst-svag)'
+  }[status.tilstand];
+
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 'var(--plads-2)',
+      paddingTop: 'var(--plads-3)',
+      borderTop: '1px solid var(--border-svag)',
+      fontSize: 'var(--skrift-lille)',
+      color: 'var(--tekst-svag)'
+    }}>
+      <span style={{
+        width: '7px',
+        height: '7px',
+        borderRadius: 'var(--runding-pille)',
+        background: prik,
+        flexShrink: 0
+      }} />
+      {status.tekst}
+    </div>
   );
 }
 

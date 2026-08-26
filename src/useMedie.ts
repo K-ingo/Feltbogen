@@ -15,6 +15,28 @@ export function useErBredskaerm(): boolean {
   return useBredereEnd(BREDSKAERM_FRA);
 }
 
+// Om der er forbindelse. Ikke en mediaforespørgsel, men samme slags svar:
+// noget om omgivelserne, som skærmen skal rette sig efter.
+//
+// `navigator.onLine` er et løfte om det svageste: falsk betyder helt sikkert
+// ingen forbindelse, sandt betyder kun, at der er et netværk — ikke at der er
+// hul igennem til serveren. Til at vælge ordlyd på en statuslinje er det nok.
+export function useErOnline(): boolean {
+  const [online, setOnline] = useState(() => navigator.onLine);
+
+  useEffect(() => {
+    const opdater = () => setOnline(navigator.onLine);
+    window.addEventListener('online', opdater);
+    window.addEventListener('offline', opdater);
+    return () => {
+      window.removeEventListener('online', opdater);
+      window.removeEventListener('offline', opdater);
+    };
+  }, []);
+
+  return online;
+}
+
 // Højden på det man faktisk kan se, i px.
 //
 // `100vh` og `100dvh` bygger på browserens layout-viewport, og den kan på iOS
