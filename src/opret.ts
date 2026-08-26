@@ -27,6 +27,7 @@ export function opretTomtItem(status: ItemStatus = 'ejer'): Promise<number> {
     udlaan: null,
     laant_af: null,
     vedligehold: [],
+    vurdering: null,
     noter: '',
     oprettet: nu,
     aendret: nu

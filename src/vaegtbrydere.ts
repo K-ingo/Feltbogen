@@ -1,5 +1,6 @@
 import type { Gruppe, Item, Reference, Tur } from './db';
 import { itemUidsPaaTur, turensTags } from './smartMotor';
+import { erGodtVurderet, GODT } from './vurdering';
 
 // Vægt-brydere: hvor kan sækken blive lettere?
 //
@@ -78,6 +79,11 @@ export function vaegtbrydere(
   const paaTuren = itemUidsPaaTur(tur, grupper);
 
   return [...pakItems]
+    // Grej man har sagt god for, foreslås ikke skiftet ud. Det er det ene
+    // sted, hvor vurderingen betyder noget for et forslag: appen kender
+    // ellers kun tags og gram, og på de to alene ligner en sovepose man
+    // fryser i og en man sover godt i hinanden.
+    .filter((i) => !erGodtVurderet(i))
     .sort((a, b) => b.vaegt_g - a.vaegt_g)
     .slice(0, TOP)
     .map((tung) => ({ tung, alternativer: alternativerTil(tung, inventar, paaTuren) }))
@@ -85,7 +91,7 @@ export function vaegtbrydere(
     .map(({ tung, alternativer }) => ({
       tung,
       alternativer,
-      begrundelse: `${tung.navn} er blandt de tungeste på turen. ${alternativer.length === 1 ? 'Et andet stykke gear' : `${alternativer.length} andre stykker gear`} i dit inventar deler mindst ét tag med den og vejer mindst ${Math.round(MINDSTE_BESPARELSE * 100)} % mindre. Om de faktisk kan det samme, er dit valg — motoren kender kun tags og gram.`
+      begrundelse: `${tung.navn} er blandt de tungeste på turen. ${alternativer.length === 1 ? 'Et andet stykke gear' : `${alternativer.length} andre stykker gear`} i dit inventar deler mindst ét tag med den og vejer mindst ${Math.round(MINDSTE_BESPARELSE * 100)} % mindre. Om de faktisk kan det samme, er dit valg — motoren kender kun tags, gram og din egen vurdering: har du givet noget ${GODT} stjerner eller mere, holder den op med at foreslå at skifte det ud.`
     }));
 }
 

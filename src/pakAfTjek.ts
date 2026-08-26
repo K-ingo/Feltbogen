@@ -12,6 +12,7 @@ import type {
   Tur
 } from './db';
 import { pakkelisteEfterGruppe, dageTil } from './smartMotor';
+import { gyldig } from './vurdering';
 
 // Efterregnskabet på en tur: hvad blev brugt, hvad lå urørt i bunden af
 // sækken, og hvad gik i stykker. Det er den ene ting der gør smart-motoren i
@@ -125,6 +126,19 @@ export function saetKategoriNote(
 
 export function saetNiveau(tjek: PakAfTjek, niveau: PakAfNiveau): PakAfTjek {
   return { ...tjek, niveau };
+}
+
+// Turen som helhed. null rydder den igen — feltet fjernes frem for at blive
+// stående som nul, så et tjek ikke bærer rundt på en vurdering man har fortrudt.
+export function saetTurvurdering(tjek: PakAfTjek, vurdering: number | null): PakAfTjek {
+  const gyldigt = gyldig(vurdering);
+  if (gyldigt === null) {
+    const { tur_vurdering: _fjernet, ...uden } = tjek;
+    void _fjernet;
+    return uden;
+  }
+
+  return { ...tjek, tur_vurdering: gyldigt };
 }
 
 // Kategorierne følger pakkelisten som den er grupperet på turen — det er den

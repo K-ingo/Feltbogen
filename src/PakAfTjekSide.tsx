@@ -10,9 +10,11 @@ import {
   saetLinjenoter,
   saetNiveau,
   saetStatus,
+  saetTurvurdering,
   statusFor
 } from './pakAfTjek';
 import { pakkelisteEfterGruppe } from './smartMotor';
+import { opdaterItem } from './sync';
 import { useErDesktop } from './useMedie';
 import { layout } from './layout';
 import { formatterPeriode } from './datotekst';
@@ -22,6 +24,7 @@ import {
   Knap,
   Segment,
   SektionsTitel,
+  Stjerner,
   Tekstomraade,
   TomListe
 } from './ui';
@@ -48,6 +51,16 @@ function PakAfTjekSide({ tur, tjek, pakItems, grupper, gem, tilbage }: Props) {
   const erDesktop = useErDesktop();
 
   const grundig = tjek.niveau === 'grundig';
+
+  // Vurderingen skrives på selve grejet og ikke i tjekket: den handler om
+  // tingen og ikke om turen, og den skal stå der næste gang man kigger på
+  // den. Listen herinde kommer fra en liveQuery på turskærmen, så værdien
+  // finder selv vej tilbage.
+  const vurder = (item: Item, v: number | null) => {
+    if (item.id === undefined) return;
+    void opdaterItem(item.id, { vurdering: v });
+  };
+
   const tal = opsummering(tjek);
   const afsnit = pakkelisteEfterGruppe(tur, grupper, pakItems);
 
@@ -73,6 +86,7 @@ function PakAfTjekSide({ tur, tjek, pakItems, grupper, gem, tilbage }: Props) {
             grundig={grundig}
             saetStatus={(s) => gem(saetStatus(tjek, item.uid, s))}
             saetNoter={(n) => gem(saetLinjenoter(tjek, item.uid, n))}
+            saetVurdering={(v) => vurder(item, v)}
           />
         ))}
       </div>
@@ -104,6 +118,20 @@ function PakAfTjekSide({ tur, tjek, pakItems, grupper, gem, tilbage }: Props) {
   const opsamling = (
     <Infokort label="Status" fremhaevet>
       <div style={{ fontSize: '15px', marginBottom: '10px' }}>{resumetekst(tjek)}</div>
+
+      {/* Turen som helhed. Den står øverst og ikke nederst: det er den man har
+          et svar på med det samme, mens grejet kræver at man tænker sig om. */}
+      <div style={{ marginBottom: 'var(--plads-3)' }}>
+        <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginBottom: '2px' }}>
+          Hvordan var turen?
+        </div>
+        <Stjerner
+          vaerdi={tjek.tur_vurdering ?? null}
+          saet={(v) => gem(saetTurvurdering(tjek, v))}
+          label="turen"
+        />
+      </div>
+
       <div style={{ display: 'grid', gap: '8px' }}>
         <div>
           <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginBottom: '5px' }}>
@@ -213,13 +241,16 @@ const STATUSFARVE: Record<PakAfStatus, string> = {
   i_stykker: 'var(--advarsel)'
 };
 
-function Itemraekke({ item, status, noter, grundig, saetStatus, saetNoter }: {
+function Itemraekke({ item, status, noter, grundig, saetStatus, saetNoter, saetVurdering }: {
   item: Item;
   status: PakAfStatus;
   noter: string;
   grundig: boolean;
   saetStatus: (s: PakAfStatus) => void;
   saetNoter: (n: string) => void;
+  // Vurderingen gemmes på grejet og ikke i tjekket: den handler om tingen og
+  // ikke om turen, og den skal stå der næste gang man kigger på den.
+  saetVurdering: (v: number | null) => void;
 }) {
   return (
     <div style={{
@@ -242,6 +273,21 @@ function Itemraekke({ item, status, noter, grundig, saetStatus, saetNoter }: {
         formater={(v) => etiket(v)}
         kompakt
       />
+      {/* Kun på det grundige niveau. Et let tjek skal kunne klares på
+          bagsædet på vej hjem; skal man tage stilling til fyrre stjerner,
+          bliver det ikke lavet. */}
+      {grundig && (
+        <div style={{ marginTop: '8px' }}>
+          <div style={{ fontSize: 'var(--skrift-mikro)', color: 'var(--tekst-dæmpet)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>
+            Hvor god var den?
+          </div>
+          <Stjerner
+            vaerdi={item.vurdering ?? null}
+            saet={saetVurdering}
+            label={item.navn || 'grejet'}
+          />
+        </div>
+      )}
       {grundig && (
         <div style={{ marginTop: '8px' }}>
           <Tekstomraade

@@ -93,7 +93,7 @@ Tryk **Create**.
 
 ---
 
-## Trin 3 — Tilføj tre felter til `items`
+## Trin 3 — Tilføj fire felter til `items`
 
 Åbn den eksisterende `items`-samling → **Fields** → tilføj:
 
@@ -102,6 +102,13 @@ Tryk **Create**.
 | `udlaan` | JSON |
 | `laant_af` | JSON |
 | `vedligehold` | JSON |
+| `vurdering` | Number |
+
+> `vurdering` er nyt: 1–5 stjerner på et stykke grej. Det skal være **Number**
+> og ikke Text — appen afviser værdier den ikke kan læse som et helt tal
+> mellem 1 og 5, så en tekstværdi ville stille og roligt blive til
+> "ikke vurderet". Mangler feltet helt, kan man stadig give stjerner, men de
+> bliver på den enhed man står med, og der kommer ingen fejl.
 
 Reglerne på `items` skal ikke røres — de skal være `user = @request.auth.id`
 på alle fem, som de formentlig allerede er.
@@ -381,7 +388,7 @@ står herunder.
 `antal` number · `delt` bool · `status` text · `tags` json · `kraever` json ·
 `komplementer` json · `koebt_hos` text · `koebsdato` text · `koebslink` text ·
 `ordrenummer` text · `garanti` json · `udlaan` json · `laant_af` json ·
-`vedligehold` json · `noter` text
+`vedligehold` json · `vurdering` number · `noter` text
 
 ### `grupper`
 

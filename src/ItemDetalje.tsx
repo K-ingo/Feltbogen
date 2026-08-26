@@ -30,6 +30,7 @@ import {
   Kort,
   Segment,
   SektionsTitel,
+  Stjerner,
   Tekstomraade,
   TitelInput
 } from './ui';
@@ -151,6 +152,25 @@ function ItemDetalje({ itemId, tilbage, nyOprettet }: Props) {
           handlinger={item.vedligehold ?? []}
           gem={(nye) => void opdater({ vedligehold: nye })}
         />
+
+        {/* Vurderingen står sammen med resten af det, der følger tingen
+            gennem hele dens levetid — ikke på turen, hvor den blev givet.
+            Motoren bruger den ét sted: den holder op med at foreslå at skifte
+            noget ud, man har givet fire eller fem. */}
+        <div style={{ height: '4px' }} />
+        <SektionsTitel>Din vurdering</SektionsTitel>
+        <div style={{ marginBottom: 'var(--plads-4)' }}>
+          <Stjerner
+            vaerdi={item.vurdering ?? null}
+            saet={(v) => void opdater({ vurdering: v })}
+            label={item.navn || 'grejet'}
+          />
+          <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', marginTop: 'var(--plads-1)' }}>
+            {item.vurdering
+              ? 'Tryk på den samme stjerne igen for at rydde vurderingen.'
+              : 'Ikke vurderet endnu. Det er ikke det samme som en dårlig vurdering — motoren tæller den slet ikke med.'}
+          </div>
+        </div>
 
         <div style={{ height: '4px' }} />
         <SektionsTitel>Kompatibilitet</SektionsTitel>

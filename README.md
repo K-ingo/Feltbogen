@@ -41,6 +41,7 @@ appen starter.
 | Turkort | `src/turkort.ts` | Ét link til én pårørende: hvor og hvornår hjemme |
 | Turfase | `src/turfase.ts` | Hvor turen er i sit forløb, og hvad næste skridt er |
 | Pakning | `src/pakning.ts` | Hvad der er lagt i tasken, og hvor langt man er |
+| Vurdering | `src/vurdering.ts` | Stjerner på grej og ture, og hvad motoren gør ved dem |
 | Turlog | `src/feltnoter.ts` | Dagbogen fra turen, samlet pr. dag |
 | Vedligehold | `src/vedligehold.ts` | Imprægnering, slibning — intervaller der går i ring |
 | Vægt-brydere | `src/vaegtbrydere.ts` | Lettere alternativer i skabet, og tags ingen gruppe har |
@@ -56,6 +57,18 @@ appen starter.
 | Design tokens | `src/index.css` | Farver, afstande, runding, skriftstørrelser og rørehøjde |
 | UI-primitiver | `src/ui.tsx`, `src/layout.ts` | Knap, Kort, Felt, Chip, Badge, listerækker, detalje-header |
 | Skærme | `src/App.tsx` m.fl. | Hjem, Ture, Grej, Folk, Mere — og skærmene derunder |
+
+Vurderingen er den eneste ting, appen ved, som ikke er et tal eller en dato.
+Den ved, hvad der var med, hvad der blev brugt, og hvad der gik i stykker —
+men ikke om man var glad for det. En sovepose kan være brugt hver eneste nat
+og stadig være noget, man frøs i.
+
+`null` er en rigtig værdi og ikke en dårlig karakter: de fleste ting bliver
+aldrig vurderet, og de tælles hverken med i gennemsnittet eller imod noget.
+Motoren bruger vurderingen ét sted — `vaegtbrydere.ts` holder op med at
+foreslå, at man skifter noget ud, man har givet fire stjerner eller mere.
+Grænsen står som `GODT` i `vurdering.ts`, så den er ét sted, når den skal
+justeres.
 
 Turen skelner mellem det grej der er *valgt* til den (`loese_item_ids` og
 `gruppe_ids`) og det der er *pakket* (`pakkede_item_uids`). Det første er en

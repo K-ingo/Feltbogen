@@ -134,7 +134,9 @@ describe('vaegtbrydere', () => {
     const [b] = vaegtbrydere(tur, [], [tung, let_], [tung]);
 
     expect(b.begrundelse).toContain('mindst ét tag');
-    expect(b.begrundelse).toContain('kun tags og gram');
+    // Motoren sammenligner nu tre ting og ikke to. Begrundelsen skal sige
+    // alle tre — ellers lover den mindre, end den gør.
+    expect(b.begrundelse).toContain('kun tags, gram og din egen vurdering');
   });
 });
 
@@ -157,5 +159,43 @@ describe('manglendeTags', () => {
 
   it('regner alle turens kendetegn som manglende uden grupper', () => {
     expect(manglendeTags(lavTur(), [])).toHaveLength(4);
+  });
+});
+
+
+describe('vurderingen holder motoren tilbage', () => {
+  it('foreslår ikke at skifte grej ud man har sagt god for', () => {
+    const tungt = lavItem({ navn: 'Stort telt', vaegt_g: 4000, tags: ['ly'], vurdering: 5 });
+    const let_ = lavItem({ navn: 'Tarp', vaegt_g: 600, tags: ['ly'] });
+    const tur = lavTur({ loese_item_ids: [tungt.uid] });
+
+    expect(vaegtbrydere(tur, [], [tungt, let_], [tungt])).toEqual([]);
+  });
+
+  it('foreslår det stadig når man ikke har taget stilling', () => {
+    const tungt = lavItem({ navn: 'Stort telt', vaegt_g: 4000, tags: ['ly'], vurdering: null });
+    const let_ = lavItem({ navn: 'Tarp', vaegt_g: 600, tags: ['ly'] });
+    const tur = lavTur({ loese_item_ids: [tungt.uid] });
+
+    expect(vaegtbrydere(tur, [], [tungt, let_], [tungt])).toHaveLength(1);
+  });
+
+  it('foreslår det stadig når vurderingen er lav', () => {
+    const tungt = lavItem({ navn: 'Stort telt', vaegt_g: 4000, tags: ['ly'], vurdering: 2 });
+    const let_ = lavItem({ navn: 'Tarp', vaegt_g: 600, tags: ['ly'] });
+    const tur = lavTur({ loese_item_ids: [tungt.uid] });
+
+    expect(vaegtbrydere(tur, [], [tungt, let_], [tungt])).toHaveLength(1);
+  });
+
+  it('holder kun det vurderede tilbage, ikke resten af turen', () => {
+    const elsket = lavItem({ navn: 'Dyne', vaegt_g: 4000, tags: ['sov'], vurdering: 5 });
+    const tungt = lavItem({ navn: 'Stort telt', vaegt_g: 3000, tags: ['ly'] });
+    const let_ = lavItem({ navn: 'Tarp', vaegt_g: 600, tags: ['ly'] });
+    const tur = lavTur({ loese_item_ids: [elsket.uid, tungt.uid] });
+
+    const brydere = vaegtbrydere(tur, [], [elsket, tungt, let_], [elsket, tungt]);
+
+    expect(brydere.map((b) => b.tung.navn)).toEqual(['Stort telt']);
   });
 });

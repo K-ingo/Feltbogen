@@ -370,6 +370,55 @@ export function Chip({ children, onFjern, farve = 'default', storrelse = 'normal
   );
 }
 
+// Vurdering i stjerner, 1-5.
+//
+// Fem knapper og ikke en skyder: man vælger en karakter, man justerer ikke en
+// værdi. Trykker man på den stjerne der allerede er valgt, ryddes vurderingen
+// — det skal kunne fortrydes at have taget stilling, uden at man skal lede
+// efter en ekstra knap til det.
+export function Stjerner({ vaerdi, saet, label }: {
+  vaerdi: number | null;
+  saet: (v: number | null) => void;
+  // Hvad der vurderes. Står i skærmlæserens oplæsning: "Giv Trangia 4 ud af 5".
+  label: string;
+}) {
+  return (
+    <div role="group" aria-label={`Vurdering af ${label}`} style={{ display: 'flex', gap: '2px' }}>
+      {[1, 2, 3, 4, 5].map((n) => {
+        const fyldt = vaerdi !== null && n <= vaerdi;
+
+        return (
+          <button
+            key={n}
+            onClick={() => saet(vaerdi === n ? null : n)}
+            aria-label={`Giv ${label} ${n} ud af 5`}
+            aria-pressed={fyldt}
+            title={vaerdi === n ? 'Tryk igen for at rydde' : undefined}
+            style={{
+              minWidth: 'var(--roerehoejde)',
+              minHeight: 'var(--roerehoejde)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0,
+              fontSize: '20px',
+              lineHeight: 1,
+              // Formen og ikke kun farven skiller de valgte fra resten: en
+              // udfyldt stjerne kan ses af én der ikke skelner farverne.
+              color: fyldt ? 'var(--accent)' : 'var(--tekst-svag)'
+            }}
+          >
+            {fyldt ? '★' : '☆'}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // Krydset der fjerner en linje i en liste man kan redigere — et punkt på
 // afgangs-tjekket, en deltager, en vedligeholdelseshandling. Lå fire steder i
 // koden som hver sin lille knap på 20×16 px, hvilket er småt at ramme for

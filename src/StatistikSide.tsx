@@ -19,6 +19,7 @@ import {
 } from './statistik';
 import type { Periode } from './statistik';
 import { aarMedTure } from './aarsopgoerelse';
+import { gennemsnit, snittekst } from './vurdering';
 
 interface Props {
   fane: Fane;
@@ -59,6 +60,8 @@ function StatistikSide({ fane, skift, aabnItem, aabnAar }: Props) {
   // udråbe gear som ubrugt bare fordi man kigger på et enkelt år.
   const ubrugt = ubrugteItems(items, alleTure, grupper);
   const gruppeFordeling = fordelingPrGruppe(items, grupper);
+  // Kun det man ejer. Solgt grej siger ikke noget om, hvad man er glad for nu.
+  const snit = gennemsnit(items.filter((i) => i.status === 'ejer'));
 
   // "I år" sammenlignes med sidste år, "sidste år" med året før. Under "alt"
   // er der ikke noget at sammenligne med.
@@ -115,6 +118,20 @@ function StatistikSide({ fane, skift, aabnItem, aabnAar }: Props) {
           <Tal vaerdi={kroner(samletInventarvaerdi(items))} enhed="kr" />
           <Undertekst>{tilvaekstTekst(tilvaekst, periode, samletVaegt(items))}</Undertekst>
         </Widget>
+
+        {/* Kun når der faktisk er vurderet noget. Et snit af nul vurderinger
+            er ikke nul stjerner — det er ingen oplysning, og et tomt felt her
+            ville se ud som en dårlig karakter. */}
+        {snit !== null && (
+          <Widget titel="Gennemsnitlig vurdering">
+            <Tal vaerdi={snittekst(snit)} />
+            <Undertekst>
+              {snit.antal === 1
+                ? 'Bygger på ét stykke grej, du har vurderet'
+                : `Bygger på ${snit.antal} stykker grej, du har vurderet`}
+            </Undertekst>
+          </Widget>
+        )}
 
         <Widget titel="Antal items">
           {/* Solgt gear tælles ikke med — det er ikke længere en del af

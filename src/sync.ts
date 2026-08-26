@@ -14,6 +14,7 @@ import {
 } from './db';
 import { pb, nuvaerendeBruger } from './pb';
 import { fejlDetaljer } from './pbFejl';
+import { gyldig as gyldigVurdering } from './vurdering';
 import type {
   Billede,
   Item,
@@ -325,6 +326,7 @@ const itemSamling: Samling<Item> = {
     udlaan: i.udlaan ?? null,
     laant_af: i.laant_af ?? null,
     vedligehold: i.vedligehold ?? [],
+    vurdering: i.vurdering ?? null,
     noter: i.noter
   }),
   fraPb: (r) => ({
@@ -345,6 +347,7 @@ const itemSamling: Samling<Item> = {
     udlaan: udlaan(r.udlaan),
     laant_af: laantAf(r.laant_af),
     vedligehold: vedligehold(r.vedligehold),
+    vurdering: gyldigVurdering(r.vurdering),
     koebslink: tekst(r.koebslink),
     ordrenummer: tekst(r.ordrenummer),
     garanti: garanti(r.garanti),

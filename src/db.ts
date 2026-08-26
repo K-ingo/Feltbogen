@@ -127,6 +127,10 @@ export interface Item extends Synkroniserbar {
   // Tom liste når der ikke er noget at holde ved lige. Ældre poster har feltet
   // slet ikke — læs det altid med ?? [].
   vedligehold: Vedligehold[];
+  // 1-5, eller null når man ikke har taget stilling. Det er det eneste sted
+  // appen ved, om man kan lide sit grej — resten af det den ved, er tal og
+  // datoer. Ældre poster har feltet slet ikke; se vurdering.ts.
+  vurdering: number | null;
   noter: string;
   oprettet: Date;
   aendret: Date;
@@ -265,6 +269,8 @@ export interface KategoriNote {
 export interface PakAfTjek {
   udfyldt_dato: string;
   niveau: PakAfNiveau;
+  // Turen som helhed, 1-5. Udeladt indtil man har sat den.
+  tur_vurdering?: number;
   linjer: PakAfLinje[];
   // Kun på det grundige niveau. Skifter man tilbage til let, bliver de
   // liggende — de er dyrere at skrive end at bære rundt på.
