@@ -18,11 +18,16 @@
 
     /* Strenge tjek */
 
-    /* Uden det her er en type som `Tur | null` kun en kommentar: oversætteren
-       lader dig læse .navn på den uden at sige noget. Koden skriver allerede
-       `?? []` og `| null` overalt — det her er det, der gør dem til noget der
-       bliver tjekket frem for noget man husker. */
-    "strictNullChecks": true,
+    /* `strict` er summen af de tjek TypeScript kan lave, og den kostede
+       ingenting her: koden var ren under den, allerede inden den blev slået
+       til. Det er ikke tilfældigt — den skriver `?? []` og `| null` overalt,
+       Dexie-tabellerne i db.ts har deres `!`, og der er ingen utypede
+       parametre. Flaget gør den disciplin til noget oversætteren håndhæver
+       frem for noget man skal huske.
+
+       Vigtigst er `strictNullChecks`: uden den er en type som `Tur | null` en
+       kommentar, og man må gerne læse .navn på den. Med den slår det fejl. */
+    "strict": true,
 
     /* Linting */
     "noUnusedLocals": true,

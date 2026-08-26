@@ -14,9 +14,9 @@
     "moduleDetection": "force",
     "noEmit": true,
 
-    /* Strenge tjek. Samme som app'en: to tsconfig'er der er uenige om hvor
+    /* `strict` — samme som app'en. To tsconfig'er der er uenige om hvor
        strengt der oversættes, er en fælde for den der flytter en fil. */
-    "strictNullChecks": true,
+    "strict": true,
 
     /* Linting */
     "noUnusedLocals": true,
