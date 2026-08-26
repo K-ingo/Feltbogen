@@ -476,6 +476,7 @@ const stedSamling: Samling<Sted> = {
     koordinater: s.koordinater,
     adresse: s.adresse,
     tags: s.tags,
+    vurdering: s.vurdering ?? null,
     noter: s.noter
   }),
   fraPb: (r) => ({
@@ -485,6 +486,7 @@ const stedSamling: Samling<Sted> = {
     koordinater: koordinater(r.koordinater),
     adresse: tekst(r.adresse),
     tags: tags(r.tags),
+    vurdering: gyldigVurdering(r.vurdering),
     noter: tekst(r.noter),
     oprettet: dato(r.created),
     aendret: dato(r.updated)

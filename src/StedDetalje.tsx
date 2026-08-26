@@ -13,12 +13,13 @@ import { layout } from './layout';
 import {
   DetaljeHeader,
   Felt,
-  Knap,
   Indlaeser,
+  Knap,
   Kort,
   Label,
   ListeRaekke,
   SektionsTitel,
+  Stjerner,
   Tekstomraade,
   TitelInput
 } from './ui';
@@ -195,6 +196,20 @@ function StedDetalje({ stedId, tilbage, aabnTur, nyOprettet }: Props) {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Et sted bliver bedre at vurdere, jo flere gange man har været
+            der. Derfor står den her og ikke i turens efterregnskab: den
+            handler om stedet over tid, ikke om den ene tur. */}
+        <div>
+          <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginBottom: '2px' }}>
+            Din vurdering
+          </div>
+          <Stjerner
+            vaerdi={sted.vurdering ?? null}
+            saet={(v) => void opdater({ vurdering: v })}
+            label={sted.navn || 'stedet'}
+          />
         </div>
 
         <TagsInput

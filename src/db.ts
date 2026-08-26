@@ -218,6 +218,9 @@ export interface Sted extends Synkroniserbar {
   // Fra DAWA-opslaget, når stedet er fundet ad den vej.
   adresse: string;
   tags: string[];
+  // 1-5, eller null når man ikke har taget stilling. Et sted bliver bedre at
+  // vurdere jo flere gange man har været der; se vurdering.ts.
+  vurdering: number | null;
   noter: string;
   oprettet: Date;
   aendret: Date;

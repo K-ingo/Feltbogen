@@ -107,6 +107,7 @@ export function opretTomtSted(felter: Partial<Sted> = {}): Promise<number> {
     koordinater: null,
     adresse: '',
     tags: [],
+    vurdering: null,
     noter: '',
     oprettet: nu,
     aendret: nu,

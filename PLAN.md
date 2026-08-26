@@ -293,6 +293,28 @@ tænkes igennem samlet.
 fordi vi bygger til ejeren først. Bliver relevant, hvis appen skal ud til
 folk, der ikke selv har bygget den.
 
+**~~§24 Tilgængelighed: fokus-state.~~** ✅ Felterne skiftede kant, når man
+klikkede i dem, og det var alt — knapper havde ingen markering overhovedet.
+Nu tegner `:focus-visible` en ring, som browseren selv afgør skal vises ved
+tastatur og ikke ved mus.
+
+**~~§25 Performance: lazy-load.~~** ✅ Statistik, årsopgørelse, feltbog,
+indstillinger (med import/eksport) og rundvisningen hentes først, når de
+åbnes. Bundtet gik fra 588 til 543 kB.
+
+Resten af de 543 kB er React, Dexie og PocketBase, som appen ikke kan starte
+uden. Det eneste, der kunne udskydes derudover, er `qrcode` — målt til 25 kB
+(10 kB gzippet). Det er fravalgt: appen er offline-first og installeres som
+PWA, så første hentning sker én gang, og bagefter ligger alt i cachen. En
+indlæsningstilstand inde i en skærm, der virker, er ikke 1 % af bundtet værd.
+
+**Virtualisering af lange gearlister** (også §25) er ikke gjort. Den er først
+værd at bygge, når en liste er lang nok til at hakke — og det afhænger af et
+rigtigt inventar.
+
+**~~§15 Steder: rating.~~** ✅ Var en skævhed: vurderinger kom til grej og
+ture, men ikke til steder.
+
 Og én ting, der ikke står i specen: **de tærskler, forslagene bygger på**, er
 sat efter mavefornemmelse og testdata. Hvornår vægten er værd at nævne, hvor
 godt et grejsæt skal matche, hvor mange ture der skal til, før noget regnes

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 import AuthSide from './AuthSide';
 import { useAuth } from './useAuth';
@@ -15,13 +15,13 @@ import TurDetalje from './TurDetalje';
 import StederListe from './StederListe';
 import StedDetalje from './StedDetalje';
 import DeltTurDetalje from './DeltTurDetalje';
-import StatistikSide from './StatistikSide';
+
 import FolkSide from './FolkSide';
 import MereSide from './MereSide';
-import AarsopgoerelseSide from './AarsopgoerelseSide';
-import FeltbogSide from './FeltbogSide';
-import IndstillingerSide from './IndstillingerSide';
-import Rundvisning from './Rundvisning';
+
+
+
+
 import GaesteSide from './GaesteSide';
 import { tokenFraAdresse } from './gaest';
 import TurkortSide from './TurkortSide';
@@ -31,6 +31,21 @@ import { turkorttokenFraAdresse } from './turkort';
 import './delesnapshot';
 import { opretTomtItem, opretTomGruppe, opretTomTur, opretTomtSted } from './opret';
 import { markerSet, useErSet, ONBOARDING_SET } from './indstillinger';
+// Skærme man sjældent åbner, hentes først når man åbner dem.
+//
+// De fem her er tilsammen omkring to tusind linjer plus import/eksport, og de
+// lå i det bundt, der skulle hentes ned, før appen kunne vise en pakkeliste.
+// Statistikken og årsopgørelsen ses et par gange om året, rundvisningen én
+// gang i alt, og indstillingerne sjældnere end noget andet.
+//
+// Det er specens §25, og den advarsel byggeriet har skrevet ved hver eneste
+// kørsel: "Some chunks are larger than 500 kB".
+const StatistikSide = lazy(() => import('./StatistikSide'));
+const AarsopgoerelseSide = lazy(() => import('./AarsopgoerelseSide'));
+const FeltbogSide = lazy(() => import('./FeltbogSide'));
+const IndstillingerSide = lazy(() => import('./IndstillingerSide'));
+const Rundvisning = lazy(() => import('./Rundvisning'));
+
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
 

@@ -66,6 +66,10 @@
   --skrift-tal: 22px;      /* fremhævede tal, fx vægten */
   --skrift-titel: 26px;
 
+  /* Fokusringen. Egen variabel og ikke bare accenten, fordi den skal kunne
+     rettes uden at flytte alt det andet grønne med. */
+  --fokus: var(--accent);
+
   /* Mindste mål på noget man skal kunne ramme.
      44 px er kravet, når det er en finger — og Feltbogen bruges udendørs,
      hvor sigtet er dårligere end ved et skrivebord, nogle gange med handske
@@ -171,8 +175,27 @@ input, textarea, select {
 }
 
 input:focus, textarea:focus, select:focus {
-  outline: none;
   border-color: var(--accent);
+}
+
+/* Fokus.
+   Felterne skiftede kant, når man klikkede i dem, og det var alt: knapper
+   havde ingen markering overhovedet. Tabbede man sig gennem appen, kunne man
+   ikke se hvor man var — og det er hele forudsætningen for at bruge den uden
+   mus.
+
+   `:focus-visible` er browserens egen vurdering af, om fokus kom fra
+   tastaturet. Så slipper man for ringe om alt, man klikker på med musen,
+   uden at skulle gætte sig til forskellen selv. */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--fokus);
+  /* Afstanden gør, at ringen kan ses på en knap der selv har accentfarve:
+     den lægger sig ude på baggrunden i stedet for at forsvinde i fyldet. */
+  outline-offset: 2px;
 }
 
 button {

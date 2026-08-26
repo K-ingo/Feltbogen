@@ -56,6 +56,7 @@ export function lavSted(felter: Partial<Sted> = {}): Sted {
     koordinater: { lat: 56.8, lng: 9.9 },
     adresse: '',
     tags: [],
+    vurdering: null,
     noter: '',
     oprettet: nu,
     aendret: nu,

@@ -46,6 +46,7 @@ Tilføj i denne rækkefølge. `id`, `created` og `updated` laver PocketBase selv
 | `koordinater` | JSON | — |
 | `adresse` | Plain text | — |
 | `tags` | JSON | — |
+| `vurdering` | Number | — |
 | `noter` | Plain text | — |
 
 Lad alle felter være **ikke-påkrævede**. Appen gemmer tomme strenge og `null`
@@ -104,11 +105,13 @@ Tryk **Create**.
 | `vedligehold` | JSON |
 | `vurdering` | Number |
 
-> `vurdering` er nyt: 1–5 stjerner på et stykke grej. Det skal være **Number**
-> og ikke Text — appen afviser værdier den ikke kan læse som et helt tal
-> mellem 1 og 5, så en tekstværdi ville stille og roligt blive til
-> "ikke vurderet". Mangler feltet helt, kan man stadig give stjerner, men de
-> bliver på den enhed man står med, og der kommer ingen fejl.
+> `vurdering` er nyt: 1–5 stjerner. Det skal være **Number** og ikke Text —
+> appen afviser værdier den ikke kan læse som et helt tal mellem 1 og 5, så en
+> tekstværdi ville stille og roligt blive til "ikke vurderet". Mangler feltet
+> helt, kan man stadig give stjerner, men de bliver på den enhed man står med,
+> og der kommer ingen fejl.
+>
+> Det samme felt findes på `steder` (trin 1). Et sted vurderes også.
 
 Reglerne på `items` skal ikke røres — de skal være `user = @request.auth.id`
 på alle fem, som de formentlig allerede er.
@@ -417,7 +420,7 @@ står herunder.
 
 ### `steder`
 
-`navn` text · `koordinater` json · `adresse` text · `tags` json · `noter` text
+`navn` text · `koordinater` json · `adresse` text · `tags` json · `vurdering` number · `noter` text
 
 ### `personer`
 
