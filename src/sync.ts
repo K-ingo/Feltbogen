@@ -412,7 +412,14 @@ const turSamling: Samling<Tur> = {
     turkort_token: t.turkort_token,
     turkort_retur: t.turkort_retur,
     turkort_besked: t.turkort_besked,
-    turkort_snapshot: t.turkort_snapshot
+    turkort_snapshot: t.turkort_snapshot,
+    // De her to blev læst ned uden nogensinde at blive sendt op. Et felt der
+    // kun læses, er ikke et halvt felt — det er et felt der bliver slettet:
+    // serverens udgave vinder ved en flettning og skriver sin tomme værdi ind
+    // over den lokale. Valgte man en forside på telefonen og rettede turen på
+    // PC'en, var forsiden væk efter næste sync.
+    hero_billede: t.hero_billede,
+    booking: t.booking ?? null
   }),
   fraPb: (r) => ({
     uid: uid(r),
