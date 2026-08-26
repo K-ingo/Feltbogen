@@ -1,20 +1,26 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
-import type { Billede, Tur, TurStatus } from './db';
+import type { Billede, Tur } from './db';
 import { formatterPeriode } from './datotekst';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
-import { useErDesktop } from './useMedie';
 import { Knap, Badge, ListeRaekke, SektionsTitel, TomListe } from './ui';
 import { Billedvisning } from './BilledSektion';
 import { hero } from './billeder';
+import { faseAf, FASENAVN } from './turfase';
+import type { Fase } from './turfase';
 
 // Farven signalerer hvor turen er i sit livsforløb.
-const STATUS_NIVEAU: Record<TurStatus, 'info' | 'accent' | 'advarsel'> = {
+//
+// "Gjort op" er den eneste grønne: det er den eneste af faserne, hvor der
+// ikke er mere, der skal gøres. En afsluttet tur, der ikke er gjort op,
+// mangler stadig det sidste, og skal ikke se færdig ud.
+const FASE_NIVEAU: Record<Fase, 'info' | 'accent' | 'advarsel' | 'succes'> = {
   kladde: 'info',
   klar: 'accent',
   aktiv: 'advarsel',
-  afsluttet: 'info'
+  afsluttet: 'info',
+  evalueret: 'succes'
 };
 
 interface Props {
@@ -26,7 +32,6 @@ interface Props {
 }
 
 function TureListe({ fane, skift, aabnTur, aabnDeltTur, nyTur }: Props) {
-  const erDesktop = useErDesktop();
   const ture = useLiveQuery(() => db.ture.orderBy('startdato').reverse().toArray());
   // Ture andre har delt med én. De ligger i deres egen tabel og kan ikke
   // redigeres, men de hører hjemme her — det er stadig ture man skal med på.
@@ -45,16 +50,6 @@ function TureListe({ fane, skift, aabnTur, aabnDeltTur, nyTur }: Props) {
       handlinger={<Knap variant="primaer" onClick={nyTur}>+ Ny tur</Knap>}
       fab={nyTur}
     >
-      {/* Steder står i sidebaren på PC, men har ikke plads i bundnavigationen.
-          Turlisten er der man er, når det er et sted man leder efter. */}
-      {!erDesktop && (
-        <div style={{ marginBottom: '12px' }}>
-          <Knap onClick={() => skift('steder')} style={{ fontSize: '12px', padding: '5px 12px' }}>
-            Se steder
-          </Knap>
-        </div>
-      )}
-
       {egne === 0 && antalDelte === 0 && <TomListe>Ingen ture endnu. Opret din første.</TomListe>}
 
       {ture?.map((t) => (
@@ -65,7 +60,7 @@ function TureListe({ fane, skift, aabnTur, aabnDeltTur, nyTur }: Props) {
           titel={
             <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               {t.navn}
-              <Badge niveau={STATUS_NIVEAU[t.status]}>{t.status}</Badge>
+              <Badge niveau={FASE_NIVEAU[faseAf(t)]}>{FASENAVN[faseAf(t)]}</Badge>
             </span>
           }
           detalje={
@@ -87,7 +82,7 @@ function TureListe({ fane, skift, aabnTur, aabnDeltTur, nyTur }: Props) {
               titel={
                 <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   {d.snapshot.navn || 'Uden navn'}
-                  <Badge niveau="info">delt</Badge>
+                  <Badge niveau="info">Delt</Badge>
                 </span>
               }
               detalje={

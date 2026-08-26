@@ -218,11 +218,28 @@ Internt hedder fanen stadig `inventar`, og filen hedder stadig
 `InventarSide.tsx`. Det er kun ordet i brugerfladen, der er blevet til "Grej" —
 et inventar er stadig præcis, hvad det er.
 
-### Skridt 5 — Turens livscyklus lukkes
+### Skridt 5 — Turens livscyklus lukkes ✅
 
-Kladde → planlæg → klar → aktiv → afsluttet → evalueret, med de skærme, der
-allerede findes, bundet sammen, så man aldrig står med en tur og er i tvivl om,
-hvad næste skridt er.
+Kladde → klar → på tur → afsluttet → gjort op, med de skærme, der allerede
+findes, bundet sammen.
+
+Knappen, der førte turen videre, fandtes i forvejen. Det, den ikke gjorde, var
+at sige, hvad turen manglede, før det gav mening at trykke. Man kunne markere
+en tur klar uden datoer og uden grej, og appen sagde ingenting.
+
+`turfase.ts` svarer nu på "hvad nu?" som ren logik, med 16 tests. Manglerne
+står under knappen — ikke som en lås på den. Fundamentet siger, at Feltbogen
+hjælper, men aldrig tvinger, og at manglende data er i orden; man skal kunne
+tage afsted på en tur, appen synes er halvfærdig.
+
+**Specens PLANLÆG blev ikke til en tilstand.** Specens §4 har seks faser, hvor
+appen har fire i basen. PLANLÆG beskrives som "dato, sted, aktivitet,
+deltagere og setup redigeres" — det er præcis, hvad en kladde er, og en
+tilstand mere ville skulle migreres og synkroniseres uden at sige noget nyt.
+EVALUERET er derimod med, men udledt af, om pak-af-tjekket er udfyldt.
+
+Turlisten viser fasen frem for den rå tilstand, og "Gjort op" er den eneste
+grønne: det er den eneste fase, hvor der ikke er mere, der skal gøres.
 
 ---
 
@@ -241,3 +258,34 @@ en eksisterende tur, et grej-item, en person eller et sted? Kan den vises
 kontekstuelt frem for som en ny side? Kan brugeren forstå konsekvensen, før
 handlingen udføres? Virker den offline? Kan den testes uden at starte hele
 appen?
+
+
+---
+
+## 6. Hvad der står tilbage
+
+Alle fem skridt er taget. Det, der ligger og venter, i den rækkefølge det
+sandsynligvis er værd at tage:
+
+**Pakkeprogression (specens §7 og §8).** Det største stykke, og det eneste,
+der kræver en ændring i datamodellen: et felt pr. item pr. tur, som skal
+synkroniseres og indgå i konfliktstrategien. Uden det kan turen ikke sige
+"36 af 42 pakket", og hele pakke-arbejdsfladen i §7 mangler sit fundament.
+
+**Ruter og højdemeter (specens §12).** Kilometer og højdemeter har ingen
+datakilde. Det er et nyt datadomæne — GPX eller lignende — ikke en
+statistikfunktion.
+
+**Router (specens §20).** Venter stadig på et behov, der betaler for det:
+deep links, browserens tilbage-knap, PWA-startpunkt og token-ruterne skal
+tænkes igennem samlet.
+
+**Onboarding og adaptiv hjælpegrad (specens §5 og §6).** Udskudt bevidst,
+fordi vi bygger til ejeren først. Bliver relevant, hvis appen skal ud til
+folk, der ikke selv har bygget den.
+
+Og én ting, der ikke står i specen: **de tærskler, forslagene bygger på**, er
+sat efter mavefornemmelse og testdata. Hvornår vægten er værd at nævne, hvor
+godt et grejsæt skal matche, hvor mange ture der skal til, før noget regnes
+som ubrugt. De er nemme at justere — men kun når de har været brugt på
+rigtige data.

@@ -6,7 +6,6 @@ import type {
   Item,
   Gruppe,
   Tur,
-  TurStatus,
   Overnatning,
   Aktivitet,
   Terraen,
@@ -96,6 +95,8 @@ import type { Vaegtbryder } from './vaegtbrydere';
 import { foreslaaKopi, kopierGrej, antalNye } from './ligesomSidst';
 import type { Kopiforslag } from './ligesomSidst';
 import { nytPakAfTjek, synkroniserLinjer, resumetekst } from './pakAfTjek';
+import { turfase } from './turfase';
+import type { Turfase } from './turfase';
 import { useValg, useKropsdata, useTekst, PAK_AF_NIVEAU_VALG, AFGANGS_SKABELON } from './indstillinger';
 import { nytDeletoken, lavSnapshot, deleLink, linkadvarsel, linkvaert } from './gaest';
 import { formatterPeriode } from './datotekst';
@@ -119,16 +120,6 @@ interface Props {
   // Sat når turen netop er oprettet, så en navnløs post kan ryddes væk igen.
   nyOprettet?: boolean;
 }
-
-// Turen har fire tilstande, og handlingsknappen fører til den næste. En
-// afsluttet tur har ingen næste tilstand — der fører knappen til pak-af-tjekket
-// i stedet, så kredsløbet bliver lukket.
-const NAESTE_TILSTAND: Record<TurStatus, { label: string; naeste: TurStatus } | null> = {
-  kladde: { label: 'Markér som klar', naeste: 'klar' },
-  klar: { label: 'Start tur', naeste: 'aktiv' },
-  aktiv: { label: 'Afslut tur', naeste: 'afsluttet' },
-  afsluttet: null
-};
 
 type Visning = 'gruppe' | 'tag' | 'person';
 
@@ -550,17 +541,17 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
         alleLinjer
       );
 
-  const naeste = NAESTE_TILSTAND[tur.status];
+  // Hvor turen er, og hvad det næste skridt er. Reglerne ligger i turfase.ts;
+  // her oversættes skridtet til den knap, der udfører det.
+  const fase = turfase(tur, grupper ?? []);
 
-  // Én knap uanset tilstand: den fører turen videre indtil den er afsluttet, og
-  // derefter til efterregnskabet. Uden det sidste trin stopper turen bare, og
-  // motoren får aldrig noget at vide.
-  const handling = naeste
-    ? { label: naeste.label, gaa: () => void opdater({ status: naeste.naeste }) }
-    : {
-        label: pakAfTjek ? 'Se pak-af-tjek' : 'Lav pak-af-tjek',
-        gaa: () => void aabnPakAfTjek()
-      };
+  const handling = {
+    label: fase.naeste.slags === 'ingen' ? '' : fase.naeste.label,
+    gaa: () => {
+      if (fase.naeste.slags === 'status') void opdater({ status: fase.naeste.til });
+      if (fase.naeste.slags === 'pak_af_tjek') void aabnPakAfTjek();
+    }
+  };
 
   // Sektionerne er de samme på begge layouts — kun rammen om dem er forskellig.
   const parametre = (
@@ -948,6 +939,8 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
         </>
       )}
 
+      <Naesteskridt fase={fase} />
+
       <Faner valgt={fane} vaelg={setFane} tal={fanetal} />
 
       {/* Nøglen er ikke til pynt. Uden den genbruger React kortene på tværs
@@ -963,6 +956,40 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
 // ─────────────────────────────────────────────
 // Rammer
 // ─────────────────────────────────────────────
+
+// Hvad turen mangler, før det næste skridt giver mening.
+//
+// Den står lige under knappen og ikke inde på en fane: det er dér, man er ved
+// at trykke, og en oplysning om at der ikke er valgt grej, hjælper ikke hvis
+// den ligger et sted, man skal finde først.
+//
+// Listen låser ingenting. Man skal kunne tage afsted på en tur, appen synes er
+// halvfærdig — den skal bare have sagt det først.
+function Naesteskridt({ fase }: { fase: Turfase }) {
+  if (fase.mangler.length === 0) return null;
+
+  return (
+    <div style={{
+      marginTop: 'var(--plads-3)',
+      padding: '10px var(--plads-3)',
+      borderRadius: 'var(--runding-lille)',
+      border: '1px solid var(--border-svag)',
+      background: 'var(--bg-forhoejet)',
+      fontSize: 'var(--skrift-detalje)',
+      color: 'var(--tekst-dæmpet)'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: 'var(--plads-1)' }}>
+        <span style={{ flex: 1, fontWeight: 500 }}>
+          {fase.mangler.length === 1 ? 'Én ting mangler' : `${fase.mangler.length} ting mangler`}
+        </span>
+        <Hvorfor begrundelse={fase.begrundelse} />
+      </div>
+      <ul style={{ margin: 0, paddingLeft: '18px', display: 'grid', gap: '2px' }}>
+        {fase.mangler.map((m) => <li key={m}>{m}</li>)}
+      </ul>
+    </div>
+  );
+}
 
 // Turens fanerække. Den bryder linjen frem for at scrolle vandret: en fane
 // man skal skubbe frem for at få øje på, er lige så skjult som en post i en

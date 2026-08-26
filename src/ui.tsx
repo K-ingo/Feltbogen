@@ -438,7 +438,9 @@ export function Badge({ children, niveau }: BadgeProps) {
       padding: '2px var(--plads-2)',
       borderRadius: 'var(--runding-lille)',
       fontWeight: 500,
-      textTransform: 'capitalize',
+      // Ingen capitalize. Den var uskadelig, dengang badgene indeholdt ét ord
+      // fra datamodellen, men gør "På tur" til "På Tur". Kalderen skriver
+      // teksten, som den skal se ud — komponenten skal ikke bestemme over den.
       ...farver[niveau]
     }}>
       {children}

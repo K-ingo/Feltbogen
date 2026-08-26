@@ -39,6 +39,7 @@ appen starter.
 | Afgangs-tjek | `src/afgangsTjek.ts` | Huskelisten der ikke handler om gear, og dens skabelon |
 | På tur | `src/paaTur.ts` | Næste vejrskift, dage tilbage — det man skal vide i felten |
 | Turkort | `src/turkort.ts` | Ét link til én pårørende: hvor og hvornår hjemme |
+| Turfase | `src/turfase.ts` | Hvor turen er i sit forløb, og hvad næste skridt er |
 | Turlog | `src/feltnoter.ts` | Dagbogen fra turen, samlet pr. dag |
 | Vedligehold | `src/vedligehold.ts` | Imprægnering, slibning — intervaller der går i ring |
 | Vægt-brydere | `src/vaegtbrydere.ts` | Lettere alternativer i skabet, og tags ingen gruppe har |
@@ -54,6 +55,16 @@ appen starter.
 | Design tokens | `src/index.css` | Farver, afstande, runding, skriftstørrelser og rørehøjde |
 | UI-primitiver | `src/ui.tsx`, `src/layout.ts` | Knap, Kort, Felt, Chip, Badge, listerækker, detalje-header |
 | Skærme | `src/App.tsx` m.fl. | Hjem, Ture, Grej, Folk, Mere — og skærmene derunder |
+
+En tur går gennem kladde → klar → på tur → afsluttet → gjort op. De fire
+første er `Tur.status` i basen; den femte er udledt af, om pak-af-tjekket er
+udfyldt — en tilstand mere ville skulle migreres, synkes og holdes i sync med
+et felt, der allerede siger det samme.
+
+`turfase.ts` svarer på "hvad nu?" for en tur: hvilken fase, hvad det næste
+skridt er, og hvad der er værd at gøre først. Manglerne blokerer ikke. Man
+skal kunne tage afsted på en tur, appen synes er halvfærdig — den skal bare
+have sagt det først.
 
 Navigationen har fem faner: **Hjem, Ture, Grej, Folk** og **Mere**. Grejsæt
 ligger under Grej, fordi et sæt er en måde at samle sit grej på og ikke et
