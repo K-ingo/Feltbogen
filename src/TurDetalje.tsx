@@ -45,20 +45,21 @@ import {
 } from './smartMotor';
 import type { VejrDag, VejrData, StedForslag, Advarsel, Pakkelinje, Pakkeafsnit, Beregninger, Baerevaegt, GruppeForslag } from './smartMotor';
 import {
-  Knap,
-  Felt,
-  Label,
   Chip,
-  Dropdown,
-  Infokort,
-  Segment,
-  Tekstomraade,
-  Talinput,
-  TitelInput,
   DetaljeHeader,
+  Dropdown,
+  Felt,
+  FjernKnap,
+  Hvorfor,
   Indlaeser,
+  Infokort,
+  Knap,
+  Label,
+  Segment,
   SektionsTitel,
-  Hvorfor
+  Talinput,
+  Tekstomraade,
+  TitelInput
 } from './ui';
 import PakAfTjekSide from './PakAfTjekSide';
 import { Qrkode, Qrfuldskaerm } from './Qrkode';
@@ -997,9 +998,10 @@ function Faner({ valgt, vaelg, tal }: {
             aria-selected={erAktiv}
             onClick={() => vaelg(f.id)}
             style={{
-              // 44 px høj: den skal kunne rammes med en handske på.
-              minHeight: '44px',
-              padding: '0 12px',
+              // Skal kunne rammes med en handske på. Rørehøjden er 44 px på
+              // en touchskærm og 36 med mus — se index.css.
+              minHeight: 'var(--roerehoejde)',
+              padding: '0 var(--plads-3)',
               background: 'transparent',
               border: 'none',
               // Stregen ligger oven i kassens egen, så fanerækken ikke
@@ -1007,7 +1009,7 @@ function Faner({ valgt, vaelg, tal }: {
               borderBottom: `2px solid ${erAktiv ? 'var(--accent)' : 'transparent'}`,
               marginBottom: '-1px',
               color: erAktiv ? 'var(--tekst)' : 'var(--tekst-dæmpet)',
-              fontSize: '13px',
+              fontSize: 'var(--skrift-knap)',
               fontWeight: erAktiv ? 600 : 500,
               cursor: 'pointer',
               whiteSpace: 'nowrap'
@@ -1045,9 +1047,14 @@ function Foldbar({ titel, resume, children, aabenFra, advarsel }: {
     }}>
       <button
         onClick={() => setAaben(!aaben)}
+        aria-expanded={aaben}
         style={{
           width: '100%',
-          padding: resume ? '11px 14px 4px' : '11px 14px',
+          // At folde en sektion ud er en af de hyppigste handlinger på
+          // turskærmen. Overskriften er lille, men knappen bag den skal
+          // stadig kunne rammes.
+          minHeight: 'var(--roerehoejde)',
+          padding: resume ? '11px var(--plads-4) var(--plads-1)' : '11px var(--plads-4)',
           background: 'transparent',
           border: 'none',
           textAlign: 'left',
@@ -1559,13 +1566,7 @@ function Deltagere({ deltagere, turensOvernatning, personer, ture, tilfoejPerson
                 {OVERNATNING.map((o) => <option key={o} value={o}>{etiket(o)}</option>)}
               </select>
 
-              <button
-                onClick={() => fjern(d.id)}
-                aria-label={`Fjern ${d.navn}`}
-                style={{ background: 'transparent', border: 'none', color: 'var(--fejl)', cursor: 'pointer', fontSize: '14px', padding: '0 4px' }}
-              >
-                ×
-              </button>
+              <FjernKnap onClick={() => fjern(d.id)} label={`Fjern ${d.navn}`} />
             </div>
           ))}
         </div>
@@ -2267,13 +2268,7 @@ function Afgangstjekliste({ tjek, opret, gem }: {
                 color: linje.afkrydset ? 'var(--tekst-svag)' : 'var(--tekst)'
               }}
             />
-            <button
-              onClick={() => gem(fjernLinje(tjek, linje.id))}
-              aria-label={`Fjern ${linje.tekst}`}
-              style={{ background: 'transparent', border: 'none', color: 'var(--fejl)', cursor: 'pointer', fontSize: '14px', padding: '0 4px' }}
-            >
-              ×
-            </button>
+            <FjernKnap onClick={() => gem(fjernLinje(tjek, linje.id))} label={`Fjern ${linje.tekst}`} />
           </div>
         ))}
       </div>

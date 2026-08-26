@@ -143,14 +143,14 @@ function Topbar({ titel, tilIndstillinger }: { titel: string; tilIndstillinger: 
       <div style={{
         maxWidth: '640px',
         margin: '0 auto',
-        padding: '12px 20px',
+        padding: 'var(--plads-2) var(--plads-5)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: '10px'
+        gap: 'var(--plads-3)'
       }}>
         <span style={{
-          fontSize: '12px',
+          fontSize: 'var(--skrift-detalje)',
           fontWeight: 600,
           letterSpacing: '1.2px',
           textTransform: 'uppercase',
@@ -161,7 +161,22 @@ function Topbar({ titel, tilIndstillinger }: { titel: string; tilIndstillinger: 
         <button
           onClick={tilIndstillinger}
           aria-label="Indstillinger"
-          style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '15px', padding: '2px 4px', color: 'var(--tekst-dæmpet)' }}
+          style={{
+            // Tandhjulet er den eneste vej til indstillinger på en telefon.
+            // Det skal kunne rammes uden at sigte.
+            minHeight: 'var(--roerehoejde)',
+            minWidth: 'var(--roerehoejde)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '15px',
+            padding: 0,
+            margin: 'calc(var(--plads-2) * -1) calc(var(--plads-2) * -1) calc(var(--plads-2) * -1) 0',
+            color: 'var(--tekst-dæmpet)'
+          }}
         >
           ⚙
         </button>
@@ -177,7 +192,7 @@ function Sidebar({ fane, skift }: { fane: Fane; skift: (f: Fane) => void }) {
       flexShrink: 0,
       borderRight: '1px solid var(--border)',
       background: 'var(--bg-topbar)',
-      padding: '24px 12px',
+      padding: 'var(--plads-5) var(--plads-3)',
       position: 'sticky',
       top: 0,
       alignSelf: 'flex-start',
@@ -186,7 +201,7 @@ function Sidebar({ fane, skift }: { fane: Fane; skift: (f: Fane) => void }) {
       <div style={{
         fontFamily: "'Fraunces', Georgia, serif",
         fontSize: '19px',
-        padding: '0 10px 20px',
+        padding: '0 10px var(--plads-5)',
         color: 'var(--tekst)'
       }}>
         Feltbogen
@@ -202,12 +217,13 @@ function Sidebar({ fane, skift }: { fane: Fane; skift: (f: Fane) => void }) {
               display: 'block',
               width: '100%',
               textAlign: 'left',
-              padding: '9px 10px',
+              minHeight: 'var(--roerehoejde)',
+              padding: '0 10px',
               marginBottom: '2px',
-              borderRadius: '8px',
+              borderRadius: 'var(--runding-lille)',
               border: 'none',
               cursor: 'pointer',
-              fontSize: '13px',
+              fontSize: 'var(--skrift-knap)',
               fontWeight: erAktiv ? 600 : 500,
               background: erAktiv ? 'var(--accent-bg)' : 'transparent',
               color: erAktiv ? 'var(--accent)' : 'var(--tekst-dæmpet)'
@@ -244,11 +260,14 @@ function BundNav({ fane, skift }: { fane: Fane; skift: (f: Fane) => void }) {
             style={{
               flex: 1,
               minWidth: 0,
-              padding: '14px 2px 12px',
+              // Baren er det man rammer flest gange om dagen, og tit med
+              // tommelen uden at kigge. Rørehøjden er gulvet under den.
+              minHeight: 'var(--roerehoejde)',
+              padding: 'var(--plads-4) 2px var(--plads-3)',
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
-              fontSize: '10px',
+              fontSize: 'var(--skrift-mikro)',
               color: erAktiv ? 'var(--accent)' : 'var(--tekst-dæmpet)',
               fontWeight: erAktiv ? 600 : 500,
               textTransform: 'uppercase',
@@ -286,13 +305,13 @@ function FabTip() {
       right: '20px',
       bottom: 'calc(150px + env(safe-area-inset-bottom))',
       maxWidth: '230px',
-      padding: '12px 14px',
-      borderRadius: '10px',
+      padding: 'var(--plads-3) var(--plads-4)',
+      borderRadius: 'var(--runding-lille)',
       background: 'var(--tekst)',
       color: 'var(--bg)',
       boxShadow: '0 4px 16px var(--skygge)',
       zIndex: 25,
-      fontSize: '12px',
+      fontSize: 'var(--skrift-detalje)',
       lineHeight: 1.5
     }}>
       <div style={{ fontWeight: 600, marginBottom: '3px' }}>Tilføj her</div>

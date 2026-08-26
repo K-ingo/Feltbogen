@@ -43,9 +43,15 @@ Specen siger seks faner i §6 og ni i §16/§32. Ni går ikke på en telefon, og
 "På tur" som fane modsiger specens egen §33.10, der argumenterer for, at På
 tur skal være et separat mode med eget layout og egne offline-krav.
 
-**Afgørelse:** Overblik · Pakning · Pakkeliste · Deltagere · Kort · Noter.
-På tur, pak-af-tjek og feltbogen er skærme, man går ind i og ud af igen — ikke
-faner.
+**Afgørelse:** Overblik · Pakning · Pakkeliste · Deltagere · Undervejs ·
+Praktisk. På tur, pak-af-tjek og feltbogen er skærme, man går ind i og ud af
+igen — ikke faner.
+
+Specens sjette fane hedder Kort, men appen har intet kortlag — hverken Mapbox
+eller Leaflet, kun links ud til OpenStreetMap. En tom fane er værre end ingen
+fane, så pladsen gik til **Undervejs**, som samler afgangs-tjek, turlog,
+billeder og pak-af-tjek. Kommer der et rigtigt kort en dag, er der plads til
+det på Overblik.
 
 ### Vi bygger til ejeren først
 
@@ -71,7 +77,7 @@ fungerende, testdækket kode. Dette er kortet over, hvad der allerede er der.
 | §3 Dashboard | `dashboard.ts`, `DashboardSide.tsx` | Skal rettes ind efter §3's viewmodel, ikke bygges om. |
 | §22 Offline, sync, uid | `sync.ts` (1.215 linjer) | uid er allerede invariant; sletninger registreres. |
 | §23 Snapshot-deling | `delesnapshot.ts`, `gaest.ts`, `turkort.ts` | Snapshot-grænsen er på plads. |
-| §19 Design system | `ui.tsx`, `index.css` | Primitiverne findes; tokens mangler. |
+| §19 Design system | `ui.tsx`, `index.css` | Primitiver og tokens på plads. |
 | §25 Vedligehold | `vedligehold.ts` | Intervaller der går i ring. |
 | §12 Statistik | `statistik.ts`, `aarsopgoerelse.ts`, `feltbog.ts` | Dybere end specen beskriver. |
 
@@ -132,7 +138,7 @@ nogen på `delesnapshot` i regelrytteriets navn, åbnes ejerens data for gæster
 
 ## 5. Rækkefølgen
 
-### Skridt 1 — Turdetaljen får faner
+### Skridt 1 — Turdetaljen får faner ✅
 
 `TurDetalje.tsx` er 2.587 linjer og projektets største fil med god margin. Alt
 om en tur står i én strimmel af foldbare kort, og på mobil skal man scrolle
@@ -142,15 +148,20 @@ Sektionerne er allerede byggede som selvstændige stykker — det er kun
 sammensætningen, der skal laves om. Ingen ændringer i datamodellen, ingen
 ændringer i sync.
 
-Faner: Overblik · Pakning · Pakkeliste · Deltagere · Kort · Noter.
+Faner: Overblik · Pakning · Pakkeliste · Deltagere · Undervejs · Praktisk.
 
 Dette er det største enkeltløft i hele planen, og det er derfor det første.
 
-### Skridt 2 — Design tokens
+### Skridt 2 — Design tokens ✅
 
-Et fælles sæt CSS-variabler for spacing (4/8/12/16/24/32), radius (12–16 px),
-touch targets (min. 44×44) og typografi, brugt af `ui.tsx`. Billigt, globalt,
-og forudsætning for at resten kommer til at se ens ud.
+Et fælles sæt CSS-variabler for spacing (4/8/12/16/24/32), radius, touch
+targets og typografi, brugt af `ui.tsx`, `Skal.tsx` og `layout.ts`. Se
+README for hvad de hedder og hvornår de gælder.
+
+Rørehøjden skifter selv mellem 44 px på touch og 36 med mus, så en ny knap
+får det rigtige mål uden at nogen skal huske reglen. De skærme, der endnu
+skriver deres egne tal, kan flyttes over efterhånden — tokensne gælder, så
+snart en værdi bliver slået op i stedet for skrevet ind.
 
 ### Skridt 3 — Dashboardet rettes ind
 

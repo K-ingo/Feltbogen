@@ -29,7 +29,13 @@ import { Skal } from './Skal';
 import type { Fane } from './Skal';
 import Personer from './Personer';
 import { laesSkabelon, skrivSkabelon, STANDARD_SKABELON } from './afgangsTjek';
-import { Knap, SektionsTitel, Felt, Segment } from './ui';
+import {
+  Felt,
+  FjernKnap,
+  Knap,
+  Segment,
+  SektionsTitel
+} from './ui';
 
 interface Props {
   fane: Fane;
@@ -436,13 +442,7 @@ function Skabelon({ linjer, gem, nulstil }: {
               onChange={(e) => gem(linjer.map((l, i) => (i === n ? e.target.value : l)))}
               style={{ flex: 1, minWidth: 0, fontSize: '13px', border: 'none', background: 'transparent', padding: '2px 0' }}
             />
-            <button
-              onClick={() => gem(linjer.filter((_, i) => i !== n))}
-              aria-label={`Fjern ${linje}`}
-              style={{ background: 'transparent', border: 'none', color: 'var(--fejl)', cursor: 'pointer', fontSize: '14px', padding: '0 4px' }}
-            >
-              ×
-            </button>
+            <FjernKnap onClick={() => gem(linjer.filter((_, i) => i !== n))} label={`Fjern ${linje}`} />
           </div>
         ))}
       </div>

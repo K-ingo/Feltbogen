@@ -20,17 +20,18 @@ import {
 } from './vedligehold';
 import { garantiAdvarsel } from './smartMotor';
 import {
+  DetaljeHeader,
   Felt,
   Feltkort,
-  Knap,
+  FjernKnap,
+  Indlaeser,
   Infokort,
+  Knap,
   Kort,
-  SektionsTitel,
   Segment,
+  SektionsTitel,
   Tekstomraade,
-  TitelInput,
-  DetaljeHeader,
-  Indlaeser
+  TitelInput
 } from './ui';
 import { layout } from './layout';
 import { sletItem, opdaterItem } from './sync';
@@ -589,13 +590,7 @@ function Vedligeholdsraekke({ handling, saet, fjern }: {
           placeholder="Hvad skal gøres"
           style={{ flex: 1, minWidth: 0, fontSize: '13px', border: 'none', background: 'transparent', padding: 0 }}
         />
-        <button
-          onClick={fjern}
-          aria-label={`Fjern ${handling.navn}`}
-          style={{ background: 'transparent', border: 'none', color: 'var(--fejl)', cursor: 'pointer', fontSize: '14px', padding: '0 2px' }}
-        >
-          ×
-        </button>
+        <FjernKnap onClick={fjern} label={`Fjern ${handling.navn}`} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>

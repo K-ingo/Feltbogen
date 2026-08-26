@@ -51,8 +51,26 @@ appen starter.
 | Sol og skumring | `src/soltider.ts` | Hvornår det bliver lyst og mørkt, regnet på enheden |
 | Jagtvarsel | `src/jagt.ts` | Om turen ligger i en jagtsæson, og hvad det betyder |
 | Tørke og bål | `src/baalforbud.ts` | Om udsigten er tør nok til at tjekke for afbrændingsforbud |
+| Design tokens | `src/index.css` | Farver, afstande, runding, skriftstørrelser og rørehøjde |
 | UI-primitiver | `src/ui.tsx`, `src/layout.ts` | Knap, Kort, Felt, Chip, Badge, listerækker, detalje-header |
 | Skærme | `src/App.tsx` m.fl. | Inventar, Grupper, Ture, Steder, Statistik |
+
+Målene i brugerfladen står som CSS-variabler i `src/index.css` og skal vælges
+derfra frem for at blive skrevet ind i den enkelte skærm: `--plads-1` til
+`--plads-6` for afstande, `--runding*` for hjørner, `--skrift-*` for
+skriftstørrelser. Et spring i skalaen er tilladt; en værdi uden om den skal
+have en grund.
+
+`--roerehoejde` er mindstemålet på noget, man skal kunne ramme. Den er 44 px
+på en touchskærm og 36 med mus, fordi appen bruges udendørs, hvor sigtet er
+dårligere end ved et skrivebord — nogle gange med handske på. Skiftet sker af
+sig selv på `pointer: coarse`, så en ny knap får det rigtige mål uden at nogen
+skal huske det. To undtagelser er bevidste: `hvorfor?`-linket står midt i en
+sætning, og krydset i en tag-chip står i en række, der ombryder — begge ville
+stjæle klik fra linjen omkring sig, hvis de fyldte de fulde 44 px.
+
+Felterne står på 16 px, og det er ikke en smagssag: Safari på iPhone zoomer
+ind på et felt med mindre skrift og zoomer ikke ud igen.
 
 Steder og personer er genbrugsressourcer på tværs af ture: et sted husker sine
 noter fra sidst, og en person samler sine ture. Begge koblinger er valgfrie —
