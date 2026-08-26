@@ -15,6 +15,8 @@ import StederListe from './StederListe';
 import StedDetalje from './StedDetalje';
 import DeltTurDetalje from './DeltTurDetalje';
 import StatistikSide from './StatistikSide';
+import FolkSide from './FolkSide';
+import MereSide from './MereSide';
 import AarsopgoerelseSide from './AarsopgoerelseSide';
 import FeltbogSide from './FeltbogSide';
 import IndstillingerSide from './IndstillingerSide';
@@ -287,6 +289,8 @@ function App() {
           nyTur={nyTur}
         />
       );
+    case 'folk': return <FolkSide fane={fane} skift={skiftFane} />;
+    case 'mere': return <MereSide fane={fane} skift={skiftFane} aabnAar={setValgtAar} />;
     case 'grupper': return <GrupperListe fane={fane} skift={skiftFane} aabnGruppe={aabnGruppe} nyGruppe={nyGruppe} />;
     case 'ture': return <TureListe fane={fane} skift={skiftFane} aabnTur={aabnTur} aabnDeltTur={aabnDeltTur} nyTur={nyTur} />;
     case 'steder': return <StederListe fane={fane} skift={skiftFane} aabnSted={aabnSted} nytSted={nytSted} />;

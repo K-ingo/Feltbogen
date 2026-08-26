@@ -59,6 +59,8 @@ function InventarSide({ fane, skift, aabnItem }: Props) {
   const antal = (status: ItemStatus) => items.filter((i) => i.status === status).length;
   const vaerdiIStatus = iStatus.reduce((sum, i) => sum + i.pris_kr * i.antal, 0);
 
+  const grejsaet = useLiveQuery(() => db.grupper.toArray()) ?? [];
+
   const nulstilFiltre = () => {
     setSoegning('');
     setValgtTag(null);
@@ -72,12 +74,26 @@ function InventarSide({ fane, skift, aabnItem }: Props) {
     <Skal
       fane={fane}
       skift={skift}
-      titel="Inventar"
+      titel="Grej"
       undertitel={`${iStatus.length} items · ${vaerdiIStatus.toLocaleString('da-DK')} kr`}
       handlinger={<Knap variant="primaer" onClick={nytItem}>+ Nyt item</Knap>}
       fab={nytItem}
     >
-      <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
+      {/* Grejsættene stod før som deres egen fane i bunden. De hører til her:
+          et sæt er en måde at samle sit grej på, ikke et sted man arbejder.
+          Linjen står øverst, så den er det første man ser — ikke gemt under
+          listen hvor man aldrig ville falde over den. */}
+      <ListeRaekke
+        titel="Grejsæt"
+        detalje={
+          grejsaet.length === 0
+            ? 'Saml grej i sæt, så en hel pakning kan vælges på én gang'
+            : `${grejsaet.length} ${grejsaet.length === 1 ? 'sæt' : 'sæt'} · ${grejsaet.map((g) => g.navn).join(', ')}`
+        }
+        onClick={() => skift('grupper')}
+      />
+
+      <div style={{ display: 'flex', gap: '6px', margin: 'var(--plads-4) 0 var(--plads-3)', flexWrap: 'wrap' }}>
         {FANEBLADE.map(({ status, label }) => (
           <button
             key={status}

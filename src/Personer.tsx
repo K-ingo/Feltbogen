@@ -8,8 +8,11 @@ import { opdaterPerson, sletPerson } from './sync';
 import { meldSletning } from './fortryd';
 import { Knap, Felt, Segment, Tekstomraade } from './ui';
 
-// Rejseselskabet. Personer bor i indstillingerne og ikke i en fane for sig:
-// man vedligeholder dem sjældent, og de bruges inde på turene.
+// Rejseselskabet. Selve listen — skærmen omkring den er FolkSide.
+//
+// Den lå før inde i indstillingerne, fordi personer blev regnet for noget man
+// vedligeholder sjældent. Det holdt ikke: en tur med andre er en af de ting
+// appen er til, og de mennesker man tager afsted med, er ikke en indstilling.
 //
 // Der gemmes kun navn, en valgfri e-mail og et par noter — se kommentaren på
 // Person i db.ts om hvad det betyder for hvor dataene ender.

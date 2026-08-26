@@ -194,11 +194,29 @@ rigtige kryds. Et tal, der lader som om, er værre end intet tal.
 Skal pakkeprogressionen bygges, er det sit eget skridt: et felt pr. item pr.
 tur, som skal synkroniseres og indgå i konfliktstrategien.
 
-### Skridt 4 — Navigationen fra seks faner til fem
+### Skridt 4 — Navigationen fra seks faner til fem ✅
 
-Hjem · Ture · Grej · Folk · Mere. Grupper flytter ind under Grej, Steder og
-Statistik ind under Mere. Først når skridt 1–3 står, fordi det er her,
-brugeren mærker, at noget flyttede sig.
+Hjem · Ture · Grej · Folk · Mere. Grejsæt (før "Grupper") ligger under Grej,
+Steder og Statistik under Mere.
+
+To ting blev til undervejs, fordi fire skærme gik fra at være faner til at
+være underskærme. Skallen kender nu sammenhængen mellem dem (`HOERER_TIL`), og
+den bruger den to gange: navigationen markerer hovedfanen, så man kan se hvor
+man er, og der kommer en "‹ Grej"-linje over titlen. Begge dele udledes frem
+for at blive sendt med som prop — en vej tilbage, man kan glemme at sende med,
+er en vej tilbage, der før eller siden mangler ét sted.
+
+**Folk blev en rigtig skærm.** Personer lå inde i indstillingerne, fordi de
+blev regnet for noget man vedligeholder sjældent. Det holdt ikke: en tur med
+andre er en af de ting, appen er til, og de mennesker man tager afsted med, er
+ikke en indstilling.
+
+Tandhjulet i topbaren er væk. Det var den eneste vej til indstillinger, dengang
+de ikke stod i navigationen; nu ville det være en anden dør til samme rum.
+
+Internt hedder fanen stadig `inventar`, og filen hedder stadig
+`InventarSide.tsx`. Det er kun ordet i brugerfladen, der er blevet til "Grej" —
+et inventar er stadig præcis, hvad det er.
 
 ### Skridt 5 — Turens livscyklus lukkes
 

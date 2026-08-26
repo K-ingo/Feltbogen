@@ -25,9 +25,9 @@ function GrupperListe({ fane, skift, aabnGruppe, nyGruppe }: Props) {
     <Skal
       fane={fane}
       skift={skift}
-      titel="Grupper"
-      undertitel={`${grupper?.length ?? 0} grupper`}
-      handlinger={<Knap variant="primaer" onClick={nyGruppe}>+ Ny gruppe</Knap>}
+      titel="Grejsæt"
+      undertitel={`${grupper?.length ?? 0} ${(grupper?.length ?? 0) === 1 ? 'sæt' : 'sæt'}`}
+      handlinger={<Knap variant="primaer" onClick={nyGruppe}>+ Nyt sæt</Knap>}
       fab={nyGruppe}
     >
       {grupper?.length === 0 && <TomListe>Ingen grupper endnu. Opret din første.</TomListe>}

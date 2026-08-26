@@ -53,7 +53,21 @@ appen starter.
 | Tørke og bål | `src/baalforbud.ts` | Om udsigten er tør nok til at tjekke for afbrændingsforbud |
 | Design tokens | `src/index.css` | Farver, afstande, runding, skriftstørrelser og rørehøjde |
 | UI-primitiver | `src/ui.tsx`, `src/layout.ts` | Knap, Kort, Felt, Chip, Badge, listerækker, detalje-header |
-| Skærme | `src/App.tsx` m.fl. | Inventar, Grupper, Ture, Steder, Statistik |
+| Skærme | `src/App.tsx` m.fl. | Hjem, Ture, Grej, Folk, Mere — og skærmene derunder |
+
+Navigationen har fem faner: **Hjem, Ture, Grej, Folk** og **Mere**. Grejsæt
+ligger under Grej, fordi et sæt er en måde at samle sit grej på og ikke et
+sted man arbejder; Steder, Statistik og Indstillinger ligger under Mere, fordi
+de bruges sjældnere end ture og grej og ellers ville fylde lige så meget.
+
+Skallen kender selv den sammenhæng (`HOERER_TIL` i `Skal.tsx`). Står man inde
+på en underskærm, bliver hovedfanen markeret i navigationen, og der kommer en
+"‹ Grej"-linje over titlen — begge dele udledt, så en vej tilbage ikke kan
+blive glemt ét sted. En ny skærm skal derfor kun skrives ind i den ene tabel.
+
+Reglen bagved: en ny funktion får ikke automatisk sin egen fane. Hører den til
+en tur, ligger den under turen; hører den til et stykke grej, under Grej. Kun
+det tværgående hører under Mere.
 
 Målene i brugerfladen står som CSS-variabler i `src/index.css` og skal vælges
 derfra frem for at blive skrevet ind i den enkelte skærm: `--plads-1` til

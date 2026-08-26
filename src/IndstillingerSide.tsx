@@ -27,7 +27,6 @@ import {
 import type { Baseindhold } from './dataudveksling';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
-import Personer from './Personer';
 import { laesSkabelon, skrivSkabelon, STANDARD_SKABELON } from './afgangsTjek';
 import {
   Felt,
@@ -219,21 +218,6 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning }: Props) {
             <Hjaelp>
               Alt gemmes først på enheden og sendes derefter op. Er du uden dækning, bliver
               ændringerne liggende og går op af sig selv når forbindelsen er tilbage.
-            </Hjaelp>
-          </Kort>
-        </section>
-
-        <section>
-          <SektionsTitel>Personer</SektionsTitel>
-          <Kort>
-            <Personer />
-            <Hjaelp>
-              De du tager afsted med. Bliver en deltager knyttet til en person, tælles
-              turene sammen på tværs, og standardovernatningen udfyldes af sig selv.
-              Du kan stadig skrive et navn direkte på en tur uden at oprette nogen her.
-              Der gemmes kun navn, en valgfri e-mail og dine egne noter. Det bliver på
-              enheden og i din egen konto — intet deles med tredjepart, og gæster på en
-              tur ser kun navnet.
             </Hjaelp>
           </Kort>
         </section>
