@@ -21,10 +21,16 @@ interface Props {
 // Kommer der nye tværgående funktioner til, er det her de hører hjemme. En
 // ny top-level fane kræver en stærk begrundelse.
 function MereSide({ fane, skift, aabnAar }: Props) {
-  const ture = useLiveQuery(() => db.ture.toArray()) ?? [];
-  const steder = useLiveQuery(() => db.steder.toArray()) ?? [];
-  const items = useLiveQuery(() => db.items.toArray()) ?? [];
+  // Tællinger og ikke toArray. Skærmen viser to tal, og at hente hele
+  // inventaret ned i hukommelsen for at måle længden af det er spild på en
+  // telefon med et par hundrede ting.
+  const antalSteder = useLiveQuery(() => db.steder.count(), [], 0);
+  const antalItems = useLiveQuery(() => db.items.count(), [], 0);
 
+  // Turene hentes helt: årsopgørelsen skal bruge dem for at afgøre om der er
+  // noget at se. Så er antallet gratis, og en tælling ved siden af ville være
+  // den samme tabel læst to gange.
+  const ture = useLiveQuery(() => db.ture.toArray()) ?? [];
   const opgoerelse = aarsopgoerelseAtSe(ture);
 
   return (
@@ -33,12 +39,12 @@ function MereSide({ fane, skift, aabnAar }: Props) {
         <SektionsTitel>Din friluftshistorik</SektionsTitel>
         <ListeRaekke
           titel="Steder"
-          detalje={`${steder.length} ${steder.length === 1 ? 'sted' : 'steder'} du kommer tilbage til`}
+          detalje={`${antalSteder} ${antalSteder === 1 ? 'sted' : 'steder'} du kommer tilbage til`}
           onClick={() => skift('steder')}
         />
         <ListeRaekke
           titel="Statistik"
-          detalje={`${ture.length} ${ture.length === 1 ? 'tur' : 'ture'} · ${items.length} ${items.length === 1 ? 'ting' : 'ting'} talt op`}
+          detalje={`${ture.length} ${ture.length === 1 ? 'tur' : 'ture'} · ${antalItems} ting talt op`}
           onClick={() => skift('statistik')}
         />
         {opgoerelse !== null && (

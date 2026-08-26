@@ -30,8 +30,7 @@ export type Fase = 'kladde' | 'klar' | 'aktiv' | 'afsluttet' | 'evalueret';
 // oversætter det til en handling. Så kan reglerne testes uden en skærm.
 export type Naesteskridt =
   | { slags: 'status'; til: TurStatus; label: string }
-  | { slags: 'pak_af_tjek'; label: string }
-  | { slags: 'ingen' };
+  | { slags: 'pak_af_tjek'; label: string };
 
 export interface Turfase {
   fase: Fase;

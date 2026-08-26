@@ -88,7 +88,7 @@ function InventarSide({ fane, skift, aabnItem }: Props) {
         detalje={
           grejsaet.length === 0
             ? 'Saml grej i sæt, så en hel pakning kan vælges på én gang'
-            : `${grejsaet.length} ${grejsaet.length === 1 ? 'sæt' : 'sæt'} · ${grejsaet.map((g) => g.navn).join(', ')}`
+            : `${grejsaet.length} sæt · ${saetnavne(grejsaet)}`
         }
         onClick={() => skift('grupper')}
       />
@@ -291,6 +291,16 @@ function formatterDato(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
   return d.toLocaleDateString('da-DK', { day: 'numeric', month: 'short' });
+}
+
+// De første par navne, og resten som en tæller. Linjen ramsede før dem alle
+// op, og med tyve sæt blev rækken en mur af tekst der brød om på fem linjer.
+function saetnavne(saet: { navn: string }[]): string {
+  const VISES = 3;
+  const foerste = saet.slice(0, VISES).map((g) => g.navn || 'Uden navn');
+  const resten = saet.length - foerste.length;
+
+  return resten > 0 ? `${foerste.join(', ')} + ${resten} mere` : foerste.join(', ');
 }
 
 export default InventarSide;

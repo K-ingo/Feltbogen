@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { ReactElement } from 'react';
 import AuthSide from './AuthSide';
 import { useAuth } from './useAuth';
 import { fornyLogin } from './pb';
@@ -33,7 +34,10 @@ import { markerSet, useErSet, ONBOARDING_SET } from './indstillinger';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
 
-function App() {
+// null indgår i returtypen: onboardingen kan være uafgjort, og så tegner
+// appen ingenting frem for at blinke velkomstskærmen forbi. Uden strengt
+// nul-tjek i oversætteren fanges den slags ikke af sig selv.
+function App(): ReactElement | null {
   const { erLoggetInd } = useAuth();
   // Et gæstelink afgøres af adresselinjen og læses én gang. Går gæsten videre
   // ind i appen, ryddes den, så et genbesøg ikke lander på turen igen.
@@ -305,6 +309,17 @@ function App() {
           seRundvisning={() => setViserRundvisning(true)}
         />
       );
+    default: {
+      // Værnet mod en fane uden en skærm. Projektet oversætter uden
+      // strictNullChecks, så en switch der falder igennem, ikke er en fejl —
+      // den giver bare undefined, og React tegner en blank skærm. Med ni faner
+      // er det ikke en teoretisk risiko.
+      //
+      // Tildelingen til never fejler ved oversættelsen i samme øjeblik en
+      // fane mangler sin case, uanset hvilke strenge tjek der er slået til.
+      const uhaandteret: never = fane;
+      throw new Error(`Fanen "${uhaandteret}" har ingen skærm`);
+    }
   }
 }
 

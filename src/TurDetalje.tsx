@@ -554,11 +554,14 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   // her oversættes skridtet til den knap, der udfører det.
   const fase = turfase(tur, grupper ?? []);
 
+  // Der er altid et næste skridt — også på en tur der er gjort op, hvor det
+  // fører tilbage til regnskabet. Var der en tilstand uden, ville knappen stå
+  // uden tekst, og det ville ingen opdage før den stod der.
   const handling = {
-    label: fase.naeste.slags === 'ingen' ? '' : fase.naeste.label,
+    label: fase.naeste.label,
     gaa: () => {
       if (fase.naeste.slags === 'status') void opdater({ status: fase.naeste.til });
-      if (fase.naeste.slags === 'pak_af_tjek') void aabnPakAfTjek();
+      else void aabnPakAfTjek();
     }
   };
 
@@ -959,7 +962,10 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
         </>
       )}
 
-      <Naesteskridt fase={fase} />
+      {/* Først når grejet og sættene er hentet. Indtil da ville listen sige
+          "Intet grej valgt" om en tur, hvis grej ligger i et grejsæt — en
+          påstand om brugerens data, der er forkert i et enkelt billede. */}
+      {items !== undefined && grupper !== undefined && <Naesteskridt fase={fase} />}
 
       <Faner valgt={fane} vaelg={setFane} tal={fanetal} />
 
