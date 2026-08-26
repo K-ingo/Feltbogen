@@ -16,6 +16,14 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* Strenge tjek */
+
+    /* Uden det her er en type som `Tur | null` kun en kommentar: oversætteren
+       lader dig læse .navn på den uden at sige noget. Koden skriver allerede
+       `?? []` og `| null` overalt — det her er det, der gør dem til noget der
+       bliver tjekket frem for noget man husker. */
+    "strictNullChecks": true,
+
     /* Linting */
     "noUnusedLocals": true,
     "noUnusedParameters": true,

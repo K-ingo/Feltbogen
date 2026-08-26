@@ -14,6 +14,10 @@
     "moduleDetection": "force",
     "noEmit": true,
 
+    /* Strenge tjek. Samme som app'en: to tsconfig'er der er uenige om hvor
+       strengt der oversættes, er en fælde for den der flytter en fil. */
+    "strictNullChecks": true,
+
     /* Linting */
     "noUnusedLocals": true,
     "noUnusedParameters": true,

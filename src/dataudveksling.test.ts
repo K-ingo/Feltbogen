@@ -8,9 +8,13 @@ import {
   KopiFejl,
   KOPI_VERSION
 } from './dataudveksling';
+import type { Baseindhold } from './dataudveksling';
 import { lavItem, lavGruppe, lavTur, lavSted, lavPerson } from './test/data';
 
-const tomBase = { items: [], grupper: [], ture: [], steder: [], personer: [] };
+// Typen er ikke pynt. Uden den udleder oversætteren de tomme lister som
+// never[], og så kan en test ikke lægge et item i dem. Med den tjekkes
+// fikstureringen samtidig mod den form, sikkerhedskopien faktisk tager.
+const tomBase: Baseindhold = { items: [], grupper: [], ture: [], steder: [], personer: [] };
 
 // Kopien tager fem tabeller; de fleste tests bruger kun en eller to af dem.
 const base = (dele: Partial<typeof tomBase> = {}) => ({ ...tomBase, ...dele });
