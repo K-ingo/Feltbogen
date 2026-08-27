@@ -186,7 +186,7 @@ export function FoersteTurWizard({ luk, aabnTur }: Props) {
                 </label>
                 <select
                   value={aktivitet}
-                  onChange={(e) => setAktivitet(e.target.value as any)}
+                  onChange={(e) => setAktivitet(e.target.value as 'vandretur' | 'kano' | 'bushcraft' | 'andet')}
                   style={{
                     width: '100%', padding: '10px 12px', borderRadius: '8px',
                     border: '1px solid var(--border-svag)', background: 'var(--bg-forhoejet)', color: 'var(--tekst)'
@@ -205,7 +205,7 @@ export function FoersteTurWizard({ luk, aabnTur }: Props) {
                 </label>
                 <select
                   value={overnatning}
-                  onChange={(e) => setOvernatning(e.target.value as any)}
+                  onChange={(e) => setOvernatning(e.target.value as 'telt' | 'shelter' | 'haengekoeje' | 'blandet')}
                   style={{
                     width: '100%', padding: '10px 12px', borderRadius: '8px',
                     border: '1px solid var(--border-svag)', background: 'var(--bg-forhoejet)', color: 'var(--tekst)'
