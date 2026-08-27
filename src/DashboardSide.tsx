@@ -18,6 +18,7 @@ import type { Turmaal } from './turmaal';
 import { kopierGrej } from './ligesomSidst';
 import { opdaterTur } from './sync';
 import { itemsPaaTur, findAdvarsler } from './smartMotor';
+import { forfaldne } from './vedligehold';
 import { samletInventarvaerdi, samletVaegt } from './statistik';
 import { fremdriftstekst } from './afgangsTjek';
 import { fremdrift as pakkefremdrift, fremdriftstekst as pakketekst } from './pakning';
@@ -74,6 +75,11 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
   const aar = tureIAar(ture);
   const nyeste = sidstTilfoejede(items, MAKS_SIDST_TILFOEJET);
   const opgoerelse = aarsopgoerelseAtSe(ture);
+
+  const ejet = items.filter((i) => i.status === 'ejer');
+  // Tælles i ting og ikke i handlinger: en tarp der både skal imprægneres og
+  // have lynlåsen smurt, er stadig én ting at tage sig af.
+  const skalPasses = new Set(forfaldne(ejet).map((f) => f.item.uid)).size;
 
   // At tage imod et forslag.
   //
@@ -193,6 +199,23 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
             </div>
           </section>
         )}
+
+        {/* Specens §3 vil have et gearSummary: hvor meget man har, og hvor
+            meget der skal passes. Vedligeholdet står også som handlingskort
+            ovenfor, men det er ikke det samme — dér er det de enkelte ting,
+            her er det hvordan skabet står. */}
+        <section>
+          <SektionsTitel>Dit grej</SektionsTitel>
+          <ListeRaekke
+            titel={`${ejet.length} ${ejet.length === 1 ? 'ting' : 'ting'}`}
+            detalje={
+              skalPasses === 0
+                ? 'Alt er passet'
+                : `${skalPasses} ${skalPasses === 1 ? 'ting skal passes' : 'ting skal passes'}`
+            }
+            onClick={() => skift('inventar')}
+          />
+        </section>
 
         <section>
           <SektionsTitel>Nøgletal</SektionsTitel>

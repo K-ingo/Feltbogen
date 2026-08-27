@@ -5,11 +5,12 @@ import {
   deltagerFraPerson,
   foreslaaPersoner,
   personForDeltager,
+  personprofil,
   tureMedPerson,
   ukendteNavne
 } from './personer';
 import type { Deltager } from './db';
-import { lavPerson, lavTur } from './test/data';
+import { lavItem, lavPerson, lavTur } from './test/data';
 
 const deltager = (navn: string, person_uid = ''): Deltager => ({
   id: `d-${navn}`,
@@ -159,5 +160,111 @@ describe('ukendteNavne', () => {
 
   it('ser bort fra tomme navne', () => {
     expect(ukendteNavne([lavTur({ deltagere: [deltager('  ')] })], [])).toEqual([]);
+  });
+});
+
+// ─────────────────────────────────────────────
+// Personens profil (specens §17)
+// ─────────────────────────────────────────────
+
+describe('personprofil', () => {
+  const emil = lavPerson({ uid: 'p-emil', navn: 'Emil' });
+  const telt = lavItem({ uid: 'i-telt', navn: 'Telt', vaegt_g: 2400, delt: true });
+  const pose = lavItem({ uid: 'i-pose', navn: 'Sovepose', vaegt_g: 1100 });
+  const oekse = lavItem({ uid: 'i-oekse', navn: 'Økse', vaegt_g: 700 });
+  const inventar = [telt, pose, oekse];
+
+  const medEmil = (personligt: string[], delt: string[] = [], felter = {}) => lavTur({
+    deltagere: [{
+      id: crypto.randomUUID(), navn: 'Emil', overnatning: null,
+      personligt_gear_ids: personligt, baerer_delt_ids: delt, person_uid: 'p-emil'
+    }],
+    ...felter
+  });
+
+  it('samler personens ture, nyeste først', () => {
+    const profil = personprofil(emil, [
+      medEmil(['i-pose'], [], { navn: 'Gammel', startdato: '2026-05-01' }),
+      medEmil(['i-pose'], [], { navn: 'Ny', startdato: '2026-08-01' })
+    ], inventar);
+
+    expect(profil.ture.map((t) => t.navn)).toEqual(['Ny', 'Gammel']);
+  });
+
+  it('tæller det gear hun oftest har med, hyppigst først', () => {
+    const profil = personprofil(emil, [
+      medEmil(['i-pose'], ['i-telt']),
+      medEmil(['i-pose']),
+      medEmil(['i-pose', 'i-oekse'])
+    ], inventar);
+
+    expect(profil.typiskGear.map((g) => [g.item.navn, g.ture])).toEqual([
+      ['Sovepose', 3],
+      ['Telt', 1],
+      ['Økse', 1]
+    ]);
+  });
+
+  it('tæller en tur én gang, selvom navnet står to gange på den', () => {
+    const dobbelt = lavTur({
+      deltagere: [
+        { id: 'a', navn: 'Emil', overnatning: null, personligt_gear_ids: ['i-pose'], baerer_delt_ids: [], person_uid: 'p-emil' },
+        { id: 'b', navn: 'Emil', overnatning: null, personligt_gear_ids: ['i-pose'], baerer_delt_ids: [], person_uid: 'p-emil' }
+      ]
+    });
+
+    expect(personprofil(emil, [dobbelt], inventar).typiskGear[0].ture).toBe(1);
+  });
+
+  it('regner den typiske vægt af det hun bar', () => {
+    const profil = personprofil(emil, [
+      medEmil(['i-pose'], ['i-telt']),   // 3500
+      medEmil(['i-pose'])                 // 1100
+    ], inventar);
+
+    expect(profil.baerer).toEqual({ snit_g: 2300, ture: 2 });
+  });
+
+  // En tur hvor grejet aldrig blev fordelt, siger ingenting om hvad hun
+  // plejer at slæbe. At tælle den med som nul ville trække snittet ned på
+  // noget, appen ikke ved.
+  it('regner ikke ture uden fordelt grej med i snittet', () => {
+    const profil = personprofil(emil, [
+      medEmil(['i-pose'], ['i-telt']),
+      medEmil([]),
+      medEmil([])
+    ], inventar);
+
+    expect(profil.ture).toHaveLength(3);
+    expect(profil.baerer).toEqual({ snit_g: 3500, ture: 1 });
+  });
+
+  it('giver ingen vægt når hun aldrig har båret noget', () => {
+    expect(personprofil(emil, [medEmil([])], inventar).baerer).toBeNull();
+  });
+
+  it('giver en tom profil for en person uden ture', () => {
+    const profil = personprofil(emil, [], inventar);
+
+    expect(profil.ture).toEqual([]);
+    expect(profil.typiskGear).toEqual([]);
+    expect(profil.baerer).toBeNull();
+  });
+
+  // Gear kan slettes, mens turene bliver stående. Så er der ikke noget at
+  // vise — men vægten hun bar dengang, er stadig det den var.
+  it('springer gear over der ikke findes i inventaret længere', () => {
+    const profil = personprofil(emil, [medEmil(['i-pose', 'i-vaek'])], inventar);
+
+    expect(profil.typiskGear.map((g) => g.item.navn)).toEqual(['Sovepose']);
+  });
+
+  it('viser højst fem stykker gear', () => {
+    const mange = Array.from({ length: 8 }, (_, n) =>
+      lavItem({ uid: `i-${n}`, navn: `Ting ${n}`, vaegt_g: 100 })
+    );
+    const profil = personprofil(emil, [medEmil(mange.map((i) => i.uid))], mange);
+
+    expect(profil.typiskGear).toHaveLength(5);
   });
 });

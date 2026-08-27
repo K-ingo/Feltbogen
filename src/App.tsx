@@ -3,7 +3,9 @@ import type { ReactElement } from 'react';
 import AuthSide from './AuthSide';
 import { useAuth } from './useAuth';
 import { fornyLogin } from './pb';
-import { afstemMedServer, sendAfventende, sletItem, sletGruppe, sletTur, sletSted } from './sync';
+import { afstemMedServer, sendAfventende, sletItem, sletGruppe, sletTur, sletSted, opdaterTur } from './sync';
+import type { Sted } from './db';
+import type { Indstillingsmaal } from './indstillingsmaal';
 import { db } from './db';
 import DashboardSide from './DashboardSide';
 import InventarSide from './InventarSide';
@@ -83,6 +85,10 @@ function App(): ReactElement | null {
   // Feltbogen ligger uden for Skal: alt der ikke er bogen, ville komme med
   // på papiret.
   const [feltbogAar, setFeltbogAar] = useState<number | null>(null);
+  // Afsnittet indstillingerne skal åbne i. Sat af rækkerne under Mere og
+  // ryddet igen, når man forlader skærmen — kommer man tilbage ad en anden
+  // vej, er man et andet ærinde. Se indstillingsmaal.ts.
+  const [indstillingsmaal, setIndstillingsmaal] = useState<Indstillingsmaal | undefined>();
   const aabnItem = (id: number, ny = false) => setValgtItem({ id, ny });
   const aabnGruppe = (id: number, ny = false) => setValgtGruppe({ id, ny });
   // maal er stedet på turen, man skal lande — sat når man kommer fra et
@@ -96,6 +102,19 @@ function App(): ReactElement | null {
   const nytItem = async () => aabnItem(await opretTomtItem(), true);
   const nyGruppe = async () => aabnGruppe(await opretTomGruppe(), true);
   const nyTur = async () => aabnTur(await opretTomTur(), true);
+
+  // En tur på et sted man kender. Stedet, navnet og koordinaterne følger med,
+  // så turen åbner med det udfyldt, man kom for — resten er som en ny tur.
+  const nyTurPaaSted = async (sted: Sted) => {
+    const id = await opretTomTur();
+    await opdaterTur(id, {
+      sted: sted.navn,
+      sted_uid: sted.uid,
+      koordinater: sted.koordinater
+    });
+    setValgtSted(null);
+    aabnTur(id, true);
+  };
   const nytSted = async () => aabnSted(await opretTomtSted(), true);
 
   // En navnløs post man lige har oprettet, kan ikke findes igen. Oprydningen
@@ -127,8 +146,12 @@ function App(): ReactElement | null {
   // Et tryk i navigationen skal føre hen til fanen — også når der ligger en
   // detaljeskærm ovenpå. Ellers skifter markeringen, mens skærmen bliver
   // stående, og man skal trykke tilbage før man kan se hvor man er.
-  const skiftFane = (f: Fane) => {
+  // Målet ryddes ved hvert fanevalg og sættes kun af den, der vælger fanen.
+  // Ellers ville et tryk på "Indstillinger" i navigationen rulle ned til det
+  // afsnit, man sidst kom fra Mere for at se — og det er et andet ærinde.
+  const skiftFane = (f: Fane, maal?: Indstillingsmaal) => {
     void lukDetalje();
+    setIndstillingsmaal(maal);
     setFane(f);
   };
 
@@ -271,6 +294,7 @@ function App(): ReactElement | null {
           nyOprettet={valgtSted.ny}
           tilbage={lukDetalje}
           aabnTur={(id) => { setValgtSted(null); aabnTur(id); }}
+          opretTurHer={(sted) => void nyTurPaaSted(sted)}
         />
       </Skal>
     );
@@ -317,7 +341,14 @@ function App(): ReactElement | null {
         />
       );
     case 'folk': return <FolkSide fane={fane} skift={skiftFane} />;
-    case 'mere': return <MereSide fane={fane} skift={skiftFane} aabnAar={setValgtAar} />;
+    case 'mere': return (
+      <MereSide
+        fane={fane}
+        skift={skiftFane}
+        aabnAar={setValgtAar}
+        aabnIndstillinger={(maal) => skiftFane('indstillinger', maal)}
+      />
+    );
     case 'grupper': return <GrupperListe fane={fane} skift={skiftFane} aabnGruppe={aabnGruppe} nyGruppe={nyGruppe} />;
     case 'ture': return <TureListe fane={fane} skift={skiftFane} aabnTur={aabnTur} aabnDeltTur={aabnDeltTur} nyTur={nyTur} />;
     case 'steder': return <StederListe fane={fane} skift={skiftFane} aabnSted={aabnSted} nytSted={nytSted} />;
@@ -330,6 +361,7 @@ function App(): ReactElement | null {
           skift={skiftFane}
           tilLogin={() => setViserLogin(true)}
           seRundvisning={() => setViserRundvisning(true)}
+          maal={indstillingsmaal}
         />
       );
     default: {

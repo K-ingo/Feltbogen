@@ -384,14 +384,35 @@ statistikfunktion.
 deep links, browserens tilbage-knap, PWA-startpunkt og token-ruterne skal
 tænkes igennem samlet.
 
-**Det, en gennemgang af specen mod koden fandt til sidst.** Fem ting, som
-ingen af os havde skrevet ned: persondetaljen mangler §17's turhistorik,
-typiske gear og typiske vægt, og Folk har hverken Turfæller eller
-Invitationer som sektioner; steddetaljen mangler §15's hero-billede og
-"Opret tur her"; Mere mangler rækkerne til Skabeloner, Backup, Import og
-Hjælp, som alle ligger inde i Indstillinger; startskærmens "Dit grej" er
-nøgletal og ikke §3's `gearSummary`; og Grej har en "Overvejer"-status, men
-ingen indkøbsliste.
+**~~Det, en gennemgang af specen mod koden fandt til sidst.~~** ✅ Fem ting,
+som ingen af os havde skrevet ned, og som alle er bygget nu:
+
+- **§17 persondetaljen.** Turhistorik, typisk gear og typisk vægt er udledt af
+  turene og gemmes ikke — personen ejer ingen af delene, det gør turene.
+  Vægten er et snit over de ture, hvor grejet faktisk var fordelt til hende;
+  ture uden fordeling tælles ikke med som nul, af samme grund som en
+  ubesvaret vurdering ikke tælles som en dårlig. *Aktive invitationer* er
+  ikke med: deling er et gæstelink på en tur, ikke en indbydelse til en
+  person, og linket kan gives videre. At kalde det "Emils invitation" ville
+  være en påstand om, hvem der har det.
+- **§15 steddetaljen.** Stedets billede er forsiden fra det seneste besøg —
+  et sted har ingen billeder af sig selv, men det ser ud som sidst man var
+  der. Udledt og ikke gemt. Og "Opret tur her" opretter turen med sted, navn
+  og koordinater udfyldt.
+- **§2.5/§18 Mere.** Synkronisering, Skabeloner, Backup/eksport/import og
+  Hjælp står nu som rækker. De lå som afsnit inde i Indstillinger, og §2
+  siger direkte, at hovedfunktioner ikke må gemmes bag andre. Hver række
+  lander i sit eget afsnit — samme regel som `turmaal.ts`, og den er skrevet
+  ned i `indstillingsmaal.ts`. Fem skærme med ét afsnit hver ville ikke være
+  en bedre struktur, kun den samme med flere sider imellem.
+- **§3 "Dit grej".** Antal ting og hvor mange der skal passes. Vedligeholdet
+  står også som handlingskort, men det er ikke det samme: dér er det de
+  enkelte ting, her er det, hvordan skabet står.
+- **§2.3/§16 Lån, Vedligehold og Indkøb.** Tre nye faner under Grej. De to
+  første er ikke statusser men tværgående udsnit — de fandtes kun som felter
+  på det enkelte item, så man kunne ikke svare på "hvad har jeg lånt ud?"
+  uden at gå hele inventaret igennem. "Overvejer" hedder **Indkøb** på fanen,
+  fordi det er dét, listen er.
 
 **Onboarding og adaptiv hjælpegrad (specens §5 og §6).** Udskudt bevidst,
 fordi vi bygger til ejeren først. Bliver relevant, hvis appen skal ud til

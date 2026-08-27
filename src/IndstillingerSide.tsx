@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, etiket, PAK_AF_NIVEAU, AKTIVITETSNIVEAU } from './db';
 import {
@@ -26,6 +26,7 @@ import {
 } from './dataudveksling';
 import type { Baseindhold } from './dataudveksling';
 import { Skal } from './Skal';
+import type { Indstillingsmaal } from './indstillingsmaal';
 import type { Fane } from './Skal';
 import { laesSkabelon, skrivSkabelon, STANDARD_SKABELON } from './afgangsTjek';
 import {
@@ -41,11 +42,26 @@ interface Props {
   skift: (f: Fane) => void;
   tilLogin: () => void;
   seRundvisning: () => void;
+  // Afsnittet man skal lande i, når man kommer fra en række under Mere.
+  // Se indstillingsmaal.ts.
+  maal?: Indstillingsmaal;
 }
 
 type Besked = { slags: 'ok' | 'fejl'; tekst: string } | null;
 
-function IndstillingerSide({ fane, skift, tilLogin, seRundvisning }: Props) {
+function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props) {
+  // Ruller det, man er sendt efter, ind på skærmen — én gang, og først når
+  // afsnittet faktisk står der.
+  const sigtRef = useRef<HTMLElement | null>(null);
+  const harRullet = useRef(false);
+  useEffect(() => {
+    if (!maal || harRullet.current || !sigtRef.current) return;
+    harRullet.current = true;
+    sigtRef.current.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  });
+
+  const sigte = (m: Indstillingsmaal) => (maal === m ? sigtRef : undefined);
+
   const { bruger } = useAuth();
 
   const [arbejder, setArbejder] = useState<string | null>(null);
@@ -142,7 +158,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning }: Props) {
     <Skal fane={fane} skift={skift} titel="Indstillinger">
       <div style={{ display: 'grid', gap: '22px' }}>
 
-        <section>
+        <section ref={sigte('konto')}>
           <SektionsTitel>Konto</SektionsTitel>
           <Kort>
             {bruger ? (
@@ -186,7 +202,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning }: Props) {
           </Kort>
         </section>
 
-        <section>
+        <section ref={sigte('synkronisering')}>
           <SektionsTitel>Synkronisering</SektionsTitel>
           <Kort>
             <Raekke
@@ -264,7 +280,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning }: Props) {
           </Kort>
         </section>
 
-        <section>
+        <section ref={sigte('skabeloner')}>
           <SektionsTitel>Afgangs-tjek</SektionsTitel>
           <Kort>
             <Skabelon
@@ -300,7 +316,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning }: Props) {
           </Kort>
         </section>
 
-        <section>
+        <section ref={sigte('data')}>
           <SektionsTitel>Data</SektionsTitel>
           <Kort>
             <Raekke label="Gear" vaerdi={`${items.length}`} />
@@ -338,7 +354,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning }: Props) {
           </Kort>
         </section>
 
-        <section>
+        <section ref={sigte('om')}>
           <SektionsTitel>Om</SektionsTitel>
           <Kort>
             <Raekke label="Feltbogen" vaerdi={`version ${__APP_VERSION__} · ${__APP_COMMIT__}`} />

@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, etiket, OVERNATNING } from './db';
 import type { Overnatning, Person } from './db';
-import { antalTurePrPerson, ukendteNavne } from './personer';
+import { antalTurePrPerson, personprofil, ukendteNavne } from './personer';
+import type { Personprofil } from './personer';
 import { opretTomPerson } from './opret';
 import { opdaterPerson, sletPerson } from './sync';
 import { meldSletning } from './fortryd';
@@ -19,6 +20,9 @@ import { Knap, Felt, Segment, Tekstomraade } from './ui';
 function Personer() {
   const personer = useLiveQuery(() => db.personer.toArray()) ?? [];
   const ture = useLiveQuery(() => db.ture.toArray()) ?? [];
+  // Til den typiske vægt og det typiske gear. Vægten skal slås op pr. uid, og
+  // det kan kun gøres mod inventaret.
+  const items = useLiveQuery(() => db.items.toArray()) ?? [];
   const [aabenUid, setAabenUid] = useState<string | null>(null);
   const [nytNavn, setNytNavn] = useState('');
 
@@ -108,6 +112,7 @@ function Personer() {
               key={person.uid}
               person={person}
               ture={antal.get(person.uid) ?? 0}
+              profil={personprofil(person, ture, items)}
               aaben={aabenUid === person.uid}
               skiftAaben={() => setAabenUid(aabenUid === person.uid ? null : person.uid)}
               opdater={(a) => person.id !== undefined && void opdaterPerson(person.id, a)}
@@ -120,9 +125,10 @@ function Personer() {
   );
 }
 
-function Personraekke({ person, ture, aaben, skiftAaben, opdater, fjern }: {
+function Personraekke({ person, ture, profil, aaben, skiftAaben, opdater, fjern }: {
   person: Person;
   ture: number;
+  profil: Personprofil;
   aaben: boolean;
   skiftAaben: () => void;
   opdater: (aendringer: Partial<Person>) => void;
@@ -187,11 +193,93 @@ function Personraekke({ person, ture, aaben, skiftAaben, opdater, fjern }: {
             raekker={2}
           />
 
+          <Profil profil={profil} />
+
           <div>
             <Knap variant="fare" onClick={fjern}>Slet person</Knap>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Hvad turene siger om en person.
+//
+// Specens §17 vil have turhistorik, typisk gear og typisk vægt på
+// persondetaljen. Alle tre er udledt af turene og gemmes ikke: personen ejer
+// ingen af delene, det er turene der gør.
+//
+// Aktive invitationer er ikke med. Specen nævner dem, men appen har ingen:
+// deling er et gæstelink på en tur, ikke en indbydelse til en person, og
+// linket kan gives videre til hvem som helst. At kalde et turlink for "Emils
+// invitation" ville være en påstand om, hvem der har det.
+function Profil({ profil }: { profil: Personprofil }) {
+  if (profil.ture.length === 0) {
+    return (
+      <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)' }}>
+        Ingen ture sammen endnu. Skriv personen på en tur, så samles historikken her.
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'grid', gap: 'var(--plads-3)' }}>
+      {profil.baerer && (
+        <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)' }}>
+          Bærer typisk{' '}
+          <span style={{ color: 'var(--tekst)' }}>
+            {(profil.baerer.snit_g / 1000).toFixed(1).replace('.', ',')} kg
+          </span>
+          {' '}— snit over {profil.baerer.ture}{' '}
+          {profil.baerer.ture === 1 ? 'tur hvor grejet var fordelt' : 'ture hvor grejet var fordelt'}
+        </div>
+      )}
+
+      {profil.typiskGear.length > 0 && (
+        <div>
+          <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginBottom: 'var(--plads-1)' }}>
+            Har typisk med
+          </div>
+          <div style={{ display: 'grid', gap: '2px' }}>
+            {profil.typiskGear.map(({ item, ture }) => (
+              <div
+                key={item.uid}
+                style={{
+                  display: 'flex',
+                  gap: 'var(--plads-2)',
+                  fontSize: 'var(--skrift-detalje)',
+                  color: 'var(--tekst)'
+                }}
+              >
+                <span style={{ flex: 1, minWidth: 0 }}>{item.navn}</span>
+                <span style={{ color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>
+                  {ture} af {profil.ture.length}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div>
+        <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginBottom: 'var(--plads-1)' }}>
+          Ture sammen
+        </div>
+        <div style={{ display: 'grid', gap: '2px' }}>
+          {profil.ture.map((tur) => (
+            <div
+              key={tur.uid}
+              style={{ display: 'flex', gap: 'var(--plads-2)', fontSize: 'var(--skrift-detalje)' }}
+            >
+              <span style={{ flex: 1, minWidth: 0 }}>{tur.navn || 'Uden navn'}</span>
+              <span style={{ color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>
+                {tur.startdato || '—'}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

@@ -8,6 +8,8 @@ import { Skal } from './Skal';
 import type { Fane } from './Skal';
 import { useErDesktop } from './useMedie';
 import { Knap, TagChips, ListeRaekke, TomListe } from './ui';
+import { udlaanteItems, laanteItems } from './udlaan';
+import { forfaldne } from './vedligehold';
 
 interface Props {
   fane: Fane;
@@ -15,21 +17,64 @@ interface Props {
   aabnItem: (id: number, nyOprettet?: boolean) => void;
 }
 
-// Ejer og Overvejer er to forskellige lister i hovedet på brugeren, så de er
-// faner frem for et filter. Solgt får sin egen fane, så det gear ikke bliver
-// usynligt når man har markeret det.
-const FANEBLADE: { status: ItemStatus; label: string }[] = [
-  { status: 'ejer', label: 'Ejer' },
-  { status: 'overvejer', label: 'Overvejer' },
-  { status: 'solgt', label: 'Solgt' }
+// Fanerne over listen.
+//
+// Ejer, Indkøb og Solgt er tre forskellige lister i hovedet på brugeren, så de
+// er faner frem for et filter. Solgt får sin egen, så det gear ikke bliver
+// usynligt, når man har markeret det.
+//
+// Lån og Vedligehold er de to sidste, og de er ikke statusser: de er tværgående
+// udsnit af det man ejer. Specens §2.3 og §16 vil have dem under Grej, og de
+// fandtes kun som felter på det enkelte item og som kort på startskærmen — man
+// kunne altså ikke svare på "hvad har jeg lånt ud?" uden at gå igennem hele
+// inventaret.
+//
+// "Indkøb" og ikke "Overvejer": det er dét, listen er. Statussen på selve
+// itemet hedder stadig overvejer, og teksten under fanen binder de to ord
+// sammen.
+type Udsnit = ItemStatus | 'laan' | 'vedligehold';
+
+const FANEBLADE: { udsnit: Udsnit; label: string }[] = [
+  { udsnit: 'ejer', label: 'Ejer' },
+  { udsnit: 'overvejer', label: 'Indkøb' },
+  { udsnit: 'solgt', label: 'Solgt' },
+  { udsnit: 'laan', label: 'Lån' },
+  { udsnit: 'vedligehold', label: 'Vedligehold' }
 ];
+
+// Hvad udsnittet er, skrevet ud. Står under fanerne, så en liste aldrig er
+// noget man skal gætte sig til hvad er.
+const UDSNITSTEKST: Record<Udsnit, string> = {
+  ejer: '',
+  overvejer: 'Grej du overvejer at købe. De står som "overvejer" og tælles ikke med i din vægt.',
+  solgt: 'Grej du ikke har længere. Det bliver stående, så turhistorikken ikke mister det.',
+  laan: 'Grej der er ude af huset, og grej du har lånt af andre.',
+  vedligehold: 'Grej med noget der forfalder inden længe, eller som skulle have været gjort.'
+};
+
+// Udsnittet af inventaret. Statusserne filtrerer på status; de to andre går
+// på tværs af dem — men kun på det man ejer, for man vedligeholder ikke noget,
+// man har solgt.
+function iUdsnit(items: Item[], udsnit: Udsnit): Item[] {
+  if (udsnit === 'laan') {
+    const ejet = items.filter((i) => i.status === 'ejer');
+    return [...new Set([...udlaanteItems(ejet), ...laanteItems(items)])];
+  }
+
+  if (udsnit === 'vedligehold') {
+    const uids = new Set(forfaldne(items).map((f) => f.item.uid));
+    return items.filter((i) => uids.has(i.uid));
+  }
+
+  return items.filter((i) => i.status === udsnit);
+}
 
 const MAKS_TAG_CHIPS = 5;
 
 function InventarSide({ fane, skift, aabnItem }: Props) {
   const erDesktop = useErDesktop();
 
-  const [valgtStatus, setValgtStatus] = useState<ItemStatus>('ejer');
+  const [valgtStatus, setValgtStatus] = useState<Udsnit>('ejer');
   const [soegning, setSoegning] = useState('');
   const [valgtTag, setValgtTag] = useState<string | null>(null);
   const [alleTagsVist, setAlleTagsVist] = useState(false);
@@ -38,7 +83,7 @@ function InventarSide({ fane, skift, aabnItem }: Props) {
   const grupper = useLiveQuery(() => db.grupper.toArray()) ?? [];
   const ture = useLiveQuery(() => db.ture.toArray()) ?? [];
 
-  const iStatus = items.filter((i) => i.status === valgtStatus);
+  const iStatus = iUdsnit(items, valgtStatus);
 
   // Tag-chips bygges af det gear man rent faktisk har i den valgte fane,
   // sorteret efter hvor ofte de bruges.
@@ -56,7 +101,7 @@ function InventarSide({ fane, skift, aabnItem }: Props) {
     return matcherSoegning && matcherTag;
   });
 
-  const antal = (status: ItemStatus) => items.filter((i) => i.status === status).length;
+  const antal = (udsnit: Udsnit) => iUdsnit(items, udsnit).length;
   const vaerdiIStatus = iStatus.reduce((sum, i) => sum + i.pris_kr * i.antal, 0);
 
   const grejsaet = useLiveQuery(() => db.grupper.toArray()) ?? [];
@@ -67,8 +112,12 @@ function InventarSide({ fane, skift, aabnItem }: Props) {
   };
 
   // Den nye post lander i den fane man står på, så den ikke forsvinder ud af
-  // syne i det øjeblik den bliver oprettet.
-  const nytItem = async () => aabnItem(await opretTomtItem(valgtStatus), true);
+  // syne i det øjeblik den bliver oprettet. Lån og Vedligehold er ikke
+  // statusser, man kan oprette noget i — der bliver det til noget man ejer.
+  const nytItem = async () => aabnItem(
+    await opretTomtItem(valgtStatus === 'laan' || valgtStatus === 'vedligehold' ? 'ejer' : valgtStatus),
+    true
+  );
 
   return (
     <Skal
@@ -94,22 +143,22 @@ function InventarSide({ fane, skift, aabnItem }: Props) {
       />
 
       <div style={{ display: 'flex', gap: '6px', margin: 'var(--plads-4) 0 var(--plads-3)', flexWrap: 'wrap' }}>
-        {FANEBLADE.map(({ status, label }) => (
+        {FANEBLADE.map(({ udsnit, label }) => (
           <button
-            key={status}
-            onClick={() => { setValgtStatus(status); nulstilFiltre(); }}
+            key={udsnit}
+            onClick={() => { setValgtStatus(udsnit); nulstilFiltre(); }}
             style={{
               padding: '6px 14px',
               fontSize: '12px',
               borderRadius: '16px',
               cursor: 'pointer',
               fontWeight: 500,
-              background: valgtStatus === status ? 'var(--accent)' : 'transparent',
-              color: valgtStatus === status ? 'var(--accent-tekst)' : 'var(--tekst-dæmpet)',
-              border: `1px solid ${valgtStatus === status ? 'var(--accent)' : 'var(--border)'}`
+              background: valgtStatus === udsnit ? 'var(--accent)' : 'transparent',
+              color: valgtStatus === udsnit ? 'var(--accent-tekst)' : 'var(--tekst-dæmpet)',
+              border: `1px solid ${valgtStatus === udsnit ? 'var(--accent)' : 'var(--border)'}`
             }}
           >
-            {label} ({antal(status)})
+            {label} ({antal(udsnit)})
           </button>
         ))}
       </div>
@@ -134,6 +183,17 @@ function InventarSide({ fane, skift, aabnItem }: Props) {
               {alleTagsVist ? '− Færre' : `+ ${tags.length - MAKS_TAG_CHIPS} flere`}
             </FilterChip>
           )}
+        </div>
+      )}
+
+      {UDSNITSTEKST[valgtStatus] !== '' && (
+        <div style={{
+          fontSize: 'var(--skrift-detalje)',
+          color: 'var(--tekst-dæmpet)',
+          marginBottom: 'var(--plads-3)',
+          maxWidth: '68ch'
+        }}>
+          {UDSNITSTEKST[valgtStatus]}
         </div>
       )}
 
