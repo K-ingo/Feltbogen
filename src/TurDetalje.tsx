@@ -44,6 +44,7 @@ import {
 } from './smartMotor';
 import type { VejrDag, VejrData, StedForslag, Advarsel, Pakkelinje, Pakkeafsnit, Beregninger, Baerevaegt, GruppeForslag } from './smartMotor';
 import {
+  Badge,
   Chip,
   DetaljeHeader,
   Dropdown,
@@ -90,8 +91,8 @@ import {
 } from './personer';
 import { foreslaaSteder, sorterEfterBesoeg, besoegPrSted, besoegstekst, naermesteSted } from './steder';
 import { udlaansAdvarsler } from './udlaan';
-import { vaegtbrydere, samletBesparelse, manglendeTags } from './vaegtbrydere';
-import type { Vaegtbryder } from './vaegtbrydere';
+import { vaegtresultat, bedsteBytter, byt, manglendeTags } from './vaegtbrydere';
+import type { Vaegtresultat, Risiko, Bytte } from './vaegtbrydere';
 import { foreslaaKopi, kopierGrej, antalNye } from './ligesomSidst';
 import type { Kopiforslag } from './ligesomSidst';
 import { nytPakAfTjek, synkroniserLinjer, resumetekst } from './pakAfTjek';
@@ -166,6 +167,13 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   const [vejrFejl, setVejrFejl] = useState('');
   const [koordinatTekst, setKoordinatTekst] = useState('');
   const [koordinatFejl, setKoordinatFejl] = useState('');
+  // Beskeden om et bytte, der ikke kunne gennemføres helt.
+  //
+  // Kun den. Et bytte der gik igennem, siger sig selv: vægten falder, og
+  // forslaget forsvinder. Det er dét sidste, der gør beskeden nødvendig her —
+  // gik byttet igennem, er der ikke længere en vægtsektion at skrive i, så
+  // beskeden står uden for den og ikke inde i den.
+  const [byttebesked, setByttebesked] = useState('');
   const [stedForslag, setStedForslag] = useState<StedForslag[]>([]);
   const [stedSoeger, setStedSoeger] = useState(false);
   // Hvad de inviterede har skrevet sig på for. Hentes kun når turen er delt.
@@ -336,6 +344,25 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   const toggleLoestItem = async (itemUid: Reference) => {
     if (!tur) return;
     await opdater({ loese_item_ids: vekslet(tur.loese_item_ids, itemUid) });
+  };
+
+  // Et bytte er et bytte. Knappen hed før "Tilføj" og lagde kun det lette
+  // til — så stod begge dele på pakkelisten, og vægten var gået op i stedet
+  // for ned, indtil man selv huskede at tage det tunge af.
+  //
+  // Kom det tunge med via et grejsæt, kan det ikke tages af turen alene. Så
+  // siger beskeden det, i stedet for at lade byttet se helt ud.
+  const tagImodBytte = async (bytter: Bytte[]) => {
+    if (!tur) return;
+
+    const { aendringer, uloeste } = byt(tur, bytter);
+    await opdater(aendringer);
+
+    setByttebesked(
+      uloeste.length === 0
+        ? ''
+        : `${uloeste.map((i) => i.navn).join(', ')} kom med via et grejsæt og blev stående. Et sæt vælges som et sæt, og enkeltdele kan ikke slås fra på en tur. Det lette er lagt til — skal det tunge helt af, skal sættet af turen.`
+    );
   };
 
   // Fra person-tabellen: navnet og standardovernatningen følger med, og turen
@@ -513,7 +540,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   const beregninger = beregnForbrug(tur, kropsdata);
   const gruppeForslag = grupper ? foreslaaGrupper(tur, grupper) : [];
   const savnedeTags = grupper ? manglendeTags(tur, grupper) : [];
-  const brydere = vaegtbrydere(tur, grupper ?? [], items ?? [], pakItems);
+  const vaegtsvar = vaegtresultat(tur, grupper ?? [], items ?? [], pakItems);
 
   // Kun på en tur der ikke er pakket endnu. Har man allerede valgt sit grej,
   // er et forslag om at kopiere en anden tur i vejen.
@@ -658,12 +685,12 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
     />
   );
 
-  const vaegtbryderSektion = brydere.length > 0 && (
+  const vaegtbryderSektion = vaegtsvar.brydere.length > 0 && (
     <Foldbar
       titel="Kan vægten ned?"
-      resume={`${kg(samletBesparelse(brydere))} kg at hente`}
+      resume={`${kg(vaegtsvar.potentiel_besparelse_g)} kg at hente`}
     >
-      <Vaegtbrydere brydere={brydere} byt={toggleLoestItem} />
+      <Vaegtbrydere resultat={vaegtsvar} byt={tagImodBytte} />
     </Foldbar>
   );
 
@@ -878,6 +905,13 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
       <>
         <Pakkekort pakning={pakning} tilListen={() => setFane('pakkeliste')} />
         {vaegt}
+        {byttebesked !== '' && (
+          <Infokort label="Byttet blev ikke helt">
+            <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)', lineHeight: 1.55 }}>
+              {byttebesked}
+            </div>
+          </Infokort>
+        )}
         {vaegtbryderSektion}
       </>
     ),
@@ -2162,60 +2196,104 @@ function Deling({ token, snapshot, deltagelser, gearnavne, del, stop }: {
 
 // Hvor sækken kan blive lettere. Forslagene er kandidater og ikke svar:
 // motoren kender kun tags og gram, ikke om de to ting faktisk kan det samme.
-function Vaegtbrydere({ brydere, byt }: {
-  brydere: Vaegtbryder[];
-  byt: (uid: Reference) => Promise<void>;
+// Vægtbryderne, som specens §7.2 vil have dem: vægten som den er, hvad der
+// kan hentes, og hvert bytte med sin risiko og sin konsekvens.
+//
+// Risikoen er ikke pynt. Uden den ser et bytte, der bare er lettere, ud som et
+// bytte, der kan det samme — og det er dér, en motor holder op med at blive
+// læst. Derfor står konsekvensen som tekst under mærket og ikke bag "hvorfor?".
+//
+// Automatisk fjernelse er aldrig tilladt. "Byt alle" er derfor en knap, man
+// trykker på, og den tager ét bytte pr. tungt stykke gear — det sikreste, ikke
+// det mest sparende.
+const RISIKOMAERKE: Record<Risiko, { navn: string; niveau: 'succes' | 'advarsel' | 'fejl' }> = {
+  lav: { navn: 'lav risiko', niveau: 'succes' },
+  mellem: { navn: 'mellem risiko', niveau: 'advarsel' },
+  hoej: { navn: 'høj risiko', niveau: 'fejl' }
+};
+
+function Vaegtbrydere({ resultat, byt: tagImod }: {
+  resultat: Vaegtresultat;
+  byt: (bytter: Bytte[]) => Promise<void>;
 }) {
+  const alle = bedsteBytter(resultat.brydere);
+
   return (
-    <div style={{ display: 'grid', gap: '12px' }}>
-      <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', lineHeight: 1.55 }}>
-        Lettere gear i dit inventar der deler tags med det tunge. Om de kan det samme,
-        er dit valg — tilføj det lette her, og tag det tunge af pakkelisten.
+    <div style={{ display: 'grid', gap: 'var(--plads-3)' }}>
+      <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)', lineHeight: 1.55 }}>
+        Pakken vejer {kg(resultat.nuvaerende_g)} kg. Der er {kg(resultat.potentiel_besparelse_g)} kg
+        at hente på lettere gear, du allerede ejer. Om de kan det samme, er dit valg —
+        motoren kender kun tags, gram og dine stjerner.
       </div>
 
-      {brydere.map(({ tung, alternativer, begrundelse }) => (
+      {alle.length > 1 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--plads-2)', flexWrap: 'wrap' }}>
+          <Knap variant="primaer" onClick={() => void tagImod(alle)}>
+            Byt alle {alle.length}
+          </Knap>
+          <span style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)' }}>
+            tager det sikreste bytte på hver ting
+          </span>
+        </div>
+      )}
+
+      {resultat.brydere.map(({ tung, alternativer, begrundelse }) => (
         <div
           key={tung.uid}
           style={{
             border: '1px solid var(--border-svag)',
-            borderRadius: '10px',
-            padding: '10px 12px',
+            borderRadius: 'var(--runding-lille)',
+            padding: 'var(--plads-3)',
             background: 'var(--bg-forhoejet)'
           }}
         >
-          <div style={{ fontSize: '13px', marginBottom: '2px' }}>
+          <div style={{ fontSize: 'var(--skrift-knap)', marginBottom: '2px' }}>
             {tung.navn}
-            <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '11px', marginLeft: '8px' }}>
+            <span style={{ color: 'var(--tekst-dæmpet)', fontSize: 'var(--skrift-lille)', marginLeft: 'var(--plads-2)' }}>
               {tung.vaegt_g} g
             </span>
           </div>
 
-          <div style={{ display: 'grid', gap: '4px', marginTop: '8px' }}>
+          <div style={{ display: 'grid', gap: 'var(--plads-2)', marginTop: 'var(--plads-2)' }}>
             {alternativer.map((a) => (
-              <div
-                key={a.item.uid}
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}
-              >
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  {a.item.navn}
-                  <span style={{ color: 'var(--tekst-svag)', marginLeft: '6px' }}>
-                    {a.item.vaegt_g} g
+              <div key={a.item.uid} style={{ display: 'grid', gap: 'var(--plads-1)' }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--plads-2)',
+                  fontSize: 'var(--skrift-detalje)'
+                }}>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    {a.item.navn}
+                    <span style={{ color: 'var(--tekst-svag)', marginLeft: 'var(--plads-1)' }}>
+                      {a.item.vaegt_g} g
+                    </span>
                   </span>
-                </span>
-                <span style={{ color: 'var(--accent)', whiteSpace: 'nowrap' }}>
-                  −{a.sparet_g} g
-                </span>
-                <Knap
-                  onClick={() => void byt(a.item.uid)}
-                  style={{ fontSize: '11px', padding: '3px 9px' }}
-                >
-                  Tilføj
-                </Knap>
+                  <Badge niveau={RISIKOMAERKE[a.risiko].niveau}>{RISIKOMAERKE[a.risiko].navn}</Badge>
+                  <span style={{ color: 'var(--accent)', whiteSpace: 'nowrap' }}>
+                    −{a.sparet_g} g
+                  </span>
+                  <Knap
+                    onClick={() => void tagImod([{
+                      tung, lette: a.item, sparet_g: a.sparet_g, risiko: a.risiko
+                    }])}
+                    style={{ fontSize: 'var(--skrift-lille)', padding: '3px 9px' }}
+                  >
+                    Byt
+                  </Knap>
+                </div>
+                <div style={{
+                  fontSize: 'var(--skrift-lille)',
+                  color: 'var(--tekst-dæmpet)',
+                  lineHeight: 1.5
+                }}>
+                  {a.konsekvens}
+                </div>
               </div>
             ))}
           </div>
 
-          <div style={{ marginTop: '6px' }}>
+          <div style={{ marginTop: 'var(--plads-2)' }}>
             <Hvorfor begrundelse={begrundelse} />
           </div>
         </div>

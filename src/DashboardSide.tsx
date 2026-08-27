@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import type { Item, Gruppe, Tur } from './db';
@@ -5,13 +6,16 @@ import {
   naesteTur,
   naarBegynder,
   handlinger,
-  turforslag,
   syncstatus,
   tureIAar,
   sidstTilfoejede
 } from './dashboard';
 import { aarsopgoerelseAtSe } from './aarsopgoerelse';
-import type { Handling, Turforslag, Syncstatus } from './dashboard';
+import type { Handling, Syncstatus } from './dashboard';
+import { forslagTilTur, udenAfviste, maalFor, TILTRONAVN } from './forslag';
+import type { Forslag } from './forslag';
+import { kopierGrej } from './ligesomSidst';
+import { opdaterTur } from './sync';
 import { itemsPaaTur, findAdvarsler } from './smartMotor';
 import { samletInventarvaerdi, samletVaegt } from './statistik';
 import { fremdriftstekst } from './afgangsTjek';
@@ -59,11 +63,44 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
 
   const tur = naesteTur(ture);
   const alleHandlinger = handlinger(items, ture, grupper);
-  const forslag = turforslag(tur, grupper, items, ture);
+  // Afvisningen lever her og ikke i basen. Hvad man ikke gider høre om lige
+  // nu, er ikke data om turen — og et felt til det skulle synkroniseres og
+  // gemmes for evigt for at slippe for et kort i tre dage. Den holder til man
+  // forlader skærmen, og det er også dét, den lover.
+  const [afviste, setAfviste] = useState<Set<string>>(new Set());
+  const forslag = udenAfviste(forslagTilTur(tur, grupper, items, ture), afviste);
   const sync = syncstatus(usendt, online, erLoggetInd);
   const aar = tureIAar(ture);
   const nyeste = sidstTilfoejede(items, MAKS_SIDST_TILFOEJET);
   const opgoerelse = aarsopgoerelseAtSe(ture);
+
+  // At tage imod et forslag.
+  //
+  // Kortet skrev før ingenting og førte kun hen til turen. Det var rigtigt,
+  // dengang kortet i sig selv var knappen: et forslag der ændrer data, når man
+  // trykker et sted på det, er ikke et forslag. Nu står handlingen som en
+  // navngiven knap ved siden af "afvis", og så er det omvendt — en knap der
+  // hedder "Tag sættet med" og bare åbner turen, lover noget den ikke gør.
+  //
+  // De to, der er ét entydigt skriv, skrives derfor her. Vægtforslaget gør
+  // ikke: der skal vælges mellem alternativer med hver sin risiko, og det valg
+  // hører hjemme på turen.
+  const tagImod = async (f: Forslag) => {
+    if (!tur || tur.id === undefined) return;
+
+    if (f.type === 'grej') {
+      await opdaterTur(tur.id, { gruppe_ids: [...tur.gruppe_ids, maalFor(f)] });
+      return;
+    }
+
+    if (f.type === 'historik') {
+      const gammel = ture.find((t) => t.uid === maalFor(f));
+      if (gammel) await opdaterTur(tur.id, kopierGrej(gammel, tur));
+      return;
+    }
+
+    aabnTur(tur.id);
+  };
 
   // Kortet fører hen til den post det handler om — gear eller tur. Findes den
   // ikke længere, sker der ingenting; listen bygges om ved næste render.
@@ -138,9 +175,11 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
             }}>
               {forslag.map((f) => (
                 <ForslagsKort
-                  key={f.type}
+                  key={f.id}
                   forslag={f}
                   aabn={() => tur?.id !== undefined && aabnTur(tur.id)}
+                  tagImod={() => void tagImod(f)}
+                  afvis={() => setAfviste(new Set([...afviste, f.id]))}
                 />
               ))}
             </div>
@@ -266,9 +305,20 @@ function NaesteTurKort({ tur, items, grupper, aabn, opret }: {
 // der er gået skævt, forslaget er noget appen ville gøre, hvis den måtte.
 // Derfor accentfarven og ikke advarselsfarven.
 //
-// Kortet skriver ingenting. Det fører hen til turen, hvor man selv siger ja —
-// et forslag der ændrer data, når man trykker på det, er ikke et forslag.
-function ForslagsKort({ forslag, aabn }: { forslag: Turforslag; aabn: () => void }) {
+// Overskriften fører hen til turen; selve handlingen står som en navngiven
+// knap. Forskellen er hele pointen: man skal kunne læse et forslag og gå videre
+// uden at have sagt ja til noget.
+//
+// Specens §13 vil have to handlinger på hvert forslag. Den anden er afvis, og
+// den er nødvendig af en grund, der ikke er høflighed: et forslag man ikke kan
+// få væk, bliver til støj, og støj læser man udenom. Så holder man også op med
+// at læse det, der var værd at læse.
+function ForslagsKort({ forslag, aabn, tagImod, afvis }: {
+  forslag: Forslag;
+  aabn: () => void;
+  tagImod: () => void;
+  afvis: () => void;
+}) {
   return (
     <div style={{
       padding: '11px 13px',
@@ -295,8 +345,33 @@ function ForslagsKort({ forslag, aabn }: { forslag: Turforslag; aabn: () => void
           {forslag.detalje}
         </div>
       </button>
-      <div style={{ marginTop: 'var(--plads-1)' }}>
+
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 'var(--plads-2)',
+        marginTop: 'var(--plads-1)'
+      }}>
         <Hvorfor begrundelse={forslag.begrundelse} />
+        {/* Hvor sikker motoren selv er. Den står dæmpet og ikke som et mærke:
+            det er en oplysning om forslaget, ikke en overskrift på det. */}
+        <span style={{
+          fontSize: 'var(--skrift-lille)',
+          color: 'var(--tekst-dæmpet)',
+          whiteSpace: 'nowrap'
+        }}>
+          {TILTRONAVN[forslag.tiltro]}
+        </span>
+      </div>
+
+      <div style={{ display: 'flex', gap: 'var(--plads-2)', marginTop: 'var(--plads-2)' }}>
+        <Knap variant="primaer" onClick={tagImod} style={{ flex: 1, fontSize: 'var(--skrift-lille)' }}>
+          {forslag.handling.tag_imod}
+        </Knap>
+        <Knap onClick={afvis} style={{ fontSize: 'var(--skrift-lille)' }}>
+          {forslag.handling.afvis}
+        </Knap>
       </div>
     </div>
   );

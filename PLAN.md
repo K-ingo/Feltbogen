@@ -295,6 +295,43 @@ hver funktion for sig var rigtig, og PocketBase siger ikke fra. Testen er
 ikke bundet til bestemte felter: den læser felterne på posten, så det næste
 felt nogen glemmer i `tilPb`, falder med navns nævnelse.
 
+**~~§7.2 Vægtoptimering med risiko, og et bytte der bytter.~~** ✅ Hvert
+alternativ bærer nu en risiko — lav, mellem eller høj — regnet af det, appen
+faktisk ved: hvor stor en del af den tunges tags alternativet dækker, og hvad
+man selv har givet det i stjerner. Ikke af hvor meget der spares; en stor
+gevinst gør ikke et gæt til andet end et gæt.
+
+Rækkefølgen af alternativer er vendt om som følge af det: sikrest først og
+derefter mest sparet. Det holdt kun så længe man tog stilling til hvert
+forslag for sig, og nu findes der en "byt alle"-knap, der tager det øverste.
+
+Og et bytte bytter. Knappen hed "Tilføj" og lagde kun det lette til — så stod
+begge dele på pakkelisten, og vægten var gået op i stedet for ned. Nu ryger
+den tunge også ud af det løse grej, ud af tasken og af hos den, der skulle
+bære den. Kom den med via et grejsæt, kan den ikke tages af alene, og det
+siger appen i stedet for at lade byttet se helt ud.
+
+Specens `targetGrams` er ikke med: der findes ikke en målvægt i
+datamodellen, og et felt der altid står tomt, er et løfte appen ikke holder.
+
+**~~§13 Smart-forslag i én typet form.~~** ✅ Motoren havde tre slags forslag
+med hver sin form, og de tre skærme, der viste dem, valgte tre forskellige ord
+for det samme. `forslag.ts` samler dem: titel, forklaring, virkning, tiltro og
+to handlinger.
+
+Id'et er udledt af, hvad forslaget handler om, og ikke et tilfældigt uuid —
+specen kræver, at samme input giver samme output, og en skærm skal kunne huske
+en afvisning uden at forslaget skifter identitet mellem to renderinger.
+
+Specens `water`, `food` og `gas` er ikke med som typer. `beregnForbrug` regner
+dem ud, og tallene står på turens egen skærm; et forslag, der gentager et tal,
+man kan se i forvejen, er ikke et forslag — og en type, som ingenting
+producerer, er endnu et løfte, appen ikke holder.
+
+Afvisningen lever i skærmen og ikke i basen. Hvad man ikke gider høre om lige
+nu, er ikke data om turen, og et felt til det skulle synkroniseres og gemmes
+for evigt for at slippe for et kort i tre dage.
+
 **Ruter og højdemeter (specens §12).** Kilometer og højdemeter har ingen
 datakilde. Det er et nyt datadomæne — GPX eller lignende — ikke en
 statistikfunktion.

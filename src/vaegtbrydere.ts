@@ -1,6 +1,6 @@
 import type { Gruppe, Item, Reference, Tur } from './db';
 import { itemUidsPaaTur, turensTags } from './smartMotor';
-import { erGodtVurderet, GODT } from './vurdering';
+import { erGodtVurderet, vurderingAf, GODT, SKIDT } from './vurdering';
 
 // Vægt-brydere: hvor kan sækken blive lettere?
 //
@@ -23,6 +23,19 @@ const TOP = 5;
 // længere — så er det en liste man skal igennem.
 const MAKS_ALTERNATIVER = 3;
 
+// Hvor sikkert byttet er.
+//
+// Specens §7.2 kræver, at hvert forslag bærer en risiko. Det er ikke en
+// dekoration: uden den vejer et bytte, der bare er lettere, lige så tungt som
+// et bytte, der kan det samme — og det er dét, der gør en motor til noget man
+// holder op med at læse.
+//
+// Risikoen er regnet af det, appen faktisk ved: hvor stor en del af den tunges
+// tags alternativet dækker, og hvad man selv har givet alternativet i
+// stjerner. Ikke af hvor meget der spares — en stor besparelse er en gevinst,
+// ikke en fare.
+export type Risiko = 'lav' | 'mellem' | 'hoej';
+
 export interface Alternativ {
   item: Item;
   sparet_g: number;
@@ -30,6 +43,13 @@ export interface Alternativ {
   andel: number;
   // Tags de to har til fælles. Det er dem der gør dem sammenlignelige.
   faelles: string[];
+  // Hvor stor en del af den tunges tags alternativet dækker, 0-1. Det er den
+  // eneste sammenlignelighed appen kan måle.
+  daekning: number;
+  risiko: Risiko;
+  // Hvorfor risikoen er den, den er. Vises sammen med mærket, så det ikke
+  // bare er en farve.
+  konsekvens: string;
 }
 
 export interface Vaegtbryder {
@@ -57,16 +77,87 @@ export function alternativerTil(
     .filter((i) => i.status === 'ejer')
     .filter((i) => !paaTuren.has(i.uid))
     .filter((i) => i.vaegt_g > 0 && i.vaegt_g <= graense)
-    .map((item) => ({
-      item,
-      sparet_g: tung.vaegt_g - item.vaegt_g,
-      andel: (tung.vaegt_g - item.vaegt_g) / tung.vaegt_g,
-      faelles: item.tags.filter((t) => tung.tags.includes(t))
-    }))
+    .map((item) => {
+      const faelles = item.tags.filter((t) => tung.tags.includes(t));
+      const daekning = faelles.length / tung.tags.length;
+
+      return {
+        item,
+        sparet_g: tung.vaegt_g - item.vaegt_g,
+        andel: (tung.vaegt_g - item.vaegt_g) / tung.vaegt_g,
+        faelles,
+        daekning,
+        ...vurderRisiko(tung, item, daekning)
+      };
+    })
     .filter((a) => a.faelles.length > 0)
-    // Mest sparet først; ved uafgjort vinder den der ligner mest.
-    .sort((a, b) => (b.sparet_g - a.sparet_g) || (b.faelles.length - a.faelles.length))
+    // Sikrest først, og derefter mest sparet. Rækkefølgen var før den
+    // omvendte, og det holdt kun så længe man tog stilling til hvert forslag
+    // for sig: det øverste alternativ er dét, "byt alle" tager, og en
+    // knap der bytter fem ting på én gang, må ikke vælge det mest vovede
+    // bytte, bare fordi det sparer to gram mere.
+    .sort((a, b) =>
+      (VOVETHED[a.risiko] - VOVETHED[b.risiko]) ||
+      (b.sparet_g - a.sparet_g) ||
+      (b.faelles.length - a.faelles.length)
+    )
     .slice(0, MAKS_ALTERNATIVER);
+}
+
+const VOVETHED: Record<Risiko, number> = { lav: 0, mellem: 1, hoej: 2 };
+
+// Risikoen ved ét bytte, og sætningen der forklarer den.
+//
+// Grænserne er sat, så "lav" faktisk betyder noget: alternativet skal dække
+// alle den tunges tags, og man skal selv have sagt god for det. Alt det, appen
+// ikke kan se — om teltet holder til blæsten, om posen er varm nok — bliver
+// aldrig til "lav" af sig selv.
+function vurderRisiko(tung: Item, let_: Item, daekning: number): { risiko: Risiko; konsekvens: string } {
+  const stjerner = vurderingAf(let_);
+  const mangler = tung.tags.filter((t) => !let_.tags.includes(t));
+
+  if (stjerner !== null && stjerner <= SKIDT) {
+    return {
+      risiko: 'hoej',
+      konsekvens: `Du har selv givet ${let_.navn} ${stjerner} ${stjerner === 1 ? 'stjerne' : 'stjerner'}. Lettere er ikke bedre, hvis det er noget du har været utilfreds med.`
+    };
+  }
+
+  if (daekning < HALVDELEN) {
+    return {
+      risiko: 'hoej',
+      konsekvens: `${let_.navn} mangler ${mangler.map(etikettekst).join(', ')} af det, ${tung.navn} er tagget med. De deler et tag, men de bruges ikke til det samme.`
+    };
+  }
+
+  if (daekning === 1 && erGodtVurderet(let_)) {
+    return {
+      risiko: 'lav',
+      konsekvens: `${let_.navn} dækker alt det, ${tung.navn} er tagget med, og du har selv givet den ${vurderingAf(let_)} stjerner.`
+    };
+  }
+
+  if (daekning === 1) {
+    return {
+      risiko: 'mellem',
+      konsekvens: `${let_.navn} dækker alt det, ${tung.navn} er tagget med, men du har ikke vurderet den endnu. Om den også kan det i praksis, ved kun du.`
+    };
+  }
+
+  return {
+    risiko: 'mellem',
+    konsekvens: `${let_.navn} mangler ${mangler.map(etikettekst).join(', ')} i forhold til ${tung.navn}. Det kan være ligegyldigt på den her tur — det er det ikke altid.`
+  };
+}
+
+// Halvdelen af tagsene. Under den er de to ting ikke i familie nok til at
+// byttet kan kaldes andet end vovet.
+const HALVDELEN = 0.5;
+
+// Tags står som de er skrevet; kun turens egne kendetegn har pæne etiketter,
+// og dem oversætter smartMotor. Her er det brugerens egne ord.
+function etikettekst(tag: string): string {
+  return `"${tag}"`;
 }
 
 // De tungeste stykker gear på turen der har et lettere alternativ i skabet.
@@ -97,7 +188,127 @@ export function vaegtbrydere(
 
 // Hvor meget der kunne spares, hvis man tog det bedste bytte hver gang.
 export function samletBesparelse(brydere: Vaegtbryder[]): number {
-  return brydere.reduce((sum, b) => sum + (b.alternativer[0]?.sparet_g ?? 0), 0);
+  return bedsteBytter(brydere).reduce((sum, b) => sum + b.sparet_g, 0);
+}
+
+// ─────────────────────────────────────────────
+// Resultatet, som specens §7.2 beder om det
+//
+// Vægten som den er, vægten som den kunne blive, og hvad der skal til. Målet
+// er ikke med: der findes ikke en målvægt i datamodellen, og et felt der
+// altid står tomt, er et løfte appen ikke holder. Kommer der en målvægt på
+// turen en dag, er det her, den hører hjemme.
+//
+// Automatisk fjernelse er aldrig tilladt, siger specen. Der er derfor ikke en
+// funktion herinde der skriver noget: `byt` og `bytAlle` regner de nye
+// felter ud, og skærmen gemmer dem, når nogen har trykket.
+// ─────────────────────────────────────────────
+
+export interface Vaegtresultat {
+  nuvaerende_g: number;
+  brydere: Vaegtbryder[];
+  potentiel_besparelse_g: number;
+}
+
+export function vaegtresultat(
+  tur: Tur,
+  grupper: Gruppe[],
+  inventar: Item[],
+  pakItems: Item[]
+): Vaegtresultat {
+  const brydere = vaegtbrydere(tur, grupper, inventar, pakItems);
+
+  return {
+    nuvaerende_g: pakItems.reduce((sum, i) => sum + i.vaegt_g * Math.max(1, i.antal), 0),
+    brydere,
+    potentiel_besparelse_g: samletBesparelse(brydere)
+  };
+}
+
+// ─────────────────────────────────────────────
+// At tage imod et forslag
+// ─────────────────────────────────────────────
+
+export interface Bytte {
+  tung: Item;
+  lette: Item;
+  sparet_g: number;
+  risiko: Risiko;
+}
+
+// Det bedste bud pr. tungt stykke gear — ét bytte ad gangen, som "byt alle"
+// ville tage dem.
+//
+// Det samme lette stykke gear kan sagtens være det bedste bud på to
+// forskellige tunge ting. Det må det være hver for sig, men ikke på én gang:
+// så ville to ting ryge ud af tasken og kun én komme ind, og man ville stå i
+// skoven uden den ene. Første bytte vinder; det andet falder væk.
+export function bedsteBytter(brydere: Vaegtbryder[]): Bytte[] {
+  const brugte = new Set<Reference>();
+  const bytter: Bytte[] = [];
+
+  for (const { tung, alternativer } of brydere) {
+    const bedste = alternativer.find((a) => !brugte.has(a.item.uid));
+    if (!bedste) continue;
+
+    brugte.add(bedste.item.uid);
+    bytter.push({ tung, lette: bedste.item, sparet_g: bedste.sparet_g, risiko: bedste.risiko });
+  }
+
+  return bytter;
+}
+
+// Turen som den ser ud efter et eller flere bytter.
+//
+// Byttet er ikke bare "tilføj det lette". Det var det, appen kunne før, og så
+// stod man med begge dele på pakkelisten og en vægt der var gået op i stedet
+// for ned — resten skulle man selv huske. Her ryger den tunge ud af det løse
+// grej, ud af tasken, og af hos den der skulle bære den.
+//
+// Kommer den tunge med via et grejsæt, kan den ikke fjernes fra turen alene:
+// et sæt er valgt som et sæt. Så lægges den lette til, og den tunge bliver —
+// og det er dét, `uloeste` fortæller skærmen, så den kan sige det højt frem
+// for at lade som om byttet var helt.
+export interface Bytteresultat {
+  aendringer: Partial<Tur>;
+  uloeste: Item[];
+}
+
+export function byt(tur: Tur, bytter: Bytte[]): Bytteresultat {
+  const loese = new Set(tur.loese_item_ids);
+  const pakkede = new Set(tur.pakkede_item_uids ?? []);
+  const uloeste: Item[] = [];
+  const fjernede = new Set<Reference>();
+
+  for (const { tung, lette } of bytter) {
+    loese.add(lette.uid);
+
+    if (loese.has(tung.uid)) {
+      loese.delete(tung.uid);
+      pakkede.delete(tung.uid);
+      fjernede.add(tung.uid);
+    } else {
+      // Den tunge kom fra et grejsæt og bliver stående.
+      uloeste.push(tung);
+    }
+  }
+
+  const deltagere = fjernede.size === 0
+    ? tur.deltagere
+    : tur.deltagere.map((d) => ({
+        ...d,
+        personligt_gear_ids: d.personligt_gear_ids.filter((uid) => !fjernede.has(uid)),
+        baerer_delt_ids: d.baerer_delt_ids.filter((uid) => !fjernede.has(uid))
+      }));
+
+  return {
+    aendringer: {
+      loese_item_ids: [...loese],
+      pakkede_item_uids: [...pakkede],
+      ...(fjernede.size > 0 ? { deltagere } : {})
+    },
+    uloeste
+  };
 }
 
 // ─────────────────────────────────────────────

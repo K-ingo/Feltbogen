@@ -3,7 +3,6 @@ import {
   naesteTur,
   naarBegynder,
   handlinger,
-  turforslag,
   syncstatus,
   tureIAar,
   sidstTilfoejede
@@ -514,90 +513,6 @@ describe('sidstTilfoejede', () => {
   });
 });
 
-
-describe('turforslag', () => {
-  it('giver ingen forslag uden en tur', () => {
-    expect(turforslag(null, [], [], [])).toEqual([]);
-  });
-
-  it('foreslår at kopiere en tidligere tur når der ikke er valgt grej endnu', () => {
-    const oekse = lavItem({ navn: 'Økse' });
-    const gammel = lavTur({
-      navn: 'Sidste sommer',
-      startdato: '2026-06-01',
-      slutdato: '2026-06-03',
-      status: 'afsluttet',
-      loese_item_ids: [oekse.uid]
-    });
-    const ny = lavTur({ navn: 'Ny tur' });
-
-    const forslag = turforslag(ny, [], [oekse], [gammel]);
-    const kopi = forslag.find((f) => f.type === 'kopi');
-
-    expect(kopi?.titel).toBe('Pak ligesom Sidste sommer');
-    expect(kopi?.begrundelse).not.toBe('');
-  });
-
-  it('foreslår ikke at kopiere når turen allerede har grej', () => {
-    const oekse = lavItem({ navn: 'Økse' });
-    const gammel = lavTur({ navn: 'Sidste sommer', status: 'afsluttet', loese_item_ids: [oekse.uid] });
-    const ny = lavTur({ loese_item_ids: [oekse.uid] });
-
-    expect(turforslag(ny, [], [oekse], [gammel]).some((f) => f.type === 'kopi')).toBe(false);
-  });
-
-  it('foreslår et grejsæt hvis tags rammer turens', () => {
-    const tur = lavTur({ overnatning: 'shelter', aktivitet: 'bushcraft' });
-    const saet = lavGruppe({ navn: 'Shelter-sommer', tags: ['shelter', 'bushcraft'] });
-
-    const gruppe = turforslag(tur, [saet], [], []).find((f) => f.type === 'gruppe');
-
-    expect(gruppe?.titel).toBe('Tag Shelter-sommer med');
-  });
-
-  it('foreslår ikke et grejsæt der allerede er på turen', () => {
-    const saet = lavGruppe({ navn: 'Shelter-sommer', tags: ['shelter'] });
-    const tur = lavTur({ overnatning: 'shelter', gruppe_ids: [saet.uid] });
-
-    expect(turforslag(tur, [saet], [], []).some((f) => f.type === 'gruppe')).toBe(false);
-  });
-
-  it('nævner kun vægten når der er noget at hente', () => {
-    const tungt = lavItem({ navn: 'Stort telt', vaegt_g: 4000, tags: ['ly'] });
-    const let_ = lavItem({ navn: 'Tarp', vaegt_g: 600, tags: ['ly'] });
-    const tur = lavTur({ loese_item_ids: [tungt.uid] });
-
-    const vaegt = turforslag(tur, [], [tungt, let_], []).find((f) => f.type === 'vaegt');
-
-    expect(vaegt?.titel).toBe('Vægten kan ned');
-    expect(vaegt?.detalje).toContain('kg at hente');
-  });
-
-  it('nævner ikke vægten når der ikke er et lettere alternativ', () => {
-    const tungt = lavItem({ navn: 'Stort telt', vaegt_g: 4000, tags: ['ly'] });
-    const tur = lavTur({ loese_item_ids: [tungt.uid] });
-
-    expect(turforslag(tur, [], [tungt], []).some((f) => f.type === 'vaegt')).toBe(false);
-  });
-
-  it('viser højst tre forslag', () => {
-    const tungt = lavItem({ navn: 'Stort telt', vaegt_g: 4000, tags: ['ly'] });
-    const let_ = lavItem({ navn: 'Tarp', vaegt_g: 600, tags: ['ly'] });
-    const saet = lavGruppe({ navn: 'Shelter', tags: ['shelter', 'bushcraft', 'skov'] });
-    const tur = lavTur({ loese_item_ids: [tungt.uid] });
-
-    expect(turforslag(tur, [saet], [tungt, let_], []).length).toBeLessThanOrEqual(3);
-  });
-
-  it('regner ikke gear man har solgt eller overvejer med', () => {
-    const overvejet = lavItem({ navn: 'Ønsketelt', status: 'overvejer' });
-    const tur = lavTur({ loese_item_ids: [overvejet.uid] });
-
-    // Turen har intet ejet grej, så den skal behandles som tom.
-    const gammel = lavTur({ navn: 'Sidste', status: 'afsluttet', loese_item_ids: [overvejet.uid] });
-    expect(turforslag(tur, [], [overvejet], [gammel]).some((f) => f.type === 'vaegt')).toBe(false);
-  });
-});
 
 describe('syncstatus', () => {
   it('siger at data ligger lokalt når der ikke er en konto', () => {

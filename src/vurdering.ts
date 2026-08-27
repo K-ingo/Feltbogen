@@ -22,6 +22,10 @@ export const HOEJESTE = 5;
 // motoren, så den er ét sted når den skal justeres.
 export const GODT = 4;
 
+// Og fra hvornår man har sagt fra. To og derunder — tre er "fint nok", og at
+// regne "fint nok" som en advarsel ville gøre skalaen til et ja/nej.
+export const SKIDT = 2;
+
 // Læser en vurdering fra en post der måske er ældre end feltet, og afviser
 // værdier uden for skalaen. Sync og import kan levere hvad som helst.
 export function vurderingAf(item: Pick<Item, 'vurdering'>): number | null {

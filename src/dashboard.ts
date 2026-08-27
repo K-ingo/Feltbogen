@@ -1,11 +1,9 @@
 import type { Item, Tur, Gruppe, Reference } from './db';
-import { itemUidsPaaTur, itemsPaaTur, foreslaaGrupper, laesDanskDato, dageTil } from './smartMotor';
+import { itemUidsPaaTur, laesDanskDato, dageTil } from './smartMotor';
 import { filtrererTure } from './statistik';
 import { manglerPakAfTjek, dageSidenSlut, PAK_AF_FRIST_DAGE } from './pakAfTjek';
 import { udlaanteItems, dageUdlaant, erOverskredet, laengde, LANGT_UDLAAN_DAGE } from './udlaan';
 import { forfaldne, forfaldstekst, VARSEL_DAGE } from './vedligehold';
-import { vaegtbrydere, samletBesparelse } from './vaegtbrydere';
-import { foreslaaKopi } from './ligesomSidst';
 
 // Logikken bag startskærmen. Alt herinde er rene funktioner, så rækkefølgen og
 // grænserne kan testes uden at rende skærmen igennem.
@@ -299,88 +297,6 @@ function garantiFrist(dage: number): string {
   if (dage === 1) return '1 dag';
   if (dage === 0) return 'i dag';
   return 'udløbet';
-}
-
-// ─────────────────────────────────────────────
-// Feltbogen foreslår
-//
-// Handlingerne ovenfor er ting, der er gået skævt. Det her er det modsatte:
-// hvad appen ville gøre, hvis den måtte. Den må ikke — forslagene skriver
-// ingenting, de peger på turen, hvor man selv siger ja.
-//
-// Alle tre kilder er motorens egne og har allerede en begrundelse med. Der
-// laves ingen nye regler her; der vælges kun, hvilke der er værd at vise på
-// en startskærm.
-// ─────────────────────────────────────────────
-
-export type ForslagsType = 'kopi' | 'gruppe' | 'vaegt';
-
-export interface Turforslag {
-  type: ForslagsType;
-  titel: string;
-  detalje: string;
-  begrundelse: string;
-}
-
-// Så mange forslag ad gangen. Startskærmen skal kunne læses på fem sekunder,
-// og et forslag man ikke når at læse, er ikke et forslag.
-const MAKS_FORSLAG = 3;
-
-export function turforslag(
-  tur: Tur | null,
-  grupper: Gruppe[],
-  items: Item[],
-  alleTure: Tur[]
-): Turforslag[] {
-  if (!tur) return [];
-
-  const ejet = items.filter((i) => i.status === 'ejer');
-  const paaTuren = itemsPaaTur(tur, grupper, ejet);
-  const forslag: Turforslag[] = [];
-
-  // Er der ikke valgt noget grej endnu, er den tomme liste det eneste
-  // problem der er værd at løse. En tidligere tur der ligner, er et bedre
-  // sted at begynde end ingenting.
-  if (paaTuren.length === 0) {
-    const kopi = foreslaaKopi(tur, alleTure, grupper)[0];
-    if (kopi) {
-      forslag.push({
-        type: 'kopi',
-        titel: `Pak ligesom ${kopi.tur.navn || 'sidste tur'}`,
-        detalje: `${kopi.antalItems} ${kopi.antalItems === 1 ? 'ting' : 'ting'} at kopiere over`,
-        begrundelse: kopi.begrundelse
-      });
-    }
-  }
-
-  // Grejsæt hvis tags rammer turens. Kun det bedste match: to forslag om at
-  // tilføje en gruppe ad gangen er ikke hjælp, det er en liste.
-  const gruppe = foreslaaGrupper(tur, grupper).filter((g) => g.score > 0)[0];
-  if (gruppe) {
-    forslag.push({
-      type: 'gruppe',
-      titel: `Tag ${gruppe.gruppe.navn} med`,
-      detalje: `Passer på ${gruppe.traf.join(', ')}`,
-      begrundelse: gruppe.begrundelse
-    });
-  }
-
-  // Lettere alternativer i skabet. Kun værd at nævne når der er valgt grej
-  // at gøre lettere, og kun hvis der reelt er noget at hente.
-  if (paaTuren.length > 0) {
-    const brydere = vaegtbrydere(tur, grupper, ejet, paaTuren);
-    const sparet = samletBesparelse(brydere);
-    if (sparet > 0) {
-      forslag.push({
-        type: 'vaegt',
-        titel: 'Vægten kan ned',
-        detalje: `${(sparet / 1000).toFixed(1)} kg at hente på ${brydere.length} ${brydere.length === 1 ? 'ting' : 'ting'}`,
-        begrundelse: brydere[0].begrundelse
-      });
-    }
-  }
-
-  return forslag.slice(0, MAKS_FORSLAG);
 }
 
 // ─────────────────────────────────────────────
