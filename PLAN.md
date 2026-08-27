@@ -262,7 +262,7 @@ appen?
 
 ---
 
-## 6. Hvad der står tilbage
+## 7. Hvad der står tilbage
 
 Alle fem skridt er taget. Det, der ligger og venter, i den rækkefølge det
 sandsynligvis er værd at tage:
@@ -280,6 +280,20 @@ er en tilstand de fleste aldrig sætter.
 **Feltet skal oprettes i PocketBase** (`pakkede_item_uids`, JSON — se
 POCKETBASE.md trin 4). Mangler det, kan man stadig krydse af, men
 afkrydsningen bliver på den enhed man står med, og der kommer ingen fejl.
+
+**~~§26 Integrationstest af turflowet.~~** ✅ De 849 unittests dækkede
+regnestykkerne, ikke overgangene mellem dem. `turflow.test.ts` kører turen
+fra tom kladde til gjort op gennem det rigtige datalag — opret, læg grej på,
+pak, fordel mellem to deltagere, gå klar og afsted, skriv i logen, afslut,
+gør op, og brug turen igen næste gang — og læser turen frisk fra Dexie efter
+hvert skridt.
+
+Og et hul, der var værre end de tests: `sync.test.ts` kræver nu, at hvert
+felt på turen, grejet og grejsættet faktisk kommer med op. Det var sådan
+`hero_billede` og `booking` kunne blive slettet ved sync i første omgang —
+hver funktion for sig var rigtig, og PocketBase siger ikke fra. Testen er
+ikke bundet til bestemte felter: den læser felterne på posten, så det næste
+felt nogen glemmer i `tilPb`, falder med navns nævnelse.
 
 **Ruter og højdemeter (specens §12).** Kilometer og højdemeter har ingen
 datakilde. Det er et nyt datadomæne — GPX eller lignende — ikke en
