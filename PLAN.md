@@ -513,9 +513,23 @@ afhængighed den anden vej.
 
 ### Rækkefølgen
 
-1. **Situationsbaseret Hjem.** `turfase` afgør, hvad forsiden viser: ingen tur,
-   kladde, klar, snart afsted, på tur, afsluttet. Én primær handling. Målene
-   fra `Mangel` genbruges, så Hjem lander det rigtige sted — reglen fra §6.
+1. **~~Situationsbaseret Hjem.~~** ✅ `hjemsituation` i `dashboard.ts` afgør,
+   hvad forsiden handler om: ingen tur, kladde, klar, snart afsted, på tur,
+   eller hjemme uden at have gjort turen op. Én primær handling, og den lander
+   dér, hvor den kan udføres — reglen fra §6.
+
+   Hullet var det sidste af de seks: `naesteTur` filtrerer afsluttede ture fra,
+   så når man kom hjem, sagde forsiden "Ingen ture planlagt", mens det eneste,
+   der manglede, stod nede under handlingerne. Nu er den hjemkomne tur selv
+   kortet, og teksten siger hvorfor det haster: hvad blev brugt, hvad lå urørt,
+   hvad gik i stykker.
+
+   Rækkefølgen er en prioritering og ikke en liste: en tur, man er midt i,
+   slår alt — man planlægger ikke næste sommer fra en shelter. Derefter det,
+   der kommer, og til sidst det, man har efterladt.
+
+   Og kortet øverst ejer sin tur: handlingerne og situationen kigger på de
+   samme data, så uden en regel sagde de begge det samme om den samme tur.
 2. **Gear-historikkens tidslinje.** Aggregatet findes; udfaldet pr. tur gør
    ikke. "24/08 – Øhavet – Brugt" er dét, der gør historikken læselig, og det
    er `pak_af_tjek` læst pr. tur i stedet for lagt sammen.

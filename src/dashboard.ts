@@ -2,6 +2,7 @@ import type { Item, Tur, Gruppe, Reference } from './db';
 import { itemUidsPaaTur, laesDanskDato, dageTil } from './smartMotor';
 import { filtrererTure } from './statistik';
 import { manglerPakAfTjek, dageSidenSlut, PAK_AF_FRIST_DAGE } from './pakAfTjek';
+import type { Turmaal } from './turmaal';
 import { udlaanteItems, dageUdlaant, erOverskredet, laengde, LANGT_UDLAAN_DAGE } from './udlaan';
 import { forfaldne, forfaldstekst, VARSEL_DAGE } from './vedligehold';
 
@@ -33,6 +34,139 @@ export function naarBegynder(tur: Tur, nu: Date = new Date()): string {
   if (dage === 1) return 'i morgen';
   if (dage === 0) return 'i dag';
   return 'i gang';
+}
+
+// ─────────────────────────────────────────────
+// Situationen
+//
+// Startskærmen skal vise det, der er vigtigt nu — ikke alt, appen kan. Og
+// "nu" er ikke det samme hele året: der er forskel på en kladde tre uger ude,
+// en tur der begynder i morgen, en man er midt i, og en man lige er kommet
+// hjem fra.
+//
+// Hullet, den her funktion lukker, var det sidste af dem: `naesteTur`
+// filtrerer afsluttede ture fra, så når man kom hjem fra en tur, sagde
+// forsiden "Ingen ture planlagt" — mens det eneste, der faktisk manglede, var
+// at gøre turen op. Det stod nede under handlingerne, hvor man skulle finde
+// det selv.
+//
+// Situationen udledes og gemmes ikke. Et felt til den ville skulle holdes i
+// sync med datoer, status og pak-af-tjek, og det ville sige det samme som dem.
+// ─────────────────────────────────────────────
+
+// Så tæt på afgang handler turen ikke længere om at planlægge. Så handler den
+// om at få det i tasken.
+const SNART_DAGE = 3;
+
+export type Situation =
+  // Ingen tur i sigte — hverken forude eller lige bag.
+  | 'ingen_tur'
+  // Turen er lagt, men langt ude endnu.
+  | 'kladde'
+  // Klar, men der er stadig tid.
+  | 'klar'
+  // Den begynder om få dage.
+  | 'snart'
+  // Man er afsted.
+  | 'paa_tur'
+  // Hjemme, men turen er ikke gjort op.
+  | 'gjort_op_mangler';
+
+export interface Hjemsituation {
+  situation: Situation;
+  // Turen, situationen handler om. Null kun ved 'ingen_tur'.
+  tur: Tur | null;
+  // Ordet over kortet: "Næste tur · om 8 dage", "På tur", "Hjemme fra".
+  overskrift: string;
+  // Hvad knappen hedder. Den siger, hvad man skal — ikke hvor man kommer hen.
+  handling: string;
+  // Hvor på turen knappen lander, når turens forside ikke er stedet.
+  // Se turmaal.ts: peger appen på noget, skal man kunne gøre det, hvor man
+  // lander.
+  maal?: Turmaal;
+}
+
+export function hjemsituation(
+  ture: Tur[],
+  nu: Date = new Date()
+): Hjemsituation {
+  // Rækkefølgen er prioriteringen: det man er midt i, så det der kommer, og
+  // til sidst det man har efterladt. En tur man står i, slår alt andet — man
+  // planlægger ikke næste sommer fra en shelter.
+  const aktiv = ture.find((t) => t.status === 'aktiv');
+  if (aktiv) {
+    return {
+      situation: 'paa_tur',
+      tur: aktiv,
+      overskrift: 'På tur',
+      handling: 'Fortsæt turen'
+    };
+  }
+
+  const kommende = naesteTur(ture, nu);
+  if (kommende) {
+    const dage = kommende.startdato ? dageTil(new Date(kommende.startdato), nu) : 99;
+    const overskrift = `Næste tur · ${naarBegynder(kommende, nu)}`;
+
+    if (dage <= SNART_DAGE) {
+      return {
+        situation: 'snart',
+        tur: kommende,
+        overskrift,
+        handling: 'Pak færdig',
+        // Pakkelisten og ikke pakke-fanen: så tæt på afgang er det
+        // afkrydsningen, man skal have fat i.
+        maal: 'pakkeliste'
+      };
+    }
+
+    return kommende.status === 'kladde'
+      ? { situation: 'kladde', tur: kommende, overskrift, handling: 'Fortsæt planlægningen' }
+      : { situation: 'klar', tur: kommende, overskrift, handling: 'Gør klar', maal: 'pakning' };
+  }
+
+  // Ikke noget forude. Så er det, man kom hjem fra, det eneste der står
+  // tilbage — og kun hvis den ikke er gjort op. Nyeste først: den husker man
+  // bedst.
+  const uafsluttet = ture
+    .filter(manglerPakAfTjek)
+    .filter((t) => t.slutdato || t.startdato)
+    .sort((a, b) => (b.slutdato || b.startdato).localeCompare(a.slutdato || a.startdato))[0];
+
+  if (uafsluttet) {
+    return {
+      situation: 'gjort_op_mangler',
+      tur: uafsluttet,
+      overskrift: 'Hjemme fra',
+      handling: 'Gør turen op'
+    };
+  }
+
+  return {
+    situation: 'ingen_tur',
+    tur: null,
+    overskrift: 'Næste tur',
+    handling: 'Planlæg en tur'
+  };
+}
+
+// Kortet øverst ejer sin tur.
+//
+// Handlingerne og situationen kigger på de samme data, så de kan nå frem til
+// det samme: står man hjemme fra en tur uden pak-af-tjek, siger turkortet
+// "Gør turen op", og handlingen under det siger "Mangler pak-af-tjek" om
+// præcis den tur. To kort om det samme fylder to pladser og siger én ting.
+//
+// Handlingerne om *andre* ture bliver stående — det er kun dubletten, der
+// ryger.
+export function udenDubletAfSituationen(
+  alle: Handling[],
+  situation: Hjemsituation
+): Handling[] {
+  const turUid = situation.tur?.uid;
+  if (!turUid) return alle;
+
+  return alle.filter((h) => !(h.maal.slags === 'tur' && h.maal.uid === turUid));
 }
 
 // ─────────────────────────────────────────────

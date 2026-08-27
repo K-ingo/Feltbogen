@@ -1,17 +1,17 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
-import type { Item, Gruppe, Tur } from './db';
+import type { Item, Gruppe } from './db';
 import {
-  naesteTur,
-  naarBegynder,
+  hjemsituation,
+  udenDubletAfSituationen,
   handlinger,
   syncstatus,
   tureIAar,
   sidstTilfoejede
 } from './dashboard';
 import { aarsopgoerelseAtSe } from './aarsopgoerelse';
-import type { Handling, Syncstatus } from './dashboard';
+import type { Handling, Syncstatus, Hjemsituation } from './dashboard';
 import { forslagTilTur, udenAfviste, maalFor } from './forslag';
 import type { Forslag } from './forslag';
 import type { Turmaal } from './turmaal';
@@ -63,8 +63,12 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
   // Tælles om når basen ændrer sig, så tallet ikke står og lyver efter en sync.
   const usendt = useLiveQuery(usendtAntal, [], 0);
 
-  const tur = naesteTur(ture);
-  const alleHandlinger = handlinger(items, ture, grupper);
+  // Hvad startskærmen handler om lige nu. Reglerne ligger i dashboard.ts, så
+  // de kan afprøves uden en skærm.
+  const situation = hjemsituation(ture);
+  const tur = situation.tur;
+  // Turkortet øverst ejer sin tur, så den ikke bliver sagt to gange.
+  const alleHandlinger = udenDubletAfSituationen(handlinger(items, ture, grupper), situation);
   // Afvisningen lever her og ikke i basen. Hvad man ikke gider høre om lige
   // nu, er ikke data om turen — og et felt til det skulle synkroniseres og
   // gemmes for evigt for at slippe for et kort i tre dage. Den holder til man
@@ -143,11 +147,11 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
       fab={nytItem}
     >
       <div style={{ display: 'grid', gap: '22px' }}>
-        <NaesteTurKort
-          tur={tur}
+        <Situationskort
+          situation={situation}
           items={items}
           grupper={grupper}
-          aabn={() => tur?.id !== undefined && aabnTur(tur.id)}
+          aabn={(maal) => situation.tur?.id !== undefined && aabnTur(situation.tur.id, false, maal)}
           opret={nyTur}
         />
 
@@ -265,20 +269,30 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
 // Sektioner
 // ─────────────────────────────────────────────
 
-function NaesteTurKort({ tur, items, grupper, aabn, opret }: {
-  tur: Tur | null;
+// Turkortet på startskærmen.
+//
+// Det viser ikke "næste tur" men *situationen*: hvad der er vigtigt nu. Der er
+// forskel på en kladde tre uger ude, en tur der begynder i morgen, en man er
+// midt i, og en man lige er kommet hjem fra uden at gøre den op — og knappen
+// skal sige noget forskelligt i hvert af de fire tilfælde.
+//
+// Reglerne ligger i `hjemsituation`; her oversættes de kun til en skærm.
+function Situationskort({ situation, items, grupper, aabn, opret }: {
+  situation: Hjemsituation;
   items: Item[];
   grupper: Gruppe[];
-  aabn: () => void;
+  aabn: (maal?: Turmaal) => void;
   opret: () => void;
 }) {
+  const tur = situation.tur;
+
   if (!tur) {
     return (
-      <Infokort label="Næste tur">
+      <Infokort label={situation.overskrift}>
         <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginBottom: '12px' }}>
           Ingen ture planlagt.
         </div>
-        <Knap variant="primaer" onClick={opret}>+ Planlæg en tur</Knap>
+        <Knap variant="primaer" onClick={opret}>+ {situation.handling}</Knap>
       </Infokort>
     );
   }
@@ -291,12 +305,15 @@ function NaesteTurKort({ tur, items, grupper, aabn, opret }: {
     : vaegtPersonligt + vaegtDelt;
 
   const advarsler = findAdvarsler(paaTuren);
-
   const pakning = pakkefremdrift(tur, paaTuren);
   const afgang = tur.afgangs_tjek;
 
+  // En hjemkommen tur skal ikke stå og fortælle, hvor langt man er med
+  // pakningen. Den er ovre; det eneste, der mangler, er regnskabet.
+  const hjemme = situation.situation === 'gjort_op_mangler';
+
   return (
-    <Infokort label={`Næste tur · ${naarBegynder(tur)}`} fremhaevet>
+    <Infokort label={situation.overskrift} fremhaevet>
       <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '20px', marginBottom: '3px' }}>
         {tur.navn || 'Uden navn'}
       </div>
@@ -315,21 +332,30 @@ function NaesteTurKort({ tur, items, grupper, aabn, opret }: {
         display: 'grid',
         gap: '2px'
       }}>
-        <span>{pakketekst(pakning)}</span>
-        {afgang && <span>Afgangs-tjek: {fremdriftstekst(afgang).toLowerCase()}</span>}
+        {hjemme ? (
+          <span>
+            Ikke gjort op endnu. Hvad blev brugt, hvad lå urørt, og hvad gik i stykker —
+            det er dét, motoren lærer af.
+          </span>
+        ) : (
+          <>
+            <span>{pakketekst(pakning)}</span>
+            {afgang && <span>Afgangs-tjek: {fremdriftstekst(afgang).toLowerCase()}</span>}
+          </>
+        )}
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--plads-2)', flexWrap: 'wrap' }}>
-        {advarsler.length > 0 && (
+        {!hjemme && advarsler.length > 0 && (
           <Chip farve={advarsler.some((a) => a.niveau === 'roed') ? 'fejl' : 'advarsel'} storrelse="lille">
             ⚠ {advarsler.length} {advarsler.length === 1 ? 'advarsel' : 'advarsler'}
           </Chip>
         )}
         <div style={{ marginLeft: 'auto' }}>
-          {/* Knappen siger, hvad man skal, og ikke bare hvor man kommer hen.
-              Er der ikke valgt grej endnu, er det dét, turen mangler. */}
-          <Knap variant="primaer" onClick={aabn}>
-            {paaTuren.length === 0 ? 'Vælg grej' : pakning.faerdig ? 'Åbn tur' : 'Fortsæt pakning'}
+          {/* Knappen siger, hvad man skal — og lander dér, hvor det kan gøres.
+              Se turmaal.ts. */}
+          <Knap variant="primaer" onClick={() => aabn(situation.maal)}>
+            {situation.handling}
           </Knap>
         </div>
       </div>
@@ -337,12 +363,6 @@ function NaesteTurKort({ tur, items, grupper, aabn, opret }: {
   );
 }
 
-// Sync-status. Fundamentet siger, den skal være synlig uden at være
-// dominerende, og derfor er den en linje nederst og ikke et kort øverst.
-//
-// Kun en rigtig fejl får en farve. At have ændringer liggende uden dækning er
-// den normale tilstand for en app, man bruger i skoven — den skal ikke stå og
-// blinke rødt, fordi man er kommet ud, hvor der ikke er signal.
 function Synclinje({ status }: { status: Syncstatus }) {
   const prik = {
     synkroniseret: 'var(--succes)',

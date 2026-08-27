@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   naesteTur,
+  hjemsituation,
+  udenDubletAfSituationen,
   naarBegynder,
   handlinger,
   syncstatus,
@@ -538,5 +540,160 @@ describe('syncstatus', () => {
   it('er synkroniseret når køen er tom', () => {
     expect(syncstatus(0, true, true).tilstand).toBe('synkroniseret');
     expect(syncstatus(0, false, true).tekst).toContain('offline');
+  });
+});
+
+// ─────────────────────────────────────────────
+// Situationen på startskærmen
+// ─────────────────────────────────────────────
+
+describe('hjemsituation', () => {
+  const nu = new Date('2026-08-27T09:00:00Z');
+  const tur = (felter: Parameters<typeof lavTur>[0]) => lavTur(felter);
+
+  it('siger ingen tur når der hverken er noget forude eller bagude', () => {
+    const s = hjemsituation([], nu);
+
+    expect(s.situation).toBe('ingen_tur');
+    expect(s.tur).toBeNull();
+    expect(s.handling).toBe('Planlæg en tur');
+  });
+
+  // Man planlægger ikke næste sommer fra en shelter.
+  it('lader en tur man er midt i slå alt andet', () => {
+    const s = hjemsituation([
+      tur({ navn: 'Om tre uger', status: 'klar', startdato: '2026-09-17', slutdato: '2026-09-19' }),
+      tur({ navn: 'I gang', status: 'aktiv', startdato: '2026-08-26', slutdato: '2026-08-28' })
+    ], nu);
+
+    expect(s.situation).toBe('paa_tur');
+    expect(s.tur?.navn).toBe('I gang');
+    expect(s.handling).toBe('Fortsæt turen');
+  });
+
+  it('kalder en kladde langt ude for planlægning', () => {
+    const s = hjemsituation([
+      tur({ navn: 'Til september', status: 'kladde', startdato: '2026-09-17', slutdato: '2026-09-19' })
+    ], nu);
+
+    expect(s.situation).toBe('kladde');
+    expect(s.handling).toBe('Fortsæt planlægningen');
+    expect(s.overskrift).toContain('om 21 dage');
+  });
+
+  it('sender en klar tur langt ude til pakningen', () => {
+    const s = hjemsituation([
+      tur({ status: 'klar', startdato: '2026-09-17', slutdato: '2026-09-19' })
+    ], nu);
+
+    expect(s.situation).toBe('klar');
+    expect(s.handling).toBe('Gør klar');
+    expect(s.maal).toBe('pakning');
+  });
+
+  // Tre dage før afgang handler turen ikke om at planlægge længere.
+  it('skifter til pak færdig når afgangen er nær', () => {
+    const s = hjemsituation([
+      tur({ status: 'kladde', startdato: '2026-08-29', slutdato: '2026-08-31' })
+    ], nu);
+
+    expect(s.situation).toBe('snart');
+    expect(s.handling).toBe('Pak færdig');
+    // Pakkelisten og ikke pakke-fanen: så tæt på er det afkrydsningen.
+    expect(s.maal).toBe('pakkeliste');
+  });
+
+  it('regner en tur der begynder i dag som nær', () => {
+    expect(hjemsituation([
+      tur({ status: 'klar', startdato: '2026-08-27', slutdato: '2026-08-29' })
+    ], nu).situation).toBe('snart');
+  });
+
+  // Hullet det hele handler om: uden det her sagde forsiden "Ingen ture
+  // planlagt", når man lige var kommet hjem.
+  it('peger på en hjemkommen tur der ikke er gjort op', () => {
+    const s = hjemsituation([
+      tur({ navn: 'Mols', status: 'afsluttet', startdato: '2026-08-20', slutdato: '2026-08-22' })
+    ], nu);
+
+    expect(s.situation).toBe('gjort_op_mangler');
+    expect(s.tur?.navn).toBe('Mols');
+    expect(s.overskrift).toBe('Hjemme fra');
+    expect(s.handling).toBe('Gør turen op');
+  });
+
+  it('tager den nyeste af flere uafsluttede', () => {
+    const s = hjemsituation([
+      tur({ navn: 'Gammel', status: 'afsluttet', startdato: '2026-05-01', slutdato: '2026-05-03' }),
+      tur({ navn: 'Nyere', status: 'afsluttet', startdato: '2026-08-20', slutdato: '2026-08-22' })
+    ], nu);
+
+    expect(s.tur?.navn).toBe('Nyere');
+  });
+
+  it('nævner ikke en tur der allerede er gjort op', () => {
+    const s = hjemsituation([
+      tur({
+        status: 'afsluttet',
+        startdato: '2026-08-20',
+        slutdato: '2026-08-22',
+        pak_af_tjek: { udfyldt_dato: '2026-08-23', niveau: 'let', linjer: [] }
+      })
+    ], nu);
+
+    expect(s.situation).toBe('ingen_tur');
+  });
+
+  // En tur forude er stadig vigtigere end en, der er ovre. Regnskabet står
+  // som handlingskort imens.
+  it('lader en kommende tur gå forud for et manglende opgør', () => {
+    const s = hjemsituation([
+      tur({ navn: 'Ikke gjort op', status: 'afsluttet', startdato: '2026-08-20', slutdato: '2026-08-22' }),
+      tur({ navn: 'Forude', status: 'kladde', startdato: '2026-09-17', slutdato: '2026-09-19' })
+    ], nu);
+
+    expect(s.situation).toBe('kladde');
+    expect(s.tur?.navn).toBe('Forude');
+  });
+});
+
+describe('udenDubletAfSituationen', () => {
+  const nu = new Date('2026-08-27T09:00:00Z');
+
+  // Uden det her stod "Gør turen op" på turkortet og "Mangler pak-af-tjek"
+  // som handling lige under — to kort om den samme tur.
+  it('fjerner handlinger om den tur, kortet øverst allerede handler om', () => {
+    const hjemme = lavTur({
+      navn: 'Mols', status: 'afsluttet', startdato: '2026-08-20', slutdato: '2026-08-22'
+    });
+    const situation = hjemsituation([hjemme], nu);
+    const alle = handlinger([], [hjemme], [], nu);
+
+    expect(situation.tur?.uid).toBe(hjemme.uid);
+    expect(alle.some((h) => h.type === 'pak_af_tjek_mangler')).toBe(true);
+    expect(udenDubletAfSituationen(alle, situation)).toEqual([]);
+  });
+
+  it('lader handlinger om andre ture stå', () => {
+    const hjemme = lavTur({
+      navn: 'Mols', status: 'afsluttet', startdato: '2026-08-20', slutdato: '2026-08-22'
+    });
+    const anden = lavTur({
+      navn: 'Øhavet', status: 'afsluttet', startdato: '2026-07-01', slutdato: '2026-07-03'
+    });
+    const situation = hjemsituation([hjemme, anden], nu);
+    const tilbage = udenDubletAfSituationen(handlinger([], [hjemme, anden], [], nu), situation);
+
+    expect(situation.tur?.navn).toBe('Mols');
+    expect(tilbage.map((h) => h.detalje.split(' ·')[0])).toEqual(['Øhavet']);
+  });
+
+  it('rører ikke gear-handlinger', () => {
+    const item = lavItem({ navn: 'Dyr ting', pris_kr: 3000, koebt_hos: '', koebsdato: '' });
+    const situation = hjemsituation([], nu);
+    const alle = handlinger([item], [], [], nu);
+
+    expect(alle.length).toBeGreaterThan(0);
+    expect(udenDubletAfSituationen(alle, situation)).toEqual(alle);
   });
 });
