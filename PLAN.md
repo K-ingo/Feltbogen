@@ -445,3 +445,101 @@ sat efter mavefornemmelse og testdata. Hvornår vægten er værd at nævne, hvor
 godt et grejsæt skal matche, hvor mange ture der skal til, før noget regnes
 som ubrugt. De er nemme at justere — men kun når de har været brugt på
 rigtige data.
+
+---
+
+## 9. Anden runde: fra fundament til færdig 2.0
+
+*August 2026, efter at det første dokument var arbejdet igennem.*
+
+Der er kommet en ny gap-analyse — `Feltbogen_2_0_AKTUEL_Mangler_og_Implementeringsplan.docx`.
+Den findes i to udgaver, og forskellen mellem dem er selv en pointe: den
+første beskrev gear-historik, steder og turfase som manglende, hvilket de ikke
+er. Den anden er skrevet efter en gennemgang af den faktiske gren og rammer
+rigtigt.
+
+Dette afsnit er broen fra den til koden, på samme måde som §1–§8 var broen fra
+den oprindelige spec.
+
+### Det dokumentet får rigtigt
+
+**Auditér før du bygger.** Dokumentets §14 er en eksplicit "byg ikke det her
+om"-liste — turfase, tur-overblik, pakning, gear-historik, steder,
+forslagsarkitekturen, sync og smart-motoren. Den liste er korrekt, og den er
+den vigtigste side i dokumentet. Halvdelen af den første udgaves arbejdsliste
+var allerede lavet.
+
+**Flerdages ture er ikke en checkbox.** Det står der to gange, og det er sandt:
+`flerdagstur = true` ville se færdigt ud og ikke kunne bære en daglig
+destination, rute, overnatning eller journal.
+
+**Kortdata er ude af scope.** Den første udgave havde offline-kortfliser
+stående som en punkttegn ved siden af "rutelængde". Det er to helt forskellige
+størrelser — appen fylder 558 kB i dag. Den nye udgave nævner dem ikke, og det
+er rigtigt.
+
+### De to steder, vi gør noget andet
+
+**Dagene bliver et felt på turen, ikke syv tabeller.** Dokumentets §8.2
+tegner TurDag, DagDestination, DagRute, DagOvernatning, DagVejr, DagForbrug og
+DagNote som selvstændige entiteter. Det ville betyde syv PocketBase-samlinger
+og syv konfliktstrategier i en app, der i dag har fem.
+
+Sådan gør appen det ikke. `deltagere`, `budget_linjer`, `feltnoter`,
+`pak_af_tjek` og `afgangs_tjek` ligger alle som JSON på turen — netop fordi de
+ikke findes uden den, og fordi de så synkroniserer som én post: én kolonne, én
+konflikt, ingen dubletter. Dagene hører til samme familie.
+
+**Afgørelse:** ét felt, `dage: TurDag[]`, med et `day_uid` på hver dag —
+dokumentets egen identitetsregel, uden syv tabeller. Bliver en dag senere
+noget, man skal kunne dele eller slå op alene, kan den flyttes ud; det
+omvendte er sværere.
+
+Og tre af de syv findes allerede i en anden form. `feltnoter` er dagsopdelt i
+forvejen (`efterDag` i `feltnoter.ts`), `vejrsnapshot` er allerede et frosset
+snapshot, og DagForbrug er den vand/mad-registrering, specens §10 beskriver.
+De skal genbruges, ikke bygges parallelt — dokumentet siger selv, at den samme
+historik ikke må ligge to steder som to uafhængige sandheder.
+
+**Hjem før første tur-flow.** Dokumentets §13 sætter det guidede tur-flow som
+trin 2 og situationsbaseret Hjem som trin 3. Vi bytter om.
+
+Hjem er næsten kun at lade `turfase` styre startskærmen, og hullet er konkret:
+`naesteTur` filtrerer afsluttede ture fra, så når man kommer hjem fra en tur,
+siger forsiden "Ingen ture planlagt", mens evalueringen ligger nede under
+handlingerne. Dokumentets sjette situation — *afsluttet → gør turen op* —
+findes ikke. Det er en dags arbejde mod flere for wizarden, og der er ingen
+afhængighed den anden vej.
+
+### Rækkefølgen
+
+1. **Situationsbaseret Hjem.** `turfase` afgør, hvad forsiden viser: ingen tur,
+   kladde, klar, snart afsted, på tur, afsluttet. Én primær handling. Målene
+   fra `Mangel` genbruges, så Hjem lander det rigtige sted — reglen fra §6.
+2. **Gear-historikkens tidslinje.** Aggregatet findes; udfaldet pr. tur gør
+   ikke. "24/08 – Øhavet – Brugt" er dét, der gør historikken læselig, og det
+   er `pak_af_tjek` læst pr. tur i stedet for lagt sammen.
+3. **Første tur-flow.** Fravalgt i §4 med begrundelsen "et guidet flow på seks
+   trin er stadig en formular". Det var for hurtigt sagt: dokumentets udgave
+   spørger ét ad gangen, kan afbrydes, gemmer en lokal draft og slutter med et
+   *forslag* frem for en tom tur. Det er en anden ting, og den er bedre.
+   Turen, der oprettes, er den almindelige `Tur` — ingen wizard-model ved
+   siden af.
+4. **Gruppefordeling.** En ren fordelingsfunktion, der returnerer et forslag
+   med før/efter ("Jakob +0,8 kg / Emil −0,8 kg") og aldrig skriver selv.
+   Samme mønster som vægtbytterne.
+5. **Læringssløjfen og de sidste statistikker.** Nætter, besøgte steder,
+   turtyper, gennemsnitsvægt, bedste og dårligste grej efter egne stjerner.
+   Kun det, der kan forklares ud fra data, der findes.
+6. **Rute som eget domæne, og så `dage: TurDag[]`.** Datamodel, migration og
+   tests før noget UI, som dokumentets §8.4 siger. Rute først, fordi dagen
+   skal kunne pege på en.
+
+Adaptiv hjælp og Smart Motor 1.0 til sidst — dokumentet siger det selv, og det
+har ikke ændret sig siden første runde.
+
+### Stadig fravalgt
+
+Router, engelske mappenavne og AI/naturligt sprog står som de gjorde i §4.
+Kvitteringsfil er den ene nye: den kræver et fil-felt i PocketBase, og
+dokumentet er selv i tvivl om, hvorvidt den hører til 2.0.
