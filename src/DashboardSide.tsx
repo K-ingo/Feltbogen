@@ -10,6 +10,7 @@ import {
   tureIAar,
   sidstTilfoejede
 } from './dashboard';
+import { turfase } from './turfase';
 import { aarsopgoerelseAtSe } from './aarsopgoerelse';
 import type { Handling, Syncstatus } from './dashboard';
 import { forslagTilTur, udenAfviste, maalFor } from './forslag';
@@ -295,8 +296,19 @@ function NaesteTurKort({ tur, items, grupper, aabn, opret }: {
   const pakning = pakkefremdrift(tur, paaTuren);
   const afgang = tur.afgangs_tjek;
 
+  const faseInfo = turfase(tur, grupper);
+
+  // Situationsbaseret primær handling udledt af turfase
+  const primaerHandlingsLabel = () => {
+    if (faseInfo.fase === 'kladde') return 'Fortsæt planlægning';
+    if (faseInfo.fase === 'klar') return pakning.faerdig ? 'Gør klar til afgang' : 'Pak færdig';
+    if (faseInfo.fase === 'aktiv') return 'Fortsæt tur';
+    if (faseInfo.fase === 'afsluttet') return 'Gør turen op';
+    return 'Åbn tur';
+  };
+
   return (
-    <Infokort label={`Næste tur · ${naarBegynder(tur)}`} fremhaevet>
+    <Infokort label={`Næste tur · ${naarBegynder(tur)} (${faseInfo.navn})`} fremhaevet>
       <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '20px', marginBottom: '3px' }}>
         {tur.navn || 'Uden navn'}
       </div>
@@ -317,6 +329,11 @@ function NaesteTurKort({ tur, items, grupper, aabn, opret }: {
       }}>
         <span>{pakketekst(pakning)}</span>
         {afgang && <span>Afgangs-tjek: {fremdriftstekst(afgang).toLowerCase()}</span>}
+        {faseInfo.mangler.length > 0 && (
+          <span style={{ color: 'var(--advarsel)', fontWeight: 500 }}>
+            Mangler: {faseInfo.mangler.map((m) => m.tekst).join(', ')}
+          </span>
+        )}
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--plads-2)', flexWrap: 'wrap' }}>
@@ -326,10 +343,8 @@ function NaesteTurKort({ tur, items, grupper, aabn, opret }: {
           </Chip>
         )}
         <div style={{ marginLeft: 'auto' }}>
-          {/* Knappen siger, hvad man skal, og ikke bare hvor man kommer hen.
-              Er der ikke valgt grej endnu, er det dét, turen mangler. */}
           <Knap variant="primaer" onClick={aabn}>
-            {paaTuren.length === 0 ? 'Vælg grej' : pakning.faerdig ? 'Åbn tur' : 'Fortsæt pakning'}
+            {primaerHandlingsLabel()}
           </Knap>
         </div>
       </div>

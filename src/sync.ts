@@ -20,6 +20,7 @@ import type {
   Item,
   Gruppe,
   Tur,
+  TurDag,
   Synkroniserbar,
   Reference,
   Garanti,
@@ -1023,6 +1024,54 @@ export const sletSted = (id: number) => slet(stedSamling, id);
 export const opretPerson = (person: Omit<Person, 'id' | 'uid'>) => opret(personSamling, person);
 export const opdaterPerson = (id: number, aendringer: Partial<Person>) => opdater(personSamling, id, aendringer);
 export const sletPerson = (id: number) => slet(personSamling, id);
+
+const turDagSamling: Samling<TurDag> = {
+  pbNavn: 'tur_dage',
+  tabel: db.tur_dage,
+  tilPb: (td, user) => ({
+    user,
+    uid: td.uid,
+    tur_uid: td.tur_uid,
+    dag_nr: td.dag_nr,
+    dato: td.dato,
+    aktivitet: td.aktivitet,
+    destination_navn: td.destination_navn,
+    destination_sted_uid: td.destination_sted_uid,
+    destination_koordinater: td.destination_koordinater,
+    overnatning_type: td.overnatning_type,
+    overnatning_noter: td.overnatning_noter,
+    rute_distance_km: td.rute_distance_km,
+    vejrsnapshot: td.vejrsnapshot,
+    forbrug_vand_l: td.forbrug_vand_l,
+    forbrug_mad_kcal: td.forbrug_mad_kcal,
+    noter: td.noter
+  }),
+  fraPb: (r) => ({
+    uid: uid(r),
+    pb_id: r.id,
+    tur_uid: tekst(r.tur_uid),
+    dag_nr: tal(r.dag_nr, 1),
+    dato: tekst(r.dato),
+    aktivitet: enumVaerdi(r.aktivitet, AKTIVITET, 'vandretur'),
+    destination_navn: tekst(r.destination_navn),
+    destination_sted_uid: tekst(r.destination_sted_uid),
+    destination_koordinater: koordinater(r.destination_koordinater),
+    overnatning_type: enumVaerdi(r.overnatning_type, OVERNATNING, 'telt'),
+    overnatning_noter: tekst(r.overnatning_noter),
+    rute_distance_km: tal(r.rute_distance_km),
+    vejrsnapshot: tekst(r.vejrsnapshot),
+    forbrug_vand_l: tal(r.forbrug_vand_l),
+    forbrug_mad_kcal: tal(r.forbrug_mad_kcal),
+    noter: tekst(r.noter),
+    navn: `Dag ${tal(r.dag_nr, 1)}`,
+    oprettet: dato(r.created),
+    aendret: dato(r.updated)
+  })
+};
+
+export const opretTurDag = (turDag: Omit<TurDag, 'id' | 'uid'>) => opret(turDagSamling, turDag);
+export const opdaterTurDag = (id: number, aendringer: Partial<TurDag>) => opdater(turDagSamling, id, aendringer);
+export const sletTurDag = (id: number) => slet(turDagSamling, id);
 
 // Billeder oprettes og slettes, men redigeres ikke — der er ingen
 // opdaterBillede. Beskrivelsen er det eneste der kan rettes, og den går

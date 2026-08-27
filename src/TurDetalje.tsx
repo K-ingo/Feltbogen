@@ -214,17 +214,6 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
   // Hvad de inviterede har skrevet sig på for. Hentes kun når turen er delt.
   const [deltagelser, setDeltagelser] = useState<Deltagelse[]>([]);
 
-  const items = useLiveQuery(() => db.items.toArray());
-  const grupper = useLiveQuery(() => db.grupper.toArray());
-  // Steder og personer er genbrugsressourcer på tværs af turene, så de hentes
-  // hele vejen ind — forslagene bygger på dem.
-  const steder = useLiveQuery(() => db.steder.toArray()) ?? [];
-  const personer = useLiveQuery(() => db.personer.toArray()) ?? [];
-  const alleTure = useLiveQuery(() => db.ture.toArray()) ?? [];
-  // Kun antallet bruges her — selve billederne hentes af BilledSektion, som
-  // også er den der viser dem.
-  const alleBilleder = useLiveQuery(() => db.billeder.toArray()) ?? [];
-
   const { post: tur, opdater } = useRedigerbar(db.ture, turId, opdaterTur, {
     onIndlaest: (fundet) => {
       if (fundet.koordinater) {
@@ -239,6 +228,19 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
       }
     }
   });
+
+  const items = useLiveQuery(() => db.items.toArray());
+  const grupper = useLiveQuery(() => db.grupper.toArray());
+  // Steder og personer er genbrugsressourcer på tværs af turene, så de hentes
+  // hele vejen ind — forslagene bygger på dem.
+  const steder = useLiveQuery(() => db.steder.toArray()) ?? [];
+  const personer = useLiveQuery(() => db.personer.toArray()) ?? [];
+  const alleTure = useLiveQuery(() => db.ture.toArray()) ?? [];
+  const turUid = tur?.uid ?? '';
+  const turDage = useLiveQuery(() => db.tur_dage.where('tur_uid').equals(turUid).toArray(), [turUid]) ?? [];
+  // Kun antallet bruges her — selve billederne hentes af BilledSektion, som
+  // også er den der viser dem.
+  const alleBilleder = useLiveQuery(() => db.billeder.toArray()) ?? [];
 
   // Niveauet er en vane og ikke en egenskab ved turen, så det står i
   // indstillingerne. Det følger med ind i tjekket, hvor det kan rettes for den
@@ -1004,6 +1006,27 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
             aabenFra={tur.status === 'kladde' || sigtet === 'overblik'}
           >
             {parametre}
+          </Foldbar>
+        )}
+        {tur.naetter > 1 && (
+          <Foldbar
+            titel={`Dage & tidslinje (${turDage.length} registrerede dage)`}
+            resume={turDage.length > 0 ? `${turDage.length} dage på tidslinjen` : 'Ingen dagsnoter oprettet endnu'}
+            aabenFra
+          >
+            <div style={{ display: 'grid', gap: '8px' }}>
+              {turDage.map((td) => (
+                <div key={td.uid} style={{ padding: '8px', border: '1px solid var(--border-svag)', borderRadius: '8px' }}>
+                  <div style={{ fontWeight: 600, fontSize: '13px' }}>Dag {td.dag_nr}: {td.destination_navn || 'Uden mål'}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)' }}>{td.rute_distance_km} km · Overnatning: {etiket(td.overnatning_type)}</div>
+                </div>
+              ))}
+              {turDage.length === 0 && (
+                <div style={{ fontSize: '12px', color: 'var(--tekst-svag)' }}>
+                  Flerdages tur med {tur.naetter + 1} dage.
+                </div>
+              )}
+            </div>
           </Foldbar>
         )}
         {bookingSektion}

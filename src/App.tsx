@@ -29,6 +29,7 @@ import { tokenFraAdresse } from './gaest';
 import TurkortSide from './TurkortSide';
 import { turkorttokenFraAdresse } from './turkort';
 import type { Turmaal } from './turmaal';
+import { FoersteTurWizard } from './FoersteTurWizard';
 // Kobler friskningen af delte ture på skrivninger. Importeres for sin
 // bivirkning — modulet melder sig selv til hos sync.
 import './delesnapshot';
@@ -68,6 +69,7 @@ function App(): ReactElement | null {
   // Rundvisningen kan hentes frem igen fra indstillingerne. Den vises da som
   // opslag: uden kontosalg og uden knapper til at komme i gang.
   const [viserRundvisning, setViserRundvisning] = useState(false);
+  const [viserWizard, setViserWizard] = useState(false);
   const [fane, setFane] = useState<Fane>('dashboard');
   // Valget ligger her og ikke i listeskærmene, fordi dashboardet også åbner
   // både gear og ture. nyOprettet følger med, så detaljeskærmen kan rydde en
@@ -102,6 +104,7 @@ function App(): ReactElement | null {
   const nytItem = async () => aabnItem(await opretTomtItem(), true);
   const nyGruppe = async () => aabnGruppe(await opretTomGruppe(), true);
   const nyTur = async () => aabnTur(await opretTomTur(), true);
+  const startWizard = () => setViserWizard(true);
 
   // En tur på et sted man kender. Stedet, navnet og koordinaterne følger med,
   // så turen åbner med det udfyldt, man kom for — resten er som en ny tur.
@@ -330,15 +333,23 @@ function App(): ReactElement | null {
   switch (fane) {
     case 'dashboard':
       return (
-        <DashboardSide
-          fane={fane}
-          skift={skiftFane}
-          aabnItem={aabnItem}
-          aabnTur={aabnTur}
-          aabnAar={setValgtAar}
-          nytItem={nytItem}
-          nyTur={nyTur}
-        />
+        <>
+          {viserWizard && (
+            <FoersteTurWizard
+              luk={() => setViserWizard(false)}
+              aabnTur={(id, ny) => aabnTur(id, ny)}
+            />
+          )}
+          <DashboardSide
+            fane={fane}
+            skift={skiftFane}
+            aabnItem={aabnItem}
+            aabnTur={aabnTur}
+            aabnAar={setValgtAar}
+            nytItem={nytItem}
+            nyTur={startWizard}
+          />
+        </>
       );
     case 'folk': return <FolkSide fane={fane} skift={skiftFane} />;
     case 'mere': return (

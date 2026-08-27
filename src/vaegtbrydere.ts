@@ -324,3 +324,81 @@ export function manglendeTags(tur: Tur, grupper: Gruppe[]): string[] {
   const iBrug = new Set(grupper.flatMap((g) => g.tags));
   return [...turensTags(tur)].filter((t) => !iBrug.has(t));
 }
+
+// ─────────────────────────────────────────────
+// Balanceret Gruppefordeling
+// ─────────────────────────────────────────────
+
+export interface GruppefordelingsForslag {
+  deltager_id: string;
+  navn: string;
+  nuvaerende_vaegt_g: number;
+  foreslaaet_vaegt_g: number;
+  baerer_delt_ids: Reference[];
+}
+
+// Beregner en balanceret fordeling af fælles/delte items på deltagere.
+// Returnerer forslag uden direkte at overskrive turens tilstand.
+export function beregnBalanceretGruppefordeling(
+  tur: Tur,
+  pakItems: Item[]
+): GruppefordelingsForslag[] {
+  if (tur.deltagere.length === 0) return [];
+
+  const delteItems = pakItems.filter((i) => i.delt);
+  const deltagere = tur.deltagere.map((d) => ({
+    id: d.id,
+    navn: d.navn,
+    personligt_vaegt_g: pakItems
+      .filter((i) => d.personligt_gear_ids.includes(i.uid))
+      .reduce((s, i) => s + i.vaegt_g, 0),
+    baerer_delt_ids: [...d.baerer_delt_ids]
+  }));
+
+  // Nulstil fælles bæreansvar for forslaget
+  const forslagMap = new Map<string, { vaegt: number; delt_ids: Reference[] }>();
+  deltagere.forEach((d) => {
+    forslagMap.set(d.id, { vaegt: d.personligt_vaegt_g, delt_ids: [] });
+  });
+
+  // Sorter delte items efter vægt (tungest først)
+  const sorteredeDelte = [...delteItems].sort((a, b) => b.vaegt_g - a.vaegt_g);
+
+  // Greedy tildeling til den deltager der pt har mindst vægt
+  for (const item of sorteredeDelte) {
+    let letteDeltagerId = deltagere[0].id;
+    let minVaegt = Infinity;
+
+    for (const d of deltagere) {
+      const nuv = forslagMap.get(d.id)!.vaegt;
+      if (nuv < minVaegt) {
+        minVaegt = nuv;
+        letteDeltagerId = d.id;
+      }
+    }
+
+    const nuvObj = forslagMap.get(letteDeltagerId)!;
+    nuvObj.vaegt += item.vaegt_g;
+    nuvObj.delt_ids.push(item.uid);
+  }
+
+  return tur.deltagere.map((d) => {
+    const personligtV = pakItems
+      .filter((i) => d.personligt_gear_ids.includes(i.uid))
+      .reduce((s, i) => s + i.vaegt_g, 0);
+
+    const eksisterendeDeltV = pakItems
+      .filter((i) => d.baerer_delt_ids.includes(i.uid))
+      .reduce((s, i) => s + i.vaegt_g, 0);
+
+    const f = forslagMap.get(d.id)!;
+
+    return {
+      deltager_id: d.id,
+      navn: d.navn,
+      nuvaerende_vaegt_g: personligtV + eksisterendeDeltV,
+      foreslaaet_vaegt_g: f.vaegt,
+      baerer_delt_ids: f.delt_ids
+    };
+  });
+}

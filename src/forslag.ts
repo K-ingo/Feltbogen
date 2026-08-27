@@ -3,6 +3,7 @@ import { itemsPaaTur, foreslaaGrupper } from './smartMotor';
 import { vaegtresultat, bedsteBytter } from './vaegtbrydere';
 import type { Risiko } from './vaegtbrydere';
 import { foreslaaKopi } from './ligesomSidst';
+import { brugPrItem } from './pakAfTjek';
 
 // Smart-motorens forslag, i én form.
 //
@@ -82,11 +83,39 @@ export function forslagTilTur(
 
   const forslag = [
     ...(paaTuren.length === 0 ? historik(tur, grupper, alleTure) : []),
+    ...ubrugtFraHistorik(paaTuren, alleTure),
     ...grej(tur, grupper),
     ...(paaTuren.length > 0 ? vaegt(tur, grupper, ejet, paaTuren) : [])
   ];
 
   return forslag.slice(0, MAKS_FORSLAG);
+}
+
+// Viser advarsel/forslag hvis gear på turen konsekvent er overskydende i tidligere evaluerede ture
+function ubrugtFraHistorik(paaTuren: Item[], alleTure: Tur[]): Forslag[] {
+  const evalueretTure = alleTure.filter((t) => t.status === 'afsluttet' && t.pak_af_tjek);
+  if (evalueretTure.length === 0) return [];
+
+  const historikBrug = brugPrItem(evalueretTure);
+  const kandidater: Forslag[] = [];
+
+  for (const item of paaTuren) {
+    const stats = historikBrug.get(item.uid);
+    if (stats && stats.gjort_op >= 2 && stats.brugt === 0) {
+      kandidater.push({
+        id: `ubrugt-historik:${item.uid}`,
+        type: 'historik',
+        titel: `Ubrugt gear (${item.navn})`,
+        detalje: `Haft med på ${stats.gjort_op} evalueret(e) ture uden at blive brugt`,
+        begrundelse: `Læringssløjfen viser, at ${item.navn} lå urørt på de seneste ${stats.gjort_op} evalueret(e) ture. Du kan overveje om den behøves denne gang.`,
+        virkning: { vaegt_g: -item.vaegt_g, antal: 1 },
+        tiltro: 'hoej',
+        handling: { tag_imod: 'Lad blive hjemme', afvis: 'Tag med alligevel' }
+      });
+    }
+  }
+
+  return kandidater;
 }
 
 // Er der ikke valgt noget grej endnu, er den tomme liste det eneste problem

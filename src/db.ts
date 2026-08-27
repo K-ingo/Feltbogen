@@ -411,11 +411,33 @@ export interface DeltTur {
   opdateret: Date;
 }
 
+export interface TurDag extends Synkroniserbar {
+  id?: number;
+  navn: string;
+  tur_uid: Reference;
+  dag_nr: number;
+  dato: string;
+  aktivitet: Aktivitet;
+  destination_navn: string;
+  destination_sted_uid: Reference;
+  destination_koordinater: { lat: number; lng: number } | null;
+  overnatning_type: Overnatning;
+  overnatning_noter: string;
+  rute_distance_km: number;
+  vejrsnapshot: string;
+  forbrug_vand_l: number;
+  forbrug_mad_kcal: number;
+  noter: string;
+  oprettet: Date;
+  aendret: Date;
+}
+
 export class FeltbogenDB extends Dexie {
   // Nøgletypen er number (++id), så get/add/update slipper for id-casts.
   items!: Table<Item, number>;
   grupper!: Table<Gruppe, number>;
   ture!: Table<Tur, number>;
+  tur_dage!: Table<TurDag, number>;
   slettede!: Table<Slettet, number>;
   indstillinger!: Table<Indstilling, string>;
   delte_ture!: Table<DeltTur, number>;
@@ -511,6 +533,19 @@ export class FeltbogenDB extends Dexie {
       items: '++id, &uid, navn, status, oprettet',
       grupper: '++id, &uid, navn, oprettet',
       ture: '++id, &uid, navn, startdato, status, oprettet, dele_token',
+      slettede: '++id, samling, pb_id, [samling+pb_id]',
+      indstillinger: '&noegle',
+      delte_ture: '++id, &token, gemt',
+      steder: '++id, &uid, navn, oprettet',
+      personer: '++id, &uid, navn, oprettet',
+      billeder: '++id, &uid, tur_uid, tid, oprettet'
+    });
+
+    this.version(11).stores({
+      items: '++id, &uid, navn, status, oprettet',
+      grupper: '++id, &uid, navn, oprettet',
+      ture: '++id, &uid, navn, startdato, status, oprettet, dele_token',
+      tur_dage: '++id, &uid, tur_uid, dag_nr, dato, oprettet',
       slettede: '++id, samling, pb_id, [samling+pb_id]',
       indstillinger: '&noegle',
       delte_ture: '++id, &token, gemt',
