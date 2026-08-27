@@ -849,6 +849,64 @@ export function linjerEfterPerson(linjer: Pakkelinje[]): Pakkeafsnit[] {
   return afsnit;
 }
 
+// Alt på én liste, tungest først.
+//
+// Specens §8 har den som den første chip, og den er der en grund til: de
+// andre opdelinger er gode til at pakke efter, men når man leder efter én
+// bestemt ting, er en flad liste den korteste vej.
+export const ALT_PAA_TUREN = 'Alt på turen';
+
+export function linjerSamlet(linjer: Pakkelinje[]): Pakkeafsnit[] {
+  if (linjer.length === 0) return [];
+  return [{ titel: ALT_PAA_TUREN, linjer: [...linjer].sort(tungestFoerst) }];
+}
+
+// Fælles og personligt hver for sig.
+//
+// Det er den opdeling, der afgør en samtale inden afgang: fællesgrejet skal
+// nogen bære, og det personlige skal hver især selv huske. Deltagernes eget
+// grej står for sig — det er personligt, men det er ikke ens eget at pakke.
+export const FAELLES = 'Fælles';
+export const PERSONLIGT = 'Personligt';
+
+export function linjerEfterDeling(linjer: Pakkelinje[]): Pakkeafsnit[] {
+  const afsnit: Pakkeafsnit[] = [];
+  const laeg = (titel: string, valgte: Pakkelinje[]) => {
+    if (valgte.length > 0) afsnit.push({ titel, linjer: [...valgte].sort(tungestFoerst) });
+  };
+
+  laeg(FAELLES, linjer.filter((l) => l.egen && l.delt));
+  laeg(PERSONLIGT, linjer.filter((l) => l.egen && !l.delt));
+  laeg(DELTAGERNES, linjer.filter((l) => !l.egen));
+
+  return afsnit;
+}
+
+// Søgningen.
+//
+// Den leder i navnet, i den der bærer det, og i afsnittets egen overskrift —
+// søger man på et grejsæt eller et tag, er det hele afsnittet, man mener, og
+// ikke kun de ting der tilfældigvis hedder det samme.
+//
+// Afsnit uden træffere falder væk. En liste med tomme overskrifter er sværere
+// at læse end en kort liste.
+export function filtrerAfsnit(afsnit: Pakkeafsnit[], soegning: string): Pakkeafsnit[] {
+  const ord = soegning.trim().toLowerCase();
+  if (ord === '') return afsnit;
+
+  return afsnit
+    .map((a) => (
+      a.titel.toLowerCase().includes(ord)
+        ? a
+        : { ...a, linjer: a.linjer.filter((l) => rammer(l, ord)) }
+    ))
+    .filter((a) => a.linjer.length > 0);
+}
+
+function rammer(linje: Pakkelinje, ord: string): boolean {
+  return linje.navn.toLowerCase().includes(ord) || linje.baerer.toLowerCase().includes(ord);
+}
+
 // Deltagernes eget grej hører ikke til i nogen af ejerens grupper eller tags.
 // Det får sit eget afsnit til sidst, så de to andre opdelinger stadig kan
 // bruges uden at noget falder ud af listen.

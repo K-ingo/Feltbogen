@@ -12,7 +12,7 @@ import {
 } from './dashboard';
 import { aarsopgoerelseAtSe } from './aarsopgoerelse';
 import type { Handling, Syncstatus } from './dashboard';
-import { forslagTilTur, udenAfviste, maalFor, TILTRONAVN } from './forslag';
+import { forslagTilTur, udenAfviste, maalFor } from './forslag';
 import type { Forslag } from './forslag';
 import type { Turmaal } from './turmaal';
 import { kopierGrej } from './ligesomSidst';
@@ -26,7 +26,7 @@ import { useAuth } from './useAuth';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
 import { useErDesktop, useErOnline } from './useMedie';
-import { Knap, Chip, Infokort, SektionsTitel, ListeRaekke, TomListe, Hvorfor } from './ui';
+import { Knap, Chip, Infokort, SektionsTitel, ListeRaekke, TomListe, Hvorfor, Forslagskort } from './ui';
 
 interface Props {
   fane: Fane;
@@ -182,7 +182,7 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
               gap: 'var(--plads-2)'
             }}>
               {forslag.map((f) => (
-                <ForslagsKort
+                <Forslagskort
                   key={f.id}
                   forslag={f}
                   aabn={() => tur?.id !== undefined && aabnTur(tur.id)}
@@ -306,82 +306,6 @@ function NaesteTurKort({ tur, items, grupper, aabn, opret }: {
         </div>
       </div>
     </Infokort>
-  );
-}
-
-// Et forslag ser med vilje anderledes ud end en handling: handlingen er noget
-// der er gået skævt, forslaget er noget appen ville gøre, hvis den måtte.
-// Derfor accentfarven og ikke advarselsfarven.
-//
-// Overskriften fører hen til turen; selve handlingen står som en navngiven
-// knap. Forskellen er hele pointen: man skal kunne læse et forslag og gå videre
-// uden at have sagt ja til noget.
-//
-// Specens §13 vil have to handlinger på hvert forslag. Den anden er afvis, og
-// den er nødvendig af en grund, der ikke er høflighed: et forslag man ikke kan
-// få væk, bliver til støj, og støj læser man udenom. Så holder man også op med
-// at læse det, der var værd at læse.
-function ForslagsKort({ forslag, aabn, tagImod, afvis }: {
-  forslag: Forslag;
-  aabn: () => void;
-  tagImod: () => void;
-  afvis: () => void;
-}) {
-  return (
-    <div style={{
-      padding: '11px 13px',
-      borderRadius: 'var(--runding-lille)',
-      border: '1px solid var(--accent-border)',
-      background: 'var(--accent-bg)'
-    }}>
-      <button
-        onClick={aabn}
-        style={{
-          display: 'block',
-          width: '100%',
-          textAlign: 'left',
-          padding: 0,
-          border: 'none',
-          background: 'transparent',
-          cursor: 'pointer'
-        }}
-      >
-        <div style={{ fontSize: 'var(--skrift-knap)', fontWeight: 600, color: 'var(--accent)' }}>
-          {forslag.titel}
-        </div>
-        <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
-          {forslag.detalje}
-        </div>
-      </button>
-
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 'var(--plads-2)',
-        marginTop: 'var(--plads-1)'
-      }}>
-        <Hvorfor begrundelse={forslag.begrundelse} />
-        {/* Hvor sikker motoren selv er. Den står dæmpet og ikke som et mærke:
-            det er en oplysning om forslaget, ikke en overskrift på det. */}
-        <span style={{
-          fontSize: 'var(--skrift-lille)',
-          color: 'var(--tekst-dæmpet)',
-          whiteSpace: 'nowrap'
-        }}>
-          {TILTRONAVN[forslag.tiltro]}
-        </span>
-      </div>
-
-      <div style={{ display: 'flex', gap: 'var(--plads-2)', marginTop: 'var(--plads-2)' }}>
-        <Knap variant="primaer" onClick={tagImod} style={{ flex: 1, fontSize: 'var(--skrift-lille)' }}>
-          {forslag.handling.tag_imod}
-        </Knap>
-        <Knap onClick={afvis} style={{ fontSize: 'var(--skrift-lille)' }}>
-          {forslag.handling.afvis}
-        </Knap>
-      </div>
-    </div>
   );
 }
 

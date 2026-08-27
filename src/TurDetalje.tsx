@@ -30,6 +30,9 @@ import {
   itemUidsPaaTur,
   pakkelisteEfterGruppe,
   pakkelisteEfterTag,
+  linjerSamlet,
+  linjerEfterDeling,
+  filtrerAfsnit,
   baererAf,
   linjeAfItem,
   linjeAfMedbragt,
@@ -52,6 +55,7 @@ import {
   FjernKnap,
   Hvorfor,
   Indlaeser,
+  Forslagskort,
   Infokort,
   Knap,
   Label,
@@ -123,6 +127,8 @@ import BilledSektion from './BilledSektion';
 import { billederPaaTur } from './billeder';
 import { opretTomtSted } from './opret';
 import { useRedigerbar } from './useRedigerbar';
+import { forslagTilTur, udenAfviste, maalFor } from './forslag';
+import type { Forslag } from './forslag';
 import { MAALETS_FANE } from './turmaal';
 import type { Turfane, Turmaal } from './turmaal';
 
@@ -137,7 +143,9 @@ interface Props {
   maal?: Turmaal;
 }
 
-type Visning = 'gruppe' | 'tag' | 'person';
+// Chipsene over pakkelisten. Specens §8 har Alle | Person | Fælles |
+// Kategori; "kategori" er grejsæt og tags her, fordi det er dem, der findes.
+type Visning = 'alle' | 'gruppe' | 'tag' | 'person' | 'delt';
 
 // Turens faner. Rækkefølgen er turens egen: først rammerne om den, så
 // pakningen og listen man går rundt med, så selskabet, så dagene undervejs —
@@ -160,6 +168,7 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
   const erDesktop = useErDesktop();
   const erBred = useErBredskaerm();
   const [visning, setVisning] = useState<Visning>('gruppe');
+  const [pakkesoegning, setPakkesoegning] = useState('');
   // Man lander på overblikket, medmindre man er sendt hertil af et forslag
   // eller en mangel. En fane man stod på sidst ville være et gæt på hvad man
   // kom for, og gættet ville være forkert lige så tit som det var rigtigt —
@@ -196,6 +205,10 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
   // gik byttet igennem, er der ikke længere en vægtsektion at skrive i, så
   // beskeden står uden for den og ikke inde i den.
   const [byttebesked, setByttebesked] = useState('');
+  // Forslag man har vinket af på den her tur. Holder til man forlader
+  // skærmen, af samme grund som på startskærmen: hvad man ikke gider høre om
+  // lige nu, er ikke data om turen.
+  const [afviste, setAfviste] = useState<Set<string>>(new Set());
   const [stedForslag, setStedForslag] = useState<StedForslag[]>([]);
   const [stedSoeger, setStedSoeger] = useState(false);
   // Hvad de inviterede har skrevet sig på for. Hentes kun når turen er delt.
@@ -574,6 +587,31 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
     await opdater(kopierGrej(fra, tur));
   };
 
+  // Hvad motoren har at sige om lige denne tur.
+  //
+  // Forslagene stod kun på startskærmen. Men startskærmen er ikke der, man
+  // arbejder med en tur — man åbner turen. Motoren havde altså noget at sige
+  // præcis dér, hvor man stod, og sagde det et andet sted.
+  //
+  // Historik-forslaget er ikke med her: "Ligesom sidst" ovenfor er den samme
+  // idé med en bedre flade — den viser tre gamle ture at vælge imellem og
+  // hvor meget hver især ville lægge til. Ét forslag om det samme er nok.
+  const turforslag = udenAfviste(
+    forslagTilTur(tur, grupper ?? [], items ?? [], alleTure).filter((f) => f.type !== 'historik'),
+    afviste
+  );
+
+  // At tage imod. Alt sker på turen selv, så der er ingen skærm at sende
+  // nogen hen til først — bortset fra vægtbytterne, hvor man skal vælge
+  // mellem alternativer med hver sin risiko.
+  const tagImodForslag = async (f: Forslag) => {
+    if (f.type === 'grej') {
+      await opdater({ gruppe_ids: [...tur.gruppe_ids, maalFor(f)] });
+      return;
+    }
+    gaaTilMaal('vaegt');
+  };
+
   // Deltagernes eget grej hører til i den samme liste som ens eget — det er
   // én tur, og man pakker efter én liste.
   const deltagerlinjer = deltagelser.flatMap((d) =>
@@ -587,8 +625,10 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
 
   const alleLinjer = [...pakItems.map((i) => linjeAfItem(i, navne.get(i.uid) ?? '')), ...deltagerlinjer];
 
-  const afsnit: Pakkeafsnit[] = visning === 'person'
-    ? linjerEfterPerson(alleLinjer)
+  const opdelt: Pakkeafsnit[] =
+    visning === 'alle' ? linjerSamlet(alleLinjer)
+    : visning === 'person' ? linjerEfterPerson(alleLinjer)
+    : visning === 'delt' ? linjerEfterDeling(alleLinjer)
     : medDeltagernes(
         afsnitAfItems(
           visning === 'gruppe'
@@ -598,6 +638,11 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
         ),
         alleLinjer
       );
+
+  // Søgningen lægger sig oven på opdelingen og erstatter den ikke: leder man
+  // efter noget bestemt, skal man stadig kunne se, hvilket grejsæt eller hvem
+  // det hører til.
+  const afsnit = filtrerAfsnit(opdelt, pakkesoegning);
 
   // Hvor turen er, og hvad det næste skridt er. Reglerne ligger i turfase.ts;
   // her oversættes skridtet til den knap, der udfører det.
@@ -649,6 +694,8 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
       perItem={perItem}
       visning={visning}
       setVisning={setVisning}
+      soegning={pakkesoegning}
+      setSoegning={setPakkesoegning}
       antal={pakItems.length}
       pakning={pakning}
       pakkede={afkrydsede}
@@ -928,6 +975,28 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
         {/* På en kladde er parametrene det første der skal udfyldes, så der
             står den åben. Senere er den et opslag — medmindre man er sendt
             hertil af en mangel om datoer eller sted. */}
+        <Turresume
+          pakning={pakning}
+          vaegtPrPerson={vaegtPrPerson}
+          personer={tur.personer}
+          deltagere={tur.deltagere.length}
+          gaaTil={gaaTilMaal}
+        />
+        {turforslag.length > 0 && (
+          <Infokort label="Feltbogen foreslår">
+            <div style={{ display: 'grid', gap: 'var(--plads-2)' }}>
+              {turforslag.map((f) => (
+                <Forslagskort
+                  key={f.id}
+                  forslag={f}
+                  aabn={() => gaaTilMaal(f.type === 'vaegt' ? 'vaegt' : 'pakning')}
+                  tagImod={() => void tagImodForslag(f)}
+                  afvis={() => setAfviste(new Set([...afviste, f.id]))}
+                />
+              ))}
+            </div>
+          </Infokort>
+        )}
         {sigte('overblik',
           <Foldbar
             titel="Turparametre"
@@ -1257,6 +1326,73 @@ function Faner({ valgt, vaelg, tal }: {
 }
 
 
+// Sådan står turen, øverst på overblikket.
+//
+// Specens §6 vil have pakkeprogression, totalvægt og deltagere på overblikket.
+// De tre ting findes i forvejen, men hver på sin fane — så overblikket var det
+// eneste sted på turskærmen, hvor man ikke kunne se, hvordan man stod.
+//
+// De står som tal og ikke som kort. Kortene bliver på deres egne faner, hvor
+// der er plads til dem; her er det fire tal, man kan aflæse på et sekund. Hvert
+// af dem er en knap videre til fanen, hvor der kan gøres noget — turmaal.ts.
+function Turresume({ pakning, vaegtPrPerson, personer, deltagere, gaaTil }: {
+  pakning: Pakkefremdrift;
+  vaegtPrPerson: number;
+  personer: number;
+  deltagere: number;
+  gaaTil: (m: Turmaal) => void;
+}) {
+  const tal: { label: string; vaerdi: string; maal: Turmaal }[] = [
+    {
+      label: 'Pakket',
+      vaerdi: pakning.ialt === 0 ? '–' : `${pakning.pakket} af ${pakning.ialt}`,
+      maal: 'pakkeliste'
+    },
+    { label: personer > 1 ? 'Vægt pr. person' : 'Vægt', vaerdi: `${kg(vaegtPrPerson)} kg`, maal: 'pakning' },
+    {
+      label: 'Deltagere',
+      vaerdi: `${deltagere}`,
+      maal: 'deltagere'
+    }
+  ];
+
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: `repeat(${tal.length}, minmax(0, 1fr))`,
+      gap: 'var(--plads-2)'
+    }}>
+      {tal.map((t) => (
+        <button
+          key={t.label}
+          onClick={() => gaaTil(t.maal)}
+          style={{
+            display: 'block',
+            textAlign: 'left',
+            minHeight: 'var(--roerehoejde)',
+            padding: 'var(--plads-2) var(--plads-3)',
+            border: '1px solid var(--border-svag)',
+            borderRadius: 'var(--runding-lille)',
+            background: 'var(--bg-forhoejet)',
+            cursor: 'pointer'
+          }}
+        >
+          <span style={{
+            display: 'block',
+            fontSize: 'var(--skrift-mikro)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.6px',
+            color: 'var(--tekst-dæmpet)'
+          }}>
+            {t.label}
+          </span>
+          <span style={{ fontSize: 'var(--skrift-brod)', color: 'var(--tekst)' }}>{t.vaerdi}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // En sektion man kan folde ud. Resuméet står fremme uanset foldetilstand, så
 // man kan aflæse turen uden at åbne alt.
 function Foldbar({ titel, resume, children, aabenFra, advarsel }: {
@@ -1547,11 +1683,16 @@ function baerernavne(tur: Tur): Map<Reference, string> {
   return pr;
 }
 
-function Pakkeliste({ afsnit, perItem, visning, setVisning, antal, pakning, pakkede, veksl, pakAlle, ryd }: {
+function Pakkeliste({
+  afsnit, perItem, visning, setVisning, soegning, setSoegning,
+  antal, pakning, pakkede, veksl, pakAlle, ryd
+}: {
   afsnit: Pakkeafsnit[];
   perItem: Map<Reference, Advarsel[]>;
   visning: Visning;
   setVisning: (v: Visning) => void;
+  soegning: string;
+  setSoegning: (v: string) => void;
   antal: number;
   pakning: Pakkefremdrift;
   pakkede: Set<Reference>;
@@ -1571,7 +1712,7 @@ function Pakkeliste({ afsnit, perItem, visning, setVisning, antal, pakning, pakk
     <div>
       <Pakkestatus pakning={pakning} pakAlle={pakAlle} ryd={ryd} />
 
-      <div style={{ marginBottom: '14px' }}>
+      <div style={{ display: 'grid', gap: 'var(--plads-2)', marginBottom: 'var(--plads-4)' }}>
         <Segment
           vaerdier={VISNINGER}
           valgt={visning}
@@ -1579,7 +1720,35 @@ function Pakkeliste({ afsnit, perItem, visning, setVisning, antal, pakning, pakk
           formater={(v) => VISNING_LABEL[v]}
           kompakt
         />
+
+        {/* Søgningen står ved siden af opdelingerne og ikke i stedet for dem.
+            Et inventar på tres ting er ikke noget man ruller igennem for at
+            finde soveposen — men når man har fundet den, skal man stadig kunne
+            se, hvilket sæt den kom med i. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--plads-2)' }}>
+          <input
+            type="search"
+            value={soegning}
+            onChange={(e) => setSoegning(e.target.value)}
+            placeholder="Søg i listen"
+            aria-label="Søg på pakkelisten"
+            style={{ flex: 1, minWidth: 0 }}
+          />
+          {soegning.trim() !== '' && (
+            <span style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>
+              {fundne(afsnit)}
+            </span>
+          )}
+        </div>
       </div>
+
+      {/* En søgning uden træffere skal sige det. Ellers ligner det en tom
+          pakkeliste, og det er en påstand om turen frem for om søgningen. */}
+      {afsnit.length === 0 && (
+        <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-svag)', padding: 'var(--plads-3) 0' }}>
+          Ingenting på listen hedder "{soegning.trim()}" eller bæres af nogen med det navn.
+        </div>
+      )}
 
       {afsnit.map((a) => (
         <div key={a.titel} style={{ marginBottom: '16px' }}>
@@ -1606,6 +1775,11 @@ function Pakkeliste({ afsnit, perItem, visning, setVisning, antal, pakning, pakk
       ))}
     </div>
   );
+}
+
+function fundne(afsnit: Pakkeafsnit[]): string {
+  const antal = afsnit.reduce((sum, a) => sum + a.linjer.length, 0);
+  return `${antal} ${antal === 1 ? 'træffer' : 'træffere'}`;
 }
 
 // Status og de to knapper der gælder hele listen. Specens §8 har dem i en
@@ -2840,12 +3014,14 @@ function Noegletal({ vaerdi, label }: { vaerdi: string; label: string }) {
 // Hjælpere
 // ─────────────────────────────────────────────
 
-const VISNINGER: readonly Visning[] = ['gruppe', 'tag', 'person'];
+const VISNINGER: readonly Visning[] = ['alle', 'gruppe', 'tag', 'person', 'delt'];
 
 const VISNING_LABEL: Record<Visning, string> = {
-  gruppe: 'Efter gruppe',
-  tag: 'Efter tag',
-  person: 'Efter person'
+  alle: 'Alle',
+  gruppe: 'Grejsæt',
+  tag: 'Tag',
+  person: 'Person',
+  delt: 'Fælles'
 };
 
 function kg(gram: number): string {

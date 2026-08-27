@@ -22,7 +22,13 @@ import {
   DELTAGERNES,
   tildelGear,
   IKKE_FORDELT,
-  vejrIkonKode
+  vejrIkonKode,
+  linjerSamlet,
+  linjerEfterDeling,
+  filtrerAfsnit,
+  ALT_PAA_TUREN,
+  FAELLES,
+  PERSONLIGT
 } from './smartMotor';
 import type { Beregninger } from './smartMotor';
 import { lavItem, lavGruppe, lavTur } from './test/data';
@@ -792,5 +798,94 @@ describe('den fælles pakkeliste', () => {
     it('er nul uden linjer', () => {
       expect(samletVaegt([])).toBe(0);
     });
+  });
+});
+
+// ─────────────────────────────────────────────
+// Pakkelistens øvrige opdelinger og søgningen (specens §8)
+// ─────────────────────────────────────────────
+
+describe('linjerSamlet', () => {
+  it('lægger alt i ét afsnit, tungest først', () => {
+    const afsnit = linjerSamlet([
+      linjeAfItem(lavItem({ navn: 'Kniv', vaegt_g: 200 })),
+      linjeAfItem(lavItem({ navn: 'Telt', vaegt_g: 2400 }))
+    ]);
+
+    expect(afsnit).toHaveLength(1);
+    expect(afsnit[0].titel).toBe(ALT_PAA_TUREN);
+    expect(afsnit[0].linjer.map((l) => l.navn)).toEqual(['Telt', 'Kniv']);
+  });
+
+  it('giver ingen afsnit når der ikke er noget på turen', () => {
+    expect(linjerSamlet([])).toEqual([]);
+  });
+});
+
+describe('linjerEfterDeling', () => {
+  it('deler i fælles, personligt og deltagernes eget', () => {
+    const afsnit = linjerEfterDeling([
+      linjeAfItem(lavItem({ navn: 'Sovepose', vaegt_g: 1100, delt: false })),
+      linjeAfItem(lavItem({ navn: 'Telt', vaegt_g: 2400, delt: true })),
+      linjeAfMedbragt('Annas dunjakke', 500, 'Anna')
+    ]);
+
+    expect(afsnit.map((a) => a.titel)).toEqual([FAELLES, PERSONLIGT, DELTAGERNES]);
+    expect(afsnit[0].linjer.map((l) => l.navn)).toEqual(['Telt']);
+    expect(afsnit[1].linjer.map((l) => l.navn)).toEqual(['Sovepose']);
+    expect(afsnit[2].linjer.map((l) => l.navn)).toEqual(['Annas dunjakke']);
+  });
+
+  it('udelader et afsnit der ville være tomt', () => {
+    const kun = linjerEfterDeling([linjeAfItem(lavItem({ navn: 'Telt', delt: true }))]);
+    expect(kun.map((a) => a.titel)).toEqual([FAELLES]);
+  });
+});
+
+describe('filtrerAfsnit', () => {
+  const afsnit = [
+    {
+      titel: 'Køkken',
+      linjer: [
+        linjeAfItem(lavItem({ navn: 'Trangia' }), 'Emil'),
+        linjeAfItem(lavItem({ navn: 'Skål' }), 'Anna')
+      ]
+    },
+    { titel: 'Løse items', linjer: [linjeAfItem(lavItem({ navn: 'Sovepose' }), 'Emil')] }
+  ];
+
+  it('giver alt tilbage uden en søgning', () => {
+    expect(filtrerAfsnit(afsnit, '   ')).toEqual(afsnit);
+  });
+
+  it('finder på navn og skjuler afsnit uden træffere', () => {
+    const fundet = filtrerAfsnit(afsnit, 'sove');
+
+    expect(fundet).toHaveLength(1);
+    expect(fundet[0].titel).toBe('Løse items');
+  });
+
+  it('finder på den der bærer det', () => {
+    const fundet = filtrerAfsnit(afsnit, 'anna');
+
+    expect(fundet).toHaveLength(1);
+    expect(fundet[0].linjer.map((l) => l.navn)).toEqual(['Skål']);
+  });
+
+  // Søger man på et grejsæt, mener man hele sættet — ikke kun de ting der
+  // tilfældigvis hedder det samme som det.
+  it('beholder hele afsnittet når overskriften rammer', () => {
+    const fundet = filtrerAfsnit(afsnit, 'køkken');
+
+    expect(fundet).toHaveLength(1);
+    expect(fundet[0].linjer).toHaveLength(2);
+  });
+
+  it('går ikke op i store og små bogstaver', () => {
+    expect(filtrerAfsnit(afsnit, 'TRANGIA')[0].linjer.map((l) => l.navn)).toEqual(['Trangia']);
+  });
+
+  it('giver ingen afsnit når intet rammer', () => {
+    expect(filtrerAfsnit(afsnit, 'økse')).toEqual([]);
   });
 });

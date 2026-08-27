@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { ReactNode, CSSProperties } from 'react';
+import { TILTRONAVN } from './forslag';
+import type { Forslag } from './forslag';
 
 // ─────────────────────────────────────────────
 // Talfelter
@@ -824,4 +826,88 @@ export function Hvorfor({ begrundelse }: { begrundelse: string }) {
 
 export function Indlaeser() {
   return <div style={{ padding: 'var(--plads-5)', color: 'var(--tekst-dæmpet)' }}>Indlæser...</div>;
+}
+
+// ─────────────────────────────────────────────
+// Smart-forslag
+// ─────────────────────────────────────────────
+
+// Et forslag ser med vilje anderledes ud end en handling: handlingen er noget
+// der er gået skævt, forslaget er noget appen ville gøre, hvis den måtte.
+// Derfor accentfarven og ikke advarselsfarven.
+//
+// Overskriften fører hen til det, forslaget handler om; selve handlingen står
+// som en navngiven knap. Forskellen er hele pointen: man skal kunne læse et
+// forslag og gå videre uden at have sagt ja til noget.
+//
+// Kortet står her og ikke på en af skærmene, fordi begge skærme viser det —
+// startskærmen og turen. To kort for den samme slags forslag ville være
+// præcis det, §13 skulle af med.
+//
+// Specens §13 vil have to handlinger på hvert forslag. Den anden er afvis, og
+// den er nødvendig af en grund, der ikke er høflighed: et forslag man ikke kan
+// få væk, bliver til støj, og støj læser man udenom. Så holder man også op med
+// at læse det, der var værd at læse.
+export function Forslagskort({ forslag, aabn, tagImod, afvis }: {
+  forslag: Forslag;
+  aabn: () => void;
+  tagImod: () => void;
+  afvis: () => void;
+}) {
+  return (
+    <div style={{
+      padding: '11px 13px',
+      borderRadius: 'var(--runding-lille)',
+      border: '1px solid var(--accent-border)',
+      background: 'var(--accent-bg)'
+    }}>
+      <button
+        onClick={aabn}
+        style={{
+          display: 'block',
+          width: '100%',
+          textAlign: 'left',
+          padding: 0,
+          border: 'none',
+          background: 'transparent',
+          cursor: 'pointer'
+        }}
+      >
+        <div style={{ fontSize: 'var(--skrift-knap)', fontWeight: 600, color: 'var(--accent)' }}>
+          {forslag.titel}
+        </div>
+        <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
+          {forslag.detalje}
+        </div>
+      </button>
+
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 'var(--plads-2)',
+        marginTop: 'var(--plads-1)'
+      }}>
+        <Hvorfor begrundelse={forslag.begrundelse} />
+        {/* Hvor sikker motoren selv er. Den står dæmpet og ikke som et mærke:
+            det er en oplysning om forslaget, ikke en overskrift på det. */}
+        <span style={{
+          fontSize: 'var(--skrift-lille)',
+          color: 'var(--tekst-dæmpet)',
+          whiteSpace: 'nowrap'
+        }}>
+          {TILTRONAVN[forslag.tiltro]}
+        </span>
+      </div>
+
+      <div style={{ display: 'flex', gap: 'var(--plads-2)', marginTop: 'var(--plads-2)' }}>
+        <Knap variant="primaer" onClick={tagImod} style={{ flex: 1, fontSize: 'var(--skrift-lille)' }}>
+          {forslag.handling.tag_imod}
+        </Knap>
+        <Knap onClick={afvis} style={{ fontSize: 'var(--skrift-lille)' }}>
+          {forslag.handling.afvis}
+        </Knap>
+      </div>
+    </div>
+  );
 }

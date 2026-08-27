@@ -353,6 +353,29 @@ Afvisningen lever i skærmen og ikke i basen. Hvad man ikke gider høre om lige
 nu, er ikke data om turen, og et felt til det skulle synkroniseres og gemmes
 for evigt for at slippe for et kort i tre dage.
 
+**~~§6 Overblikket manglede halvdelen — og forslagene.~~** ✅ Specen vil have
+pakkeprogression, totalvægt, deltagere og "Feltbogen foreslår" på turens
+overblik. De tre tal lå hver på sin fane, og forslagene stod kun på
+startskærmen — så åbnede man turen direkte, hvilket man gør hele tiden, sagde
+motoren ingenting dér, hvor man arbejdede.
+
+Tallene står som tre knapper og ikke som tre kort: kortene bliver på deres
+egne faner, hvor der er plads, og hver knap fører hen til sin fane efter
+reglen i §6 ovenfor. Forslagskortet er flyttet til `ui.tsx`, så turen og
+startskærmen deler ét kort — to kort for den samme slags forslag ville være
+præcis det, §13 skulle af med.
+
+Historik-forslaget vises ikke på turen: "Ligesom sidst" er den samme idé med
+en bedre flade, og ét forslag om det samme er nok.
+
+**~~§8 Pakkelisten manglede søgning og to visninger.~~** ✅ Chipsene er nu
+Alle · Grejsæt · Tag · Person · Fælles — den flade liste og fælles/personligt
+manglede. Søgningen leder i navnet, i den der bærer det, og i afsnittets egen
+overskrift: søger man på et grejsæt, mener man hele sættet. Den lægger sig
+oven på opdelingen frem for at erstatte den, så man stadig kan se, hvilket sæt
+en ting kom med i. En søgning uden træffere siger fra — ellers ligner det en
+tom pakkeliste, og det er en påstand om turen frem for om søgningen.
+
 **Ruter og højdemeter (specens §12).** Kilometer og højdemeter har ingen
 datakilde. Det er et nyt datadomæne — GPX eller lignende — ikke en
 statistikfunktion.
@@ -360,6 +383,15 @@ statistikfunktion.
 **Router (specens §20).** Venter stadig på et behov, der betaler for det:
 deep links, browserens tilbage-knap, PWA-startpunkt og token-ruterne skal
 tænkes igennem samlet.
+
+**Det, en gennemgang af specen mod koden fandt til sidst.** Fem ting, som
+ingen af os havde skrevet ned: persondetaljen mangler §17's turhistorik,
+typiske gear og typiske vægt, og Folk har hverken Turfæller eller
+Invitationer som sektioner; steddetaljen mangler §15's hero-billede og
+"Opret tur her"; Mere mangler rækkerne til Skabeloner, Backup, Import og
+Hjælp, som alle ligger inde i Indstillinger; startskærmens "Dit grej" er
+nøgletal og ikke §3's `gearSummary`; og Grej har en "Overvejer"-status, men
+ingen indkøbsliste.
 
 **Onboarding og adaptiv hjælpegrad (specens §5 og §6).** Udskudt bevidst,
 fordi vi bygger til ejeren først. Bliver relevant, hvis appen skal ud til
