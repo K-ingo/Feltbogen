@@ -209,9 +209,14 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
           <ListeRaekke
             titel={`${ejet.length} ${ejet.length === 1 ? 'ting' : 'ting'}`}
             detalje={
-              skalPasses === 0
-                ? 'Alt er passet'
-                : `${skalPasses} ${skalPasses === 1 ? 'ting skal passes' : 'ting skal passes'}`
+              // "Alt er passet" om et tomt skab er en påstand om noget, der
+              // ikke findes. Har man ikke skrevet noget ind endnu, er dét det,
+              // rækken skal sige.
+              ejet.length === 0
+                ? 'Skriv det ind, du har — så kan appen regne på det'
+                : skalPasses === 0
+                  ? 'Alt er passet'
+                  : `${skalPasses} ${skalPasses === 1 ? 'ting skal passes' : 'ting skal passes'}`
             }
             onClick={() => skift('inventar')}
           />

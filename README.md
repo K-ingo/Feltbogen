@@ -44,7 +44,9 @@ appen starter.
 | Vurdering | `src/vurdering.ts` | Stjerner på grej og ture, og hvad motoren gør ved dem |
 | Turlog | `src/feltnoter.ts` | Dagbogen fra turen, samlet pr. dag |
 | Vedligehold | `src/vedligehold.ts` | Imprægnering, slibning — intervaller der går i ring |
-| Vægt-brydere | `src/vaegtbrydere.ts` | Lettere alternativer i skabet, og tags ingen gruppe har |
+| Vægt-brydere | `src/vaegtbrydere.ts` | Lettere alternativer i skabet, deres risiko, og tags ingen gruppe har |
+| Smart-forslag | `src/forslag.ts` | Motorens forslag i én form: forklaring, virkning, tiltro og to handlinger |
+| Hvor et forslag lander | `src/turmaal.ts`, `src/indstillingsmaal.ts` | Fanen *og* sektionen man skal stå i, når man trykker på noget appen selv har bragt på bane |
 | Ligesom sidst | `src/ligesomSidst.ts` | Tidligere ture der lignede, som grej kan kopieres fra |
 | Fortryd sletning | `src/fortryd.ts` | Vinduet på 25 sekunder efter en sletning |
 | Statistik | `src/statistik.ts` | Aggregeringer over inventar og ture |

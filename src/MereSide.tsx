@@ -2,6 +2,9 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import { aarsopgoerelseAtSe } from './aarsopgoerelse';
 import { usendtAntal } from './sync';
+import { syncstatus } from './dashboard';
+import { useAuth } from './useAuth';
+import { useErOnline } from './useMedie';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
 import { ListeRaekke, SektionsTitel } from './ui';
@@ -27,6 +30,8 @@ interface Props {
 // Kommer der nye tværgående funktioner til, er det her de hører hjemme. En
 // ny top-level fane kræver en stærk begrundelse.
 function MereSide({ fane, skift, aabnAar, aabnIndstillinger }: Props) {
+  const { erLoggetInd } = useAuth();
+  const online = useErOnline();
   // Tællinger og ikke toArray. Skærmen viser to tal, og at hente hele
   // inventaret ned i hukommelsen for at måle længden af det er spild på en
   // telefon med et par hundrede ting.
@@ -39,11 +44,13 @@ function MereSide({ fane, skift, aabnAar, aabnIndstillinger }: Props) {
   const ture = useLiveQuery(() => db.ture.toArray()) ?? [];
   const opgoerelse = aarsopgoerelseAtSe(ture);
 
-  // Tallet står på rækken, så man kan se om der er noget at gå ind efter.
+  // Rækken siger det samme som linjen på startskærmen, og af samme kilde.
+  // Den sagde først "Alt er sendt op" ud fra antallet alene — også uden en
+  // konto, hvor der ikke er noget at sende op til. To steder der siger
+  // forskellige ting om den samme tilstand, er præcis det, forslagene skulle
+  // af med.
   const usendt = useLiveQuery(usendtAntal, [], 0);
-  const syncdetalje = usendt === 0
-    ? 'Alt er sendt op'
-    : `${usendt} ${usendt === 1 ? 'ændring venter' : 'ændringer venter'}`;
+  const sync = syncstatus(usendt, online, erLoggetInd);
 
   return (
     <Skal fane={fane} skift={skift} titel="Mere">
@@ -76,7 +83,7 @@ function MereSide({ fane, skift, aabnAar, aabnIndstillinger }: Props) {
         <SektionsTitel>Appen</SektionsTitel>
         <ListeRaekke
           titel="Synkronisering"
-          detalje={syncdetalje}
+          detalje={sync.tekst}
           onClick={() => aabnIndstillinger('synkronisering')}
         />
         <ListeRaekke
