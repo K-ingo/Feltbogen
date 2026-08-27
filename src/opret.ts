@@ -27,6 +27,7 @@ export function opretTomtItem(status: ItemStatus = 'ejer'): Promise<number> {
     udlaan: null,
     laant_af: null,
     vedligehold: [],
+    vurdering: null,
     noter: '',
     oprettet: nu,
     aendret: nu
@@ -66,6 +67,7 @@ export function opretTomTur(): Promise<number> {
     status: 'kladde',
     gruppe_ids: [],
     loese_item_ids: [],
+    pakkede_item_uids: [],
     // Den der opretter turen skal selv med på den. Uden det stod ejeren ikke
     // på sin egen deltagerliste, og hendes eget grej kunne ikke fordeles.
     deltagere: [{
@@ -105,6 +107,7 @@ export function opretTomtSted(felter: Partial<Sted> = {}): Promise<number> {
     koordinater: null,
     adresse: '',
     tags: [],
+    vurdering: null,
     noter: '',
     oprettet: nu,
     aendret: nu,

@@ -3,6 +3,7 @@ import {
   naesteTur,
   naarBegynder,
   handlinger,
+  syncstatus,
   tureIAar,
   sidstTilfoejede
 } from './dashboard';
@@ -509,5 +510,33 @@ describe('sidstTilfoejede', () => {
     ];
     sidstTilfoejede(items);
     expect(items.map((i) => i.navn)).toEqual(['A', 'B']);
+  });
+});
+
+
+describe('syncstatus', () => {
+  it('siger at data ligger lokalt når der ikke er en konto', () => {
+    expect(syncstatus(7, true, false)).toEqual({
+      tilstand: 'kun_lokalt',
+      tekst: 'Gemt på denne enhed'
+    });
+  });
+
+  it('kalder ikke usendte ændringer en fejl når man er offline', () => {
+    const status = syncstatus(3, false, true);
+    expect(status.tilstand).toBe('offline');
+    expect(status.tekst).toBe('3 ændringer venter på dækning');
+  });
+
+  it('venter når der er forbindelse og noget at sende', () => {
+    expect(syncstatus(1, true, true)).toEqual({
+      tilstand: 'venter',
+      tekst: '1 ændring på vej op'
+    });
+  });
+
+  it('er synkroniseret når køen er tom', () => {
+    expect(syncstatus(0, true, true).tilstand).toBe('synkroniseret');
+    expect(syncstatus(0, false, true).tekst).toContain('offline');
   });
 });

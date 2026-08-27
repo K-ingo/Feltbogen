@@ -14,6 +14,7 @@ import {
 } from './db';
 import { pb, nuvaerendeBruger } from './pb';
 import { fejlDetaljer } from './pbFejl';
+import { gyldig as gyldigVurdering } from './vurdering';
 import type {
   Billede,
   Item,
@@ -325,6 +326,7 @@ const itemSamling: Samling<Item> = {
     udlaan: i.udlaan ?? null,
     laant_af: i.laant_af ?? null,
     vedligehold: i.vedligehold ?? [],
+    vurdering: i.vurdering ?? null,
     noter: i.noter
   }),
   fraPb: (r) => ({
@@ -345,6 +347,7 @@ const itemSamling: Samling<Item> = {
     udlaan: udlaan(r.udlaan),
     laant_af: laantAf(r.laant_af),
     vedligehold: vedligehold(r.vedligehold),
+    vurdering: gyldigVurdering(r.vurdering),
     koebslink: tekst(r.koebslink),
     ordrenummer: tekst(r.ordrenummer),
     garanti: garanti(r.garanti),
@@ -399,6 +402,7 @@ const turSamling: Samling<Tur> = {
     status: t.status,
     gruppe_ids: t.gruppe_ids,
     loese_item_ids: t.loese_item_ids,
+    pakkede_item_uids: t.pakkede_item_uids ?? [],
     deltagere: t.deltagere,
     budget_linjer: t.budget_linjer,
     pak_af_tjek: t.pak_af_tjek ?? null,
@@ -412,7 +416,14 @@ const turSamling: Samling<Tur> = {
     turkort_token: t.turkort_token,
     turkort_retur: t.turkort_retur,
     turkort_besked: t.turkort_besked,
-    turkort_snapshot: t.turkort_snapshot
+    turkort_snapshot: t.turkort_snapshot,
+    // De her to blev læst ned uden nogensinde at blive sendt op. Et felt der
+    // kun læses, er ikke et halvt felt — det er et felt der bliver slettet:
+    // serverens udgave vinder ved en flettning og skriver sin tomme værdi ind
+    // over den lokale. Valgte man en forside på telefonen og rettede turen på
+    // PC'en, var forsiden væk efter næste sync.
+    hero_billede: t.hero_billede,
+    booking: t.booking ?? null
   }),
   fraPb: (r) => ({
     uid: uid(r),
@@ -433,6 +444,7 @@ const turSamling: Samling<Tur> = {
     status: enumVaerdi(r.status, TUR_STATUS, 'kladde'),
     gruppe_ids: referencer(r.gruppe_ids),
     loese_item_ids: referencer(r.loese_item_ids),
+    pakkede_item_uids: referencer(r.pakkede_item_uids),
     deltagere: deltagere(r.deltagere),
     budget_linjer: budgetLinjer(r.budget_linjer),
     pak_af_tjek: pakAfTjek(r.pak_af_tjek),
@@ -464,6 +476,7 @@ const stedSamling: Samling<Sted> = {
     koordinater: s.koordinater,
     adresse: s.adresse,
     tags: s.tags,
+    vurdering: s.vurdering ?? null,
     noter: s.noter
   }),
   fraPb: (r) => ({
@@ -473,6 +486,7 @@ const stedSamling: Samling<Sted> = {
     koordinater: koordinater(r.koordinater),
     adresse: tekst(r.adresse),
     tags: tags(r.tags),
+    vurdering: gyldigVurdering(r.vurdering),
     noter: tekst(r.noter),
     oprettet: dato(r.created),
     aendret: dato(r.updated)

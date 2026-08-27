@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react';
+import { lazy, useEffect, useState } from 'react';
+import type { ReactElement } from 'react';
 import AuthSide from './AuthSide';
 import { useAuth } from './useAuth';
 import { fornyLogin } from './pb';
-import { afstemMedServer, sendAfventende, sletItem, sletGruppe, sletTur, sletSted } from './sync';
+import { afstemMedServer, sendAfventende, sletItem, sletGruppe, sletTur, sletSted, opdaterTur } from './sync';
+import type { Sted } from './db';
+import type { Indstillingsmaal } from './indstillingsmaal';
 import { db } from './db';
 import DashboardSide from './DashboardSide';
 import InventarSide from './InventarSide';
@@ -14,24 +17,45 @@ import TurDetalje from './TurDetalje';
 import StederListe from './StederListe';
 import StedDetalje from './StedDetalje';
 import DeltTurDetalje from './DeltTurDetalje';
-import StatistikSide from './StatistikSide';
-import AarsopgoerelseSide from './AarsopgoerelseSide';
-import FeltbogSide from './FeltbogSide';
-import IndstillingerSide from './IndstillingerSide';
-import Rundvisning from './Rundvisning';
+
+import FolkSide from './FolkSide';
+import MereSide from './MereSide';
+
+
+
+
 import GaesteSide from './GaesteSide';
 import { tokenFraAdresse } from './gaest';
 import TurkortSide from './TurkortSide';
 import { turkorttokenFraAdresse } from './turkort';
+import type { Turmaal } from './turmaal';
 // Kobler friskningen af delte ture på skrivninger. Importeres for sin
 // bivirkning — modulet melder sig selv til hos sync.
 import './delesnapshot';
 import { opretTomtItem, opretTomGruppe, opretTomTur, opretTomtSted } from './opret';
 import { markerSet, useErSet, ONBOARDING_SET } from './indstillinger';
+// Skærme man sjældent åbner, hentes først når man åbner dem.
+//
+// De fem her er tilsammen omkring to tusind linjer plus import/eksport, og de
+// lå i det bundt, der skulle hentes ned, før appen kunne vise en pakkeliste.
+// Statistikken og årsopgørelsen ses et par gange om året, rundvisningen én
+// gang i alt, og indstillingerne sjældnere end noget andet.
+//
+// Det er specens §25, og den advarsel byggeriet har skrevet ved hver eneste
+// kørsel: "Some chunks are larger than 500 kB".
+const StatistikSide = lazy(() => import('./StatistikSide'));
+const AarsopgoerelseSide = lazy(() => import('./AarsopgoerelseSide'));
+const FeltbogSide = lazy(() => import('./FeltbogSide'));
+const IndstillingerSide = lazy(() => import('./IndstillingerSide'));
+const Rundvisning = lazy(() => import('./Rundvisning'));
+
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
 
-function App() {
+// null indgår i returtypen: onboardingen kan være uafgjort, og så tegner
+// appen ingenting frem for at blinke velkomstskærmen forbi. Uden strengt
+// nul-tjek i oversætteren fanges den slags ikke af sig selv.
+function App(): ReactElement | null {
   const { erLoggetInd } = useAuth();
   // Et gæstelink afgøres af adresselinjen og læses én gang. Går gæsten videre
   // ind i appen, ryddes den, så et genbesøg ikke lander på turen igen.
@@ -50,7 +74,7 @@ function App() {
   // navnløs post væk igen hvis man fortryder.
   const [valgtItem, setValgtItem] = useState<{ id: number; ny: boolean } | null>(null);
   const [valgtGruppe, setValgtGruppe] = useState<{ id: number; ny: boolean } | null>(null);
-  const [valgtTur, setValgtTur] = useState<{ id: number; ny: boolean } | null>(null);
+  const [valgtTur, setValgtTur] = useState<{ id: number; ny: boolean; maal?: Turmaal } | null>(null);
   const [valgtSted, setValgtSted] = useState<{ id: number; ny: boolean } | null>(null);
   // En tur en anden har delt. Den kan ikke redigeres og har derfor ingen
   // ny-tilstand at rydde op efter.
@@ -61,9 +85,15 @@ function App() {
   // Feltbogen ligger uden for Skal: alt der ikke er bogen, ville komme med
   // på papiret.
   const [feltbogAar, setFeltbogAar] = useState<number | null>(null);
+  // Afsnittet indstillingerne skal åbne i. Sat af rækkerne under Mere og
+  // ryddet igen, når man forlader skærmen — kommer man tilbage ad en anden
+  // vej, er man et andet ærinde. Se indstillingsmaal.ts.
+  const [indstillingsmaal, setIndstillingsmaal] = useState<Indstillingsmaal | undefined>();
   const aabnItem = (id: number, ny = false) => setValgtItem({ id, ny });
   const aabnGruppe = (id: number, ny = false) => setValgtGruppe({ id, ny });
-  const aabnTur = (id: number, ny = false) => setValgtTur({ id, ny });
+  // maal er stedet på turen, man skal lande — sat når man kommer fra et
+  // forslag eller en mangel. Se turmaal.ts.
+  const aabnTur = (id: number, ny = false, maal?: Turmaal) => setValgtTur({ id, ny, maal });
   const aabnSted = (id: number, ny = false) => setValgtSted({ id, ny });
   const aabnDeltTur = (id: number) => setValgtDeltTur(id);
 
@@ -72,6 +102,19 @@ function App() {
   const nytItem = async () => aabnItem(await opretTomtItem(), true);
   const nyGruppe = async () => aabnGruppe(await opretTomGruppe(), true);
   const nyTur = async () => aabnTur(await opretTomTur(), true);
+
+  // En tur på et sted man kender. Stedet, navnet og koordinaterne følger med,
+  // så turen åbner med det udfyldt, man kom for — resten er som en ny tur.
+  const nyTurPaaSted = async (sted: Sted) => {
+    const id = await opretTomTur();
+    await opdaterTur(id, {
+      sted: sted.navn,
+      sted_uid: sted.uid,
+      koordinater: sted.koordinater
+    });
+    setValgtSted(null);
+    aabnTur(id, true);
+  };
   const nytSted = async () => aabnSted(await opretTomtSted(), true);
 
   // En navnløs post man lige har oprettet, kan ikke findes igen. Oprydningen
@@ -103,8 +146,12 @@ function App() {
   // Et tryk i navigationen skal føre hen til fanen — også når der ligger en
   // detaljeskærm ovenpå. Ellers skifter markeringen, mens skærmen bliver
   // stående, og man skal trykke tilbage før man kan se hvor man er.
-  const skiftFane = (f: Fane) => {
+  // Målet ryddes ved hvert fanevalg og sættes kun af den, der vælger fanen.
+  // Ellers ville et tryk på "Indstillinger" i navigationen rulle ned til det
+  // afsnit, man sidst kom fra Mere for at se — og det er et andet ærinde.
+  const skiftFane = (f: Fane, maal?: Indstillingsmaal) => {
     void lukDetalje();
+    setIndstillingsmaal(maal);
     setFane(f);
   };
 
@@ -229,7 +276,12 @@ function App() {
   if (valgtTur !== null) {
     return (
       <Skal fane={fane} skift={skiftFane}>
-        <TurDetalje turId={valgtTur.id} nyOprettet={valgtTur.ny} tilbage={lukDetalje} />
+        <TurDetalje
+          turId={valgtTur.id}
+          nyOprettet={valgtTur.ny}
+          maal={valgtTur.maal}
+          tilbage={lukDetalje}
+        />
       </Skal>
     );
   }
@@ -242,6 +294,7 @@ function App() {
           nyOprettet={valgtSted.ny}
           tilbage={lukDetalje}
           aabnTur={(id) => { setValgtSted(null); aabnTur(id); }}
+          opretTurHer={(sted) => void nyTurPaaSted(sted)}
         />
       </Skal>
     );
@@ -287,6 +340,15 @@ function App() {
           nyTur={nyTur}
         />
       );
+    case 'folk': return <FolkSide fane={fane} skift={skiftFane} />;
+    case 'mere': return (
+      <MereSide
+        fane={fane}
+        skift={skiftFane}
+        aabnAar={setValgtAar}
+        aabnIndstillinger={(maal) => skiftFane('indstillinger', maal)}
+      />
+    );
     case 'grupper': return <GrupperListe fane={fane} skift={skiftFane} aabnGruppe={aabnGruppe} nyGruppe={nyGruppe} />;
     case 'ture': return <TureListe fane={fane} skift={skiftFane} aabnTur={aabnTur} aabnDeltTur={aabnDeltTur} nyTur={nyTur} />;
     case 'steder': return <StederListe fane={fane} skift={skiftFane} aabnSted={aabnSted} nytSted={nytSted} />;
@@ -299,8 +361,20 @@ function App() {
           skift={skiftFane}
           tilLogin={() => setViserLogin(true)}
           seRundvisning={() => setViserRundvisning(true)}
+          maal={indstillingsmaal}
         />
       );
+    default: {
+      // Værnet mod en fane uden en skærm. Projektet oversætter uden
+      // strictNullChecks, så en switch der falder igennem, ikke er en fejl —
+      // den giver bare undefined, og React tegner en blank skærm. Med ni faner
+      // er det ikke en teoretisk risiko.
+      //
+      // Tildelingen til never fejler ved oversættelsen i samme øjeblik en
+      // fane mangler sin case, uanset hvilke strenge tjek der er slået til.
+      const uhaandteret: never = fane;
+      throw new Error(`Fanen "${uhaandteret}" har ingen skærm`);
+    }
   }
 }
 

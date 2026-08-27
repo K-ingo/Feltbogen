@@ -8,11 +8,12 @@ import {
   opretItem,
   opdaterItem,
   opretGruppe,
+  opretTur,
   hentFraPocketBase,
   sendAltUsendt,
   sendAfventende
 } from './sync';
-import { lavItem, lavGruppe } from './test/data';
+import { lavItem, lavGruppe, lavTur } from './test/data';
 
 beforeEach(async () => {
   await db.items.clear();
@@ -205,5 +206,39 @@ describe('sletning holder', () => {
     await hentFraPocketBase();
 
     expect(await db.items.count()).toBe(0);
+  });
+});
+
+
+// Et felt der læses ned uden også at blive sendt op, er ikke et halvt felt —
+// det er et felt der bliver slettet. Serverens udgave vinder ved en flettning
+// og skriver den tomme værdi ind over den lokale.
+describe('felter på en tur overlever at turen bliver hentet ned', () => {
+  async function turPaaServeren(felter = {}) {
+    const id = await opretTur(lavTur(felter));
+    await sendAfventende();
+    return { id, post: (await db.ture.get(id))! };
+  }
+
+  it('mister ikke forsidebilledet når turen rettes et andet sted', async () => {
+    const { id, post } = await turPaaServeren({ hero_billede: 'billede-uid-1' });
+
+    // En anden enhed retter navnet. Serverens udgave er nyest og vinder.
+    pbMock.roer('ture', post.pb_id!, { navn: 'Rettet på PC' });
+    await hentFraPocketBase();
+
+    const efter = await db.ture.get(id);
+    expect(efter?.navn).toBe('Rettet på PC');
+    expect(efter?.hero_billede).toBe('billede-uid-1');
+  });
+
+  it('mister ikke bookingen når turen rettes et andet sted', async () => {
+    const booking = { link: 'https://udinaturen.dk/shelter/42', booket: true, reference: 'ABC-123' };
+    const { id, post } = await turPaaServeren({ booking });
+
+    pbMock.roer('ture', post.pb_id!, { navn: 'Rettet på PC' });
+    await hentFraPocketBase();
+
+    expect((await db.ture.get(id))?.booking).toEqual(booking);
   });
 });

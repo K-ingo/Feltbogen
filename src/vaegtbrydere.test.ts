@@ -4,7 +4,10 @@ import {
   alternativerTil,
   manglendeTags,
   samletBesparelse,
-  vaegtbrydere
+  vaegtbrydere,
+  vaegtresultat,
+  bedsteBytter,
+  byt
 } from './vaegtbrydere';
 import { lavGruppe, lavItem, lavTur } from './test/data';
 
@@ -134,7 +137,9 @@ describe('vaegtbrydere', () => {
     const [b] = vaegtbrydere(tur, [], [tung, let_], [tung]);
 
     expect(b.begrundelse).toContain('mindst ét tag');
-    expect(b.begrundelse).toContain('kun tags og gram');
+    // Motoren sammenligner nu tre ting og ikke to. Begrundelsen skal sige
+    // alle tre — ellers lover den mindre, end den gør.
+    expect(b.begrundelse).toContain('kun tags, gram og din egen vurdering');
   });
 });
 
@@ -157,5 +162,239 @@ describe('manglendeTags', () => {
 
   it('regner alle turens kendetegn som manglende uden grupper', () => {
     expect(manglendeTags(lavTur(), [])).toHaveLength(4);
+  });
+});
+
+
+describe('vurderingen holder motoren tilbage', () => {
+  it('foreslår ikke at skifte grej ud man har sagt god for', () => {
+    const tungt = lavItem({ navn: 'Stort telt', vaegt_g: 4000, tags: ['ly'], vurdering: 5 });
+    const let_ = lavItem({ navn: 'Tarp', vaegt_g: 600, tags: ['ly'] });
+    const tur = lavTur({ loese_item_ids: [tungt.uid] });
+
+    expect(vaegtbrydere(tur, [], [tungt, let_], [tungt])).toEqual([]);
+  });
+
+  it('foreslår det stadig når man ikke har taget stilling', () => {
+    const tungt = lavItem({ navn: 'Stort telt', vaegt_g: 4000, tags: ['ly'], vurdering: null });
+    const let_ = lavItem({ navn: 'Tarp', vaegt_g: 600, tags: ['ly'] });
+    const tur = lavTur({ loese_item_ids: [tungt.uid] });
+
+    expect(vaegtbrydere(tur, [], [tungt, let_], [tungt])).toHaveLength(1);
+  });
+
+  it('foreslår det stadig når vurderingen er lav', () => {
+    const tungt = lavItem({ navn: 'Stort telt', vaegt_g: 4000, tags: ['ly'], vurdering: 2 });
+    const let_ = lavItem({ navn: 'Tarp', vaegt_g: 600, tags: ['ly'] });
+    const tur = lavTur({ loese_item_ids: [tungt.uid] });
+
+    expect(vaegtbrydere(tur, [], [tungt, let_], [tungt])).toHaveLength(1);
+  });
+
+  it('holder kun det vurderede tilbage, ikke resten af turen', () => {
+    const elsket = lavItem({ navn: 'Dyne', vaegt_g: 4000, tags: ['sov'], vurdering: 5 });
+    const tungt = lavItem({ navn: 'Stort telt', vaegt_g: 3000, tags: ['ly'] });
+    const let_ = lavItem({ navn: 'Tarp', vaegt_g: 600, tags: ['ly'] });
+    const tur = lavTur({ loese_item_ids: [elsket.uid, tungt.uid] });
+
+    const brydere = vaegtbrydere(tur, [], [elsket, tungt, let_], [elsket, tungt]);
+
+    expect(brydere.map((b) => b.tung.navn)).toEqual(['Stort telt']);
+  });
+});
+
+// ─────────────────────────────────────────────
+// Risiko (specens §7.2)
+//
+// Uden den vejer et bytte, der bare er lettere, lige så tungt som et bytte,
+// der kan det samme.
+// ─────────────────────────────────────────────
+
+describe('risikoen ved et bytte', () => {
+  const tung = lavItem({ uid: 'u-tung', navn: 'Telt', vaegt_g: 2400, tags: ['telt', 'to-personer'] });
+
+  const risikoenVed = (let_: ReturnType<typeof lavItem>) =>
+    alternativerTil(tung, [tung, let_], paaTuren('u-tung'))[0];
+
+  it('kalder et fuldt dækkende og velvurderet bytte for lavt', () => {
+    const a = risikoenVed(lavItem({
+      uid: 'u-let', navn: 'Letvægtstelt', vaegt_g: 1200,
+      tags: ['telt', 'to-personer'], vurdering: 5
+    }));
+
+    expect(a.daekning).toBe(1);
+    expect(a.risiko).toBe('lav');
+    expect(a.konsekvens).toContain('5 stjerner');
+  });
+
+  // Appen ved ikke om det lette telt holder til blæsten. Uden en vurdering
+  // bliver et bytte aldrig til "lav" af sig selv.
+  it('holder et uvurderet bytte på mellem, selv når det dækker alt', () => {
+    const a = risikoenVed(lavItem({
+      uid: 'u-let', vaegt_g: 1200, tags: ['telt', 'to-personer'], vurdering: null
+    }));
+
+    expect(a.daekning).toBe(1);
+    expect(a.risiko).toBe('mellem');
+    expect(a.konsekvens).toContain('ikke vurderet');
+  });
+
+  it('kalder et halvt dækkende bytte for mellem og siger hvad der mangler', () => {
+    const a = risikoenVed(lavItem({ uid: 'u-let', navn: 'Soloteltet', vaegt_g: 900, tags: ['telt'] }));
+
+    expect(a.daekning).toBe(0.5);
+    expect(a.risiko).toBe('mellem');
+    expect(a.konsekvens).toContain('"to-personer"');
+  });
+
+  it('kalder et tyndt match for højt', () => {
+    const bredTung = lavItem({ uid: 'u-b', navn: 'Telt', vaegt_g: 2400, tags: ['telt', 'to-personer', 'vinter'] });
+    const [a] = alternativerTil(
+      bredTung,
+      [bredTung, lavItem({ uid: 'u-let', navn: 'Tarp', vaegt_g: 400, tags: ['telt'] })],
+      paaTuren('u-b')
+    );
+
+    expect(a.risiko).toBe('hoej');
+  });
+
+  // Lettere er ikke bedre, hvis man selv har været utilfreds med det.
+  it('kalder et bytte til noget man har givet to stjerner for højt', () => {
+    const a = risikoenVed(lavItem({
+      uid: 'u-let', navn: 'Billigteltet', vaegt_g: 1200,
+      tags: ['telt', 'to-personer'], vurdering: 2
+    }));
+
+    expect(a.risiko).toBe('hoej');
+    expect(a.konsekvens).toContain('2 stjerner');
+  });
+
+  // Rækkefølgen betyder noget nu, hvor "byt alle" tager det øverste.
+  it('sætter det sikreste bytte først, også når et vovet sparer mere', () => {
+    const sikkert = lavItem({ uid: 'u-sikkert', navn: 'Sikkert', vaegt_g: 1200, tags: ['telt', 'to-personer'], vurdering: 5 });
+    const vovet = lavItem({ uid: 'u-vovet', navn: 'Vovet', vaegt_g: 300, tags: ['telt'] });
+
+    const raekkefoelge = alternativerTil(tung, [tung, vovet, sikkert], paaTuren('u-tung'));
+
+    expect(raekkefoelge.map((a) => a.item.navn)).toEqual(['Sikkert', 'Vovet']);
+    expect(raekkefoelge[1].sparet_g).toBeGreaterThan(raekkefoelge[0].sparet_g);
+  });
+});
+
+describe('vaegtresultat', () => {
+  const tung = lavItem({ uid: 'u-tung', navn: 'Telt', vaegt_g: 2400, tags: ['telt'] });
+  const let_ = lavItem({ uid: 'u-let', navn: 'Tarp', vaegt_g: 900, tags: ['telt'] });
+  const tur = lavTur({ loese_item_ids: ['u-tung'] });
+
+  it('samler vægten, forslagene og besparelsen ét sted', () => {
+    const r = vaegtresultat(tur, [], [tung, let_], [tung]);
+
+    expect(r.nuvaerende_g).toBe(2400);
+    expect(r.brydere).toHaveLength(1);
+    expect(r.potentiel_besparelse_g).toBe(1500);
+  });
+
+  it('tæller antallet med i den nuværende vægt', () => {
+    const to = lavItem({ uid: 'u-to', navn: 'Stavene', vaegt_g: 200, antal: 2, tags: [] });
+    expect(vaegtresultat(tur, [], [to], [to]).nuvaerende_g).toBe(400);
+  });
+
+  it('siger ingenting når der ikke er noget at hente', () => {
+    const r = vaegtresultat(tur, [], [tung], [tung]);
+
+    expect(r.brydere).toEqual([]);
+    expect(r.potentiel_besparelse_g).toBe(0);
+  });
+});
+
+describe('bedsteBytter', () => {
+  const telt = lavItem({ uid: 'u-telt', navn: 'Telt', vaegt_g: 2400, tags: ['telt'] });
+  const pose = lavItem({ uid: 'u-pose', navn: 'Sovepose', vaegt_g: 1600, tags: ['telt'] });
+  const tarp = lavItem({ uid: 'u-tarp', navn: 'Tarp', vaegt_g: 700, tags: ['telt'] });
+
+  // Det samme lette stykke gear kan være det bedste bud på to tunge ting. To
+  // ud af tasken og én ind, og man står uden den ene i skoven.
+  it('bruger ikke det samme lette gear til to bytter', () => {
+    const tur = lavTur({ loese_item_ids: ['u-telt', 'u-pose'] });
+    const brydere = vaegtbrydere(tur, [], [telt, pose, tarp], [telt, pose]);
+
+    expect(brydere).toHaveLength(2);
+
+    const bytter = bedsteBytter(brydere);
+    expect(bytter).toHaveLength(1);
+    expect(bytter[0].tung.navn).toBe('Telt');
+    expect(bytter[0].lette.navn).toBe('Tarp');
+  });
+
+  it('regner besparelsen af de bytter der faktisk kan tages', () => {
+    const tur = lavTur({ loese_item_ids: ['u-telt', 'u-pose'] });
+    const brydere = vaegtbrydere(tur, [], [telt, pose, tarp], [telt, pose]);
+
+    // 2400 − 700, og ikke også 1600 − 700 for soveposen: tarpen er brugt.
+    expect(samletBesparelse(brydere)).toBe(1700);
+  });
+});
+
+describe('byt', () => {
+  const telt = lavItem({ uid: 'u-telt', navn: 'Telt', vaegt_g: 2400, tags: ['telt'] });
+  const tarp = lavItem({ uid: 'u-tarp', navn: 'Tarp', vaegt_g: 700, tags: ['telt'] });
+  const bytte = { tung: telt, lette: tarp, sparet_g: 1700, risiko: 'mellem' as const };
+
+  it('lægger det lette til og tager det tunge af', () => {
+    const tur = lavTur({ loese_item_ids: ['u-telt', 'u-andet'] });
+    const { aendringer, uloeste } = byt(tur, [bytte]);
+
+    expect(aendringer.loese_item_ids).toEqual(['u-andet', 'u-tarp']);
+    expect(uloeste).toEqual([]);
+  });
+
+  // Det var her, det gamle "Tilføj" slap: begge dele stod på listen, og
+  // vægten var gået op i stedet for ned.
+  it('tager det tunge ud af tasken igen', () => {
+    const tur = lavTur({ loese_item_ids: ['u-telt'], pakkede_item_uids: ['u-telt'] });
+    expect(byt(tur, [bytte]).aendringer.pakkede_item_uids).toEqual([]);
+  });
+
+  it('tager det tunge fra den der skulle bære det', () => {
+    const tur = lavTur({
+      loese_item_ids: ['u-telt'],
+      deltagere: [{
+        id: 'd1', navn: 'Emil', overnatning: null,
+        personligt_gear_ids: ['u-andet'], baerer_delt_ids: ['u-telt'], person_uid: ''
+      }]
+    });
+
+    const { aendringer } = byt(tur, [bytte]);
+    expect(aendringer.deltagere?.[0].baerer_delt_ids).toEqual([]);
+    expect(aendringer.deltagere?.[0].personligt_gear_ids).toEqual(['u-andet']);
+  });
+
+  it('rører ikke deltagerne når der ikke blev fjernet noget', () => {
+    const fraSaet = lavTur({ gruppe_ids: ['g1'], deltagere: [] });
+    expect(byt(fraSaet, [bytte]).aendringer.deltagere).toBeUndefined();
+  });
+
+  // Et sæt er valgt som et sæt. Så lægges det lette til, og skærmen får at
+  // vide, at byttet ikke blev helt.
+  it('siger til når det tunge kom fra et grejsæt og ikke kan tages af', () => {
+    const tur = lavTur({ gruppe_ids: ['g1'], loese_item_ids: [] });
+    const { aendringer, uloeste } = byt(tur, [bytte]);
+
+    expect(aendringer.loese_item_ids).toEqual(['u-tarp']);
+    expect(uloeste.map((i) => i.navn)).toEqual(['Telt']);
+  });
+
+  it('tager flere bytter på én gang', () => {
+    const pose = lavItem({ uid: 'u-pose', navn: 'Sovepose', vaegt_g: 1600, tags: ['sov'] });
+    const dun = lavItem({ uid: 'u-dun', navn: 'Dunpose', vaegt_g: 800, tags: ['sov'] });
+    const tur = lavTur({ loese_item_ids: ['u-telt', 'u-pose'], pakkede_item_uids: ['u-telt', 'u-pose'] });
+
+    const { aendringer } = byt(tur, [
+      bytte,
+      { tung: pose, lette: dun, sparet_g: 800, risiko: 'mellem' as const }
+    ]);
+
+    expect(aendringer.loese_item_ids).toEqual(['u-tarp', 'u-dun']);
+    expect(aendringer.pakkede_item_uids).toEqual([]);
   });
 });

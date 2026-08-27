@@ -8,6 +8,7 @@ import {
   hentelink,
   hentenavn,
   hero,
+  heroForSted,
   kanVises,
   medOriginal,
   optagetid,
@@ -197,5 +198,59 @@ describe('medOriginal', () => {
     ];
 
     expect(medOriginal(billeder)).toHaveLength(2);
+  });
+});
+
+// ─────────────────────────────────────────────
+// Stedets billede (specens §15)
+// ─────────────────────────────────────────────
+
+describe('heroForSted', () => {
+  const billeder = [
+    lavBillede({ uid: 'b-gammel', tur_uid: 't-gammel', tid: '2026-05-01T10:00:00Z' }),
+    lavBillede({ uid: 'b-ny', tur_uid: 't-ny', tid: '2026-08-01T10:00:00Z' })
+  ];
+  const ture = [
+    lavTur({ uid: 't-gammel', sted_uid: 's-mols', startdato: '2026-05-01' }),
+    lavTur({ uid: 't-ny', sted_uid: 's-mols', startdato: '2026-08-01' })
+  ];
+
+  it('tager forsiden fra det seneste besøg', () => {
+    expect(heroForSted(billeder, ture, 's-mols')?.uid).toBe('b-ny');
+  });
+
+  // Var der ikke fotograferet på den seneste tur, er det forrige besøg stadig
+  // et billede af stedet.
+  it('falder tilbage på et tidligere besøg', () => {
+    const kunGammelt = [billeder[0]];
+    expect(heroForSted(kunGammelt, ture, 's-mols')?.uid).toBe('b-gammel');
+  });
+
+  it('respekterer turens eget valg af forside', () => {
+    const to = [
+      ...billeder,
+      lavBillede({ uid: 'b-valgt', tur_uid: 't-ny', tid: '2026-08-02T10:00:00Z' })
+    ];
+    const medValg = [ture[0], { ...ture[1], hero_billede: 'b-valgt' }];
+
+    expect(heroForSted(to, medValg, 's-mols')?.uid).toBe('b-valgt');
+  });
+
+  it('giver ingenting når der ikke er billeder fra stedet', () => {
+    expect(heroForSted([], ture, 's-mols')).toBeNull();
+    expect(heroForSted(billeder, ture, 's-andet')).toBeNull();
+  });
+
+  it('giver ingenting uden et sted', () => {
+    expect(heroForSted(billeder, ture, '')).toBeNull();
+  });
+
+  // En tur uden datoer kan ikke placeres i rækken. Den skal ikke kunne skubbe
+  // sig foran det, man ved er nyest.
+  it('sætter ture uden datoer bagerst', () => {
+    const udenDato = lavTur({ uid: 't-udato', sted_uid: 's-mols', startdato: '' });
+    const medBillede = [...billeder, lavBillede({ uid: 'b-udato', tur_uid: 't-udato' })];
+
+    expect(heroForSted(medBillede, [udenDato, ...ture], 's-mols')?.uid).toBe('b-ny');
   });
 });

@@ -39,9 +39,14 @@ appen starter.
 | Afgangs-tjek | `src/afgangsTjek.ts` | Huskelisten der ikke handler om gear, og dens skabelon |
 | På tur | `src/paaTur.ts` | Næste vejrskift, dage tilbage — det man skal vide i felten |
 | Turkort | `src/turkort.ts` | Ét link til én pårørende: hvor og hvornår hjemme |
+| Turfase | `src/turfase.ts` | Hvor turen er i sit forløb, og hvad næste skridt er |
+| Pakning | `src/pakning.ts` | Hvad der er lagt i tasken, og hvor langt man er |
+| Vurdering | `src/vurdering.ts` | Stjerner på grej og ture, og hvad motoren gør ved dem |
 | Turlog | `src/feltnoter.ts` | Dagbogen fra turen, samlet pr. dag |
 | Vedligehold | `src/vedligehold.ts` | Imprægnering, slibning — intervaller der går i ring |
-| Vægt-brydere | `src/vaegtbrydere.ts` | Lettere alternativer i skabet, og tags ingen gruppe har |
+| Vægt-brydere | `src/vaegtbrydere.ts` | Lettere alternativer i skabet, deres risiko, og tags ingen gruppe har |
+| Smart-forslag | `src/forslag.ts` | Motorens forslag i én form: forklaring, virkning, tiltro og to handlinger |
+| Hvor et forslag lander | `src/turmaal.ts`, `src/indstillingsmaal.ts` | Fanen *og* sektionen man skal stå i, når man trykker på noget appen selv har bragt på bane |
 | Ligesom sidst | `src/ligesomSidst.ts` | Tidligere ture der lignede, som grej kan kopieres fra |
 | Fortryd sletning | `src/fortryd.ts` | Vinduet på 25 sekunder efter en sletning |
 | Statistik | `src/statistik.ts` | Aggregeringer over inventar og ture |
@@ -51,8 +56,72 @@ appen starter.
 | Sol og skumring | `src/soltider.ts` | Hvornår det bliver lyst og mørkt, regnet på enheden |
 | Jagtvarsel | `src/jagt.ts` | Om turen ligger i en jagtsæson, og hvad det betyder |
 | Tørke og bål | `src/baalforbud.ts` | Om udsigten er tør nok til at tjekke for afbrændingsforbud |
+| Design tokens | `src/index.css` | Farver, afstande, runding, skriftstørrelser og rørehøjde |
 | UI-primitiver | `src/ui.tsx`, `src/layout.ts` | Knap, Kort, Felt, Chip, Badge, listerækker, detalje-header |
-| Skærme | `src/App.tsx` m.fl. | Inventar, Grupper, Ture, Steder, Statistik |
+| Skærme | `src/App.tsx` m.fl. | Hjem, Ture, Grej, Folk, Mere — og skærmene derunder |
+
+Vurderingen er den eneste ting, appen ved, som ikke er et tal eller en dato.
+Den ved, hvad der var med, hvad der blev brugt, og hvad der gik i stykker —
+men ikke om man var glad for det. En sovepose kan være brugt hver eneste nat
+og stadig være noget, man frøs i.
+
+`null` er en rigtig værdi og ikke en dårlig karakter: de fleste ting bliver
+aldrig vurderet, og de tælles hverken med i gennemsnittet eller imod noget.
+Motoren bruger vurderingen ét sted — `vaegtbrydere.ts` holder op med at
+foreslå, at man skifter noget ud, man har givet fire stjerner eller mere.
+Grænsen står som `GODT` i `vurdering.ts`, så den er ét sted, når den skal
+justeres.
+
+Turen skelner mellem det grej der er *valgt* til den (`loese_item_ids` og
+`gruppe_ids`) og det der er *pakket* (`pakkede_item_uids`). Det første er en
+plan, det andet er en status man står med tasken og opdaterer. Fremdriften
+gemmes ikke — den regnes ud af de to lister, så tallet og listen ikke kan
+komme ud af trit.
+
+Specens §7.1 har fire pakketilstande; her er der to. "Blocked" og "optional"
+kan appen ikke selv udfylde, og en tilstand man skal sætte i hånden for at få
+noget ud af, er en tilstand de fleste aldrig sætter.
+
+En tur går gennem kladde → klar → på tur → afsluttet → gjort op. De fire
+første er `Tur.status` i basen; den femte er udledt af, om pak-af-tjekket er
+udfyldt — en tilstand mere ville skulle migreres, synkes og holdes i sync med
+et felt, der allerede siger det samme.
+
+`turfase.ts` svarer på "hvad nu?" for en tur: hvilken fase, hvad det næste
+skridt er, og hvad der er værd at gøre først. Manglerne blokerer ikke. Man
+skal kunne tage afsted på en tur, appen synes er halvfærdig — den skal bare
+have sagt det først.
+
+Navigationen har fem faner: **Hjem, Ture, Grej, Folk** og **Mere**. Grejsæt
+ligger under Grej, fordi et sæt er en måde at samle sit grej på og ikke et
+sted man arbejder; Steder, Statistik og Indstillinger ligger under Mere, fordi
+de bruges sjældnere end ture og grej og ellers ville fylde lige så meget.
+
+Skallen kender selv den sammenhæng (`HOERER_TIL` i `Skal.tsx`). Står man inde
+på en underskærm, bliver hovedfanen markeret i navigationen, og der kommer en
+"‹ Grej"-linje over titlen — begge dele udledt, så en vej tilbage ikke kan
+blive glemt ét sted. En ny skærm skal derfor kun skrives ind i den ene tabel.
+
+Reglen bagved: en ny funktion får ikke automatisk sin egen fane. Hører den til
+en tur, ligger den under turen; hører den til et stykke grej, under Grej. Kun
+det tværgående hører under Mere.
+
+Målene i brugerfladen står som CSS-variabler i `src/index.css` og skal vælges
+derfra frem for at blive skrevet ind i den enkelte skærm: `--plads-1` til
+`--plads-6` for afstande, `--runding*` for hjørner, `--skrift-*` for
+skriftstørrelser. Et spring i skalaen er tilladt; en værdi uden om den skal
+have en grund.
+
+`--roerehoejde` er mindstemålet på noget, man skal kunne ramme. Den er 44 px
+på en touchskærm og 36 med mus, fordi appen bruges udendørs, hvor sigtet er
+dårligere end ved et skrivebord — nogle gange med handske på. Skiftet sker af
+sig selv på `pointer: coarse`, så en ny knap får det rigtige mål uden at nogen
+skal huske det. To undtagelser er bevidste: `hvorfor?`-linket står midt i en
+sætning, og krydset i en tag-chip står i en række, der ombryder — begge ville
+stjæle klik fra linjen omkring sig, hvis de fyldte de fulde 44 px.
+
+Felterne står på 16 px, og det er ikke en smagssag: Safari på iPhone zoomer
+ind på et felt med mindre skrift og zoomer ikke ud igen.
 
 Steder og personer er genbrugsressourcer på tværs af ture: et sted husker sine
 noter fra sidst, og en person samler sine ture. Begge koblinger er valgfrie —

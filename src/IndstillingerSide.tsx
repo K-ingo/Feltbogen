@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, etiket, PAK_AF_NIVEAU, AKTIVITETSNIVEAU } from './db';
 import {
@@ -26,21 +26,42 @@ import {
 } from './dataudveksling';
 import type { Baseindhold } from './dataudveksling';
 import { Skal } from './Skal';
+import type { Indstillingsmaal } from './indstillingsmaal';
 import type { Fane } from './Skal';
-import Personer from './Personer';
 import { laesSkabelon, skrivSkabelon, STANDARD_SKABELON } from './afgangsTjek';
-import { Knap, SektionsTitel, Felt, Segment } from './ui';
+import {
+  Felt,
+  FjernKnap,
+  Knap,
+  Segment,
+  SektionsTitel
+} from './ui';
 
 interface Props {
   fane: Fane;
   skift: (f: Fane) => void;
   tilLogin: () => void;
   seRundvisning: () => void;
+  // Afsnittet man skal lande i, når man kommer fra en række under Mere.
+  // Se indstillingsmaal.ts.
+  maal?: Indstillingsmaal;
 }
 
 type Besked = { slags: 'ok' | 'fejl'; tekst: string } | null;
 
-function IndstillingerSide({ fane, skift, tilLogin, seRundvisning }: Props) {
+function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props) {
+  // Ruller det, man er sendt efter, ind på skærmen — én gang, og først når
+  // afsnittet faktisk står der.
+  const sigtRef = useRef<HTMLElement | null>(null);
+  const harRullet = useRef(false);
+  useEffect(() => {
+    if (!maal || harRullet.current || !sigtRef.current) return;
+    harRullet.current = true;
+    sigtRef.current.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  });
+
+  const sigte = (m: Indstillingsmaal) => (maal === m ? sigtRef : undefined);
+
   const { bruger } = useAuth();
 
   const [arbejder, setArbejder] = useState<string | null>(null);
@@ -137,7 +158,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning }: Props) {
     <Skal fane={fane} skift={skift} titel="Indstillinger">
       <div style={{ display: 'grid', gap: '22px' }}>
 
-        <section>
+        <section ref={sigte('konto')}>
           <SektionsTitel>Konto</SektionsTitel>
           <Kort>
             {bruger ? (
@@ -181,7 +202,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning }: Props) {
           </Kort>
         </section>
 
-        <section>
+        <section ref={sigte('synkronisering')}>
           <SektionsTitel>Synkronisering</SektionsTitel>
           <Kort>
             <Raekke
@@ -213,21 +234,6 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning }: Props) {
             <Hjaelp>
               Alt gemmes først på enheden og sendes derefter op. Er du uden dækning, bliver
               ændringerne liggende og går op af sig selv når forbindelsen er tilbage.
-            </Hjaelp>
-          </Kort>
-        </section>
-
-        <section>
-          <SektionsTitel>Personer</SektionsTitel>
-          <Kort>
-            <Personer />
-            <Hjaelp>
-              De du tager afsted med. Bliver en deltager knyttet til en person, tælles
-              turene sammen på tværs, og standardovernatningen udfyldes af sig selv.
-              Du kan stadig skrive et navn direkte på en tur uden at oprette nogen her.
-              Der gemmes kun navn, en valgfri e-mail og dine egne noter. Det bliver på
-              enheden og i din egen konto — intet deles med tredjepart, og gæster på en
-              tur ser kun navnet.
             </Hjaelp>
           </Kort>
         </section>
@@ -274,7 +280,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning }: Props) {
           </Kort>
         </section>
 
-        <section>
+        <section ref={sigte('skabeloner')}>
           <SektionsTitel>Afgangs-tjek</SektionsTitel>
           <Kort>
             <Skabelon
@@ -310,7 +316,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning }: Props) {
           </Kort>
         </section>
 
-        <section>
+        <section ref={sigte('data')}>
           <SektionsTitel>Data</SektionsTitel>
           <Kort>
             <Raekke label="Gear" vaerdi={`${items.length}`} />
@@ -348,7 +354,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning }: Props) {
           </Kort>
         </section>
 
-        <section>
+        <section ref={sigte('om')}>
           <SektionsTitel>Om</SektionsTitel>
           <Kort>
             <Raekke label="Feltbogen" vaerdi={`version ${__APP_VERSION__} · ${__APP_COMMIT__}`} />
@@ -436,13 +442,7 @@ function Skabelon({ linjer, gem, nulstil }: {
               onChange={(e) => gem(linjer.map((l, i) => (i === n ? e.target.value : l)))}
               style={{ flex: 1, minWidth: 0, fontSize: '13px', border: 'none', background: 'transparent', padding: '2px 0' }}
             />
-            <button
-              onClick={() => gem(linjer.filter((_, i) => i !== n))}
-              aria-label={`Fjern ${linje}`}
-              style={{ background: 'transparent', border: 'none', color: 'var(--fejl)', cursor: 'pointer', fontSize: '14px', padding: '0 4px' }}
-            >
-              ×
-            </button>
+            <FjernKnap onClick={() => gem(linjer.filter((_, i) => i !== n))} label={`Fjern ${linje}`} />
           </div>
         ))}
       </div>

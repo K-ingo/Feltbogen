@@ -1,4 +1,4 @@
-import type { Billede, Tur } from './db';
+import type { Billede, Reference, Tur } from './db';
 
 // Fotos fra turen.
 //
@@ -161,6 +161,33 @@ export function hero(billeder: Billede[], tur: Tur): Billede | null {
   if (paaTuren.length === 0) return null;
 
   return paaTuren.find((b) => b.uid === tur.hero_billede) ?? paaTuren[0];
+}
+
+// Stedets billede.
+//
+// Specens §15 vil have et hero-billede på steddetaljen, men et sted har ingen
+// billeder — de hører til turene. Det er ikke en mangel: et sted ser ud som
+// det gjorde, sidst man var der, og dét billede findes allerede.
+//
+// Derfor er stedets billede forsiden fra det seneste besøg. Udledt og ikke
+// gemt: et felt til det ville skulle vedligeholdes hver gang man sletter et
+// billede eller vælger en ny forside, og det ville sige det samme.
+//
+// Ture uden datoer står bagerst — de kan ikke placeres i rækken, og et sted
+// skal helst vise det nyeste, man har.
+export function heroForSted(billeder: Billede[], ture: Tur[], stedUid: Reference): Billede | null {
+  if (!stedUid) return null;
+
+  const besoeg = ture
+    .filter((t) => t.sted_uid === stedUid)
+    .sort((a, b) => (b.startdato || '').localeCompare(a.startdato || ''));
+
+  for (const tur of besoeg) {
+    const billede = hero(billeder, tur);
+    if (billede) return billede;
+  }
+
+  return null;
 }
 
 // Om billedet kan vises her og nu. Et billede der kun findes som url, og

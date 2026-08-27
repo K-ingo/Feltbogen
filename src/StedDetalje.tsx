@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
+import type { Sted } from './db';
 import TagsInput from './TagsInput';
 import { besoegstekst, turePaaSted } from './steder';
+import { heroForSted } from './billeder';
+import { Billedvisning } from './BilledSektion';
 import { soegSted } from './smartMotor';
 import type { StedForslag } from './smartMotor';
 import { formatterPeriode } from './datotekst';
@@ -13,12 +16,13 @@ import { layout } from './layout';
 import {
   DetaljeHeader,
   Felt,
-  Knap,
   Indlaeser,
+  Knap,
   Kort,
   Label,
   ListeRaekke,
   SektionsTitel,
+  Stjerner,
   Tekstomraade,
   TitelInput
 } from './ui';
@@ -27,13 +31,16 @@ interface Props {
   stedId: number;
   tilbage: () => void;
   aabnTur: (id: number) => void;
+  // Opretter en tur med stedet udfyldt og åbner den. Specens §15 har knappen,
+  // og den er den korteste vej fra "her vil jeg tilbage" til en tur.
+  opretTurHer: (sted: Sted) => void;
   nyOprettet?: boolean;
 }
 
 // Et sted man kommer tilbage til. Noterne er det egentlige — "kildevand 200 m
 // mod øst" er en oplysning man kun samler op ved at have været der, og som
 // ellers går tabt mellem to ture.
-function StedDetalje({ stedId, tilbage, aabnTur, nyOprettet }: Props) {
+function StedDetalje({ stedId, tilbage, aabnTur, opretTurHer, nyOprettet }: Props) {
   const { post: sted, opdater } = useRedigerbar(db.steder, stedId, opdaterSted, {
     onIndlaest: (fundet) => {
       if (fundet.koordinater) {
@@ -48,6 +55,7 @@ function StedDetalje({ stedId, tilbage, aabnTur, nyOprettet }: Props) {
   const [soeger, setSoeger] = useState(false);
 
   const ture = useLiveQuery(() => db.ture.toArray()) ?? [];
+  const billeder = useLiveQuery(() => db.billeder.toArray()) ?? [];
 
   const opdaterKoordinater = async (v: string) => {
     setKoordinatTekst(v);
@@ -121,6 +129,7 @@ function StedDetalje({ stedId, tilbage, aabnTur, nyOprettet }: Props) {
   if (!sted) return <Indlaeser />;
 
   const besoegte = turePaaSted(ture, sted.uid);
+  const stedbillede = heroForSted(billeder, ture, sted.uid);
 
   return (
     <div style={layout.container}>
@@ -132,6 +141,21 @@ function StedDetalje({ stedId, tilbage, aabnTur, nyOprettet }: Props) {
         placeholder="Navn på sted"
         autoFokus={nyOprettet}
       />
+
+      {/* Stedets billede er forsiden fra det seneste besøg. Et sted har ingen
+          billeder af sig selv — men det ser ud, som det gjorde sidst man var
+          der, og dét billede findes allerede. */}
+      {stedbillede && (
+        <div style={{
+          height: '180px',
+          borderRadius: 'var(--runding)',
+          overflow: 'hidden',
+          marginBottom: 'var(--plads-4)',
+          background: 'var(--border-svag)'
+        }}>
+          <Billedvisning billede={stedbillede} />
+        </div>
+      )}
 
       <div style={{ display: 'grid', gap: '14px', marginBottom: '24px' }}>
         <Kort fremhaevet>
@@ -197,6 +221,20 @@ function StedDetalje({ stedId, tilbage, aabnTur, nyOprettet }: Props) {
           )}
         </div>
 
+        {/* Et sted bliver bedre at vurdere, jo flere gange man har været
+            der. Derfor står den her og ikke i turens efterregnskab: den
+            handler om stedet over tid, ikke om den ene tur. */}
+        <div>
+          <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginBottom: '2px' }}>
+            Din vurdering
+          </div>
+          <Stjerner
+            vaerdi={sted.vurdering ?? null}
+            saet={(v) => void opdater({ vurdering: v })}
+            label={sted.navn || 'stedet'}
+          />
+        </div>
+
         <TagsInput
           tags={sted.tags}
           onChange={(nye) => opdater({ tags: nye })}
@@ -210,6 +248,10 @@ function StedDetalje({ stedId, tilbage, aabnTur, nyOprettet }: Props) {
           raekker={3}
           placeholder="fx myggeplaget i juli, kildevand 200 m mod øst"
         />
+      </div>
+
+      <div style={{ marginBottom: 'var(--plads-5)' }}>
+        <Knap variant="primaer" onClick={() => opretTurHer(sted)}>Opret tur her</Knap>
       </div>
 
       <SektionsTitel>Ture hertil</SektionsTitel>

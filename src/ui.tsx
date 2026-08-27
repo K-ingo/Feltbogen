@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { ReactNode, CSSProperties } from 'react';
+import { TILTRONAVN } from './forslag';
+import type { Forslag } from './forslag';
 
 // ─────────────────────────────────────────────
 // Talfelter
@@ -55,9 +57,9 @@ export function Talinput({ value, onChange, placeholder, style }: {
 // Fælles stilarter der bruges af flere komponenter herunder.
 const labelStil: CSSProperties = {
   display: 'block',
-  fontSize: '11px',
+  fontSize: 'var(--skrift-lille)',
   color: 'var(--tekst-dæmpet)',
-  marginBottom: '5px',
+  marginBottom: 'var(--plads-1)',
   fontWeight: 500,
   textTransform: 'uppercase',
   letterSpacing: '0.5px'
@@ -65,7 +67,7 @@ const labelStil: CSSProperties = {
 
 // Hjælpetekst og fejl står i forlængelse af labelen, men uden dens versaler.
 const tilfoejelseStil: CSSProperties = {
-  marginLeft: '8px',
+  marginLeft: 'var(--plads-2)',
   textTransform: 'none',
   letterSpacing: 0,
   fontWeight: 400
@@ -112,7 +114,7 @@ export function Knap({ children, onClick, variant = 'sekundaer', disabled, style
       background: 'transparent',
       color: 'var(--tekst-dæmpet)',
       border: 'none',
-      padding: '6px 8px'
+      padding: '0 var(--plads-2)'
     },
     fare: {
       background: 'transparent',
@@ -127,9 +129,16 @@ export function Knap({ children, onClick, variant = 'sekundaer', disabled, style
       onClick={onClick}
       disabled={disabled}
       style={{
-        padding: '8px 14px',
-        borderRadius: '8px',
-        fontSize: '13px',
+        // Højden kommer fra rørehøjden og ikke fra padding, så knappen kan
+        // rammes med en finger uden at blive tyk på en skærm med mus.
+        minHeight: 'var(--roerehoejde)',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 'var(--plads-1)',
+        padding: '0 var(--plads-3)',
+        borderRadius: 'var(--runding-lille)',
+        fontSize: 'var(--skrift-knap)',
         fontWeight: 500,
         cursor: disabled ? 'default' : 'pointer',
         opacity: disabled ? 0.5 : 1,
@@ -156,8 +165,8 @@ export function Kort({ children, onClick, style, fremhaevet }: KortProps) {
       onClick={onClick}
       style={{
         background: fremhaevet ? 'var(--bg-forhoejet)' : 'transparent',
-        borderRadius: '12px',
-        padding: '14px',
+        borderRadius: 'var(--runding)',
+        padding: 'var(--plads-4)',
         cursor: onClick ? 'pointer' : 'default',
         border: fremhaevet ? '1px solid var(--border-svag)' : 'none',
         ...style
@@ -187,7 +196,7 @@ export function Felt({ label, value, onChange, type = 'text', placeholder, hjael
           value={Number(value)}
           onChange={onChange}
           placeholder={placeholder}
-          style={{ width: '100%', fontSize: '14px' }}
+          style={{ width: '100%' }}
         />
       ) : (
         <input
@@ -195,7 +204,7 @@ export function Felt({ label, value, onChange, type = 'text', placeholder, hjael
           value={value}
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
-          style={{ width: '100%', fontSize: '14px' }}
+          style={{ width: '100%' }}
         />
       )}
     </div>
@@ -241,7 +250,7 @@ export function Dropdown({ label, value, onChange, options, formater }: Dropdown
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        style={{ width: '100%', fontSize: '14px', textTransform: 'capitalize' }}
+        style={{ width: '100%', textTransform: 'capitalize' }}
       >
         {options.map((o) => (
           <option key={o} value={o}>{formater ? formater(o) : o}</option>
@@ -262,7 +271,7 @@ interface SegmentProps<T extends string> {
 
 export function Segment<T extends string>({ vaerdier, valgt, vaelg, formater, kompakt }: SegmentProps<T>) {
   return (
-    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', gap: 'var(--plads-1)', flexWrap: 'wrap' }}>
       {vaerdier.map((v) => {
         const erAktiv = v === valgt;
         return (
@@ -270,12 +279,17 @@ export function Segment<T extends string>({ vaerdier, valgt, vaelg, formater, ko
             key={v}
             onClick={() => vaelg(v)}
             style={{
-              padding: kompakt ? '5px 12px' : '6px 14px',
-              fontSize: kompakt ? '11px' : '12px',
+              // Den kompakte er stadig et valg man skal kunne ramme — den
+              // bliver smallere, ikke lavere.
+              minHeight: 'var(--roerehoejde)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              padding: kompakt ? '0 var(--plads-3)' : '0 var(--plads-4)',
+              fontSize: kompakt ? 'var(--skrift-lille)' : 'var(--skrift-detalje)',
               background: erAktiv ? 'var(--accent)' : 'transparent',
               color: erAktiv ? 'var(--accent-tekst)' : 'var(--tekst-dæmpet)',
               border: `1px solid ${erAktiv ? 'var(--accent)' : 'var(--border)'}`,
-              borderRadius: '16px',
+              borderRadius: 'var(--runding-pille)',
               cursor: 'pointer',
               textTransform: formater ? 'none' : 'capitalize',
               fontWeight: 500
@@ -305,30 +319,47 @@ export function Chip({ children, onFjern, farve = 'default', storrelse = 'normal
   };
 
   const storrelser: Record<string, CSSProperties> = {
-    lille: { fontSize: '10px', padding: '2px 8px' },
-    normal: { fontSize: '11px', padding: '3px 10px' }
+    lille: { fontSize: 'var(--skrift-mikro)', padding: '2px var(--plads-2)' },
+    normal: { fontSize: 'var(--skrift-lille)', padding: '3px 10px' }
   };
 
   return (
     <span style={{
       display: 'inline-flex',
       alignItems: 'center',
-      gap: '4px',
-      borderRadius: '10px',
+      gap: 'var(--plads-1)',
+      borderRadius: 'var(--runding-lille)',
       fontWeight: 500,
       ...farver[farve],
-      ...storrelser[storrelse]
+      ...storrelser[storrelse],
+      // En chip man kan slette noget med, er en knap og ikke en etiket, og
+      // den skal derfor være højere end de chips der bare står og viser et
+      // tag. Ikke hele rørehøjden: chips ombryder i rækker med få pixels
+      // imellem, så en trykflade på 44 px ville nå ned i rækken under og
+      // slette et andet tag end det man sigtede på. Den fejl er værre end en
+      // lidt lille knap.
+      ...(onFjern ? { minHeight: '32px', paddingRight: 'var(--plads-1)' } : {})
     }}>
       {children}
       {onFjern && (
         <button
           onClick={onFjern}
+          aria-label="Fjern"
           style={{
             background: 'transparent',
             border: 'none',
             cursor: 'pointer',
+            // Krydset fylder chippens højde og bliver kvadratisk, så der er
+            // noget at ramme. Se kommentaren på chippen ovenfor for hvorfor
+            // det ikke er de fulde 44 px.
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '28px',
+            height: '28px',
             padding: 0,
-            fontSize: '13px',
+            marginRight: '-2px',
+            fontSize: 'var(--skrift-brod)',
             lineHeight: 1,
             color: 'inherit',
             opacity: 0.7
@@ -341,13 +372,95 @@ export function Chip({ children, onFjern, farve = 'default', storrelse = 'normal
   );
 }
 
+// Vurdering i stjerner, 1-5.
+//
+// Fem knapper og ikke en skyder: man vælger en karakter, man justerer ikke en
+// værdi. Trykker man på den stjerne der allerede er valgt, ryddes vurderingen
+// — det skal kunne fortrydes at have taget stilling, uden at man skal lede
+// efter en ekstra knap til det.
+export function Stjerner({ vaerdi, saet, label }: {
+  vaerdi: number | null;
+  saet: (v: number | null) => void;
+  // Hvad der vurderes. Står i skærmlæserens oplæsning: "Giv Trangia 4 ud af 5".
+  label: string;
+}) {
+  return (
+    <div role="group" aria-label={`Vurdering af ${label}`} style={{ display: 'flex', gap: '2px' }}>
+      {[1, 2, 3, 4, 5].map((n) => {
+        const fyldt = vaerdi !== null && n <= vaerdi;
+
+        return (
+          <button
+            key={n}
+            onClick={() => saet(vaerdi === n ? null : n)}
+            aria-label={`Giv ${label} ${n} ud af 5`}
+            aria-pressed={fyldt}
+            title={vaerdi === n ? 'Tryk igen for at rydde' : undefined}
+            style={{
+              minWidth: 'var(--roerehoejde)',
+              minHeight: 'var(--roerehoejde)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0,
+              fontSize: '20px',
+              lineHeight: 1,
+              // Formen og ikke kun farven skiller de valgte fra resten: en
+              // udfyldt stjerne kan ses af én der ikke skelner farverne.
+              color: fyldt ? 'var(--accent)' : 'var(--tekst-svag)'
+            }}
+          >
+            {fyldt ? '★' : '☆'}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// Krydset der fjerner en linje i en liste man kan redigere — et punkt på
+// afgangs-tjekket, en deltager, en vedligeholdelseshandling. Lå fire steder i
+// koden som hver sin lille knap på 20×16 px, hvilket er småt at ramme for
+// noget der sletter.
+//
+// Rækken den står i, er allerede mindst en rørehøjde høj, fordi der er et
+// input ved siden af. Derfor kan krydset få hele højden uden at nå ned i
+// rækken under.
+export function FjernKnap({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      style={{
+        minWidth: 'var(--roerehoejde)',
+        minHeight: 'var(--roerehoejde)',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+        background: 'transparent',
+        border: 'none',
+        color: 'var(--fejl)',
+        cursor: 'pointer',
+        fontSize: 'var(--skrift-brod)',
+        padding: 0
+      }}
+    >
+      ×
+    </button>
+  );
+}
+
 // Viser de første `maks` tags, og resten som en tæller.
 export function TagChips({ tags, maks = 4 }: { tags: string[]; maks?: number }) {
   if (tags.length === 0) return null;
   const resten = tags.length - maks;
 
   return (
-    <div style={{ display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', gap: 'var(--plads-1)', marginTop: '6px', flexWrap: 'wrap' }}>
       {tags.slice(0, maks).map((tag) => (
         <Chip key={tag} storrelse="lille">{tag}</Chip>
       ))}
@@ -372,11 +485,13 @@ export function Badge({ children, niveau }: BadgeProps) {
 
   return (
     <span style={{
-      fontSize: '10px',
-      padding: '2px 8px',
-      borderRadius: '10px',
+      fontSize: 'var(--skrift-mikro)',
+      padding: '2px var(--plads-2)',
+      borderRadius: 'var(--runding-lille)',
       fontWeight: 500,
-      textTransform: 'capitalize',
+      // Ingen capitalize. Den var uskadelig, dengang badgene indeholdt ét ord
+      // fra datamodellen, men gør "På tur" til "På Tur". Kalderen skriver
+      // teksten, som den skal se ud — komponenten skal ikke bestemme over den.
       ...farver[niveau]
     }}>
       {children}
@@ -387,12 +502,12 @@ export function Badge({ children, niveau }: BadgeProps) {
 export function SektionsTitel({ children }: { children: ReactNode }) {
   return (
     <div style={{
-      fontSize: '11px',
+      fontSize: 'var(--skrift-lille)',
       color: 'var(--tekst-dæmpet)',
       fontWeight: 600,
       textTransform: 'uppercase',
       letterSpacing: '0.8px',
-      marginBottom: '10px'
+      marginBottom: 'var(--plads-3)'
     }}>
       {children}
     </div>
@@ -414,20 +529,23 @@ export function ListeRaekke({ titel, detalje, onClick, foran, children }: ListeR
     <div
       onClick={onClick}
       style={{
-        padding: '14px 4px',
+        // En række i en liste er det man rammer allermest. Rørehøjden er
+        // gulvet; teksten gør den gerne højere.
+        minHeight: 'var(--roerehoejde)',
+        padding: 'var(--plads-4) var(--plads-1)',
         borderBottom: '1px solid var(--border-svag)',
         cursor: onClick ? 'pointer' : 'default',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        gap: '10px'
+        gap: 'var(--plads-3)'
       }}
     >
       {foran}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 500, color: 'var(--tekst)', fontSize: '14px' }}>{titel}</div>
+        <div style={{ fontWeight: 500, color: 'var(--tekst)', fontSize: 'var(--skrift-brod)' }}>{titel}</div>
         {detalje && (
-          <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
+          <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
             {detalje}
           </div>
         )}
@@ -442,7 +560,7 @@ export function ListeRaekke({ titel, detalje, onClick, foran, children }: ListeR
 // søgningen ikke gav noget.
 export function TomListe({ children }: { children: ReactNode }) {
   return (
-    <div style={{ padding: '30px 20px', textAlign: 'center', color: 'var(--tekst-svag)' }}>
+    <div style={{ padding: 'var(--plads-6) var(--plads-5)', textAlign: 'center', color: 'var(--tekst-svag)' }}>
       {children}
     </div>
   );
@@ -464,8 +582,8 @@ export function Feltkort({ label, value, onChange, type = 'text', enhed, placeho
   return (
     <div style={{
       border: '1px solid var(--border-svag)',
-      borderRadius: '10px',
-      padding: '10px 12px',
+      borderRadius: 'var(--runding-lille)',
+      padding: '10px var(--plads-3)',
       background: 'var(--bg-forhoejet)'
     }}>
       <div style={{ ...feltkortEtiket }}>{label}</div>
@@ -486,7 +604,7 @@ export function Feltkort({ label, value, onChange, type = 'text', enhed, placeho
             style={{ ...feltkortInput }}
           />
         )}
-        {enhed && <span style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)' }}>{enhed}</span>}
+        {enhed && <span style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-dæmpet)' }}>{enhed}</span>}
       </div>
     </div>
   );
@@ -496,14 +614,17 @@ const feltkortInput: CSSProperties = {
   border: 'none',
   background: 'transparent',
   padding: 0,
-  fontSize: '16px',
+  // Kortet er selv rammen om feltet, så inputtet skal hverken have sin egen
+  // kant eller sin egen mindstehøjde oven i den.
+  minHeight: 0,
+  fontSize: 'var(--skrift-felt)',
   width: '100%',
   minWidth: 0,
   color: 'var(--tekst)'
 };
 
 const feltkortEtiket: CSSProperties = {
-  fontSize: '10px',
+  fontSize: 'var(--skrift-mikro)',
   color: 'var(--tekst-dæmpet)',
   textTransform: 'uppercase',
   letterSpacing: '0.6px',
@@ -520,8 +641,8 @@ export function Infokort({ label, fremhaevet, children }: {
   return (
     <div style={{
       border: `1px solid ${fremhaevet ? 'var(--accent-border)' : 'var(--border-svag)'}`,
-      borderRadius: '10px',
-      padding: '12px',
+      borderRadius: 'var(--runding-lille)',
+      padding: 'var(--plads-3)',
       background: fremhaevet ? 'var(--accent-bg)' : 'var(--bg-forhoejet)'
     }}>
       <div style={feltkortEtiket}>{label}</div>
@@ -548,13 +669,13 @@ export function TitelInput({ value, onChange, placeholder, autoFokus }: TitelInp
       autoFocus={autoFokus}
       style={{
         fontFamily: "'Fraunces', Georgia, serif",
-        fontSize: '26px',
+        fontSize: 'var(--skrift-titel)',
         fontWeight: 400,
         border: 'none',
         background: 'transparent',
-        padding: '4px 0',
+        padding: 'var(--plads-1) 0',
         width: '100%',
-        marginBottom: '14px',
+        marginBottom: 'var(--plads-4)',
         color: 'var(--tekst)'
       }}
     />
@@ -573,17 +694,43 @@ export function DetaljeHeader({ tilbage, sletLabel, slet }: DetaljeHeaderProps) 
   const [menuAaben, setMenuAaben] = useState(false);
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--plads-4)' }}>
+      {/* Tilbage og tre-prikker er de to knapper man rammer med tommelen
+          øverst på skærmen. De skal have hele rørehøjden, også selvom
+          teksten i dem er lille. */}
       <button
         onClick={tilbage}
-        style={{ background: 'transparent', border: 'none', fontSize: '14px', cursor: 'pointer', color: 'var(--tekst-dæmpet)', padding: '4px 0' }}
+        style={{
+          minHeight: 'var(--roerehoejde)',
+          display: 'inline-flex',
+          alignItems: 'center',
+          background: 'transparent',
+          border: 'none',
+          fontSize: 'var(--skrift-brod)',
+          cursor: 'pointer',
+          color: 'var(--tekst-dæmpet)',
+          padding: '0 var(--plads-2) 0 0'
+        }}
       >
         ‹ Tilbage
       </button>
       <div style={{ position: 'relative' }}>
         <button
           onClick={() => setMenuAaben(!menuAaben)}
-          style={{ background: 'transparent', border: 'none', fontSize: '18px', cursor: 'pointer', padding: '4px 12px', color: 'var(--tekst-dæmpet)' }}
+          aria-label="Flere handlinger"
+          style={{
+            minHeight: 'var(--roerehoejde)',
+            minWidth: 'var(--roerehoejde)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'transparent',
+            border: 'none',
+            fontSize: '18px',
+            cursor: 'pointer',
+            padding: 0,
+            color: 'var(--tekst-dæmpet)'
+          }}
         >
           ⋯
         </button>
@@ -594,7 +741,7 @@ export function DetaljeHeader({ tilbage, sletLabel, slet }: DetaljeHeaderProps) 
             top: '100%',
             background: 'var(--bg-forhoejet)',
             border: '1px solid var(--border)',
-            borderRadius: '8px',
+            borderRadius: 'var(--runding-lille)',
             boxShadow: '0 4px 12px var(--skygge)',
             minWidth: '140px',
             zIndex: 10,
@@ -603,15 +750,15 @@ export function DetaljeHeader({ tilbage, sletLabel, slet }: DetaljeHeaderProps) 
             <button
               onClick={() => { setMenuAaben(false); slet(); }}
               style={{
-                display: 'block',
+                minHeight: 'var(--roerehoejde)',
                 width: '100%',
-                padding: '10px 14px',
+                padding: '0 var(--plads-4)',
                 background: 'transparent',
                 border: 'none',
                 textAlign: 'left',
                 cursor: 'pointer',
                 color: 'var(--fejl)',
-                fontSize: '13px'
+                fontSize: 'var(--skrift-knap)'
               }}
             >
               {sletLabel}
@@ -643,8 +790,14 @@ export function Hvorfor({ begrundelse }: { begrundelse: string }) {
         style={{
           background: 'transparent',
           border: 'none',
-          padding: '0 2px',
-          fontSize: '11px',
+          // "hvorfor?" står midt i en sætning og kan ikke fylde 44 px uden at
+          // skubbe linjen fra hinanden. I stedet vokser trykfladen ud over
+          // teksten, mens den negative margin holder linjen præcis hvor den
+          // var. Man rammer altså et større felt end det man kan se.
+          display: 'inline-block',
+          padding: 'var(--plads-2) var(--plads-1)',
+          margin: 'calc(var(--plads-2) * -1) calc(var(--plads-1) * -1)',
+          fontSize: 'var(--skrift-lille)',
           cursor: 'pointer',
           color: aaben ? 'var(--accent)' : 'var(--tekst-svag)',
           textDecoration: 'underline',
@@ -655,12 +808,12 @@ export function Hvorfor({ begrundelse }: { begrundelse: string }) {
       </button>
       {aaben && (
         <div style={{
-          marginTop: '5px',
-          padding: '8px 10px',
-          borderRadius: '8px',
+          marginTop: 'var(--plads-1)',
+          padding: 'var(--plads-2) 10px',
+          borderRadius: 'var(--runding-lille)',
           border: '1px solid var(--border-svag)',
           background: 'var(--bg-forhoejet)',
-          fontSize: '11px',
+          fontSize: 'var(--skrift-lille)',
           lineHeight: 1.55,
           color: 'var(--tekst-dæmpet)'
         }}>
@@ -672,5 +825,89 @@ export function Hvorfor({ begrundelse }: { begrundelse: string }) {
 }
 
 export function Indlaeser() {
-  return <div style={{ padding: '20px', color: 'var(--tekst-dæmpet)' }}>Indlæser...</div>;
+  return <div style={{ padding: 'var(--plads-5)', color: 'var(--tekst-dæmpet)' }}>Indlæser...</div>;
+}
+
+// ─────────────────────────────────────────────
+// Smart-forslag
+// ─────────────────────────────────────────────
+
+// Et forslag ser med vilje anderledes ud end en handling: handlingen er noget
+// der er gået skævt, forslaget er noget appen ville gøre, hvis den måtte.
+// Derfor accentfarven og ikke advarselsfarven.
+//
+// Overskriften fører hen til det, forslaget handler om; selve handlingen står
+// som en navngiven knap. Forskellen er hele pointen: man skal kunne læse et
+// forslag og gå videre uden at have sagt ja til noget.
+//
+// Kortet står her og ikke på en af skærmene, fordi begge skærme viser det —
+// startskærmen og turen. To kort for den samme slags forslag ville være
+// præcis det, §13 skulle af med.
+//
+// Specens §13 vil have to handlinger på hvert forslag. Den anden er afvis, og
+// den er nødvendig af en grund, der ikke er høflighed: et forslag man ikke kan
+// få væk, bliver til støj, og støj læser man udenom. Så holder man også op med
+// at læse det, der var værd at læse.
+export function Forslagskort({ forslag, aabn, tagImod, afvis }: {
+  forslag: Forslag;
+  aabn: () => void;
+  tagImod: () => void;
+  afvis: () => void;
+}) {
+  return (
+    <div style={{
+      padding: '11px 13px',
+      borderRadius: 'var(--runding-lille)',
+      border: '1px solid var(--accent-border)',
+      background: 'var(--accent-bg)'
+    }}>
+      <button
+        onClick={aabn}
+        style={{
+          display: 'block',
+          width: '100%',
+          textAlign: 'left',
+          padding: 0,
+          border: 'none',
+          background: 'transparent',
+          cursor: 'pointer'
+        }}
+      >
+        <div style={{ fontSize: 'var(--skrift-knap)', fontWeight: 600, color: 'var(--accent)' }}>
+          {forslag.titel}
+        </div>
+        <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
+          {forslag.detalje}
+        </div>
+      </button>
+
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 'var(--plads-2)',
+        marginTop: 'var(--plads-1)'
+      }}>
+        <Hvorfor begrundelse={forslag.begrundelse} />
+        {/* Hvor sikker motoren selv er. Den står dæmpet og ikke som et mærke:
+            det er en oplysning om forslaget, ikke en overskrift på det. */}
+        <span style={{
+          fontSize: 'var(--skrift-lille)',
+          color: 'var(--tekst-dæmpet)',
+          whiteSpace: 'nowrap'
+        }}>
+          {TILTRONAVN[forslag.tiltro]}
+        </span>
+      </div>
+
+      <div style={{ display: 'flex', gap: 'var(--plads-2)', marginTop: 'var(--plads-2)' }}>
+        <Knap variant="primaer" onClick={tagImod} style={{ flex: 1, fontSize: 'var(--skrift-lille)' }}>
+          {forslag.handling.tag_imod}
+        </Knap>
+        <Knap onClick={afvis} style={{ fontSize: 'var(--skrift-lille)' }}>
+          {forslag.handling.afvis}
+        </Knap>
+      </div>
+    </div>
+  );
 }

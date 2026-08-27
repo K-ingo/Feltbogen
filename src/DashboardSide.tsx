@@ -1,21 +1,39 @@
+import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import type { Item, Gruppe, Tur } from './db';
-import { naesteTur, naarBegynder, handlinger, tureIAar, sidstTilfoejede } from './dashboard';
+import {
+  naesteTur,
+  naarBegynder,
+  handlinger,
+  syncstatus,
+  tureIAar,
+  sidstTilfoejede
+} from './dashboard';
 import { aarsopgoerelseAtSe } from './aarsopgoerelse';
-import type { Handling } from './dashboard';
+import type { Handling, Syncstatus } from './dashboard';
+import { forslagTilTur, udenAfviste, maalFor } from './forslag';
+import type { Forslag } from './forslag';
+import type { Turmaal } from './turmaal';
+import { kopierGrej } from './ligesomSidst';
+import { opdaterTur } from './sync';
 import { itemsPaaTur, findAdvarsler } from './smartMotor';
+import { forfaldne } from './vedligehold';
 import { samletInventarvaerdi, samletVaegt } from './statistik';
+import { fremdriftstekst } from './afgangsTjek';
+import { fremdrift as pakkefremdrift, fremdriftstekst as pakketekst } from './pakning';
+import { usendtAntal } from './sync';
+import { useAuth } from './useAuth';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
-import { useErDesktop } from './useMedie';
-import { Knap, Chip, Infokort, SektionsTitel, ListeRaekke, TomListe, Hvorfor } from './ui';
+import { useErDesktop, useErOnline } from './useMedie';
+import { Knap, Chip, Infokort, SektionsTitel, ListeRaekke, TomListe, Hvorfor, Forslagskort } from './ui';
 
 interface Props {
   fane: Fane;
   skift: (f: Fane) => void;
   aabnItem: (id: number, nyOprettet?: boolean) => void;
-  aabnTur: (id: number, nyOprettet?: boolean) => void;
+  aabnTur: (id: number, nyOprettet?: boolean, maal?: Turmaal) => void;
   aabnAar: (aar: number) => void;
   nytItem: () => void;
   nyTur: () => void;
@@ -26,26 +44,84 @@ interface Props {
 const MAKS_HANDLINGER = 4;
 const MAKS_SIDST_TILFOEJET = 5;
 
-// Fast rækkefølge: Næste tur → Handlinger → Nøgletal → Sidst tilføjet.
+// Fast rækkefølge, og den er specens: næste tur, hvad der kræver
+// opmærksomhed, hvad Feltbogen foreslår, hvordan man står — og til sidst om
+// det er nået op på serveren.
+//
+// De fire første spørgsmål skal kunne besvares på under fem sekunder. Derfor
+// er der loft over både handlinger og forslag: en startskærm der ruller, er
+// en opgaveliste, og en opgaveliste lukker man.
 function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur }: Props) {
   const erDesktop = useErDesktop();
+
+  const { erLoggetInd } = useAuth();
+  const online = useErOnline();
 
   const items = useLiveQuery(() => db.items.toArray()) ?? [];
   const grupper = useLiveQuery(() => db.grupper.toArray()) ?? [];
   const ture = useLiveQuery(() => db.ture.toArray()) ?? [];
+  // Tælles om når basen ændrer sig, så tallet ikke står og lyver efter en sync.
+  const usendt = useLiveQuery(usendtAntal, [], 0);
 
   const tur = naesteTur(ture);
   const alleHandlinger = handlinger(items, ture, grupper);
+  // Afvisningen lever her og ikke i basen. Hvad man ikke gider høre om lige
+  // nu, er ikke data om turen — og et felt til det skulle synkroniseres og
+  // gemmes for evigt for at slippe for et kort i tre dage. Den holder til man
+  // forlader skærmen, og det er også dét, den lover.
+  const [afviste, setAfviste] = useState<Set<string>>(new Set());
+  const forslag = udenAfviste(forslagTilTur(tur, grupper, items, ture), afviste);
+  const sync = syncstatus(usendt, online, erLoggetInd);
   const aar = tureIAar(ture);
   const nyeste = sidstTilfoejede(items, MAKS_SIDST_TILFOEJET);
   const opgoerelse = aarsopgoerelseAtSe(ture);
+
+  const ejet = items.filter((i) => i.status === 'ejer');
+  // Tælles i ting og ikke i handlinger: en tarp der både skal imprægneres og
+  // have lynlåsen smurt, er stadig én ting at tage sig af.
+  const skalPasses = new Set(forfaldne(ejet).map((f) => f.item.uid)).size;
+
+  // At tage imod et forslag.
+  //
+  // Kortet skrev før ingenting og førte kun hen til turen. Det var rigtigt,
+  // dengang kortet i sig selv var knappen: et forslag der ændrer data, når man
+  // trykker et sted på det, er ikke et forslag. Nu står handlingen som en
+  // navngiven knap ved siden af "afvis", og så er det omvendt — en knap der
+  // hedder "Tag sættet med" og bare åbner turen, lover noget den ikke gør.
+  //
+  // De to, der er ét entydigt skriv, skrives derfor her. Vægtforslaget gør
+  // ikke: der skal vælges mellem alternativer med hver sin risiko, og det valg
+  // hører hjemme på turen.
+  const tagImod = async (f: Forslag) => {
+    if (!tur || tur.id === undefined) return;
+
+    if (f.type === 'grej') {
+      await opdaterTur(tur.id, { gruppe_ids: [...tur.gruppe_ids, maalFor(f)] });
+      return;
+    }
+
+    if (f.type === 'historik') {
+      const gammel = ture.find((t) => t.uid === maalFor(f));
+      if (gammel) await opdaterTur(tur.id, kopierGrej(gammel, tur));
+      return;
+    }
+
+    // Vægtforslaget skal vælges imellem: alternativerne har hver sin risiko,
+    // og det valg hører hjemme på turen. Men det skal lande *på* bytterne og
+    // ikke på turens overblik — et forslag, man selv skal lede efter bagefter,
+    // er ikke et forslag. Se turmaal.ts.
+    aabnTur(tur.id, false, 'vaegt');
+  };
 
   // Kortet fører hen til den post det handler om — gear eller tur. Findes den
   // ikke længere, sker der ingenting; listen bygges om ved næste render.
   const aabnHandling = (h: Handling) => {
     if (h.maal.slags === 'tur') {
-      const tur = ture.find((t) => t.uid === h.maal.uid);
-      if (tur?.id !== undefined) aabnTur(tur.id);
+      // Ingen af tur-handlingerne har brug for et mål: både "Markér som klar"
+      // og "Lav pak-af-tjek" står øverst på turskærmen, og manglerne under dem
+      // er selv knapper videre.
+      const fundet = ture.find((t) => t.uid === h.maal.uid);
+      if (fundet?.id !== undefined) aabnTur(fundet.id);
       return;
     }
 
@@ -103,6 +179,49 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
           </section>
         )}
 
+        {forslag.length > 0 && (
+          <section>
+            <SektionsTitel>Feltbogen foreslår</SektionsTitel>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: erDesktop ? 'repeat(auto-fit, minmax(230px, 1fr))' : '1fr',
+              gap: 'var(--plads-2)'
+            }}>
+              {forslag.map((f) => (
+                <Forslagskort
+                  key={f.id}
+                  forslag={f}
+                  aabn={() => tur?.id !== undefined && aabnTur(tur.id)}
+                  tagImod={() => void tagImod(f)}
+                  afvis={() => setAfviste(new Set([...afviste, f.id]))}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Specens §3 vil have et gearSummary: hvor meget man har, og hvor
+            meget der skal passes. Vedligeholdet står også som handlingskort
+            ovenfor, men det er ikke det samme — dér er det de enkelte ting,
+            her er det hvordan skabet står. */}
+        <section>
+          <SektionsTitel>Dit grej</SektionsTitel>
+          <ListeRaekke
+            titel={`${ejet.length} ${ejet.length === 1 ? 'ting' : 'ting'}`}
+            detalje={
+              // "Alt er passet" om et tomt skab er en påstand om noget, der
+              // ikke findes. Har man ikke skrevet noget ind endnu, er dét det,
+              // rækken skal sige.
+              ejet.length === 0
+                ? 'Skriv det ind, du har — så kan appen regne på det'
+                : skalPasses === 0
+                  ? 'Alt er passet'
+                  : `${skalPasses} ${skalPasses === 1 ? 'ting skal passes' : 'ting skal passes'}`
+            }
+            onClick={() => skift('inventar')}
+          />
+        </section>
+
         <section>
           <SektionsTitel>Nøgletal</SektionsTitel>
           <div style={{
@@ -135,6 +254,8 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
             ))
           )}
         </section>
+
+        <Synclinje status={sync} />
       </div>
     </Skal>
   );
@@ -171,12 +292,15 @@ function NaesteTurKort({ tur, items, grupper, aabn, opret }: {
 
   const advarsler = findAdvarsler(paaTuren);
 
+  const pakning = pakkefremdrift(tur, paaTuren);
+  const afgang = tur.afgangs_tjek;
+
   return (
     <Infokort label={`Næste tur · ${naarBegynder(tur)}`} fremhaevet>
       <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '20px', marginBottom: '3px' }}>
         {tur.navn || 'Uden navn'}
       </div>
-      <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', marginBottom: '10px' }}>
+      <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)', marginBottom: 'var(--plads-2)' }}>
         {[
           `${tur.naetter} ${tur.naetter === 1 ? 'nat' : 'nætter'}`,
           `${tur.personer} ${tur.personer === 1 ? 'person' : 'personer'}`,
@@ -184,17 +308,68 @@ function NaesteTurKort({ tur, items, grupper, aabn, opret }: {
         ].join(' · ')}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+      <div style={{
+        fontSize: 'var(--skrift-detalje)',
+        color: 'var(--tekst-dæmpet)',
+        marginBottom: 'var(--plads-3)',
+        display: 'grid',
+        gap: '2px'
+      }}>
+        <span>{pakketekst(pakning)}</span>
+        {afgang && <span>Afgangs-tjek: {fremdriftstekst(afgang).toLowerCase()}</span>}
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--plads-2)', flexWrap: 'wrap' }}>
         {advarsler.length > 0 && (
           <Chip farve={advarsler.some((a) => a.niveau === 'roed') ? 'fejl' : 'advarsel'} storrelse="lille">
             ⚠ {advarsler.length} {advarsler.length === 1 ? 'advarsel' : 'advarsler'}
           </Chip>
         )}
         <div style={{ marginLeft: 'auto' }}>
-          <Knap onClick={aabn}>Åbn tur</Knap>
+          {/* Knappen siger, hvad man skal, og ikke bare hvor man kommer hen.
+              Er der ikke valgt grej endnu, er det dét, turen mangler. */}
+          <Knap variant="primaer" onClick={aabn}>
+            {paaTuren.length === 0 ? 'Vælg grej' : pakning.faerdig ? 'Åbn tur' : 'Fortsæt pakning'}
+          </Knap>
         </div>
       </div>
     </Infokort>
+  );
+}
+
+// Sync-status. Fundamentet siger, den skal være synlig uden at være
+// dominerende, og derfor er den en linje nederst og ikke et kort øverst.
+//
+// Kun en rigtig fejl får en farve. At have ændringer liggende uden dækning er
+// den normale tilstand for en app, man bruger i skoven — den skal ikke stå og
+// blinke rødt, fordi man er kommet ud, hvor der ikke er signal.
+function Synclinje({ status }: { status: Syncstatus }) {
+  const prik = {
+    synkroniseret: 'var(--succes)',
+    venter: 'var(--accent)',
+    offline: 'var(--tekst-svag)',
+    kun_lokalt: 'var(--tekst-svag)'
+  }[status.tilstand];
+
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 'var(--plads-2)',
+      paddingTop: 'var(--plads-3)',
+      borderTop: '1px solid var(--border-svag)',
+      fontSize: 'var(--skrift-lille)',
+      color: 'var(--tekst-svag)'
+    }}>
+      <span style={{
+        width: '7px',
+        height: '7px',
+        borderRadius: 'var(--runding-pille)',
+        background: prik,
+        flexShrink: 0
+      }} />
+      {status.tekst}
+    </div>
   );
 }
 

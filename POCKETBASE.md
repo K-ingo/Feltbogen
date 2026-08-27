@@ -46,6 +46,7 @@ Tilføj i denne rækkefølge. `id`, `created` og `updated` laver PocketBase selv
 | `koordinater` | JSON | — |
 | `adresse` | Plain text | — |
 | `tags` | JSON | — |
+| `vurdering` | Number | — |
 | `noter` | Plain text | — |
 
 Lad alle felter være **ikke-påkrævede**. Appen gemmer tomme strenge og `null`
@@ -93,7 +94,7 @@ Tryk **Create**.
 
 ---
 
-## Trin 3 — Tilføj tre felter til `items`
+## Trin 3 — Tilføj fire felter til `items`
 
 Åbn den eksisterende `items`-samling → **Fields** → tilføj:
 
@@ -102,13 +103,22 @@ Tryk **Create**.
 | `udlaan` | JSON |
 | `laant_af` | JSON |
 | `vedligehold` | JSON |
+| `vurdering` | Number |
+
+> `vurdering` er nyt: 1–5 stjerner. Det skal være **Number** og ikke Text —
+> appen afviser værdier den ikke kan læse som et helt tal mellem 1 og 5, så en
+> tekstværdi ville stille og roligt blive til "ikke vurderet". Mangler feltet
+> helt, kan man stadig give stjerner, men de bliver på den enhed man står med,
+> og der kommer ingen fejl.
+>
+> Det samme felt findes på `steder` (trin 1). Et sted vurderes også.
 
 Reglerne på `items` skal ikke røres — de skal være `user = @request.auth.id`
 på alle fem, som de formentlig allerede er.
 
 ---
 
-## Trin 4 — Tilføj ti felter til `ture`
+## Trin 4 — Tilføj elleve felter til `ture`
 
 Åbn `ture` → **Fields** → tilføj:
 
@@ -118,12 +128,18 @@ på alle fem, som de formentlig allerede er.
 | `pak_af_tjek` | JSON |
 | `afgangs_tjek` | JSON |
 | `feltnoter` | JSON |
+| `pakkede_item_uids` | JSON |
 | `turkort_token` | Plain text |
 | `turkort_retur` | Plain text |
 | `turkort_besked` | Plain text |
 | `turkort_snapshot` | Plain text |
 | `hero_billede` | Plain text |
 | `booking` | JSON |
+
+> `pakkede_item_uids` er nyt. Mangler det, kan man stadig krydse af — men
+> afkrydsningen bliver på den enhed, man står med, og forsvinder tilsyneladende
+> af sig selv, næste gang turen hentes ned fra en anden enhed. Det er den
+> værste slags fejl at lede efter, fordi der ikke kommer nogen.
 
 > `turkort_snapshot` skal være **Plain text**, selvom indholdet er JSON. Se
 > faldgruberne nederst.
@@ -375,7 +391,7 @@ står herunder.
 `antal` number · `delt` bool · `status` text · `tags` json · `kraever` json ·
 `komplementer` json · `koebt_hos` text · `koebsdato` text · `koebslink` text ·
 `ordrenummer` text · `garanti` json · `udlaan` json · `laant_af` json ·
-`vedligehold` json · `noter` text
+`vedligehold` json · `vurdering` number · `noter` text
 
 ### `grupper`
 
@@ -389,7 +405,7 @@ står herunder.
 `baereafstand_km` number · `erfaring` text · `status` text ·
 `gruppe_ids` json · `loese_item_ids` json · `deltagere` json ·
 `budget_linjer` json · `pak_af_tjek` json · `afgangs_tjek` json ·
-`feltnoter` json ·
+`feltnoter` json · `pakkede_item_uids` json ·
 `besked_fra_ejer` text · `noter` text · `vejrsnapshot` text ·
 `dele_token` text · `dele_snapshot` text · `turkort_token` text ·
 `turkort_retur` text · `turkort_besked` text · `turkort_snapshot` text ·
@@ -404,7 +420,7 @@ står herunder.
 
 ### `steder`
 
-`navn` text · `koordinater` json · `adresse` text · `tags` json · `noter` text
+`navn` text · `koordinater` json · `adresse` text · `tags` json · `vurdering` number · `noter` text
 
 ### `personer`
 

@@ -127,6 +127,10 @@ export interface Item extends Synkroniserbar {
   // Tom liste når der ikke er noget at holde ved lige. Ældre poster har feltet
   // slet ikke — læs det altid med ?? [].
   vedligehold: Vedligehold[];
+  // 1-5, eller null når man ikke har taget stilling. Det er det eneste sted
+  // appen ved, om man kan lide sit grej — resten af det den ved, er tal og
+  // datoer. Ældre poster har feltet slet ikke; se vurdering.ts.
+  vurdering: number | null;
   noter: string;
   oprettet: Date;
   aendret: Date;
@@ -214,6 +218,9 @@ export interface Sted extends Synkroniserbar {
   // Fra DAWA-opslaget, når stedet er fundet ad den vej.
   adresse: string;
   tags: string[];
+  // 1-5, eller null når man ikke har taget stilling. Et sted bliver bedre at
+  // vurdere jo flere gange man har været der; se vurdering.ts.
+  vurdering: number | null;
   noter: string;
   oprettet: Date;
   aendret: Date;
@@ -265,6 +272,8 @@ export interface KategoriNote {
 export interface PakAfTjek {
   udfyldt_dato: string;
   niveau: PakAfNiveau;
+  // Turen som helhed, 1-5. Udeladt indtil man har sat den.
+  tur_vurdering?: number;
   linjer: PakAfLinje[];
   // Kun på det grundige niveau. Skifter man tilbage til let, bliver de
   // liggende — de er dyrere at skrive end at bære rundt på.
@@ -317,6 +326,10 @@ export interface Tur extends Synkroniserbar {
   status: TurStatus;
   gruppe_ids: Reference[];
   loese_item_ids: Reference[];
+  // Det grej der er lagt i tasken. En delmængde af det grej turen har — ikke
+  // en liste for sig. Ture fra før feltet fandtes har det slet ikke, så læs
+  // det altid med ?? []; se pakning.ts.
+  pakkede_item_uids: Reference[];
   deltagere: Deltager[];
   budget_linjer: BudgetLinje[];
   // null indtil turen er gjort op. Ture fra før feltet fandtes har det slet

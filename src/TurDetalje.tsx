@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import type { ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, etiket, TUR_STATUS, OVERNATNING, AKTIVITET, TERRAEN, ERFARING, PAK_AF_NIVEAU } from './db';
 import type {
   Item,
   Gruppe,
   Tur,
-  TurStatus,
   Overnatning,
   Aktivitet,
   Terraen,
@@ -30,6 +30,9 @@ import {
   itemUidsPaaTur,
   pakkelisteEfterGruppe,
   pakkelisteEfterTag,
+  linjerSamlet,
+  linjerEfterDeling,
+  filtrerAfsnit,
   baererAf,
   linjeAfItem,
   linjeAfMedbragt,
@@ -44,20 +47,23 @@ import {
 } from './smartMotor';
 import type { VejrDag, VejrData, StedForslag, Advarsel, Pakkelinje, Pakkeafsnit, Beregninger, Baerevaegt, GruppeForslag } from './smartMotor';
 import {
-  Knap,
-  Felt,
-  Label,
+  Badge,
   Chip,
-  Dropdown,
-  Infokort,
-  Segment,
-  Tekstomraade,
-  Talinput,
-  TitelInput,
   DetaljeHeader,
+  Dropdown,
+  Felt,
+  FjernKnap,
+  Hvorfor,
   Indlaeser,
+  Forslagskort,
+  Infokort,
+  Knap,
+  Label,
+  Segment,
   SektionsTitel,
-  Hvorfor
+  Talinput,
+  Tekstomraade,
+  TitelInput
 } from './ui';
 import PakAfTjekSide from './PakAfTjekSide';
 import { Qrkode, Qrfuldskaerm } from './Qrkode';
@@ -89,11 +95,22 @@ import {
 } from './personer';
 import { foreslaaSteder, sorterEfterBesoeg, besoegPrSted, besoegstekst, naermesteSted } from './steder';
 import { udlaansAdvarsler } from './udlaan';
-import { vaegtbrydere, samletBesparelse, manglendeTags } from './vaegtbrydere';
-import type { Vaegtbryder } from './vaegtbrydere';
+import { vaegtresultat, bedsteBytter, byt, manglendeTags } from './vaegtbrydere';
+import type { Vaegtresultat, Risiko, Bytte } from './vaegtbrydere';
 import { foreslaaKopi, kopierGrej, antalNye } from './ligesomSidst';
 import type { Kopiforslag } from './ligesomSidst';
 import { nytPakAfTjek, synkroniserLinjer, resumetekst } from './pakAfTjek';
+import { turfase } from './turfase';
+import type { Turfase } from './turfase';
+import {
+  pakkede,
+  veksl as vekslPakket,
+  pakAlle,
+  ryd as rydPakning,
+  fremdrift as pakkefremdrift,
+  fremdriftstekst as pakketekst
+} from './pakning';
+import type { Pakkefremdrift } from './pakning';
 import { useValg, useKropsdata, useTekst, PAK_AF_NIVEAU_VALG, AFGANGS_SKABELON } from './indstillinger';
 import { nytDeletoken, lavSnapshot, deleLink, linkadvarsel, linkvaert } from './gaest';
 import { formatterPeriode } from './datotekst';
@@ -110,32 +127,70 @@ import BilledSektion from './BilledSektion';
 import { billederPaaTur } from './billeder';
 import { opretTomtSted } from './opret';
 import { useRedigerbar } from './useRedigerbar';
+import { forslagTilTur, udenAfviste, maalFor } from './forslag';
+import type { Forslag } from './forslag';
+import { MAALETS_FANE } from './turmaal';
+import type { Turfane, Turmaal } from './turmaal';
 
 interface Props {
   turId: number;
   tilbage: () => void;
   // Sat når turen netop er oprettet, så en navnløs post kan ryddes væk igen.
   nyOprettet?: boolean;
+  // Hvor man skal lande, når man kommer hertil fra et forslag eller en
+  // mangel. Se turmaal.ts — reglen er, at appen aldrig må pege på noget og så
+  // lade én lede efter det.
+  maal?: Turmaal;
 }
 
-// Turen har fire tilstande, og handlingsknappen fører til den næste. En
-// afsluttet tur har ingen næste tilstand — der fører knappen til pak-af-tjekket
-// i stedet, så kredsløbet bliver lukket.
-const NAESTE_TILSTAND: Record<TurStatus, { label: string; naeste: TurStatus } | null> = {
-  kladde: { label: 'Markér som klar', naeste: 'klar' },
-  klar: { label: 'Start tur', naeste: 'aktiv' },
-  aktiv: { label: 'Afslut tur', naeste: 'afsluttet' },
-  afsluttet: null
-};
+// Chipsene over pakkelisten. Specens §8 har Alle | Person | Fælles |
+// Kategori; "kategori" er grejsæt og tags her, fordi det er dem, der findes.
+type Visning = 'alle' | 'gruppe' | 'tag' | 'person' | 'delt';
 
-type Visning = 'gruppe' | 'tag' | 'person';
+// Turens faner. Rækkefølgen er turens egen: først rammerne om den, så
+// pakningen og listen man går rundt med, så selskabet, så dagene undervejs —
+// og til sidst det praktiske omkring det hele.
+//
+// Seks faner er loftet. Skal der en syvende til, hører den sandsynligvis
+// hjemme inde i en af de seks.
+//
+// Selve typen bor i turmaal.ts sammen med de steder, en henvisning kan lande.
+const FANEBLADE: { id: Turfane; label: string }[] = [
+  { id: 'overblik', label: 'Overblik' },
+  { id: 'pakning', label: 'Pakning' },
+  { id: 'pakkeliste', label: 'Pakkeliste' },
+  { id: 'deltagere', label: 'Deltagere' },
+  { id: 'undervejs', label: 'Undervejs' },
+  { id: 'praktisk', label: 'Praktisk' }
+];
 
-function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
+function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
   const erDesktop = useErDesktop();
   const erBred = useErBredskaerm();
   const [visning, setVisning] = useState<Visning>('gruppe');
+  const [pakkesoegning, setPakkesoegning] = useState('');
+  // Man lander på overblikket, medmindre man er sendt hertil af et forslag
+  // eller en mangel. En fane man stod på sidst ville være et gæt på hvad man
+  // kom for, og gættet ville være forkert lige så tit som det var rigtigt —
+  // men et mål er ikke et gæt, det er noget nogen har trykket på.
+  const [fane, setFane] = useState<Turfane>(maal ? MAALETS_FANE[maal] : 'overblik');
+  // Det man er sendt hertil for. Sektionen folder sig ud, og skærmen ruller
+  // derhen. Skifter man fane, er man et andet ærinde — så ryddes det, og en
+  // gammel markering folder ikke noget ud, næste gang man kommer forbi.
+  const [sigtet, setSigtet] = useState<Turmaal | null>(maal ?? null);
   // Pak-af-tjekket lægger sig over turskærmen frem for at være en fane for
   // sig: man kommer dertil fra turen, og man skal tilbage til den bagefter.
+  // Ruller det, man er sendt efter, ind på skærmen — én gang. Uden
+  // dependency-liste, fordi elementet først findes, når turen er hentet, og
+  // effekten derfor skal prøve igen ved hver render indtil den kan.
+  const sigtRef = useRef<HTMLDivElement | null>(null);
+  const harRullet = useRef(false);
+  useEffect(() => {
+    if (!sigtet || harRullet.current || !sigtRef.current) return;
+    harRullet.current = true;
+    sigtRef.current.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  });
+
   const [viserPakAfTjek, setViserPakAfTjek] = useState(false);
   const [viserPaaTur, setViserPaaTur] = useState(false);
   const [vejrData, setVejrData] = useState<VejrData | null>(null);
@@ -143,6 +198,17 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   const [vejrFejl, setVejrFejl] = useState('');
   const [koordinatTekst, setKoordinatTekst] = useState('');
   const [koordinatFejl, setKoordinatFejl] = useState('');
+  // Beskeden om et bytte, der ikke kunne gennemføres helt.
+  //
+  // Kun den. Et bytte der gik igennem, siger sig selv: vægten falder, og
+  // forslaget forsvinder. Det er dét sidste, der gør beskeden nødvendig her —
+  // gik byttet igennem, er der ikke længere en vægtsektion at skrive i, så
+  // beskeden står uden for den og ikke inde i den.
+  const [byttebesked, setByttebesked] = useState('');
+  // Forslag man har vinket af på den her tur. Holder til man forlader
+  // skærmen, af samme grund som på startskærmen: hvad man ikke gider høre om
+  // lige nu, er ikke data om turen.
+  const [afviste, setAfviste] = useState<Set<string>>(new Set());
   const [stedForslag, setStedForslag] = useState<StedForslag[]>([]);
   const [stedSoeger, setStedSoeger] = useState(false);
   // Hvad de inviterede har skrevet sig på for. Hentes kun når turen er delt.
@@ -313,6 +379,25 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   const toggleLoestItem = async (itemUid: Reference) => {
     if (!tur) return;
     await opdater({ loese_item_ids: vekslet(tur.loese_item_ids, itemUid) });
+  };
+
+  // Et bytte er et bytte. Knappen hed før "Tilføj" og lagde kun det lette
+  // til — så stod begge dele på pakkelisten, og vægten var gået op i stedet
+  // for ned, indtil man selv huskede at tage det tunge af.
+  //
+  // Kom det tunge med via et grejsæt, kan det ikke tages af turen alene. Så
+  // siger beskeden det, i stedet for at lade byttet se helt ud.
+  const tagImodBytte = async (bytter: Bytte[]) => {
+    if (!tur) return;
+
+    const { aendringer, uloeste } = byt(tur, bytter);
+    await opdater(aendringer);
+
+    setByttebesked(
+      uloeste.length === 0
+        ? ''
+        : `${uloeste.map((i) => i.navn).join(', ')} kom med via et grejsæt og blev stående. Et sæt vælges som et sæt, og enkeltdele kan ikke slås fra på en tur. Det lette er lagt til — skal det tunge helt af, skal sættet af turen.`
+    );
   };
 
   // Fra person-tabellen: navnet og standardovernatningen følger med, og turen
@@ -490,7 +575,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
   const beregninger = beregnForbrug(tur, kropsdata);
   const gruppeForslag = grupper ? foreslaaGrupper(tur, grupper) : [];
   const savnedeTags = grupper ? manglendeTags(tur, grupper) : [];
-  const brydere = vaegtbrydere(tur, grupper ?? [], items ?? [], pakItems);
+  const vaegtsvar = vaegtresultat(tur, grupper ?? [], items ?? [], pakItems);
 
   // Kun på en tur der ikke er pakket endnu. Har man allerede valgt sit grej,
   // er et forslag om at kopiere en anden tur i vejen.
@@ -500,6 +585,31 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
 
   const kopierFra = async (fra: Tur) => {
     await opdater(kopierGrej(fra, tur));
+  };
+
+  // Hvad motoren har at sige om lige denne tur.
+  //
+  // Forslagene stod kun på startskærmen. Men startskærmen er ikke der, man
+  // arbejder med en tur — man åbner turen. Motoren havde altså noget at sige
+  // præcis dér, hvor man stod, og sagde det et andet sted.
+  //
+  // Historik-forslaget er ikke med her: "Ligesom sidst" ovenfor er den samme
+  // idé med en bedre flade — den viser tre gamle ture at vælge imellem og
+  // hvor meget hver især ville lægge til. Ét forslag om det samme er nok.
+  const turforslag = udenAfviste(
+    forslagTilTur(tur, grupper ?? [], items ?? [], alleTure).filter((f) => f.type !== 'historik'),
+    afviste
+  );
+
+  // At tage imod. Alt sker på turen selv, så der er ingen skærm at sende
+  // nogen hen til først — bortset fra vægtbytterne, hvor man skal vælge
+  // mellem alternativer med hver sin risiko.
+  const tagImodForslag = async (f: Forslag) => {
+    if (f.type === 'grej') {
+      await opdater({ gruppe_ids: [...tur.gruppe_ids, maalFor(f)] });
+      return;
+    }
+    gaaTilMaal('vaegt');
   };
 
   // Deltagernes eget grej hører til i den samme liste som ens eget — det er
@@ -515,8 +625,10 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
 
   const alleLinjer = [...pakItems.map((i) => linjeAfItem(i, navne.get(i.uid) ?? '')), ...deltagerlinjer];
 
-  const afsnit: Pakkeafsnit[] = visning === 'person'
-    ? linjerEfterPerson(alleLinjer)
+  const opdelt: Pakkeafsnit[] =
+    visning === 'alle' ? linjerSamlet(alleLinjer)
+    : visning === 'person' ? linjerEfterPerson(alleLinjer)
+    : visning === 'delt' ? linjerEfterDeling(alleLinjer)
     : medDeltagernes(
         afsnitAfItems(
           visning === 'gruppe'
@@ -527,17 +639,25 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
         alleLinjer
       );
 
-  const naeste = NAESTE_TILSTAND[tur.status];
+  // Søgningen lægger sig oven på opdelingen og erstatter den ikke: leder man
+  // efter noget bestemt, skal man stadig kunne se, hvilket grejsæt eller hvem
+  // det hører til.
+  const afsnit = filtrerAfsnit(opdelt, pakkesoegning);
 
-  // Én knap uanset tilstand: den fører turen videre indtil den er afsluttet, og
-  // derefter til efterregnskabet. Uden det sidste trin stopper turen bare, og
-  // motoren får aldrig noget at vide.
-  const handling = naeste
-    ? { label: naeste.label, gaa: () => void opdater({ status: naeste.naeste }) }
-    : {
-        label: pakAfTjek ? 'Se pak-af-tjek' : 'Lav pak-af-tjek',
-        gaa: () => void aabnPakAfTjek()
-      };
+  // Hvor turen er, og hvad det næste skridt er. Reglerne ligger i turfase.ts;
+  // her oversættes skridtet til den knap, der udfører det.
+  const fase = turfase(tur, grupper ?? []);
+
+  // Der er altid et næste skridt — også på en tur der er gjort op, hvor det
+  // fører tilbage til regnskabet. Var der en tilstand uden, ville knappen stå
+  // uden tekst, og det ville ingen opdage før den stod der.
+  const handling = {
+    label: fase.naeste.label,
+    gaa: () => {
+      if (fase.naeste.slags === 'status') void opdater({ status: fase.naeste.til });
+      else void aabnPakAfTjek();
+    }
+  };
 
   // Sektionerne er de samme på begge layouts — kun rammen om dem er forskellig.
   const parametre = (
@@ -563,13 +683,25 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
     />
   );
 
+  // Pakketilstanden. Krydset gemmes med det samme som alt andet på turen —
+  // man står med tasken i hånden og skal ikke også trykke gem.
+  const pakning = pakkefremdrift(tur, pakItems);
+  const afkrydsede = pakkede(tur);
+
   const pakkeliste = (
     <Pakkeliste
       afsnit={afsnit}
       perItem={perItem}
       visning={visning}
       setVisning={setVisning}
+      soegning={pakkesoegning}
+      setSoegning={setPakkesoegning}
       antal={pakItems.length}
+      pakning={pakning}
+      pakkede={afkrydsede}
+      veksl={(uid) => void opdater({ pakkede_item_uids: vekslPakket(tur, uid) })}
+      pakAlle={() => void opdater({ pakkede_item_uids: pakAlle(pakItems) })}
+      ryd={() => void opdater({ pakkede_item_uids: rydPakning() })}
     />
   );
 
@@ -622,12 +754,13 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
     />
   );
 
-  const vaegtbryderSektion = brydere.length > 0 && (
+  const vaegtbryderSektion = vaegtsvar.brydere.length > 0 && (
     <Foldbar
       titel="Kan vægten ned?"
-      resume={`${kg(samletBesparelse(brydere))} kg at hente`}
+      resume={`${kg(vaegtsvar.potentiel_besparelse_g)} kg at hente`}
+      aabenFra={sigtet === 'vaegt'}
     >
-      <Vaegtbrydere brydere={brydere} byt={toggleLoestItem} />
+      <Vaegtbrydere resultat={vaegtsvar} byt={tagImodBytte} />
     </Foldbar>
   );
 
@@ -671,8 +804,9 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
       titel="Afgangs-tjek"
       resume={fremdriftstekst(afgangsTjek)}
       // Er turen gået i gang, er det ikke længere noget man folder ud når man
-      // får lyst — det er det sidste man skulle have gjort.
-      aabenFra={tur.status === 'aktiv'}
+      // får lyst — det er det sidste man skulle have gjort. Det samme gælder,
+      // når man er sendt hertil af en mangel.
+      aabenFra={tur.status === 'aktiv' || sigtet === 'afgangstjek'}
     >
       <Afgangstjekliste
         tjek={afgangsTjek}
@@ -779,113 +913,57 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
     </div>
   );
 
-  // Kortene der flytter sig mellem spalterne alt efter pladsen. Ét sted, så
-  // de to opstillinger ikke kan komme til at vise forskellige ting.
-  const sidespalte = (
-    <>
-      {pakAfSektion}
-      {afgangsSektion}
-      {bookingSektion}
-      {feltnoteSektion}
-      {billedSektion}
-      <Foldbar
-        titel={`Deltagere (${tur.deltagere.length})`}
-        resume={tur.deltagere.map((d) => d.navn).join(', ')}
-      >
-        {deltagere}
-      </Foldbar>
-      {tur.deltagere.length > 0 && pakItems.length > 0 && (
-        <Foldbar titel="Fordel gear" resume={fordelingsResume(tur, pakItems)}>{fordeling}</Foldbar>
-      )}
-      <Foldbar titel="Budget" resume={`${totalFaktisk} / ${totalForventet} kr`}>{budget}</Foldbar>
-      <Foldbar titel="Del med gæster" resume={tur.dele_token ? 'Delt' : 'Ikke delt'}>{deling}</Foldbar>
-      {turkortSektion}
-      <Foldbar titel="Noter">{noter}</Foldbar>
-    </>
+  // Fanerne bærer turen nu. Før stod alt om en tur i én strimmel af foldbare
+  // kort, og på telefonen skulle man forbi femten sektioner for at nå
+  // noterne. Nu fylder ét område ad gangen, og fanerækken står fast, så man
+  // kan lære hvor tingene er i stedet for at lede efter dem hver gang.
+  //
+  // Sektionerne selv er uændrede — det er kun sammensætningen der er ny.
+  // Derfor kan et kort flyttes til en anden fane uden at røre indholdet.
+  const spalter = (venstre: ReactNode, hoejre: ReactNode) => (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: erBred
+        ? 'minmax(0, 1.3fr) minmax(320px, 1fr)'
+        : erDesktop
+          ? 'minmax(0, 1.2fr) minmax(300px, 1fr)'
+          : '1fr',
+      gap: erDesktop ? '20px' : '8px',
+      alignItems: 'start'
+    }}>
+      {/* minWidth: 0 er ikke til pynt. Et grid-barn må som udgangspunkt ikke
+          blive smallere end sit indhold, og så skubber et bredt felt inde i et
+          kort hele spalten ud over skærmkanten i stedet for at give efter. */}
+      <div style={{ display: 'grid', gap: erDesktop ? '10px' : '8px', alignContent: 'start', minWidth: 0 }}>
+        {venstre}
+      </div>
+      <div style={{ display: 'grid', gap: erDesktop ? '10px' : '8px', alignContent: 'start', minWidth: 0 }}>
+        {hoejre}
+      </div>
+    </div>
   );
 
-  if (erDesktop) {
-    return (
-      <div>
-        <DetaljeHeader tilbage={tilbage} sletLabel="Slet tur" slet={slet} />
-        {titelblok}
-        <Jagtboks tur={tur} />
+  // Pakker et sted ind, så skærmen kan rulle derhen. Wrapperen står altid, og
+  // kun ref'en flytter sig: forsvandt den, ville sektionen inde i den blive
+  // pillet ned og foldet sammen igen på vej.
+  const sigte = (m: Turmaal, indhold: ReactNode) => (
+    <div ref={sigtet === m ? sigtRef : undefined}>{indhold}</div>
+  );
 
-        {/* Er der plads til det, deles sidekortene i to spalter frem for at
-            stå i én lang strimmel. Pakkelisten er den man arbejder i, så den
-            beholder mest plads. */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: erBred
-            ? 'minmax(0, 1.5fr) minmax(280px, 1fr) minmax(280px, 1fr)'
-            : 'minmax(0, 1.9fr) minmax(300px, 1fr)',
-          gap: '24px',
-          alignItems: 'start',
-          marginTop: '22px'
-        }}>
-          <div style={{ display: 'grid', gap: '10px' }}>
-            {kopiforslag.length > 0 && (
-              <Ligesomsidst
-                forslag={kopiforslag}
-                tur={tur}
-                grupper={grupper ?? []}
-                items={items ?? []}
-                kopier={kopierFra}
-              />
-            )}
-            {pakkeliste}
-            <Foldbar titel="Vælg gear">{valgAfIndhold}</Foldbar>
-          </div>
+  // Går til et sted på turen. Rullingen skal ske igen, selvom den er sket
+  // før — det er en ny henvisning, ikke den man kom ind med.
+  const gaaTilMaal = (m: Turmaal) => {
+    harRullet.current = false;
+    setFane(MAALETS_FANE[m]);
+    setSigtet(m);
+  };
 
-          {/* Det man kigger på mens man planlægger: rammerne om turen og det
-              der er galt. */}
-          <div style={{ display: 'grid', gap: '10px' }}>
-            <Foldbar titel="Turparametre" resume={parametreResume}>{parametre}</Foldbar>
-            <Foldbar titel="Vejrudsigt" resume={vejrResume(vejrData)}>{vejr}</Foldbar>
-            {advarsler.length > 0 && <Advarsler advarsler={advarsler} />}
-            {vaegt}
-            {vaegtbryderSektion}
-            {!erBred && sidespalte}
-          </div>
-
-          {/* Det man tager fat i, når rammerne er på plads. Står i sin egen
-              spalte når der er plads, og under den første når der ikke er. */}
-          {erBred && <div style={{ display: 'grid', gap: '10px' }}>{sidespalte}</div>}
-        </div>
-      </div>
-    );
-  }
-
-  // Foldetilstandene følger fundamentets §13: det man har brug for under
-  // planlægningen står åbent, resten er foldet sammen.
-  return (
-    <div style={layout.container}>
-      <DetaljeHeader tilbage={tilbage} sletLabel="Slet tur" slet={slet} />
-      {titelblok}
-      <Jagtboks tur={tur} />
-
-      {/* På en aktiv tur er på-tur-skærmen den man skal have fat i, ikke
-          knappen der afslutter turen. */}
-      {tur.status === 'aktiv' && (
-        <Knap
-          variant="primaer"
-          onClick={() => void gaaPaaTur()}
-          style={{ width: '100%', marginTop: '14px', padding: '11px' }}
-        >
-          Åbn på-tur-skærmen
-        </Knap>
-      )}
-
-      <Knap
-        variant={tur.status === 'aktiv' ? 'sekundaer' : 'primaer'}
-        onClick={handling.gaa}
-        style={{ width: '100%', marginTop: tur.status === 'aktiv' ? '8px' : '14px', padding: '11px' }}
-      >
-        {handling.label}
-      </Knap>
-
-      {kopiforslag.length > 0 && (
-        <div style={{ marginTop: '16px' }}>
+  const fanensIndhold: Record<Turfane, ReactNode> = {
+    // Rammerne om turen: hvor, hvornår, hvem med — og det appen har set, som
+    // man skal vide inden man tager afsted.
+    overblik: spalter(
+      <>
+        {kopiforslag.length > 0 && (
           <Ligesomsidst
             forslag={kopiforslag}
             tur={tur}
@@ -893,42 +971,169 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
             items={items ?? []}
             kopier={kopierFra}
           />
-        </div>
-      )}
-
-      <div style={{ display: 'grid', gap: '8px', marginTop: '16px' }}>
-        {pakAfSektion}
-        {afgangsSektion}
-        {bookingSektion}
-        {feltnoteSektion}
-        {billedSektion}
-        <Foldbar titel="Turparametre" resume={parametreResume}>{parametre}</Foldbar>
-        {advarsler.length > 0 && (
-          <Foldbar titel={`Advarsler (${advarsler.length})`} advarsel aabenFra>
-            <Advarselsliste advarsler={advarsler} />
+        )}
+        {/* På en kladde er parametrene det første der skal udfyldes, så der
+            står den åben. Senere er den et opslag — medmindre man er sendt
+            hertil af en mangel om datoer eller sted. */}
+        <Turresume
+          pakning={pakning}
+          vaegtPrPerson={vaegtPrPerson}
+          personer={tur.personer}
+          deltagere={tur.deltagere.length}
+          gaaTil={gaaTilMaal}
+        />
+        {turforslag.length > 0 && (
+          <Infokort label="Feltbogen foreslår">
+            <div style={{ display: 'grid', gap: 'var(--plads-2)' }}>
+              {turforslag.map((f) => (
+                <Forslagskort
+                  key={f.id}
+                  forslag={f}
+                  aabn={() => gaaTilMaal(f.type === 'vaegt' ? 'vaegt' : 'pakning')}
+                  tagImod={() => void tagImodForslag(f)}
+                  afvis={() => setAfviste(new Set([...afviste, f.id]))}
+                />
+              ))}
+            </div>
+          </Infokort>
+        )}
+        {sigte('overblik',
+          <Foldbar
+            titel="Turparametre"
+            resume={parametreResume}
+            aabenFra={tur.status === 'kladde' || sigtet === 'overblik'}
+          >
+            {parametre}
           </Foldbar>
         )}
-        <Foldbar titel={`Pakkeliste (${pakItems.length})`} aabenFra>{pakkeliste}</Foldbar>
-        <Foldbar titel="Vægt" resume={`${kg(vaegtPrPerson)} kg${tur.personer > 1 ? ' / pers' : ''}`}>
-          {vaegt}
-        </Foldbar>
-        {vaegtbryderSektion}
-        <Foldbar titel="Vælg gear">{valgAfIndhold}</Foldbar>
+        {bookingSektion}
+      </>,
+      <>
+        {advarsler.length > 0 && <Advarsler advarsler={advarsler} />}
         <Foldbar titel="Vejrudsigt" resume={vejrResume(vejrData)}>{vejr}</Foldbar>
-        <Foldbar
-          titel={`Deltagere (${tur.deltagere.length})`}
-          resume={tur.deltagere.map((d) => d.navn).join(', ')}
-        >
-          {deltagere}
-        </Foldbar>
+      </>
+    ),
+
+    // Arbejdsfladen: her vælges grejet, og vægten svarer igen med det samme.
+    pakning: spalter(
+      sigte('pakning', <Infokort label="Vælg gear">{valgAfIndhold}</Infokort>),
+      <>
+        <Pakkekort pakning={pakning} tilListen={() => setFane('pakkeliste')} />
+        {vaegt}
+        {byttebesked !== '' && (
+          <Infokort label="Byttet blev ikke helt">
+            <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)', lineHeight: 1.55 }}>
+              {byttebesked}
+            </div>
+          </Infokort>
+        )}
+        {sigte('vaegt', vaegtbryderSektion)}
+      </>
+    ),
+
+    // Listen man har fremme mens man pakker. Den skal fylde det hele — der er
+    // ikke noget andet at kigge på her.
+    pakkeliste: sigte('pakkeliste',
+      <Infokort label={`Pakkeliste (${pakItems.length})`}>{pakkeliste}</Infokort>
+    ),
+
+    deltagere: spalter(
+      <>
+        {sigte('deltagere',
+          <Foldbar
+            titel={`Deltagere (${tur.deltagere.length})`}
+            resume={tur.deltagere.map((d) => d.navn).join(', ')}
+            aabenFra
+          >
+            {deltagere}
+          </Foldbar>
+        )}
         {tur.deltagere.length > 0 && pakItems.length > 0 && (
           <Foldbar titel="Fordel gear" resume={fordelingsResume(tur, pakItems)}>{fordeling}</Foldbar>
         )}
+      </>,
+      <Foldbar titel="Del med gæster" resume={tur.dele_token ? 'Delt' : 'Ikke delt'}>{deling}</Foldbar>
+    ),
+
+    // Dagene selv: det sidste tjek inden afgang, og det der bliver skrevet og
+    // fotograferet undervejs. Pak-af-tjekket lukker kredsløbet bagefter.
+    undervejs: spalter(
+      <>
+        {sigte('afgangstjek', afgangsSektion)}
+        {feltnoteSektion}
+      </>,
+      <>
+        {billedSektion}
+        {pakAfSektion}
+      </>
+    ),
+
+    praktisk: spalter(
+      <>
+        <Foldbar titel="Noter" aabenFra>{noter}</Foldbar>
         <Foldbar titel="Budget" resume={`${totalFaktisk} / ${totalForventet} kr`}>{budget}</Foldbar>
-        <Foldbar titel="Del med gæster" resume={tur.dele_token ? 'Delt' : 'Ikke delt'}>{deling}</Foldbar>
-        {turkortSektion}
-        <Foldbar titel="Noter">{noter}</Foldbar>
-      </div>
+      </>,
+      turkortSektion
+    )
+  };
+
+  // Tallene står i fanerækken, så man kan aflæse turen uden at åbne hver fane.
+  // Nul vises ikke — en tom fane skal ikke råbe op om at være tom.
+  const fanetal: Partial<Record<Turfane, number>> = {
+    pakkeliste: pakItems.length,
+    deltagere: tur.deltagere.length
+  };
+
+  return (
+    <div style={erDesktop ? undefined : layout.container}>
+      <DetaljeHeader tilbage={tilbage} sletLabel="Slet tur" slet={slet} />
+      {titelblok}
+      <Jagtboks tur={tur} />
+
+      {/* På PC står handlingsknapperne i titelblokken. På telefonen er der
+          ikke plads ved siden af titlen, så de står for sig — og på en aktiv
+          tur er på-tur-skærmen den man skal have fat i, ikke knappen der
+          afslutter turen. */}
+      {!erDesktop && (
+        <>
+          {tur.status === 'aktiv' && (
+            <Knap
+              variant="primaer"
+              onClick={() => void gaaPaaTur()}
+              style={{ width: '100%', marginTop: '14px', padding: '11px' }}
+            >
+              Åbn på-tur-skærmen
+            </Knap>
+          )}
+          <Knap
+            variant={tur.status === 'aktiv' ? 'sekundaer' : 'primaer'}
+            onClick={handling.gaa}
+            style={{ width: '100%', marginTop: tur.status === 'aktiv' ? '8px' : '14px', padding: '11px' }}
+          >
+            {handling.label}
+          </Knap>
+        </>
+      )}
+
+      {/* Først når grejet og sættene er hentet. Indtil da ville listen sige
+          "Intet grej valgt" om en tur, hvis grej ligger i et grejsæt — en
+          påstand om brugerens data, der er forkert i et enkelt billede. */}
+      {items !== undefined && grupper !== undefined && (
+        <Naesteskridt fase={fase} gaaTil={gaaTilMaal} />
+      )}
+
+      <Faner
+        valgt={fane}
+        vaelg={(f) => { setFane(f); setSigtet(null); }}
+        tal={fanetal}
+      />
+
+      {/* Nøglen er ikke til pynt. Uden den genbruger React kortene på tværs
+          af fanerne, fordi de står på samme plads i træet — og så arver
+          afgangs-tjekket den foldede-ud-tilstand fra turparametrene, man
+          efterlod på overblikket. Nøglen skifter med fanen, så det gamle træ
+          bliver pillet ned frem for at blive brugt igen. */}
+      <div key={fane}>{fanensIndhold[fane]}</div>
     </div>
   );
 }
@@ -936,6 +1141,257 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
 // ─────────────────────────────────────────────
 // Rammer
 // ─────────────────────────────────────────────
+
+// Hvor langt pakningen er, og hvad der står tilbage.
+//
+// Tallet er derived state og gemmes ikke: det regnes ud af hvilket grej der
+// er på turen, og hvilket der er krydset af. Gemtes det også som et felt,
+// ville de to kunne komme ud af trit — og så er det feltet man tror på, mens
+// listen er den der er rigtig.
+function Pakkekort({ pakning, tilListen }: { pakning: Pakkefremdrift; tilListen: () => void }) {
+  if (pakning.ialt === 0) return null;
+
+  // Højst så mange manglende nævnes ved navn. Resten tælles — en liste over
+  // fyrre ting man ikke har pakket, er bare pakkelisten en gang til.
+  const NAEVNES = 5;
+  const foerste = pakning.mangler.slice(0, NAEVNES);
+  const resten = pakning.mangler.length - foerste.length;
+
+  return (
+    <Infokort label="Pakning" fremhaevet={pakning.faerdig}>
+      <div style={{
+        fontSize: 'var(--skrift-tal)',
+        fontWeight: 500,
+        fontFamily: "'Fraunces', Georgia, serif",
+        color: pakning.faerdig ? 'var(--succes)' : 'var(--tekst)'
+      }}>
+        {pakning.faerdig ? 'Alt er pakket' : `${pakning.pakket} af ${pakning.ialt}`}
+      </div>
+
+      {/* En stribe frem for en ring: den kan læses lige så hurtigt og fylder
+          ikke en hel spalte i bredden. */}
+      <div style={{
+        height: '5px',
+        borderRadius: 'var(--runding-pille)',
+        background: 'var(--border-svag)',
+        overflow: 'hidden',
+        margin: 'var(--plads-2) 0'
+      }}>
+        <div style={{
+          width: `${pakning.procent}%`,
+          height: '100%',
+          background: pakning.faerdig ? 'var(--succes)' : 'var(--accent)',
+          transition: 'width 0.2s'
+        }} />
+      </div>
+
+      {!pakning.faerdig && (
+        <>
+          <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginBottom: 'var(--plads-1)' }}>
+            Mangler i tasken
+          </div>
+          <div style={{ display: 'grid', gap: '2px', fontSize: 'var(--skrift-detalje)' }}>
+            {foerste.map((i) => <span key={i.uid}>{i.navn || 'Uden navn'}</span>)}
+            {resten > 0 && (
+              <span style={{ color: 'var(--tekst-svag)' }}>
+                + {resten} {resten === 1 ? 'ting mere' : 'ting mere'}
+              </span>
+            )}
+          </div>
+          <Knap onClick={tilListen} style={{ marginTop: 'var(--plads-3)' }}>Gå til pakkelisten</Knap>
+        </>
+      )}
+    </Infokort>
+  );
+}
+
+// Hvad turen mangler, før det næste skridt giver mening.
+//
+// Den står lige under knappen og ikke inde på en fane: det er dér, man er ved
+// at trykke, og en oplysning om at der ikke er valgt grej, hjælper ikke hvis
+// den ligger et sted, man skal finde først.
+//
+// Listen låser ingenting. Man skal kunne tage afsted på en tur, appen synes er
+// halvfærdig — den skal bare have sagt det først.
+function Naesteskridt({ fase, gaaTil }: { fase: Turfase; gaaTil: (m: Turmaal) => void }) {
+  if (fase.mangler.length === 0) return null;
+
+  return (
+    <div style={{
+      marginTop: 'var(--plads-3)',
+      padding: '10px var(--plads-3)',
+      borderRadius: 'var(--runding-lille)',
+      border: '1px solid var(--border-svag)',
+      background: 'var(--bg-forhoejet)',
+      fontSize: 'var(--skrift-detalje)',
+      color: 'var(--tekst-dæmpet)'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: 'var(--plads-1)' }}>
+        {/* Ikke et tal. Overskriften stod før som "2 ting mangler" lige over
+            "Pakning: 4 af 6 mangler i tasken", og de to tal tæller ikke det
+            samme — det ene linjer, det andet ting. */}
+        <span style={{ flex: 1, fontWeight: 500 }}>Værd at gøre først</span>
+        <Hvorfor begrundelse={fase.begrundelse} />
+      </div>
+      {/* Hver mangel er en knap. Appen ved, hvor "Intet grej valgt" rettes —
+          så skal den også tage én derhen. En liste man selv skal finde vej ud
+          fra, er lige så besværlig som ingen liste. */}
+      <ul style={{ margin: 0, paddingLeft: '18px', display: 'grid', gap: '2px' }}>
+        {fase.mangler.map((m) => (
+          <li key={m.tekst}>
+            <button
+              onClick={() => gaaTil(m.maal)}
+              style={{
+                padding: 0,
+                border: 'none',
+                background: 'transparent',
+                color: 'inherit',
+                font: 'inherit',
+                textAlign: 'left',
+                textDecoration: 'underline',
+                textDecorationColor: 'var(--border)',
+                textUnderlineOffset: '3px',
+                cursor: 'pointer'
+              }}
+            >
+              {m.tekst}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// Turens fanerække. Den bryder linjen frem for at scrolle vandret: en fane
+// man skal skubbe frem for at få øje på, er lige så skjult som en post i en
+// dropdown, og det var netop dét fanerne skulle af med.
+//
+// Markeringen er en streg under den valgte fane og ikke kun en farve — den
+// skal også kunne aflæses af én der ikke skelner farverne.
+function Faner({ valgt, vaelg, tal }: {
+  valgt: Turfane;
+  vaelg: (f: Turfane) => void;
+  tal: Partial<Record<Turfane, number>>;
+}) {
+  return (
+    <div
+      role="tablist"
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '2px',
+        marginTop: '18px',
+        marginBottom: '16px',
+        borderBottom: '1px solid var(--border-svag)'
+      }}
+    >
+      {FANEBLADE.map((f) => {
+        const erAktiv = f.id === valgt;
+        const antal = tal[f.id];
+
+        return (
+          <button
+            key={f.id}
+            role="tab"
+            aria-selected={erAktiv}
+            onClick={() => vaelg(f.id)}
+            style={{
+              // Skal kunne rammes med en handske på. Rørehøjden er 44 px på
+              // en touchskærm og 36 med mus — se index.css.
+              minHeight: 'var(--roerehoejde)',
+              padding: '0 var(--plads-3)',
+              background: 'transparent',
+              border: 'none',
+              // Stregen ligger oven i kassens egen, så fanerækken ikke
+              // hopper en pixel når man skifter fane.
+              borderBottom: `2px solid ${erAktiv ? 'var(--accent)' : 'transparent'}`,
+              marginBottom: '-1px',
+              color: erAktiv ? 'var(--tekst)' : 'var(--tekst-dæmpet)',
+              fontSize: 'var(--skrift-knap)',
+              fontWeight: erAktiv ? 600 : 500,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {f.label}
+            {antal ? (
+              <span style={{ color: 'var(--tekst-dæmpet)', fontWeight: 500 }}> {antal}</span>
+            ) : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+
+// Sådan står turen, øverst på overblikket.
+//
+// Specens §6 vil have pakkeprogression, totalvægt og deltagere på overblikket.
+// De tre ting findes i forvejen, men hver på sin fane — så overblikket var det
+// eneste sted på turskærmen, hvor man ikke kunne se, hvordan man stod.
+//
+// De står som tal og ikke som kort. Kortene bliver på deres egne faner, hvor
+// der er plads til dem; her er det fire tal, man kan aflæse på et sekund. Hvert
+// af dem er en knap videre til fanen, hvor der kan gøres noget — turmaal.ts.
+function Turresume({ pakning, vaegtPrPerson, personer, deltagere, gaaTil }: {
+  pakning: Pakkefremdrift;
+  vaegtPrPerson: number;
+  personer: number;
+  deltagere: number;
+  gaaTil: (m: Turmaal) => void;
+}) {
+  const tal: { label: string; vaerdi: string; maal: Turmaal }[] = [
+    {
+      label: 'Pakket',
+      vaerdi: pakning.ialt === 0 ? '–' : `${pakning.pakket} af ${pakning.ialt}`,
+      maal: 'pakkeliste'
+    },
+    { label: personer > 1 ? 'Vægt pr. person' : 'Vægt', vaerdi: `${kg(vaegtPrPerson)} kg`, maal: 'pakning' },
+    {
+      label: 'Deltagere',
+      vaerdi: `${deltagere}`,
+      maal: 'deltagere'
+    }
+  ];
+
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: `repeat(${tal.length}, minmax(0, 1fr))`,
+      gap: 'var(--plads-2)'
+    }}>
+      {tal.map((t) => (
+        <button
+          key={t.label}
+          onClick={() => gaaTil(t.maal)}
+          style={{
+            display: 'block',
+            textAlign: 'left',
+            minHeight: 'var(--roerehoejde)',
+            padding: 'var(--plads-2) var(--plads-3)',
+            border: '1px solid var(--border-svag)',
+            borderRadius: 'var(--runding-lille)',
+            background: 'var(--bg-forhoejet)',
+            cursor: 'pointer'
+          }}
+        >
+          <span style={{
+            display: 'block',
+            fontSize: 'var(--skrift-mikro)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.6px',
+            color: 'var(--tekst-dæmpet)'
+          }}>
+            {t.label}
+          </span>
+          <span style={{ fontSize: 'var(--skrift-brod)', color: 'var(--tekst)' }}>{t.vaerdi}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
 
 // En sektion man kan folde ud. Resuméet står fremme uanset foldetilstand, så
 // man kan aflæse turen uden at åbne alt.
@@ -957,9 +1413,14 @@ function Foldbar({ titel, resume, children, aabenFra, advarsel }: {
     }}>
       <button
         onClick={() => setAaben(!aaben)}
+        aria-expanded={aaben}
         style={{
           width: '100%',
-          padding: resume ? '11px 14px 4px' : '11px 14px',
+          // At folde en sektion ud er en af de hyppigste handlinger på
+          // turskærmen. Overskriften er lille, men knappen bag den skal
+          // stadig kunne rammes.
+          minHeight: 'var(--roerehoejde)',
+          padding: resume ? '11px var(--plads-4) var(--plads-1)' : '11px var(--plads-4)',
           background: 'transparent',
           border: 'none',
           textAlign: 'left',
@@ -1167,17 +1628,17 @@ function Turparametre({
         />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '10px' }}>
         <Felt label="Startdato" type="date" value={tur.startdato} onChange={(v) => skiftDato({ startdato: v })} />
         <Felt label="Slutdato" type="date" value={tur.slutdato} onChange={(v) => skiftDato({ slutdato: v })} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '10px' }}>
         <Felt label="Personer" type="number" value={tur.personer} onChange={(v) => opdater({ personer: Number(v) || 1 })} />
         <Felt label="Bæreafstand (km)" type="number" value={tur.baereafstand_km} onChange={(v) => opdater({ baereafstand_km: Number(v) || 0 })} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '10px' }}>
         <Dropdown label="Overnatning" value={tur.overnatning} onChange={(v) => opdater({ overnatning: v as Overnatning })} options={OVERNATNING} formater={etiket} />
         <Dropdown label="Aktivitet" value={tur.aktivitet} onChange={(v) => opdater({ aktivitet: v as Aktivitet })} options={AKTIVITET} formater={etiket} />
         <Dropdown label="Terræn" value={tur.terraen} onChange={(v) => opdater({ terraen: v as Terraen })} options={TERRAEN} formater={etiket} />
@@ -1185,7 +1646,7 @@ function Turparametre({
       </div>
 
       <Infokort label="Forventet forbrug">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', textAlign: 'center' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '10px', textAlign: 'center' }}>
           <Noegletal vaerdi={`${beregninger.vand_liter} L`} label="Vand" />
           <Noegletal vaerdi={`${beregninger.mad_kg} kg`} label="Mad" />
           <Noegletal vaerdi={`${beregninger.gas_g} g`} label="Gas" />
@@ -1222,12 +1683,22 @@ function baerernavne(tur: Tur): Map<Reference, string> {
   return pr;
 }
 
-function Pakkeliste({ afsnit, perItem, visning, setVisning, antal }: {
+function Pakkeliste({
+  afsnit, perItem, visning, setVisning, soegning, setSoegning,
+  antal, pakning, pakkede, veksl, pakAlle, ryd
+}: {
   afsnit: Pakkeafsnit[];
   perItem: Map<Reference, Advarsel[]>;
   visning: Visning;
   setVisning: (v: Visning) => void;
+  soegning: string;
+  setSoegning: (v: string) => void;
   antal: number;
+  pakning: Pakkefremdrift;
+  pakkede: Set<Reference>;
+  veksl: (uid: Reference) => void;
+  pakAlle: () => void;
+  ryd: () => void;
 }) {
   if (antal === 0) {
     return (
@@ -1239,7 +1710,9 @@ function Pakkeliste({ afsnit, perItem, visning, setVisning, antal }: {
 
   return (
     <div>
-      <div style={{ marginBottom: '14px' }}>
+      <Pakkestatus pakning={pakning} pakAlle={pakAlle} ryd={ryd} />
+
+      <div style={{ display: 'grid', gap: 'var(--plads-2)', marginBottom: 'var(--plads-4)' }}>
         <Segment
           vaerdier={VISNINGER}
           valgt={visning}
@@ -1247,7 +1720,35 @@ function Pakkeliste({ afsnit, perItem, visning, setVisning, antal }: {
           formater={(v) => VISNING_LABEL[v]}
           kompakt
         />
+
+        {/* Søgningen står ved siden af opdelingerne og ikke i stedet for dem.
+            Et inventar på tres ting er ikke noget man ruller igennem for at
+            finde soveposen — men når man har fundet den, skal man stadig kunne
+            se, hvilket sæt den kom med i. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--plads-2)' }}>
+          <input
+            type="search"
+            value={soegning}
+            onChange={(e) => setSoegning(e.target.value)}
+            placeholder="Søg i listen"
+            aria-label="Søg på pakkelisten"
+            style={{ flex: 1, minWidth: 0 }}
+          />
+          {soegning.trim() !== '' && (
+            <span style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>
+              {fundne(afsnit)}
+            </span>
+          )}
+        </div>
       </div>
+
+      {/* En søgning uden træffere skal sige det. Ellers ligner det en tom
+          pakkeliste, og det er en påstand om turen frem for om søgningen. */}
+      {afsnit.length === 0 && (
+        <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-svag)', padding: 'var(--plads-3) 0' }}>
+          Ingenting på listen hedder "{soegning.trim()}" eller bæres af nogen med det navn.
+        </div>
+      )}
 
       {afsnit.map((a) => (
         <div key={a.titel} style={{ marginBottom: '16px' }}>
@@ -1256,6 +1757,10 @@ function Pakkeliste({ afsnit, perItem, visning, setVisning, antal }: {
             <Pakkeraekke
               key={`${linje.uid || linje.navn}-${n}`}
               linje={linje}
+              pakket={!!linje.uid && pakkede.has(linje.uid)}
+              // Kun ens eget grej kan krydses af. En deltagers ting står på
+              // listen, men den er hendes at pakke — ikke ens egen.
+              veksl={linje.uid && linje.egen ? () => veksl(linje.uid) : null}
               // Deltagernes eget grej har ingen advarsler — de bygger på tags
               // fra ejerens inventar, og det kender vi ikke for deres ting.
               advarsler={linje.uid ? perItem.get(linje.uid) ?? [] : []}
@@ -1272,25 +1777,98 @@ function Pakkeliste({ afsnit, perItem, visning, setVisning, antal }: {
   );
 }
 
-function Pakkeraekke({ linje, advarsler, visBaerer }: {
-  linje: Pakkelinje;
-  advarsler: Advarsel[];
-  visBaerer: boolean;
-}) {
-  // Er der flere huller på samme item, vejer det røde tungest.
-  const vaerst = advarsler.find((a) => a.niveau === 'roed') ?? advarsler[0];
+function fundne(afsnit: Pakkeafsnit[]): string {
+  const antal = afsnit.reduce((sum, a) => sum + a.linjer.length, 0);
+  return `${antal} ${antal === 1 ? 'træffer' : 'træffere'}`;
+}
 
+// Status og de to knapper der gælder hele listen. Specens §8 har dem i en
+// fod; her står de i toppen, fordi det er tallet man kommer for, og fordi en
+// fod under en lang liste er et sted man skal scrolle hen for at finde.
+function Pakkestatus({ pakning, pakAlle, ryd }: {
+  pakning: Pakkefremdrift;
+  pakAlle: () => void;
+  ryd: () => void;
+}) {
   return (
     <div style={{
       display: 'flex',
       alignItems: 'center',
-      gap: '8px',
-      padding: '7px 0',
-      borderBottom: '1px solid var(--border-svag)',
-      fontSize: '13px',
-      background: vaerst ? 'var(--advarsel-bg)' : 'transparent'
+      gap: 'var(--plads-2)',
+      flexWrap: 'wrap',
+      marginBottom: 'var(--plads-3)',
+      paddingBottom: 'var(--plads-3)',
+      borderBottom: '1px solid var(--border-svag)'
     }}>
-      <span style={{ flex: 1, minWidth: 0, color: 'var(--tekst)' }}>{linje.navn || 'Uden navn'}</span>
+      <span style={{
+        flex: 1,
+        minWidth: '120px',
+        fontSize: 'var(--skrift-brod)',
+        fontWeight: 500,
+        color: pakning.faerdig ? 'var(--succes)' : 'var(--tekst)'
+      }}>
+        {pakketekst(pakning)}
+      </span>
+
+      {pakning.faerdig ? (
+        <Knap onClick={ryd}>Ryd afkrydsning</Knap>
+      ) : (
+        <Knap onClick={pakAlle}>Markér alle som pakket</Knap>
+      )}
+    </div>
+  );
+}
+
+function Pakkeraekke({ linje, advarsler, visBaerer, pakket, veksl }: {
+  linje: Pakkelinje;
+  advarsler: Advarsel[];
+  visBaerer: boolean;
+  pakket: boolean;
+  // null for en deltagers eget grej, som ikke er ens eget at krydse af.
+  veksl: (() => void) | null;
+}) {
+  // Er der flere huller på samme item, vejer det røde tungest.
+  const vaerst = advarsler.find((a) => a.niveau === 'roed') ?? advarsler[0];
+
+  const raekke: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '7px 0',
+    borderBottom: '1px solid var(--border-svag)',
+    fontSize: '13px',
+    background: vaerst ? 'var(--advarsel-bg)' : 'transparent'
+  };
+
+  // Hele rækken er trykfladen, ikke bare selve firkanten. Et afkrydsningsfelt
+  // er 13 px bredt, og man står med tasken i den ene hånd — skal man ramme 13
+  // px for at sige "den er pakket", ryger halvdelen af trykkene ved siden af.
+  // En label gør navnet, vægten og luften imellem til det samme mål.
+  const Ramme = veksl ? 'label' : 'div';
+
+  return (
+    <Ramme style={{ ...raekke, cursor: veksl ? 'pointer' : 'default' }}>
+      {/* Pladsen holdes også når der ikke er noget at krydse af, så
+          navnene står på linje ned gennem listen. */}
+      {veksl ? (
+        <input
+          type="checkbox"
+          checked={pakket}
+          onChange={veksl}
+          style={{ width: 'auto', flexShrink: 0 }}
+        />
+      ) : (
+        <span style={{ width: '13px', flexShrink: 0 }} />
+      )}
+
+      <span style={{
+        flex: 1,
+        minWidth: 0,
+        color: pakket ? 'var(--tekst-svag)' : 'var(--tekst)',
+        textDecoration: pakket ? 'line-through' : 'none'
+      }}>
+        {linje.navn || 'Uden navn'}
+      </span>
 
       {vaerst && (
         <span title={`${vaerst.besked}. ${vaerst.detalje}`}>
@@ -1307,7 +1885,7 @@ function Pakkeraekke({ linje, advarsler, visBaerer }: {
       <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '12px', minWidth: '52px', textAlign: 'right' }}>
         {linje.vaegt_g} g
       </span>
-    </div>
+    </Ramme>
   );
 }
 
@@ -1395,7 +1973,7 @@ function Vejrudsigt({ tur, data, hentes, fejl, hent }: {
         <>
           <div style={{ display: 'grid', gap: '4px', fontSize: '13px' }}>
             {data.dage.map((d) => (
-              <div key={d.dato} style={{ display: 'grid', gridTemplateColumns: '54px 22px 1fr auto auto', gap: '8px', alignItems: 'center', padding: '3px 0' }}>
+              <div key={d.dato} style={{ display: 'grid', gridTemplateColumns: '54px 22px minmax(0, 1fr) auto auto', gap: '8px', alignItems: 'center', padding: '3px 0' }}>
                 <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '11px' }}>{formatterDag(d.dato)}</span>
                 <span style={{ fontSize: '15px' }}>{vejrIkonKode(d.vejrkode)}</span>
                 <span>{d.temp_min}–{d.temp_max}°C</span>
@@ -1471,13 +2049,7 @@ function Deltagere({ deltagere, turensOvernatning, personer, ture, tilfoejPerson
                 {OVERNATNING.map((o) => <option key={o} value={o}>{etiket(o)}</option>)}
               </select>
 
-              <button
-                onClick={() => fjern(d.id)}
-                aria-label={`Fjern ${d.navn}`}
-                style={{ background: 'transparent', border: 'none', color: 'var(--fejl)', cursor: 'pointer', fontSize: '14px', padding: '0 4px' }}
-              >
-                ×
-              </button>
+              <FjernKnap onClick={() => fjern(d.id)} label={`Fjern ${d.navn}`} />
             </div>
           ))}
         </div>
@@ -1582,13 +2154,13 @@ function Budget({ linjer, tilfoej, opdater, fjern }: {
       )}
       {linjer.map((l) => (
         <div key={l.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--border-svag)', display: 'grid', gap: '6px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '6px' }}>
             <select value={l.kategori} onChange={(e) => opdater(l.id, { kategori: e.target.value })} style={{ padding: '6px', fontSize: '12px', textTransform: 'capitalize' }}>
               {BUDGET_KATEGORIER.map((k) => <option key={k} value={k}>{k}</option>)}
             </select>
             <input placeholder="Beskrivelse" value={l.beskrivelse} onChange={(e) => opdater(l.id, { beskrivelse: e.target.value })} style={{ padding: '6px', fontSize: '12px', minWidth: 0 }} />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '6px', alignItems: 'center' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) auto', gap: '6px', alignItems: 'center' }}>
             <Talinput placeholder="Forventet" value={l.forventet_kr} onChange={(v) => opdater(l.id, { forventet_kr: Number(v) || 0 })} style={{ padding: '6px', fontSize: '12px', minWidth: 0 }} />
             <Talinput placeholder="Faktisk" value={l.faktisk_kr} onChange={(v) => opdater(l.id, { faktisk_kr: Number(v) || 0 })} style={{ padding: '6px', fontSize: '12px', minWidth: 0 }} />
             <button onClick={() => fjern(l.id)} style={{ background: 'transparent', border: 'none', color: 'var(--fejl)', cursor: 'pointer', fontSize: '14px', padding: '0 6px' }}>
@@ -1877,60 +2449,113 @@ function Deling({ token, snapshot, deltagelser, gearnavne, del, stop }: {
 
 // Hvor sækken kan blive lettere. Forslagene er kandidater og ikke svar:
 // motoren kender kun tags og gram, ikke om de to ting faktisk kan det samme.
-function Vaegtbrydere({ brydere, byt }: {
-  brydere: Vaegtbryder[];
-  byt: (uid: Reference) => Promise<void>;
+// Vægtbryderne, som specens §7.2 vil have dem: vægten som den er, hvad der
+// kan hentes, og hvert bytte med sin risiko og sin konsekvens.
+//
+// Risikoen er ikke pynt. Uden den ser et bytte, der bare er lettere, ud som et
+// bytte, der kan det samme — og det er dér, en motor holder op med at blive
+// læst. Derfor står konsekvensen som tekst under mærket og ikke bag "hvorfor?".
+//
+// Automatisk fjernelse er aldrig tilladt. "Byt alle" er derfor en knap, man
+// trykker på, og den tager ét bytte pr. tungt stykke gear — det sikreste, ikke
+// det mest sparende.
+const RISIKOMAERKE: Record<Risiko, { navn: string; niveau: 'succes' | 'advarsel' | 'fejl' }> = {
+  lav: { navn: 'lav risiko', niveau: 'succes' },
+  mellem: { navn: 'mellem risiko', niveau: 'advarsel' },
+  hoej: { navn: 'høj risiko', niveau: 'fejl' }
+};
+
+function Vaegtbrydere({ resultat, byt: tagImod }: {
+  resultat: Vaegtresultat;
+  byt: (bytter: Bytte[]) => Promise<void>;
 }) {
+  const alle = bedsteBytter(resultat.brydere);
+
   return (
-    <div style={{ display: 'grid', gap: '12px' }}>
-      <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', lineHeight: 1.55 }}>
-        Lettere gear i dit inventar der deler tags med det tunge. Om de kan det samme,
-        er dit valg — tilføj det lette her, og tag det tunge af pakkelisten.
+    <div style={{ display: 'grid', gap: 'var(--plads-3)' }}>
+      <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)', lineHeight: 1.55 }}>
+        Pakken vejer {kg(resultat.nuvaerende_g)} kg. Der er {kg(resultat.potentiel_besparelse_g)} kg
+        at hente på lettere gear, du allerede ejer. Om de kan det samme, er dit valg —
+        motoren kender kun tags, gram og dine stjerner.
       </div>
 
-      {brydere.map(({ tung, alternativer, begrundelse }) => (
+      {alle.length > 1 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--plads-2)', flexWrap: 'wrap' }}>
+          <Knap variant="primaer" onClick={() => void tagImod(alle)}>
+            Byt alle {alle.length}
+          </Knap>
+          <span style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)' }}>
+            tager det sikreste bytte på hver ting
+          </span>
+        </div>
+      )}
+
+      {resultat.brydere.map(({ tung, alternativer, begrundelse }) => (
         <div
           key={tung.uid}
           style={{
             border: '1px solid var(--border-svag)',
-            borderRadius: '10px',
-            padding: '10px 12px',
+            borderRadius: 'var(--runding-lille)',
+            padding: 'var(--plads-3)',
             background: 'var(--bg-forhoejet)'
           }}
         >
-          <div style={{ fontSize: '13px', marginBottom: '2px' }}>
+          <div style={{ fontSize: 'var(--skrift-knap)', marginBottom: '2px' }}>
             {tung.navn}
-            <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '11px', marginLeft: '8px' }}>
+            <span style={{ color: 'var(--tekst-dæmpet)', fontSize: 'var(--skrift-lille)', marginLeft: 'var(--plads-2)' }}>
               {tung.vaegt_g} g
             </span>
           </div>
 
-          <div style={{ display: 'grid', gap: '4px', marginTop: '8px' }}>
+          <div style={{ display: 'grid', gap: 'var(--plads-2)', marginTop: 'var(--plads-2)' }}>
             {alternativer.map((a) => (
-              <div
-                key={a.item.uid}
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}
-              >
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  {a.item.navn}
-                  <span style={{ color: 'var(--tekst-svag)', marginLeft: '6px' }}>
-                    {a.item.vaegt_g} g
+              <div key={a.item.uid} style={{ display: 'grid', gap: 'var(--plads-1)' }}>
+                {/* Ombryder frem for at mase. På en telefon er der ikke plads
+                    til navn, vægt, risiko, besparelse og knap på én linje —
+                    og uden ombrydning brækkede "1200 g" midt over, så mærket
+                    lagde sig oven i g'et. */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: 'var(--plads-2)',
+                  fontSize: 'var(--skrift-detalje)'
+                }}>
+                  <span style={{ flex: '1 1 auto', minWidth: 0 }}>
+                    {a.item.navn}
+                    <span style={{
+                      color: 'var(--tekst-svag)',
+                      marginLeft: 'var(--plads-1)',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {a.item.vaegt_g} g
+                    </span>
                   </span>
-                </span>
-                <span style={{ color: 'var(--accent)', whiteSpace: 'nowrap' }}>
-                  −{a.sparet_g} g
-                </span>
-                <Knap
-                  onClick={() => void byt(a.item.uid)}
-                  style={{ fontSize: '11px', padding: '3px 9px' }}
-                >
-                  Tilføj
-                </Knap>
+                  <Badge niveau={RISIKOMAERKE[a.risiko].niveau}>{RISIKOMAERKE[a.risiko].navn}</Badge>
+                  <span style={{ color: 'var(--accent)', whiteSpace: 'nowrap' }}>
+                    −{a.sparet_g} g
+                  </span>
+                  <Knap
+                    onClick={() => void tagImod([{
+                      tung, lette: a.item, sparet_g: a.sparet_g, risiko: a.risiko
+                    }])}
+                    style={{ fontSize: 'var(--skrift-lille)', padding: '3px 9px' }}
+                  >
+                    Byt
+                  </Knap>
+                </div>
+                <div style={{
+                  fontSize: 'var(--skrift-lille)',
+                  color: 'var(--tekst-dæmpet)',
+                  lineHeight: 1.5
+                }}>
+                  {a.konsekvens}
+                </div>
               </div>
             ))}
           </div>
 
-          <div style={{ marginTop: '6px' }}>
+          <div style={{ marginTop: 'var(--plads-2)' }}>
             <Hvorfor begrundelse={begrundelse} />
           </div>
         </div>
@@ -2179,13 +2804,7 @@ function Afgangstjekliste({ tjek, opret, gem }: {
                 color: linje.afkrydset ? 'var(--tekst-svag)' : 'var(--tekst)'
               }}
             />
-            <button
-              onClick={() => gem(fjernLinje(tjek, linje.id))}
-              aria-label={`Fjern ${linje.tekst}`}
-              style={{ background: 'transparent', border: 'none', color: 'var(--fejl)', cursor: 'pointer', fontSize: '14px', padding: '0 4px' }}
-            >
-              ×
-            </button>
+            <FjernKnap onClick={() => gem(fjernLinje(tjek, linje.id))} label={`Fjern ${linje.tekst}`} />
           </div>
         ))}
       </div>
@@ -2395,12 +3014,14 @@ function Noegletal({ vaerdi, label }: { vaerdi: string; label: string }) {
 // Hjælpere
 // ─────────────────────────────────────────────
 
-const VISNINGER: readonly Visning[] = ['gruppe', 'tag', 'person'];
+const VISNINGER: readonly Visning[] = ['alle', 'gruppe', 'tag', 'person', 'delt'];
 
 const VISNING_LABEL: Record<Visning, string> = {
-  gruppe: 'Efter gruppe',
-  tag: 'Efter tag',
-  person: 'Efter person'
+  alle: 'Alle',
+  gruppe: 'Grejsæt',
+  tag: 'Tag',
+  person: 'Person',
+  delt: 'Fælles'
 };
 
 function kg(gram: number): string {

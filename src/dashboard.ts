@@ -300,6 +300,40 @@ function garantiFrist(dage: number): string {
 }
 
 // ─────────────────────────────────────────────
+// Sync-status
+//
+// Fundamentet siger, at den skal være synlig uden at være dominerende. Den
+// skal især ikke ligne en fejl, når den ikke er en: at have ændringer
+// liggende uden dækning er den normale tilstand for en app, der bruges i
+// skoven, og ikke noget der er gået galt.
+// ─────────────────────────────────────────────
+
+export type SyncTilstand = 'synkroniseret' | 'venter' | 'offline' | 'kun_lokalt';
+
+export interface Syncstatus {
+  tilstand: SyncTilstand;
+  tekst: string;
+}
+
+export function syncstatus(usendt: number, online: boolean, harKonto: boolean): Syncstatus {
+  // Uden konto er der ikke noget at synkronisere med. Så er "usendt" ikke en
+  // kø, det er bare det, der står på enheden — og det er ikke en mangel.
+  if (!harKonto) {
+    return { tilstand: 'kun_lokalt', tekst: 'Gemt på denne enhed' };
+  }
+
+  if (usendt === 0) {
+    return { tilstand: 'synkroniseret', tekst: online ? 'Alt er sendt op' : 'Alt er sendt op · offline' };
+  }
+
+  const aendringer = `${usendt} ${usendt === 1 ? 'ændring' : 'ændringer'}`;
+
+  return online
+    ? { tilstand: 'venter', tekst: `${aendringer} på vej op` }
+    : { tilstand: 'offline', tekst: `${aendringer} venter på dækning` };
+}
+
+// ─────────────────────────────────────────────
 // Nøgletal
 // ─────────────────────────────────────────────
 

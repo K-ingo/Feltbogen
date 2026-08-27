@@ -10,12 +10,13 @@ import {
   opdaterItem,
   sletItem,
   opretGruppe,
+  opretTur,
   sendAltUsendt,
   sendAfventende,
   hentFraPocketBase,
   afstemMedServer
 } from './sync';
-import { lavItem, lavGruppe } from './test/data';
+import { lavItem, lavGruppe, lavTur } from './test/data';
 
 // Opdateringer samles i 800 ms før de sendes.
 const FORSINKELSE = 800;
@@ -489,5 +490,70 @@ describe('afstemMedServer', () => {
 
     await expect(afstemMedServer()).resolves.toBeUndefined();
     expect(await db.items.count()).toBe(1);
+  });
+});
+
+
+// ─────────────────────────────────────────────
+// Sender vi hele posten op?
+//
+// `hero_billede` og `booking` blev læst ned fra PocketBase og aldrig sendt op.
+// Hver funktion for sig var rigtig, og turen mistede sin forside alligevel:
+// et felt der kun læses, bliver slettet, fordi serverens tomme værdi vinder
+// den næste flettning. Fejlen levede, indtil nogen tilfældigt kiggede på den.
+//
+// Grunden til at den kunne leve så længe, er at PocketBase ikke siger fra.
+// Sender man et felt, skemaet ikke kender, dropper den det lydløst — og
+// sender man det slet ikke, sker der pr. definition ingenting.
+//
+// Testen herunder er ikke en test af et bestemt felt. Den læser felterne på
+// posten og kræver, at hvert eneste af dem er med i det, der bliver sendt.
+// Lægger nogen et felt på `Tur` uden at føre det ind i `tilPb`, falder den —
+// og det er præcis det øjeblik, fejlen ellers ville blive født i.
+// ─────────────────────────────────────────────
+
+// Det der med vilje bliver hjemme. `id` er Dexies egen tæller, `pb_id` og
+// `server_aendret` hører til synkroniseringen selv, og `usendt_aendring` er
+// et lokalt flag. `oprettet` og `aendret` sættes af serveren som `created` og
+// `updated` og må ikke skrives ovenfra.
+const KUN_LOKALT = ['id', 'pb_id', 'server_aendret', 'usendt_aendring', 'oprettet', 'aendret'];
+
+describe('alle felter kommer med op', () => {
+  it('sender hvert felt på turen til PocketBase', async () => {
+    const { id: _id, uid: _uid, ...tur } = lavTur();
+    void _id;
+    void _uid;
+
+    await opretTur(tur);
+
+    const sendt = pbMock.records.get('ture')?.get('pb1');
+    expect(sendt).toBeDefined();
+
+    const glemte = Object.keys(tur).filter((felt) => !KUN_LOKALT.includes(felt) && !(felt in sendt!));
+    expect(glemte).toEqual([]);
+  });
+
+  it('sender hvert felt på et stykke grej', async () => {
+    const { id: _id, uid: _uid, ...item } = lavItem();
+    void _id;
+    void _uid;
+
+    await opretItem(item);
+
+    const sendt = pbMock.records.get('items')?.get('pb1');
+    const glemte = Object.keys(item).filter((felt) => !KUN_LOKALT.includes(felt) && !(felt in sendt!));
+    expect(glemte).toEqual([]);
+  });
+
+  it('sender hvert felt på et grejsæt', async () => {
+    const { id: _id, uid: _uid, ...gruppe } = lavGruppe();
+    void _id;
+    void _uid;
+
+    await opretGruppe(gruppe);
+
+    const sendt = pbMock.records.get('grupper')?.get('pb1');
+    const glemte = Object.keys(gruppe).filter((felt) => !KUN_LOKALT.includes(felt) && !(felt in sendt!));
+    expect(glemte).toEqual([]);
   });
 });

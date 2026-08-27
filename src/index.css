@@ -27,6 +27,61 @@
   --input-bg: #ffffff;
   --skygge: rgba(60, 45, 20, 0.06);
   --overlay: rgba(0, 0, 0, 0.15);
+
+  /* ─────────────────────────────────────────────
+     Mål
+
+     Farverne ovenfor har været variabler fra begyndelsen, og derfor ser
+     appen ens ud. Målene har ikke, og derfor har hver skærm fundet sine
+     egne: der er padding på 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 18, 20, 22,
+     24, 28 og 30 px i koden. Ingen af springene betyder noget — de er bare
+     det tal, der så rigtigt ud den dag.
+
+     Herunder står de tal, resten af appen skal vælge imellem. Et spring i
+     skalaen er tilladt; en værdi uden om den skal have en grund.
+     ───────────────────────────────────────────── */
+
+  /* Afstande: padding, gap, margin. */
+  --plads-1: 4px;
+  --plads-2: 8px;
+  --plads-3: 12px;
+  --plads-4: 16px;
+  --plads-5: 24px;
+  --plads-6: 32px;
+
+  /* Runding. Små flader rundes mindre end kort, ellers ser de oppustede ud.
+     Pillen er til chips og segmenter, hvor rundingen skal følge højden. */
+  --runding-lille: 8px;
+  --runding: 12px;
+  --runding-pille: 999px;
+
+  /* Skriftstørrelser. Navngivet efter hvad de bruges til og ikke efter hvor
+     store de er, så en ændring ét sted ikke kræver en omdøbning. */
+  --skrift-mikro: 10px;    /* versal-etiketter over et tal */
+  --skrift-lille: 11px;    /* hjælpetekst, chips */
+  --skrift-detalje: 12px;  /* detaljelinjen under en titel */
+  --skrift-knap: 13px;
+  --skrift-brod: 14px;
+  --skrift-felt: 16px;     /* se nedenfor */
+  --skrift-tal: 22px;      /* fremhævede tal, fx vægten */
+  --skrift-titel: 26px;
+
+  /* Fokusringen. Egen variabel og ikke bare accenten, fordi den skal kunne
+     rettes uden at flytte alt det andet grønne med. */
+  --fokus: var(--accent);
+
+  /* Mindste mål på noget man skal kunne ramme.
+     44 px er kravet, når det er en finger — og Feltbogen bruges udendørs,
+     hvor sigtet er dårligere end ved et skrivebord, nogle gange med handske
+     på. Med mus er 36 px rigeligt, og 44 ville bare gøre alting luftigt
+     uden at hjælpe nogen. Derfor to værdier og ikke ét kompromis. */
+  --roerehoejde: 36px;
+}
+
+@media (pointer: coarse) {
+  :root {
+    --roerehoejde: 44px;
+  }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -105,14 +160,42 @@ input, button, select, textarea {
 input, textarea, select {
   background: var(--input-bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px 12px;
+  border-radius: var(--runding-lille);
+  padding: 10px var(--plads-3);
   transition: border-color 0.15s;
+
+  /* 16 px er ikke en smagssag. Safari på iPhone zoomer ind på et felt, man
+     rører ved, hvis skriften er mindre — og zoomer ikke ud igen. Man taster
+     ét tal ind og står så og skubber siden på plads med to fingre. Felterne
+     stod på 14 px og gjorde præcis det. */
+  font-size: var(--skrift-felt);
+
+  /* Feltet skal kunne rammes med en finger, også når teksten i det er kort. */
+  min-height: var(--roerehoejde);
 }
 
 input:focus, textarea:focus, select:focus {
-  outline: none;
   border-color: var(--accent);
+}
+
+/* Fokus.
+   Felterne skiftede kant, når man klikkede i dem, og det var alt: knapper
+   havde ingen markering overhovedet. Tabbede man sig gennem appen, kunne man
+   ikke se hvor man var — og det er hele forudsætningen for at bruge den uden
+   mus.
+
+   `:focus-visible` er browserens egen vurdering af, om fokus kom fra
+   tastaturet. Så slipper man for ringe om alt, man klikker på med musen,
+   uden at skulle gætte sig til forskellen selv. */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--fokus);
+  /* Afstanden gør, at ringen kan ses på en knap der selv har accentfarve:
+     den lægger sig ude på baggrunden i stedet for at forsvinde i fyldet. */
+  outline-offset: 2px;
 }
 
 button {
