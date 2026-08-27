@@ -142,7 +142,10 @@ function vaegt(tur: Tur, grupper: Gruppe[], ejet: Item[], paaTuren: Item[]): For
   return [{
     id: `vaegt:${bytter[0].tung.uid}`,
     type: 'vaegt',
-    titel: 'Vægten kan ned',
+    // Ikke "Vægten kan ned". Det er en påstand om vægten, og den siger
+    // hverken hvad man kan gøre, eller hvor. Det, der findes, er lettere gear,
+    // man allerede ejer — og det er dét, kortet fører hen til.
+    titel: 'Lettere gear i skabet',
     detalje: `${(resultat.potentiel_besparelse_g / 1000).toFixed(1)} kg at hente på ${antal} ${antal === 1 ? 'ting' : 'ting'}`,
     begrundelse: resultat.brydere[0].begrundelse,
     virkning: { vaegt_g: -resultat.potentiel_besparelse_g, antal },

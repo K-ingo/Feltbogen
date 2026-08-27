@@ -26,6 +26,7 @@ import GaesteSide from './GaesteSide';
 import { tokenFraAdresse } from './gaest';
 import TurkortSide from './TurkortSide';
 import { turkorttokenFraAdresse } from './turkort';
+import type { Turmaal } from './turmaal';
 // Kobler friskningen af delte ture på skrivninger. Importeres for sin
 // bivirkning — modulet melder sig selv til hos sync.
 import './delesnapshot';
@@ -71,7 +72,7 @@ function App(): ReactElement | null {
   // navnløs post væk igen hvis man fortryder.
   const [valgtItem, setValgtItem] = useState<{ id: number; ny: boolean } | null>(null);
   const [valgtGruppe, setValgtGruppe] = useState<{ id: number; ny: boolean } | null>(null);
-  const [valgtTur, setValgtTur] = useState<{ id: number; ny: boolean } | null>(null);
+  const [valgtTur, setValgtTur] = useState<{ id: number; ny: boolean; maal?: Turmaal } | null>(null);
   const [valgtSted, setValgtSted] = useState<{ id: number; ny: boolean } | null>(null);
   // En tur en anden har delt. Den kan ikke redigeres og har derfor ingen
   // ny-tilstand at rydde op efter.
@@ -84,7 +85,9 @@ function App(): ReactElement | null {
   const [feltbogAar, setFeltbogAar] = useState<number | null>(null);
   const aabnItem = (id: number, ny = false) => setValgtItem({ id, ny });
   const aabnGruppe = (id: number, ny = false) => setValgtGruppe({ id, ny });
-  const aabnTur = (id: number, ny = false) => setValgtTur({ id, ny });
+  // maal er stedet på turen, man skal lande — sat når man kommer fra et
+  // forslag eller en mangel. Se turmaal.ts.
+  const aabnTur = (id: number, ny = false, maal?: Turmaal) => setValgtTur({ id, ny, maal });
   const aabnSted = (id: number, ny = false) => setValgtSted({ id, ny });
   const aabnDeltTur = (id: number) => setValgtDeltTur(id);
 
@@ -250,7 +253,12 @@ function App(): ReactElement | null {
   if (valgtTur !== null) {
     return (
       <Skal fane={fane} skift={skiftFane}>
-        <TurDetalje turId={valgtTur.id} nyOprettet={valgtTur.ny} tilbage={lukDetalje} />
+        <TurDetalje
+          turId={valgtTur.id}
+          nyOprettet={valgtTur.ny}
+          maal={valgtTur.maal}
+          tilbage={lukDetalje}
+        />
       </Skal>
     );
   }

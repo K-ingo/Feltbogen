@@ -1,4 +1,5 @@
 import type { Gruppe, Tur, TurStatus } from './db';
+import type { Turmaal } from './turmaal';
 import { itemUidsPaaTur } from './smartMotor';
 import { fremdrift } from './afgangsTjek';
 import { pakkede } from './pakning';
@@ -26,6 +27,16 @@ import { pakkede } from './pakning';
 
 export type Fase = 'kladde' | 'klar' | 'aktiv' | 'afsluttet' | 'evalueret';
 
+// Noget der står tilbage, og stedet hvor det kan gøres.
+//
+// Målet er ikke pynt. En mangel, man skal lede efter for at rette, er lige så
+// besværlig som ingen mangel — appen ved præcis, hvor "Intet grej valgt"
+// rettes, og så skal den også kunne tage én derhen. Se turmaal.ts.
+export interface Mangel {
+  tekst: string;
+  maal: Turmaal;
+}
+
 // Hvad knappen gør. Domænet siger hvilken slags skridt det er; skærmen
 // oversætter det til en handling. Så kan reglerne testes uden en skærm.
 export type Naesteskridt =
@@ -41,7 +52,7 @@ export interface Turfase {
   begrundelse: string;
   // Hvad der står tilbage. Tom liste betyder ikke at turen er perfekt — kun
   // at der ikke er noget, appen kan få øje på.
-  mangler: string[];
+  mangler: Mangel[];
 }
 
 // Fasen alene. Turlisten skal kunne sætte det rigtige ord på hver tur uden at
@@ -120,23 +131,28 @@ export function turfase(tur: Tur, grupper: Gruppe[]): Turfase {
 // Rækkefølgen er den, man ville gøre tingene i: hvornår, hvorhen, hvad med,
 // hvem med. Kun det appen kan få øje på — at man har glemt at spørge om fri,
 // kan den ikke vide.
-function kladdemangler(tur: Tur, grupper: Gruppe[]): string[] {
-  const mangler: string[] = [];
+function kladdemangler(tur: Tur, grupper: Gruppe[]): Mangel[] {
+  const mangler: Mangel[] = [];
 
   if (!tur.startdato) {
-    mangler.push('Ingen datoer');
+    mangler.push({ tekst: 'Ingen datoer', maal: 'overblik' });
   } else if (!tur.slutdato) {
-    mangler.push('Ingen slutdato');
+    mangler.push({ tekst: 'Ingen slutdato', maal: 'overblik' });
   }
 
-  if (!tur.sted.trim()) mangler.push('Intet sted');
+  if (!tur.sted.trim()) mangler.push({ tekst: 'Intet sted', maal: 'overblik' });
 
-  if (itemUidsPaaTur(tur, grupper).size === 0) mangler.push('Intet grej valgt');
+  if (itemUidsPaaTur(tur, grupper).size === 0) {
+    mangler.push({ tekst: 'Intet grej valgt', maal: 'pakning' });
+  }
 
   // Kun værd at nævne når turen selv siger, at der kommer nogen med. Er man
   // afsted alene, er en tom deltagerliste det rigtige.
   if (tur.personer > 1 && tur.deltagere.length === 0) {
-    mangler.push(`Turen er sat til ${tur.personer} personer, men ingen er skrevet på`);
+    mangler.push({
+      tekst: `Turen er sat til ${tur.personer} personer, men ingen er skrevet på`,
+      maal: 'deltagere'
+    });
   }
 
   return mangler;
@@ -147,22 +163,29 @@ function kladdemangler(tur: Tur, grupper: Gruppe[]): string[] {
 //
 // Pakningen først. Det er den, der tager tid, og den man opdager for sent at
 // man ikke er færdig med.
-function klarmangler(tur: Tur, grupper: Gruppe[]): string[] {
-  const mangler: string[] = [];
+function klarmangler(tur: Tur, grupper: Gruppe[]): Mangel[] {
+  const mangler: Mangel[] = [];
 
   const paaTuren = itemUidsPaaTur(tur, grupper);
   const afkrydset = pakkede(tur);
   const ipakket = [...paaTuren].filter((u) => afkrydset.has(u)).length;
 
   if (paaTuren.size > 0 && ipakket < paaTuren.size) {
-    mangler.push(`Pakning: ${paaTuren.size - ipakket} af ${paaTuren.size} mangler i tasken`);
+    mangler.push({
+      tekst: `Pakning: ${paaTuren.size - ipakket} af ${paaTuren.size} mangler i tasken`,
+      // Pakkelisten og ikke pakke-fanen: det er dér, man krydser af.
+      maal: 'pakkeliste'
+    });
   }
 
   const tjek = fremdrift(tur.afgangs_tjek ?? null);
   if (tjek.ialt === 0) {
-    mangler.push('Afgangs-tjekket er ikke taget i brug');
+    mangler.push({ tekst: 'Afgangs-tjekket er ikke taget i brug', maal: 'afgangstjek' });
   } else if (!tjek.faerdig) {
-    mangler.push(`Afgangs-tjek: ${tjek.ialt - tjek.afkrydsede} tilbage af ${tjek.ialt}`);
+    mangler.push({
+      tekst: `Afgangs-tjek: ${tjek.ialt - tjek.afkrydsede} tilbage af ${tjek.ialt}`,
+      maal: 'afgangstjek'
+    });
   }
 
   return mangler;

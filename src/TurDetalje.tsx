@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, etiket, TUR_STATUS, OVERNATNING, AKTIVITET, TERRAEN, ERFARING, PAK_AF_NIVEAU } from './db';
@@ -123,12 +123,18 @@ import BilledSektion from './BilledSektion';
 import { billederPaaTur } from './billeder';
 import { opretTomtSted } from './opret';
 import { useRedigerbar } from './useRedigerbar';
+import { MAALETS_FANE } from './turmaal';
+import type { Turfane, Turmaal } from './turmaal';
 
 interface Props {
   turId: number;
   tilbage: () => void;
   // Sat når turen netop er oprettet, så en navnløs post kan ryddes væk igen.
   nyOprettet?: boolean;
+  // Hvor man skal lande, når man kommer hertil fra et forslag eller en
+  // mangel. Se turmaal.ts — reglen er, at appen aldrig må pege på noget og så
+  // lade én lede efter det.
+  maal?: Turmaal;
 }
 
 type Visning = 'gruppe' | 'tag' | 'person';
@@ -139,8 +145,8 @@ type Visning = 'gruppe' | 'tag' | 'person';
 //
 // Seks faner er loftet. Skal der en syvende til, hører den sandsynligvis
 // hjemme inde i en af de seks.
-type Turfane = 'overblik' | 'pakning' | 'pakkeliste' | 'deltagere' | 'undervejs' | 'praktisk';
-
+//
+// Selve typen bor i turmaal.ts sammen med de steder, en henvisning kan lande.
 const FANEBLADE: { id: Turfane; label: string }[] = [
   { id: 'overblik', label: 'Overblik' },
   { id: 'pakning', label: 'Pakning' },
@@ -150,16 +156,32 @@ const FANEBLADE: { id: Turfane; label: string }[] = [
   { id: 'praktisk', label: 'Praktisk' }
 ];
 
-function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
+function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
   const erDesktop = useErDesktop();
   const erBred = useErBredskaerm();
   const [visning, setVisning] = useState<Visning>('gruppe');
-  // Man lander altid på overblikket. En fane man stod på sidst ville være et
-  // gæt på hvad man kom for, og gættet ville være forkert lige så tit som det
-  // var rigtigt.
-  const [fane, setFane] = useState<Turfane>('overblik');
+  // Man lander på overblikket, medmindre man er sendt hertil af et forslag
+  // eller en mangel. En fane man stod på sidst ville være et gæt på hvad man
+  // kom for, og gættet ville være forkert lige så tit som det var rigtigt —
+  // men et mål er ikke et gæt, det er noget nogen har trykket på.
+  const [fane, setFane] = useState<Turfane>(maal ? MAALETS_FANE[maal] : 'overblik');
+  // Det man er sendt hertil for. Sektionen folder sig ud, og skærmen ruller
+  // derhen. Skifter man fane, er man et andet ærinde — så ryddes det, og en
+  // gammel markering folder ikke noget ud, næste gang man kommer forbi.
+  const [sigtet, setSigtet] = useState<Turmaal | null>(maal ?? null);
   // Pak-af-tjekket lægger sig over turskærmen frem for at være en fane for
   // sig: man kommer dertil fra turen, og man skal tilbage til den bagefter.
+  // Ruller det, man er sendt efter, ind på skærmen — én gang. Uden
+  // dependency-liste, fordi elementet først findes, når turen er hentet, og
+  // effekten derfor skal prøve igen ved hver render indtil den kan.
+  const sigtRef = useRef<HTMLDivElement | null>(null);
+  const harRullet = useRef(false);
+  useEffect(() => {
+    if (!sigtet || harRullet.current || !sigtRef.current) return;
+    harRullet.current = true;
+    sigtRef.current.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  });
+
   const [viserPakAfTjek, setViserPakAfTjek] = useState(false);
   const [viserPaaTur, setViserPaaTur] = useState(false);
   const [vejrData, setVejrData] = useState<VejrData | null>(null);
@@ -689,6 +711,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
     <Foldbar
       titel="Kan vægten ned?"
       resume={`${kg(vaegtsvar.potentiel_besparelse_g)} kg at hente`}
+      aabenFra={sigtet === 'vaegt'}
     >
       <Vaegtbrydere resultat={vaegtsvar} byt={tagImodBytte} />
     </Foldbar>
@@ -734,8 +757,9 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
       titel="Afgangs-tjek"
       resume={fremdriftstekst(afgangsTjek)}
       // Er turen gået i gang, er det ikke længere noget man folder ud når man
-      // får lyst — det er det sidste man skulle have gjort.
-      aabenFra={tur.status === 'aktiv'}
+      // får lyst — det er det sidste man skulle have gjort. Det samme gælder,
+      // når man er sendt hertil af en mangel.
+      aabenFra={tur.status === 'aktiv' || sigtet === 'afgangstjek'}
     >
       <Afgangstjekliste
         tjek={afgangsTjek}
@@ -872,6 +896,21 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
     </div>
   );
 
+  // Pakker et sted ind, så skærmen kan rulle derhen. Wrapperen står altid, og
+  // kun ref'en flytter sig: forsvandt den, ville sektionen inde i den blive
+  // pillet ned og foldet sammen igen på vej.
+  const sigte = (m: Turmaal, indhold: ReactNode) => (
+    <div ref={sigtet === m ? sigtRef : undefined}>{indhold}</div>
+  );
+
+  // Går til et sted på turen. Rullingen skal ske igen, selvom den er sket
+  // før — det er en ny henvisning, ikke den man kom ind med.
+  const gaaTilMaal = (m: Turmaal) => {
+    harRullet.current = false;
+    setFane(MAALETS_FANE[m]);
+    setSigtet(m);
+  };
+
   const fanensIndhold: Record<Turfane, ReactNode> = {
     // Rammerne om turen: hvor, hvornår, hvem med — og det appen har set, som
     // man skal vide inden man tager afsted.
@@ -887,10 +926,17 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
           />
         )}
         {/* På en kladde er parametrene det første der skal udfyldes, så der
-            står den åben. Senere er den et opslag. */}
-        <Foldbar titel="Turparametre" resume={parametreResume} aabenFra={tur.status === 'kladde'}>
-          {parametre}
-        </Foldbar>
+            står den åben. Senere er den et opslag — medmindre man er sendt
+            hertil af en mangel om datoer eller sted. */}
+        {sigte('overblik',
+          <Foldbar
+            titel="Turparametre"
+            resume={parametreResume}
+            aabenFra={tur.status === 'kladde' || sigtet === 'overblik'}
+          >
+            {parametre}
+          </Foldbar>
+        )}
         {bookingSektion}
       </>,
       <>
@@ -901,7 +947,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
 
     // Arbejdsfladen: her vælges grejet, og vægten svarer igen med det samme.
     pakning: spalter(
-      <Infokort label="Vælg gear">{valgAfIndhold}</Infokort>,
+      sigte('pakning', <Infokort label="Vælg gear">{valgAfIndhold}</Infokort>),
       <>
         <Pakkekort pakning={pakning} tilListen={() => setFane('pakkeliste')} />
         {vaegt}
@@ -912,23 +958,27 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
             </div>
           </Infokort>
         )}
-        {vaegtbryderSektion}
+        {sigte('vaegt', vaegtbryderSektion)}
       </>
     ),
 
     // Listen man har fremme mens man pakker. Den skal fylde det hele — der er
     // ikke noget andet at kigge på her.
-    pakkeliste: <Infokort label={`Pakkeliste (${pakItems.length})`}>{pakkeliste}</Infokort>,
+    pakkeliste: sigte('pakkeliste',
+      <Infokort label={`Pakkeliste (${pakItems.length})`}>{pakkeliste}</Infokort>
+    ),
 
     deltagere: spalter(
       <>
-        <Foldbar
-          titel={`Deltagere (${tur.deltagere.length})`}
-          resume={tur.deltagere.map((d) => d.navn).join(', ')}
-          aabenFra
-        >
-          {deltagere}
-        </Foldbar>
+        {sigte('deltagere',
+          <Foldbar
+            titel={`Deltagere (${tur.deltagere.length})`}
+            resume={tur.deltagere.map((d) => d.navn).join(', ')}
+            aabenFra
+          >
+            {deltagere}
+          </Foldbar>
+        )}
         {tur.deltagere.length > 0 && pakItems.length > 0 && (
           <Foldbar titel="Fordel gear" resume={fordelingsResume(tur, pakItems)}>{fordeling}</Foldbar>
         )}
@@ -940,7 +990,7 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
     // fotograferet undervejs. Pak-af-tjekket lukker kredsløbet bagefter.
     undervejs: spalter(
       <>
-        {afgangsSektion}
+        {sigte('afgangstjek', afgangsSektion)}
         {feltnoteSektion}
       </>,
       <>
@@ -999,9 +1049,15 @@ function TurDetalje({ turId, tilbage, nyOprettet }: Props) {
       {/* Først når grejet og sættene er hentet. Indtil da ville listen sige
           "Intet grej valgt" om en tur, hvis grej ligger i et grejsæt — en
           påstand om brugerens data, der er forkert i et enkelt billede. */}
-      {items !== undefined && grupper !== undefined && <Naesteskridt fase={fase} />}
+      {items !== undefined && grupper !== undefined && (
+        <Naesteskridt fase={fase} gaaTil={gaaTilMaal} />
+      )}
 
-      <Faner valgt={fane} vaelg={setFane} tal={fanetal} />
+      <Faner
+        valgt={fane}
+        vaelg={(f) => { setFane(f); setSigtet(null); }}
+        tal={fanetal}
+      />
 
       {/* Nøglen er ikke til pynt. Uden den genbruger React kortene på tværs
           af fanerne, fordi de står på samme plads i træet — og så arver
@@ -1088,7 +1144,7 @@ function Pakkekort({ pakning, tilListen }: { pakning: Pakkefremdrift; tilListen:
 //
 // Listen låser ingenting. Man skal kunne tage afsted på en tur, appen synes er
 // halvfærdig — den skal bare have sagt det først.
-function Naesteskridt({ fase }: { fase: Turfase }) {
+function Naesteskridt({ fase, gaaTil }: { fase: Turfase; gaaTil: (m: Turmaal) => void }) {
   if (fase.mangler.length === 0) return null;
 
   return (
@@ -1108,8 +1164,31 @@ function Naesteskridt({ fase }: { fase: Turfase }) {
         <span style={{ flex: 1, fontWeight: 500 }}>Værd at gøre først</span>
         <Hvorfor begrundelse={fase.begrundelse} />
       </div>
+      {/* Hver mangel er en knap. Appen ved, hvor "Intet grej valgt" rettes —
+          så skal den også tage én derhen. En liste man selv skal finde vej ud
+          fra, er lige så besværlig som ingen liste. */}
       <ul style={{ margin: 0, paddingLeft: '18px', display: 'grid', gap: '2px' }}>
-        {fase.mangler.map((m) => <li key={m}>{m}</li>)}
+        {fase.mangler.map((m) => (
+          <li key={m.tekst}>
+            <button
+              onClick={() => gaaTil(m.maal)}
+              style={{
+                padding: 0,
+                border: 'none',
+                background: 'transparent',
+                color: 'inherit',
+                font: 'inherit',
+                textAlign: 'left',
+                textDecoration: 'underline',
+                textDecorationColor: 'var(--border)',
+                textUnderlineOffset: '3px',
+                cursor: 'pointer'
+              }}
+            >
+              {m.tekst}
+            </button>
+          </li>
+        ))}
       </ul>
     </div>
   );
@@ -2257,15 +2336,24 @@ function Vaegtbrydere({ resultat, byt: tagImod }: {
           <div style={{ display: 'grid', gap: 'var(--plads-2)', marginTop: 'var(--plads-2)' }}>
             {alternativer.map((a) => (
               <div key={a.item.uid} style={{ display: 'grid', gap: 'var(--plads-1)' }}>
+                {/* Ombryder frem for at mase. På en telefon er der ikke plads
+                    til navn, vægt, risiko, besparelse og knap på én linje —
+                    og uden ombrydning brækkede "1200 g" midt over, så mærket
+                    lagde sig oven i g'et. */}
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
+                  flexWrap: 'wrap',
                   gap: 'var(--plads-2)',
                   fontSize: 'var(--skrift-detalje)'
                 }}>
-                  <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ flex: '1 1 auto', minWidth: 0 }}>
                     {a.item.navn}
-                    <span style={{ color: 'var(--tekst-svag)', marginLeft: 'var(--plads-1)' }}>
+                    <span style={{
+                      color: 'var(--tekst-svag)',
+                      marginLeft: 'var(--plads-1)',
+                      whiteSpace: 'nowrap'
+                    }}>
                       {a.item.vaegt_g} g
                     </span>
                   </span>

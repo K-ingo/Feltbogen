@@ -14,6 +14,7 @@ import { aarsopgoerelseAtSe } from './aarsopgoerelse';
 import type { Handling, Syncstatus } from './dashboard';
 import { forslagTilTur, udenAfviste, maalFor, TILTRONAVN } from './forslag';
 import type { Forslag } from './forslag';
+import type { Turmaal } from './turmaal';
 import { kopierGrej } from './ligesomSidst';
 import { opdaterTur } from './sync';
 import { itemsPaaTur, findAdvarsler } from './smartMotor';
@@ -31,7 +32,7 @@ interface Props {
   fane: Fane;
   skift: (f: Fane) => void;
   aabnItem: (id: number, nyOprettet?: boolean) => void;
-  aabnTur: (id: number, nyOprettet?: boolean) => void;
+  aabnTur: (id: number, nyOprettet?: boolean, maal?: Turmaal) => void;
   aabnAar: (aar: number) => void;
   nytItem: () => void;
   nyTur: () => void;
@@ -99,15 +100,22 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
       return;
     }
 
-    aabnTur(tur.id);
+    // Vægtforslaget skal vælges imellem: alternativerne har hver sin risiko,
+    // og det valg hører hjemme på turen. Men det skal lande *på* bytterne og
+    // ikke på turens overblik — et forslag, man selv skal lede efter bagefter,
+    // er ikke et forslag. Se turmaal.ts.
+    aabnTur(tur.id, false, 'vaegt');
   };
 
   // Kortet fører hen til den post det handler om — gear eller tur. Findes den
   // ikke længere, sker der ingenting; listen bygges om ved næste render.
   const aabnHandling = (h: Handling) => {
     if (h.maal.slags === 'tur') {
-      const tur = ture.find((t) => t.uid === h.maal.uid);
-      if (tur?.id !== undefined) aabnTur(tur.id);
+      // Ingen af tur-handlingerne har brug for et mål: både "Markér som klar"
+      // og "Lav pak-af-tjek" står øverst på turskærmen, og manglerne under dem
+      // er selv knapper videre.
+      const fundet = ture.find((t) => t.uid === h.maal.uid);
+      if (fundet?.id !== undefined) aabnTur(fundet.id);
       return;
     }
 

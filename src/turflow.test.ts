@@ -109,8 +109,11 @@ describe('turflowet — fra tom kladde til gjort op', () => {
       terraen: 'skov'
     });
 
-    // Stadig én mangel: der er ikke valgt grej endnu.
-    expect(turfase(await turen(), []).mangler).toEqual(['Intet grej valgt']);
+    // Stadig én mangel: der er ikke valgt grej endnu — og den ved, hvor den
+    // rettes, så skærmen kan tage én derhen.
+    expect(turfase(await turen(), []).mangler).toEqual([
+      { tekst: 'Intet grej valgt', maal: 'pakning' }
+    ]);
 
     // Køkkengrejet kommer med som et grejsæt, resten som løse ting. Begge veje
     // skal tælle med, og det er præcis dét, `itemUidsPaaTur` samler.
@@ -202,7 +205,9 @@ describe('turflowet — fra tom kladde til gjort op', () => {
     const klar = turfase(await turen(), grupper);
     expect(klar.fase).toBe('klar');
     expect(klar.naeste).toMatchObject({ til: 'aktiv' });
-    expect(klar.mangler).toEqual(['Afgangs-tjekket er ikke taget i brug']);
+    expect(klar.mangler).toEqual([
+      { tekst: 'Afgangs-tjekket er ikke taget i brug', maal: 'afgangstjek' }
+    ]);
 
     await opdaterTur(turId, {
       afgangs_tjek: {

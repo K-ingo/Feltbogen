@@ -66,7 +66,7 @@ describe('forslagTilTur', () => {
 
     const vaegt = forslagTilTur(tur, [], [tungt, let_], []).find((f) => f.type === 'vaegt');
 
-    expect(vaegt?.titel).toBe('Vægten kan ned');
+    expect(vaegt?.titel).toBe('Lettere gear i skabet');
     expect(vaegt?.detalje).toContain('kg at hente');
     // Negativ: virkningen er den vej, vægten flytter sig.
     expect(vaegt?.virkning).toEqual({ vaegt_g: -3400, antal: 1 });

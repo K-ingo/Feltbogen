@@ -243,7 +243,28 @@ grønne: det er den eneste fase, hvor der ikke er mere, der skal gøres.
 
 ---
 
-## 6. Reglen, der gælder alle fremtidige funktioner
+## 6. Reglen om, hvor et forslag lander
+
+Fra brugen af det, der blev bygget ovenfor, og den står nu i `turmaal.ts`:
+
+> Når appen foreslår noget eller peger på noget, der mangler, skal man enten
+> kunne gøre det på stedet — eller trykke og lande dér, hvor det kan gøres.
+> Brugeren skal aldrig lede efter det, appen selv har bragt på bane.
+
+Den blev skrevet, fordi vægtforslaget på startskærmen brød den: kortet sagde
+"vægten kan ned", man trykkede, og så stod man på turens overblik uden noget
+at gøre. Forslaget var rigtigt, motoren havde regnet rigtigt, og det var
+alligevel ubrugeligt — det, der manglede, var de sidste to centimeter.
+
+Et mål er derfor ikke en fane. Det er et sted at stå: fanen, og den sektion på
+fanen, der skal være foldet ud, når man kommer. Skærmen ruller derhen.
+
+Det gælder også manglerne under "værd at gøre først". De er hver især en knap
+nu, og hver af dem ved, hvor den rettes.
+
+---
+
+## 7. Reglen, der gælder alle fremtidige funktioner
 
 Fra specens §31 og §34, og den vigtigste sætning i hele dokumentet:
 
@@ -262,7 +283,7 @@ appen?
 
 ---
 
-## 7. Hvad der står tilbage
+## 8. Hvad der står tilbage
 
 Alle fem skridt er taget. Det, der ligger og venter, i den rækkefølge det
 sandsynligvis er værd at tage:
