@@ -530,9 +530,22 @@ afhængighed den anden vej.
 
    Og kortet øverst ejer sin tur: handlingerne og situationen kigger på de
    samme data, så uden en regel sagde de begge det samme om den samme tur.
-2. **Gear-historikkens tidslinje.** Aggregatet findes; udfaldet pr. tur gør
-   ikke. "24/08 – Øhavet – Brugt" er dét, der gør historikken læselig, og det
-   er `pak_af_tjek` læst pr. tur i stedet for lagt sammen.
+2. **~~Gear-historikkens tidslinje.~~** ✅ `brugPrItem` lagde sammen — "brugt
+   5 af 8 gange" — og det siger ikke hvornår. En sovepose, der lå urørt på de
+   tre seneste ture, er noget andet end en, der lå urørt tre gange for to år
+   siden.
+
+   `brugshistorik` læser pak-af-tjekket pr. tur i stedet for lagt sammen, og
+   grejsiden viser turene som en tidslinje med udfaldet og turens egen note.
+   Historikken gemmes ikke på itemet: turene ved, hvad der var med, og
+   tjekket ved, hvad der blev brugt. En kopi ville være den samme sandhed to
+   steder — og skulle rettes, hver gang en tur blev slettet eller gjort op på
+   ny.
+
+   Statussen læses direkte fra linjen og ikke gennem `statusFor`, som falder
+   tilbage på "brugt", når linjen mangler. Det er rigtigt, mens man udfylder
+   tjekket, men en påstand appen ikke kan holde, når den kigger tilbage — så
+   en tur uden opgør siger "Ikke gjort op" i stedet for at gætte.
 3. **Første tur-flow.** Fravalgt i §4 med begrundelsen "et guidet flow på seks
    trin er stadig en formular". Det var for hurtigt sagt: dokumentets udgave
    spørger ét ad gangen, kan afbrydes, gemmer en lokal draft og slutter med et
