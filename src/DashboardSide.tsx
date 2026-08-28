@@ -28,6 +28,8 @@ import { Skal } from './Skal';
 import type { Fane } from './Skal';
 import { useErDesktop, useErOnline } from './useMedie';
 import { Knap, Chip, Infokort, SektionsTitel, ListeRaekke, TomListe, Hvorfor, Forslagskort } from './ui';
+import { useTekst } from './indstillinger';
+import { laesKladde, KLADDE_NOEGLE } from './foersteTur';
 
 interface Props {
   fane: Fane;
@@ -37,6 +39,8 @@ interface Props {
   aabnAar: (aar: number) => void;
   nytItem: () => void;
   nyTur: () => void;
+  // Det guidede flow til den første tur. Se foersteTur.ts.
+  foersteTur: () => void;
 }
 
 // Så mange handlinger vises ad gangen. Resten tælles op — en liste på tredive
@@ -51,7 +55,7 @@ const MAKS_SIDST_TILFOEJET = 5;
 // De fire første spørgsmål skal kunne besvares på under fem sekunder. Derfor
 // er der loft over både handlinger og forslag: en startskærm der ruller, er
 // en opgaveliste, og en opgaveliste lukker man.
-function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur }: Props) {
+function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur, foersteTur }: Props) {
   const erDesktop = useErDesktop();
 
   const { erLoggetInd } = useAuth();
@@ -66,6 +70,9 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
   // Hvad startskærmen handler om lige nu. Reglerne ligger i dashboard.ts, så
   // de kan afprøves uden en skærm.
   const situation = hjemsituation(ture);
+  // En påbegyndt første tur ligger lokalt og ikke i basen. Den afgør kun, hvad
+  // knappen på det tomme kort hedder — se foersteTur.ts.
+  const kladde = laesKladde(useTekst(KLADDE_NOEGLE));
   const tur = situation.tur;
   // Turkortet øverst ejer sin tur, så den ikke bliver sagt to gange.
   const alleHandlinger = udenDubletAfSituationen(handlinger(items, ture, grupper), situation);
@@ -153,6 +160,8 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
           grupper={grupper}
           aabn={(maal) => situation.tur?.id !== undefined && aabnTur(situation.tur.id, false, maal)}
           opret={nyTur}
+          foersteTur={foersteTur}
+          harKladde={kladde !== null}
         />
 
         {opgoerelse !== null && (
@@ -277,22 +286,35 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
 // skal sige noget forskelligt i hvert af de fire tilfælde.
 //
 // Reglerne ligger i `hjemsituation`; her oversættes de kun til en skærm.
-function Situationskort({ situation, items, grupper, aabn, opret }: {
+function Situationskort({ situation, items, grupper, aabn, opret, foersteTur, harKladde }: {
   situation: Hjemsituation;
   items: Item[];
   grupper: Gruppe[];
   aabn: (maal?: Turmaal) => void;
   opret: () => void;
+  foersteTur: () => void;
+  harKladde: boolean;
 }) {
   const tur = situation.tur;
 
+  // Uden en tur er der ikke noget at vise fremdrift på — der er kun ét at
+  // gøre. Det guidede flow står forrest, fordi en tom turskærm med fjorten
+  // felter er svær at begynde på; den tomme tur bliver stående ved siden af
+  // for dem, der hellere vil skrive det ind selv.
   if (!tur) {
     return (
       <Infokort label={situation.overskrift}>
         <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginBottom: '12px' }}>
-          Ingen ture planlagt.
+          {harKladde
+            ? 'Du er begyndt på en tur. Den ligger her på enheden og venter.'
+            : 'Ingen ture planlagt. Feltbogen kan spørge dig frem til den første — eller du kan skrive den ind selv.'}
         </div>
-        <Knap variant="primaer" onClick={opret}>+ {situation.handling}</Knap>
+        <div style={{ display: 'flex', gap: 'var(--plads-2)', flexWrap: 'wrap' }}>
+          <Knap variant="primaer" onClick={foersteTur}>
+            {harKladde ? 'Fortsæt hvor du slap' : situation.handling}
+          </Knap>
+          <Knap onClick={opret}>+ Tom tur</Knap>
+        </div>
       </Infokort>
     );
   }

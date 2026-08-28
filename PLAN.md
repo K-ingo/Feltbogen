@@ -546,12 +546,30 @@ afhængighed den anden vej.
    tilbage på "brugt", når linjen mangler. Det er rigtigt, mens man udfylder
    tjekket, men en påstand appen ikke kan holde, når den kigger tilbage — så
    en tur uden opgør siger "Ikke gjort op" i stedet for at gætte.
-3. **Første tur-flow.** Fravalgt i §4 med begrundelsen "et guidet flow på seks
-   trin er stadig en formular". Det var for hurtigt sagt: dokumentets udgave
-   spørger ét ad gangen, kan afbrydes, gemmer en lokal draft og slutter med et
-   *forslag* frem for en tom tur. Det er en anden ting, og den er bedre.
-   Turen, der oprettes, er den almindelige `Tur` — ingen wizard-model ved
-   siden af.
+3. **Første tur-flow.** ✅ Fravalgt i §4 med begrundelsen "et guidet flow på
+   seks trin er stadig en formular". Det var for hurtigt sagt: dokumentets
+   udgave spørger ét ad gangen, kan afbrydes, gemmer en lokal draft og slutter
+   med et *forslag* frem for en tom tur. Det er en anden ting, og den er bedre.
+
+   `foersteTur.ts` holder kladden og reglerne; `FoersteTur.tsx` stiller de fem
+   spørgsmål. Fire ting blev afgjort undervejs:
+
+   Kladden ligger i `db.indstillinger` som JSON. Tabellen er enhedens egen og
+   synkroniseres ikke — en halvfærdig tanke skal ikke dukke op hos resten af
+   holdet, og den skal overleve, at man lukker appen. `laesKladde` tror ikke på
+   noget: hvert felt tages kun med, hvis det har den rigtige form.
+
+   Der er ingen wizard-model ved siden af `Tur`. `turFraKladde` laver en
+   ganske almindelig tur med de samme standarder som `opretTomTur`, og fra det
+   øjeblik den er oprettet, er det de almindelige skærme, der overtager.
+
+   Vægtforslag vises ikke på sidste trin. De skal ende på turens bytteliste,
+   og den findes ikke endnu — et forslag, der ikke kan handles på det sted, det
+   står, er præcis dét, landingsreglen i §6 findes for.
+
+   Flowet erstatter ikke "+ Ny tur". Det står som den primære knap på hjem, når
+   der ingen ture er; den tomme tur står ved siden af for dem, der hellere selv
+   skriver det ind.
 4. **Gruppefordeling.** En ren fordelingsfunktion, der returnerer et forslag
    med før/efter ("Jakob +0,8 kg / Emil −0,8 kg") og aldrig skriver selv.
    Samme mønster som vægtbytterne.
