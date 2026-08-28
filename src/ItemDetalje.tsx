@@ -4,7 +4,8 @@ import { db, ITEM_STATUS } from './db';
 import type { Item, Tur, Garanti, Laant, Person, Udlaan, Vedligehold } from './db';
 import TagsInput from './TagsInput';
 import { turePrItem } from './statistik';
-import { brugPrItem } from './pakAfTjek';
+import { brugPrItem, brugshistorik } from './pakAfTjek';
+import type { Brugslinje } from './pakAfTjek';
 import type { Brug } from './pakAfTjek';
 import { dageSiden, erOverskredet, laengde } from './udlaan';
 import {
@@ -138,7 +139,7 @@ function ItemDetalje({ itemId, tilbage, nyOprettet }: Props) {
 
         <Feltkort label="Dimensioner" value={item.dimensioner} onChange={(v) => opdater({ dimensioner: v })} placeholder="ø 33 × 15 cm" />
 
-        <Brugsstatistik ture={turePaaItem} brug={brug} />
+        <Brugsstatistik ture={turePaaItem} brug={brug} historik={brugshistorik(item.uid, turePaaItem)} />
 
         <Laanekort
           udlaan={item.udlaan ?? null}
@@ -301,7 +302,36 @@ function DeltKort({ delt, skift }: { delt: boolean; skift: (v: boolean) => void 
 //
 // "Med på 8 ture" og "brugt 5 af 8 gange" er to forskellige tal: det første
 // tæller pakkelister, det andet kun de ture der er gjort op bagefter.
-function Brugsstatistik({ ture, brug }: { ture: Tur[]; brug: Brug | null }) {
+// Så mange linjer vises på tidslinjen. Resten tælles op — en historik på
+// tredive linjer er ikke en historik man læser, det er et regneark.
+const MAKS_HISTORIK = 8;
+
+// Hvad turen sagde om gearet bagefter. Farven følger betydningen: at noget gik
+// i stykker, er en anden slags oplysning end at det lå urørt.
+const UDFALD: Record<'brugt' | 'ubrugt' | 'i_stykker', { ord: string; farve: string }> = {
+  brugt: { ord: 'Brugt', farve: 'var(--succes)' },
+  ubrugt: { ord: 'Lå urørt', farve: 'var(--tekst-dæmpet)' },
+  i_stykker: { ord: 'Gik i stykker', farve: 'var(--fejl)' }
+};
+
+// Gearets liv, tur for tur.
+//
+// Tallene øverst er summen — "med på 8 ture", "brugt 5 af 8 gange". De er
+// gode til at aflæse på et sekund, men de siger ikke hvornår, og det er dét,
+// man vil vide: en sovepose der lå urørt på de tre seneste ture, er noget
+// andet end en der lå urørt tre gange for to år siden.
+//
+// Derfor står turene under som en tidslinje med det udfald, turen selv skrev
+// ned. En tur uden pak-af-tjek siger ingenting — og linjen siger det, i stedet
+// for at gætte.
+//
+// "Med på 8 ture" og "brugt 5 af 8 gange" er to forskellige tal: det første
+// tæller pakkelister, det andet kun de ture der er gjort op bagefter.
+function Brugsstatistik({ ture, brug, historik }: {
+  ture: Tur[];
+  brug: Brug | null;
+  historik: Brugslinje[];
+}) {
   const seneste = ture.find((t) => t.startdato);
 
   return (
@@ -322,22 +352,60 @@ function Brugsstatistik({ ture, brug }: { ture: Tur[]; brug: Brug | null }) {
               {brug.i_stykker > 0 && ` · gik i stykker ${brug.i_stykker} ${brug.i_stykker === 1 ? 'gang' : 'gange'}`}
             </div>
           )}
-          <div style={{ marginTop: '8px', display: 'grid', gap: '4px' }}>
-            {ture.slice(0, 3).map((t) => (
-              <div key={t.uid} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--tekst-dæmpet)' }}>
-                <span>{t.navn || 'Uden navn'}</span>
-                <span>{t.startdato ? formatterDato(t.startdato) : '—'}</span>
-              </div>
+
+          <div style={{ marginTop: 'var(--plads-3)', display: 'grid', gap: 'var(--plads-2)' }}>
+            {historik.slice(0, MAKS_HISTORIK).map((linje) => (
+              <Historiklinje key={linje.tur.uid} linje={linje} />
             ))}
-            {ture.length > 3 && (
-              <div style={{ fontSize: '11px', color: 'var(--tekst-svag)' }}>
-                + {ture.length - 3} tidligere
+            {historik.length > MAKS_HISTORIK && (
+              <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)' }}>
+                + {historik.length - MAKS_HISTORIK} tidligere
               </div>
             )}
           </div>
         </>
       )}
     </Infokort>
+  );
+}
+
+function Historiklinje({ linje }: { linje: Brugslinje }) {
+  const udfald = linje.status ? UDFALD[linje.status] : null;
+
+  return (
+    <div style={{ display: 'grid', gap: '1px' }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'baseline',
+        gap: 'var(--plads-2)',
+        fontSize: 'var(--skrift-detalje)'
+      }}>
+        <span style={{ color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>
+          {linje.tur.startdato ? formatterDato(linje.tur.startdato) : '—'}
+        </span>
+        <span style={{ flex: 1, minWidth: 0, color: 'var(--tekst)' }}>
+          {linje.tur.navn || 'Uden navn'}
+        </span>
+        <span style={{
+          color: udfald ? udfald.farve : 'var(--tekst-svag)',
+          whiteSpace: 'nowrap'
+        }}>
+          {/* En tur uden pak-af-tjek ved ingenting om gearet. Den skal sige
+              det og ikke gætte på "brugt". */}
+          {udfald ? udfald.ord : 'Ikke gjort op'}
+        </span>
+      </div>
+
+      {linje.noter !== '' && (
+        <div style={{
+          fontSize: 'var(--skrift-lille)',
+          color: 'var(--tekst-dæmpet)',
+          lineHeight: 1.5
+        }}>
+          {linje.noter}
+        </div>
+      )}
+    </div>
   );
 }
 

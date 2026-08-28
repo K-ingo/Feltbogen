@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   brugPrItem,
+  brugshistorik,
   dageSidenSlut,
   kategoriNoteFor,
   kategorierPaaTur,
@@ -271,5 +272,91 @@ describe('dageSidenSlut', () => {
 
   it('giver null når turen ingen datoer har', () => {
     expect(dageSidenSlut(lavTur({ startdato: '', slutdato: '' }), NU)).toBeNull();
+  });
+});
+
+// ─────────────────────────────────────────────
+// Historikken, tur for tur
+// ─────────────────────────────────────────────
+
+describe('brugshistorik', () => {
+  const uid = 'i-pose';
+
+  const medTjek = (navn: string, slutdato: string, status: 'brugt' | 'ubrugt' | 'i_stykker', noter?: string) =>
+    lavTur({
+      navn,
+      slutdato,
+      startdato: slutdato,
+      status: 'afsluttet',
+      pak_af_tjek: {
+        udfyldt_dato: `${slutdato}T10:00:00Z`,
+        niveau: 'let',
+        linjer: [{ item_uid: uid, status, ...(noter ? { noter } : {}) }]
+      }
+    });
+
+  it('sætter den nyeste tur først', () => {
+    const historik = brugshistorik(uid, [
+      medTjek('Maj', '2026-05-03', 'brugt'),
+      medTjek('August', '2026-08-22', 'ubrugt'),
+      medTjek('Juli', '2026-07-04', 'brugt')
+    ]);
+
+    expect(historik.map((l) => l.tur.navn)).toEqual(['August', 'Juli', 'Maj']);
+  });
+
+  it('tager udfaldet med fra turens eget tjek', () => {
+    const historik = brugshistorik(uid, [medTjek('Mols', '2026-08-22', 'i_stykker', 'lynlåsen gik')]);
+
+    expect(historik[0].status).toBe('i_stykker');
+    expect(historik[0].noter).toBe('lynlåsen gik');
+  });
+
+  // En tur uden pak-af-tjek ved ingenting om gearet. At sige "brugt" ville
+  // være en påstand, appen ikke kan holde.
+  it('lader status stå tom når turen ikke er gjort op', () => {
+    const historik = brugshistorik(uid, [
+      lavTur({ navn: 'Ikke gjort op', startdato: '2026-08-01', slutdato: '2026-08-03' })
+    ]);
+
+    expect(historik).toHaveLength(1);
+    expect(historik[0].status).toBeNull();
+    expect(historik[0].noter).toBe('');
+  });
+
+  // Gear der kom med efter tjekket blev lavet, står ikke på det. statusFor
+  // ville sige "brugt" her; historikken siger det ikke.
+  it('lader status stå tom når gearet ikke står på tjekket', () => {
+    const uden = lavTur({
+      navn: 'Uden linjen',
+      startdato: '2026-08-01',
+      slutdato: '2026-08-03',
+      status: 'afsluttet',
+      pak_af_tjek: {
+        udfyldt_dato: '2026-08-04T10:00:00Z',
+        niveau: 'let',
+        linjer: [{ item_uid: 'et-andet-item', status: 'brugt' }]
+      }
+    });
+
+    expect(brugshistorik(uid, [uden])[0].status).toBeNull();
+  });
+
+  it('sorterer efter slutdato, ikke startdato', () => {
+    const lang = lavTur({ navn: 'Lang', startdato: '2026-08-01', slutdato: '2026-08-20' });
+    const kort = lavTur({ navn: 'Kort', startdato: '2026-08-10', slutdato: '2026-08-11' });
+
+    expect(brugshistorik(uid, [kort, lang]).map((l) => l.tur.navn)).toEqual(['Lang', 'Kort']);
+  });
+
+  it('sætter ture uden datoer bagest', () => {
+    const udenDato = lavTur({ navn: 'Uden dato', startdato: '', slutdato: '' });
+    const med = lavTur({ navn: 'Med dato', startdato: '2026-08-01', slutdato: '2026-08-03' });
+
+    expect(brugshistorik(uid, [udenDato, med]).map((l) => l.tur.navn)).toEqual(['Med dato', 'Uden dato']);
+  });
+
+  it('giver en tom liste uden ture', () => {
+    expect(brugshistorik(uid, [])).toEqual([]);
   });
 });

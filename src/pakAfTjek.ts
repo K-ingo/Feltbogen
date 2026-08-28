@@ -203,6 +203,57 @@ export function brugPrItem(ture: Tur[]): Map<Reference, Brug> {
 }
 
 // ─────────────────────────────────────────────
+// Historikken, tur for tur
+//
+// `brugPrItem` lægger sammen: "brugt 5 af 8 gange". Det er et godt tal, men
+// det siger ikke, *hvornår* — og det er dét, man vil vide om et stykke grej.
+// En sovepose, der lå urørt på de tre seneste ture, er noget andet end en, der
+// lå urørt tre gange for to år siden.
+//
+// Historikken lægges ikke ind på itemet. Den findes allerede: turene ved,
+// hvad der var med, og pak-af-tjekket ved, hvad der blev brugt. En kopi på
+// gearet ville være den samme sandhed to steder — og den ville skulle rettes,
+// hver gang en tur blev slettet eller gjort op på ny.
+// ─────────────────────────────────────────────
+
+export interface Brugslinje {
+  tur: Tur;
+  // null dækker to ting, der ligner hinanden på skærmen men ikke i data: turen
+  // er ikke gjort op, eller gearet står ikke på tjekket — fx fordi det kom med
+  // efter tjekket blev lavet. I begge tilfælde ved appen det ikke, og det er
+  // noget andet end at vide, at det lå urørt.
+  status: PakAfStatus | null;
+  noter: string;
+}
+
+// Turene et stykke grej har været med på, nyeste først, med det udfald turen
+// selv skrev ned.
+//
+// Statussen læses direkte fra linjen og ikke gennem `statusFor`: den falder
+// tilbage på "brugt", når linjen mangler, og det er rigtigt, når man sidder og
+// udfylder tjekket — men en påstand, appen ikke kan holde, når den kigger
+// tilbage.
+export function brugshistorik(itemUid: Reference, ture: Tur[]): Brugslinje[] {
+  return [...ture]
+    .sort((a, b) => slutpunkt(b).localeCompare(slutpunkt(a)))
+    .map((tur) => {
+      const linje = tur.pak_af_tjek?.linjer.find((l) => l.item_uid === itemUid);
+
+      return {
+        tur,
+        status: linje?.status ?? null,
+        noter: linje?.noter ?? ''
+      };
+    });
+}
+
+// Datoen en tur sorteres på. Slutdatoen, hvis den findes — det er dér, turen
+// hører til i rækken. Ture uden datoer havner bagest.
+function slutpunkt(tur: Tur): string {
+  return tur.slutdato || tur.startdato || '';
+}
+
+// ─────────────────────────────────────────────
 // Hvornår mangler tjekket
 // ─────────────────────────────────────────────
 
