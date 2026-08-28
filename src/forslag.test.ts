@@ -140,6 +140,59 @@ describe('tiltroAf', () => {
   });
 });
 
+describe('fordelingsforslag', () => {
+  const deltager = (navn: string, baerer: string[] = []) => ({
+    id: navn.toLowerCase(),
+    navn,
+    overnatning: null,
+    personligt_gear_ids: [],
+    baerer_delt_ids: baerer,
+    person_uid: ''
+  });
+
+  it('siger til når fælles grej ikke har en bærer', () => {
+    const telt = lavItem({ navn: 'Telt', vaegt_g: 3000, delt: true });
+    const tur = lavTur({
+      loese_item_ids: [telt.uid],
+      personer: 2,
+      deltagere: [deltager('Emil'), deltager('Jakob')]
+    });
+
+    const f = forslagTilTur(tur, [], [telt], []).find((x) => x.type === 'fordeling');
+    expect(f?.titel).toBe('Fælles grej uden en bærer');
+    expect(f?.tiltro).toBe('hoej');
+    // Vægten var der hele tiden — den stod bare ikke på nogens ryg.
+    expect(f?.virkning).toEqual({ antal: 1 });
+  });
+
+  it('siger til når den ene bærer det hele', () => {
+    const telt = lavItem({ navn: 'Telt', vaegt_g: 3000, delt: true });
+    const kogegrej = lavItem({ navn: 'Kogegrej', vaegt_g: 800, delt: true });
+    const tur = lavTur({
+      loese_item_ids: [telt.uid, kogegrej.uid],
+      personer: 2,
+      deltagere: [deltager('Emil', [telt.uid, kogegrej.uid]), deltager('Jakob')]
+    });
+
+    const f = forslagTilTur(tur, [], [telt, kogegrej], []).find((x) => x.type === 'fordeling');
+    expect(f?.titel).toBe('Rygsækkene er skæve');
+    expect(f?.virkning?.vaegt_g).toBe(-800);
+    expect(f?.begrundelse).not.toBe('');
+  });
+
+  it('siger ingenting når fordelingen er jævn', () => {
+    const a = lavItem({ navn: 'Telt', vaegt_g: 2000, delt: true });
+    const b = lavItem({ navn: 'Tarp', vaegt_g: 2000, delt: true });
+    const tur = lavTur({
+      loese_item_ids: [a.uid, b.uid],
+      personer: 2,
+      deltagere: [deltager('Emil', [a.uid]), deltager('Jakob', [b.uid])]
+    });
+
+    expect(forslagTilTur(tur, [], [a, b], []).some((f) => f.type === 'fordeling')).toBe(false);
+  });
+});
+
 describe('udenAfviste', () => {
   const tungt = lavItem({ navn: 'Stort telt', vaegt_g: 4000, tags: ['ly'] });
   const let_ = lavItem({ navn: 'Tarp', vaegt_g: 600, tags: ['ly'] });

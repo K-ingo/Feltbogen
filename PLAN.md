@@ -570,9 +570,28 @@ afhængighed den anden vej.
    Flowet erstatter ikke "+ Ny tur". Det står som den primære knap på hjem, når
    der ingen ture er; den tomme tur står ved siden af for dem, der hellere selv
    skriver det ind.
-4. **Gruppefordeling.** En ren fordelingsfunktion, der returnerer et forslag
-   med før/efter ("Jakob +0,8 kg / Emil −0,8 kg") og aldrig skriver selv.
-   Samme mønster som vægtbytterne.
+4. **Gruppefordeling.** ✅ `fordeling.ts`: en ren funktion, der returnerer et
+   forslag med før/efter pr. deltager og de enkelte flytninger, og en
+   `anvendFordeling`, som skærmen kalder, hvis nogen siger ja. Motoren skriver
+   ingenting — samme mønster som vægtbytterne.
+
+   Kun det fælles grej flyttes. En sovepose er personlig, og et forslag om at
+   give sin sovepose væk er ikke et forslag, det er en fejl. Det personlige
+   tæller med i, hvad man bærer, men bliver hvor det er.
+
+   Tildelingen er grådig, tungest først til den, der bærer mindst — og står to
+   lige, beholder den, der bærer tingen i forvejen, sit grej. Uden den regel
+   bytter motoren rundt på alting for ingenting.
+
+   Der er to grunde til at sige noget: fælles grej, ingen har taget, eller en
+   spredning der falder mindst `MINDSTE_GEVINST_G`. Ufordelt grej tæller ikke
+   med i spredningen før — ingen bar det — så spredningen kan stige af at
+   fordele det. Det er ikke en forværring, og forslaget påstår derfor heller
+   ikke en besparelse i det tilfælde.
+
+   Forslaget står to steder: øverst i "Fordel gear" på turen, hvor man kan
+   sige ja lige dér, og som et kort på hjem med `Turmaal`-målet `'fordeling'`,
+   der lander foldet ud samme sted. Se §6.
 5. **Læringssløjfen og de sidste statistikker.** Nætter, besøgte steder,
    turtyper, gennemsnitsvægt, bedste og dårligste grej efter egne stjerner.
    Kun det, der kan forklares ud fra data, der findes.

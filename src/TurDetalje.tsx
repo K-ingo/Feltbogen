@@ -130,6 +130,8 @@ import { useRedigerbar } from './useRedigerbar';
 import { forslagTilTur, udenAfviste, maalFor } from './forslag';
 import type { Forslag } from './forslag';
 import { MAALETS_FANE } from './turmaal';
+import { foreslaaFordeling, anvendFordeling, navnFor } from './fordeling';
+import type { Fordelingsforslag } from './fordeling';
 import type { Turfane, Turmaal } from './turmaal';
 
 interface Props {
@@ -417,6 +419,13 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
   const toggleGearHos = async (deltagerId: string, item: Item) => {
     if (!tur) return;
     await opdater({ deltagere: tildelGear(tur.deltagere, deltagerId, item) });
+  };
+
+  // Motoren regner fordelingen ud og skriver ingenting; skrivningen sker her,
+  // når nogen har sagt ja. Samme mønster som vægtbytterne.
+  const fordelSaadan = async (forslag: Fordelingsforslag) => {
+    if (!tur) return;
+    await opdater(anvendFordeling(tur, forslag));
   };
 
   // null betyder "som turen" — så følger deltageren med, hvis man senere
@@ -764,6 +773,8 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
     </Foldbar>
   );
 
+  const fordelingsforslag = foreslaaFordeling(tur, pakItems);
+
   const fordeling = (
     <Fordeling
       deltagere={tur.deltagere}
@@ -771,6 +782,9 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
       baerer={baererAf(tur)}
       vaegte={vaegtPrDeltager(tur, pakItems)}
       toggle={toggleGearHos}
+      forslag={fordelingsforslag}
+      navn={(id) => navnFor(tur, id)}
+      fordel={() => fordelingsforslag && void fordelSaadan(fordelingsforslag)}
     />
   );
 
@@ -1048,8 +1062,14 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
             {deltagere}
           </Foldbar>
         )}
-        {tur.deltagere.length > 0 && pakItems.length > 0 && (
-          <Foldbar titel="Fordel gear" resume={fordelingsResume(tur, pakItems)}>{fordeling}</Foldbar>
+        {tur.deltagere.length > 0 && pakItems.length > 0 && sigte('fordeling',
+          <Foldbar
+            titel="Fordel gear"
+            resume={fordelingsResume(tur, pakItems, fordelingsforslag)}
+            aabenFra={sigtet === 'fordeling'}
+          >
+            {fordeling}
+          </Foldbar>
         )}
       </>,
       <Foldbar titel="Del med gæster" resume={tur.dele_token ? 'Delt' : 'Ikke delt'}>{deling}</Foldbar>
@@ -2272,12 +2292,15 @@ function Indholdsvalg({ grupper, items, tur, paaTuren, gruppeForslag, savnedeTag
 // Afkrydsningsrække brugt til både grupper og løse items.
 // Hvem slæber hvad. Vægten pr. person er ellers et gennemsnit, og det siger
 // intet om, at én har fået teltet med.
-function Fordeling({ deltagere, pakItems, baerer, vaegte, toggle }: {
+function Fordeling({ deltagere, pakItems, baerer, vaegte, toggle, forslag, navn, fordel }: {
   deltagere: Deltager[];
   pakItems: Item[];
   baerer: Map<Reference, string>;
   vaegte: Baerevaegt[];
   toggle: (deltagerId: string, item: Item) => Promise<void>;
+  forslag: Fordelingsforslag | null;
+  navn: (id: string | null) => string;
+  fordel: () => void;
 }) {
   const [valgt, setValgt] = useState(deltagere[0]?.id ?? '');
   // Fjernes en deltager mens sektionen er åben, falder vi tilbage til den
@@ -2286,6 +2309,8 @@ function Fordeling({ deltagere, pakItems, baerer, vaegte, toggle }: {
 
   return (
     <div>
+      {forslag && <Fordelingskort forslag={forslag} navn={navn} fordel={fordel} />}
+
       <div style={{ display: 'grid', gap: '4px', marginBottom: '14px' }}>
         {vaegte.map((v) => (
           <button
@@ -2361,14 +2386,79 @@ function Fordeling({ deltagere, pakItems, baerer, vaegte, toggle }: {
   );
 }
 
+// Motorens bud på en jævn fordeling.
+//
+// Kortet står øverst i "Fordel gear" og ikke på startskærmen: forslaget kan
+// tages imod lige dér, hvor det står, og ved siden af de afkrydsningsfelter,
+// det ville ændre. Det er landingsreglen taget helt ud — man behøver slet
+// ikke gå nogen steder hen.
+//
+// Det siger både hvad der sker med hver rygsæk og hvilke ting der flytter.
+// Uden tingene ville det være to tal, man skulle tage på ordet.
+function Fordelingskort({ forslag, navn, fordel }: {
+  forslag: Fordelingsforslag;
+  navn: (id: string | null) => string;
+  fordel: () => void;
+}) {
+  return (
+    <div style={{
+      padding: '11px 13px',
+      borderRadius: 'var(--runding-lille)',
+      border: '1px solid var(--accent-border)',
+      background: 'var(--accent-bg)',
+      marginBottom: 'var(--plads-3)'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--plads-2)', flexWrap: 'wrap' }}>
+        <strong style={{ fontSize: '13px' }}>Fordel det fælles grej jævnt</strong>
+        <Hvorfor begrundelse={forslag.begrundelse} />
+      </div>
+
+      <div style={{ display: 'grid', gap: '2px', margin: '8px 0' }}>
+        {forslag.linjer.map((l) => {
+          const aendring = l.efter_g - l.foer_g;
+          return (
+            <div key={l.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', fontSize: '12px' }}>
+              <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.navn}</span>
+              <span style={{ color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>
+                {kg(l.foer_g)} → {kg(l.efter_g)} kg
+                {aendring !== 0 && (
+                  <span style={{ color: aendring < 0 ? 'var(--succes)' : 'var(--tekst-dæmpet)', marginLeft: '6px' }}>
+                    {aendring < 0 ? '−' : '+'}{kg(Math.abs(aendring))}
+                  </span>
+                )}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginBottom: '10px', lineHeight: 1.5 }}>
+        {forslag.flytninger.map((f) => (
+          <div key={f.item.uid}>
+            {f.item.navn || 'Uden navn'}: {navn(f.fra)} → {navn(f.til)}
+          </div>
+        ))}
+      </div>
+
+      <Knap variant="primaer" onClick={fordel}>
+        Fordel sådan
+      </Knap>
+    </div>
+  );
+}
+
 // "3 af 8 fordelt" — nok til at se om der er mere at tage stilling til.
-function fordelingsResume(tur: Tur, pakItems: Item[]): string {
+//
+// Er alt fordelt, men skævt, siger den dét i stedet. "Alt er fordelt" oven
+// over et kort, der siger, at rygsækkene er skæve, læses som to udsagn der
+// modsiger hinanden — og så tror man ikke på nogen af dem.
+function fordelingsResume(tur: Tur, pakItems: Item[], forslag: Fordelingsforslag | null): string {
   const baerer = baererAf(tur);
   const fordelt = pakItems.filter((i) => baerer.has(i.uid)).length;
 
   if (fordelt === 0) return `Intet af ${pakItems.length} fordelt`;
-  if (fordelt === pakItems.length) return 'Alt er fordelt';
-  return `${fordelt} af ${pakItems.length} fordelt`;
+  if (fordelt < pakItems.length) return `${fordelt} af ${pakItems.length} fordelt`;
+  return forslag ? `Skævt: ${kg(forslag.spredning_foer_g)} kg til forskel` : 'Alt er fordelt';
 }
 
 // Delingen af en tur. Linket er det eneste der giver adgang, så det kan

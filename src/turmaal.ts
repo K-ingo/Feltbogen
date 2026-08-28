@@ -28,6 +28,8 @@ export type Turmaal =
   | 'pakkeliste'
   // Hvem der er med, og hvem der bærer hvad.
   | 'deltagere'
+  // Fordelingen af det fælles grej mellem deltagerne.
+  | 'fordeling'
   // Det sidste tjek inden afgang.
   | 'afgangstjek';
 
@@ -37,5 +39,6 @@ export const MAALETS_FANE: Record<Turmaal, Turfane> = {
   vaegt: 'pakning',
   pakkeliste: 'pakkeliste',
   deltagere: 'deltagere',
+  fordeling: 'deltagere',
   afgangstjek: 'undervejs'
 };
