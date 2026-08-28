@@ -2,6 +2,7 @@ import type { Gruppe, Item, Reference, Tur } from './db';
 import { itemsPaaTur, foreslaaGrupper } from './smartMotor';
 import { vaegtresultat, bedsteBytter } from './vaegtbrydere';
 import type { Risiko } from './vaegtbrydere';
+import { foreslaaFordeling } from './fordeling';
 import { foreslaaKopi } from './ligesomSidst';
 
 // Smart-motorens forslag, i én form.
@@ -36,7 +37,7 @@ import { foreslaaKopi } from './ligesomSidst';
 // ud, og tallene står på turens egen skærm, hvor man planlægger dem. Et
 // forslag, der gentager et tal, man kan se i forvejen, er ikke et forslag —
 // og en type, som ingenting producerer, er et løfte, appen ikke holder.
-export type Forslagstype = 'grej' | 'vaegt' | 'historik';
+export type Forslagstype = 'grej' | 'vaegt' | 'historik' | 'fordeling';
 
 // Hvor meget motoren selv tror på det.
 //
@@ -83,6 +84,9 @@ export function forslagTilTur(
   const forslag = [
     ...(paaTuren.length === 0 ? historik(tur, grupper, alleTure) : []),
     ...grej(tur, grupper),
+    // Fordelingen står før vægtbryderne. En skæv fordeling mærkes hele turen;
+    // et par hundrede gram lettere gear gør ikke.
+    ...(paaTuren.length > 0 ? fordeling(tur, paaTuren) : []),
     ...(paaTuren.length > 0 ? vaegt(tur, grupper, ejet, paaTuren) : [])
   ];
 
@@ -127,6 +131,38 @@ function grej(tur: Tur, grupper: Gruppe[]): Forslag[] {
     // rammer, ved mindre om turen end et sæt, hvor alle tre rammer.
     tiltro: tiltroAf(bedste.traf.length / Math.max(1, bedste.gruppe.tags.length)),
     handling: { tag_imod: 'Tag sættet med', afvis: 'Ikke på denne tur' }
+  }];
+}
+
+// Hvem der bærer det fælles grej. Reglerne står i fordeling.ts; her bliver de
+// til et kort.
+function fordeling(tur: Tur, paaTuren: Item[]): Forslag[] {
+  const f = foreslaaFordeling(tur, paaTuren);
+  if (!f) return [];
+
+  const tungestFoer = Math.max(...f.linjer.map((l) => l.foer_g));
+  const tungestEfter = Math.max(...f.linjer.map((l) => l.efter_g));
+  const ufordelt = f.ufordelt_antal > 0;
+
+  return [{
+    id: `fordeling:${tur.uid}`,
+    type: 'fordeling',
+    titel: ufordelt ? 'Fælles grej uden en bærer' : 'Rygsækkene er skæve',
+    detalje: ufordelt
+      ? `${f.ufordelt_antal} ${f.ufordelt_antal === 1 ? 'ting' : 'ting'} på `
+        + `${(f.ufordelt_g / 1000).toFixed(1)} kg er ikke fordelt`
+      : `${(f.spredning_foer_g / 1000).toFixed(1)} kg mellem den tungeste og den letteste`,
+    begrundelse: f.begrundelse,
+    // Er der ufordelt grej, bliver den tungeste rygsæk tungere af at fordele
+    // det — vægten var der hele tiden, den stod bare ikke på nogens ryg. Så
+    // ville et minustal være en påstand, motoren ikke kan holde.
+    virkning: ufordelt
+      ? { antal: f.flytninger.length }
+      : { vaegt_g: tungestEfter - tungestFoer, antal: f.flytninger.length },
+    // Regnestykket er sikkert; om man vil bære sådan, er noget andet. Grej
+    // uden en bærer er der til gengæld ikke noget at diskutere om.
+    tiltro: ufordelt ? 'hoej' : 'mellem',
+    handling: { tag_imod: 'Se fordelingen', afvis: 'Vi bærer som vi gør' }
   }];
 }
 

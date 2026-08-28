@@ -117,11 +117,11 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
       return;
     }
 
-    // Vægtforslaget skal vælges imellem: alternativerne har hver sin risiko,
-    // og det valg hører hjemme på turen. Men det skal lande *på* bytterne og
-    // ikke på turens overblik — et forslag, man selv skal lede efter bagefter,
-    // er ikke et forslag. Se turmaal.ts.
-    aabnTur(tur.id, false, 'vaegt');
+    // De to sidste skal vælges imellem — vægtbytterne har hver sin risiko, og
+    // en fordeling flytter andres rygsække. Det valg hører hjemme på turen.
+    // Men de skal lande *på* stedet og ikke på turens overblik: et forslag,
+    // man selv skal lede efter bagefter, er ikke et forslag. Se turmaal.ts.
+    aabnTur(tur.id, false, f.type === 'fordeling' ? 'fordeling' : 'vaegt');
   };
 
   // Kortet fører hen til den post det handler om — gear eller tur. Findes den
