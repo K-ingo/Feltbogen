@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatterPeriode, kortDag, datoTekst } from './datotekst';
+import { formatterPeriode, kortDag, datoTekst, maanedsnavn } from './datotekst';
 
 describe('formatterPeriode', () => {
   it('skriver måneden én gang inden for samme måned', () => {
@@ -56,5 +56,17 @@ describe('datoTekst', () => {
   it('siger det pænt når tiden ikke kan læses', () => {
     expect(datoTekst('')).toBe('et tidligere tidspunkt');
     expect(datoTekst('for lidt siden')).toBe('et tidligere tidspunkt');
+  });
+});
+
+describe('maanedsnavn', () => {
+  it('skriver måneden ud på dansk', () => {
+    expect(maanedsnavn('2026-09-14')).toBe('september');
+    expect(maanedsnavn('2026-01-02')).toBe('januar');
+  });
+
+  it('giver tom tekst på noget der ikke er en dato', () => {
+    expect(maanedsnavn('')).toBe('');
+    expect(maanedsnavn('til sommer')).toBe('');
   });
 });

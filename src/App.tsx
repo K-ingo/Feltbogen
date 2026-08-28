@@ -48,6 +48,9 @@ const AarsopgoerelseSide = lazy(() => import('./AarsopgoerelseSide'));
 const FeltbogSide = lazy(() => import('./FeltbogSide'));
 const IndstillingerSide = lazy(() => import('./IndstillingerSide'));
 const Rundvisning = lazy(() => import('./Rundvisning'));
+// Første tur-flowet ses én gang, af dem der ikke har en tur endnu. Det har
+// ingen plads i bundtet, alle andre skal hente ned.
+const FoersteTur = lazy(() => import('./FoersteTur'));
 
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
@@ -68,6 +71,10 @@ function App(): ReactElement | null {
   // Rundvisningen kan hentes frem igen fra indstillingerne. Den vises da som
   // opslag: uden kontosalg og uden knapper til at komme i gang.
   const [viserRundvisning, setViserRundvisning] = useState(false);
+  // Det guidede flow til den første tur. Kladden ligger i basen, så den
+  // overlever både at man lukker flowet og at man lukker appen — her holdes
+  // kun styr på, om skærmen er fremme. Se foersteTur.ts.
+  const [viserFoersteTur, setViserFoersteTur] = useState(false);
   const [fane, setFane] = useState<Fane>('dashboard');
   // Valget ligger her og ikke i listeskærmene, fordi dashboardet også åbner
   // både gear og ture. nyOprettet følger med, så detaljeskærmen kan rydde en
@@ -230,6 +237,22 @@ function App(): ReactElement | null {
   // forbi for en bruger der har set den for længst.
   if (onboardingSet === undefined) return null;
 
+  // Flowet lægger sig over alt andet: der er ét spørgsmål ad gangen, og en
+  // bundnavigation ved siden af ville være en femte ting at tage stilling til.
+  if (viserFoersteTur) {
+    return (
+      <FoersteTur
+        fortryd={() => setViserFoersteTur(false)}
+        faerdig={(id) => {
+          setViserFoersteTur(false);
+          // Turen er lige oprettet, men ikke tom: den har både navn og
+          // svarene med. Derfor ikke ny=true — den skal ikke ryddes væk igen.
+          aabnTur(id);
+        }}
+      />
+    );
+  }
+
   if (viserRundvisning) {
     return (
       <Rundvisning
@@ -338,6 +361,7 @@ function App(): ReactElement | null {
           aabnAar={setValgtAar}
           nytItem={nytItem}
           nyTur={nyTur}
+          foersteTur={() => setViserFoersteTur(true)}
         />
       );
     case 'folk': return <FolkSide fane={fane} skift={skiftFane} />;

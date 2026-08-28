@@ -39,3 +39,10 @@ export function datoTekst(iso: string): string {
   const d = new Date(iso);
   return Number.isNaN(d.getTime()) ? 'et tidligere tidspunkt' : d.toLocaleDateString('da-DK');
 }
+
+// "2026-09-14" → "september". Måneden alene, til de steder hvor en tur
+// navngives efter hvornår den ligger frem for efter hvilken dag.
+export function maanedsnavn(dato: string): string {
+  const d = new Date(dato);
+  return Number.isNaN(d.getTime()) ? '' : MAANEDER[d.getMonth()];
+}
