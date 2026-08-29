@@ -11,10 +11,14 @@ import {
   sletItem,
   opretGruppe,
   opretTur,
+  opretSted,
+  opretPerson,
+  opretBillede,
   sendAltUsendt,
   sendAfventende,
   hentFraPocketBase,
-  afstemMedServer
+  afstemMedServer,
+  usendtAntal
 } from './sync';
 import { lavItem, lavGruppe, lavTur } from './test/data';
 
@@ -25,6 +29,9 @@ beforeEach(async () => {
   await db.items.clear();
   await db.grupper.clear();
   await db.ture.clear();
+  await db.steder.clear();
+  await db.personer.clear();
+  await db.billeder.clear();
   await db.slettede.clear();
   pbMock.reset();
   vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -43,7 +50,7 @@ describe('opret', () => {
     expect(pbMock.ids('items')).toEqual(['pb1']);
   });
 
-  it('gemmer lokalt selvom PocketBase er nede', async () => {
+  it('gemmer lokalt med usendt_aendring selvom PocketBase er nede', async () => {
     pbMock.offline = true;
 
     const id = await opretItem(lavItem({ navn: 'Offline-item' }));
@@ -51,6 +58,7 @@ describe('opret', () => {
     const lokal = await db.items.get(id);
     expect(lokal?.navn).toBe('Offline-item');
     expect(lokal?.pb_id).toBeUndefined();
+    expect(lokal?.usendt_aendring).toBe(true);
   });
 });
 
@@ -361,6 +369,37 @@ describe('slettede poster genopstår ikke', () => {
     // Gruppen har samme pb-id-mønster, men må ikke rammes af item-sporet.
     expect(await db.items.count()).toBe(0);
     expect(await db.grupper.count()).toBe(1);
+  });
+});
+
+describe('usendtAntal', () => {
+  it('tæller usendte fra alle synkroniserbare samlinger (items, grupper, ture, steder, personer, billeder)', async () => {
+    pbMock.offline = true;
+
+    await opretItem(lavItem({ navn: 'Usendt item' }));
+    await opretGruppe(lavGruppe({ navn: 'Usendt gruppe' }));
+    await opretTur(lavTur({ navn: 'Usendt tur' }));
+    await opretSted({ navn: 'Usendt sted', koordinater: null, adresse: '', tags: [], vurdering: null, noter: '', oprettet: new Date(), aendret: new Date() });
+    await opretPerson({ navn: 'Usendt person', email: '', standard_overnatning: null, noter: '', oprettet: new Date(), aendret: new Date() });
+    await opretBillede({
+      navn: 'foto.jpg',
+      tur_uid: 't1',
+      tid: new Date().toISOString(),
+      bredde: 100,
+      hoejde: 100,
+      byte: 500,
+      blob: new Blob(['a']),
+      url: '',
+      original_blob: null,
+      original_url: '',
+      original_byte: 0,
+      beskrivelse: '',
+      oprettet: new Date(),
+      aendret: new Date()
+    });
+
+    const antal = await usendtAntal();
+    expect(antal).toBe(6);
   });
 });
 

@@ -746,7 +746,11 @@ async function opret<T extends Post>(
   samling: Samling<T>,
   post: Omit<T, 'id' | 'uid'>
 ): Promise<number> {
-  const id = await samling.tabel.add({ ...post, uid: crypto.randomUUID() } as T);
+  const id = await samling.tabel.add({
+    ...post,
+    uid: crypto.randomUUID(),
+    usendt_aendring: true
+  } as T);
   efterSkrivning?.();
   await synkroniser(samling, id);
   return id;
@@ -955,6 +959,7 @@ async function tagServerens<T extends Post>(
   const fraServer = samling.fraPb(r);
 
   await samling.tabel.update(lokal.id!, (gemt) => {
+    const lokalBillede = lokal as Partial<Billede>;
     Object.assign(gemt, fraServer, {
       id: lokal.id,
       // uid er identiteten andre poster peger på. Mangler uid-feltet i
@@ -965,6 +970,14 @@ async function tagServerens<T extends Post>(
       server_aendret: serverAendret,
       usendt_aendring: false
     });
+    // Bevar lokal blob/original_blob for billeder, da servermodellen har dem som null.
+    const gemtBillede = gemt as Partial<Billede>;
+    if (lokalBillede.blob && !gemtBillede.blob) {
+      gemtBillede.blob = lokalBillede.blob;
+    }
+    if (lokalBillede.original_blob && !gemtBillede.original_blob) {
+      gemtBillede.original_blob = lokalBillede.original_blob;
+    }
   });
 }
 
@@ -1226,12 +1239,15 @@ export function afstemMedServer(): Promise<void> {
 // Hvor meget der venter på at komme op. Bruges af indstillingerne, så man kan
 // se om det er sikkert at lukke appen efter en tur uden dækning.
 export async function usendtAntal(): Promise<number> {
-  const [items, grupper, ture, sletninger] = await Promise.all([
+  const [items, grupper, ture, steder, personer, billeder, sletninger] = await Promise.all([
     db.items.filter((p) => !p.pb_id || !!p.usendt_aendring).count(),
     db.grupper.filter((p) => !p.pb_id || !!p.usendt_aendring).count(),
     db.ture.filter((p) => !p.pb_id || !!p.usendt_aendring).count(),
+    db.steder.filter((p) => !p.pb_id || !!p.usendt_aendring).count(),
+    db.personer.filter((p) => !p.pb_id || !!p.usendt_aendring).count(),
+    db.billeder.filter((p) => !p.pb_id || !!p.usendt_aendring).count(),
     db.slettede.count()
   ]);
 
-  return items + grupper + ture + sletninger;
+  return items + grupper + ture + steder + personer + billeder + sletninger;
 }
