@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { journalen, dagnummer, antalSkribenter, nytBidrag } from './turjournal';
+import { journalen, dagnummer, antalSkribenter, nytBidrag, skrivBidrag } from './turjournal';
 import type { Gaestesnapshot } from './gaest';
 import type { Deltagelse } from './deltagelse';
 
@@ -11,8 +11,8 @@ const snapshot = (over: Partial<Gaestesnapshot> = {}): Gaestesnapshot => ({
   delt_den: '2026-09-17T10:00:00.000Z', ...over
 });
 
-const deltager = (navn: string, journal: { id: string; tid: string; tekst: string }[], user = navn): Deltagelse => ({
-  pb_id: `d-${user}`, tur: 'pb-tur', user, navn, medbragt: [], baerer: [], journal
+const deltager = (navn: string, journal: { id: string; tid: string; tekst: string; billeder: string[] }[], user = navn): Deltagelse => ({
+  pb_id: `d-${user}`, tur: 'pb-tur', user, navn, medbragt: [], baerer: [], journal, billedfiler: []
 });
 
 describe('dagnummer', () => {
@@ -41,7 +41,7 @@ describe('journalen', () => {
       { id: 'e1', tid: '2026-09-18T18:00:00.000Z', tekst: 'Slog lejr.', skrevet_af: '' }
     ]});
     const d = [deltager('Jakob', [
-      { id: 'j1', tid: '2026-09-19T11:26:00.000Z', tekst: 'Sindssygt flot udsigt herfra.' }
+      { id: 'j1', tid: '2026-09-19T11:26:00.000Z', tekst: 'Sindssygt flot udsigt herfra.', billeder: [] }
     ])];
 
     const dage = journalen(s, d, undefined, s.ejer);
@@ -54,8 +54,8 @@ describe('journalen', () => {
 
   it('sorterer inden for dagen i den rækkefølge det skete', () => {
     const d = [deltager('Jakob', [
-      { id: 'b', tid: '2026-09-19T15:00:00.000Z', tekst: 'Sent' },
-      { id: 'a', tid: '2026-09-19T08:00:00.000Z', tekst: 'Tidligt' }
+      { id: 'b', tid: '2026-09-19T15:00:00.000Z', tekst: 'Sent', billeder: [] },
+      { id: 'a', tid: '2026-09-19T08:00:00.000Z', tekst: 'Tidligt', billeder: [] }
     ])];
 
     expect(journalen(snapshot(), d)[0].indgange.map((i) => i.tekst)).toEqual(['Tidligt', 'Sent']);
@@ -63,8 +63,8 @@ describe('journalen', () => {
 
   it('markerer ens egne indgange, og kun dem', () => {
     const d = [
-      deltager('Jakob', [{ id: 'j1', tid: '2026-09-19T11:00:00.000Z', tekst: 'Min' }], 'u-jakob'),
-      deltager('Sofie', [{ id: 's1', tid: '2026-09-19T12:00:00.000Z', tekst: 'Hendes' }], 'u-sofie')
+      deltager('Jakob', [{ id: 'j1', tid: '2026-09-19T11:00:00.000Z', tekst: 'Min', billeder: [] }], 'u-jakob'),
+      deltager('Sofie', [{ id: 's1', tid: '2026-09-19T12:00:00.000Z', tekst: 'Hendes', billeder: [] }], 'u-sofie')
     ];
 
     const indgange = journalen(snapshot(), d, 'u-jakob')[0].indgange;
@@ -98,7 +98,7 @@ describe('journalen', () => {
 describe('antalSkribenter', () => {
   it('tæller hvor mange der har skrevet med', () => {
     const s = snapshot({ journal: [{ id: 'e1', tid: '2026-09-18T18:00:00.000Z', tekst: 'Ejerens', skrevet_af: '' }] });
-    const d = [deltager('Jakob', [{ id: 'j1', tid: '2026-09-19T11:00:00.000Z', tekst: 'Hans' }])];
+    const d = [deltager('Jakob', [{ id: 'j1', tid: '2026-09-19T11:00:00.000Z', tekst: 'Hans', billeder: [] }])];
 
     expect(antalSkribenter(journalen(s, d, undefined, s.ejer))).toBe(2);
     expect(antalSkribenter(journalen(snapshot(), []))).toBe(0);
@@ -107,7 +107,7 @@ describe('antalSkribenter', () => {
 
 describe('nytBidrag', () => {
   it('trimmer teksten og sætter tiden', () => {
-    const b = nytBidrag('  Sindssygt flot  ', new Date('2026-09-19T11:26:00.000Z'));
+    const b = nytBidrag('  Sindssygt flot  ', [], new Date('2026-09-19T11:26:00.000Z'));
     expect(b.tekst).toBe('Sindssygt flot');
     expect(b.tid).toBe('2026-09-19T11:26:00.000Z');
   });
@@ -116,5 +116,76 @@ describe('nytBidrag', () => {
   // blev sendt igen efter en fejlet skrivning.
   it('giver hver indgang sit eget id', () => {
     expect(nytBidrag('a').id).not.toBe(nytBidrag('a').id);
+  });
+
+  it('bærer billedernes filnavne med', () => {
+    expect(nytBidrag('a', ['en.jpg', 'to.jpg']).billeder).toEqual(['en.jpg', 'to.jpg']);
+    expect(nytBidrag('a').billeder).toEqual([]);
+  });
+});
+
+describe('skrivBidrag', () => {
+  const min = (over: Partial<Deltagelse> = {}): Deltagelse => ({
+    pb_id: 'd1', tur: 'pb-tur', user: 'u1', navn: 'Jakob',
+    medbragt: [], baerer: [], journal: [], billedfiler: [], ...over
+  });
+  const fil = () => new File(['x'], 'billede.jpg', { type: 'image/jpeg' });
+
+  it('skriver teksten når der ikke er billeder', async () => {
+    const sendt: Deltagelse[] = [];
+    const svar = await skrivBidrag(min(), 'Rimfrost', [], async (d) => { sendt.push(d); return d; });
+
+    expect(svar).toBe('ok');
+    expect(sendt).toHaveLength(1);
+    expect(sendt[0].journal[0].tekst).toBe('Rimfrost');
+  });
+
+  // Serveren bestemmer selv filnavnene, så indgangen kan først pege på dem,
+  // når uploaden er sket.
+  it('sender filerne først og lader indgangen pege på navnene', async () => {
+    const kald: { antalFiler: number }[] = [];
+    const svar = await skrivBidrag(min(), 'Udsigt', [fil()], async (d, filer) => {
+      kald.push({ antalFiler: filer.length });
+      return filer.length > 0 ? { ...d, billedfiler: ['billede_ab12.jpg'] } : d;
+    });
+
+    expect(svar).toBe('ok');
+    expect(kald.map((k) => k.antalFiler)).toEqual([1, 0]);
+  });
+
+  it('tæller kun de billeder med, som kom til ved den her skrivning', async () => {
+    let skrevet: Deltagelse | null = null;
+    await skrivBidrag(min({ billedfiler: ['gammelt.jpg'] }), 'Nyt', [fil()], async (d, filer) => {
+      if (filer.length > 0) return { ...d, billedfiler: ['gammelt.jpg', 'nyt_cd34.jpg'] };
+      skrevet = d;
+      return d;
+    });
+
+    expect(skrevet!.journal[0].billeder).toEqual(['nyt_cd34.jpg']);
+  });
+
+  // Mangler billeder-feltet i PocketBase, dropper serveren filerne og svarer
+  // 200. Teksten skal stadig op, og det skal siges, at billederne ikke kom.
+  it('siger til, når teksten kom op men billederne ikke gjorde', async () => {
+    const svar = await skrivBidrag(min(), 'Udsigt', [fil()], async (d) => d);
+    expect(svar).toBe('kun_tekst');
+  });
+
+  // En note, man har skrevet i felten, skal ikke gå tabt, fordi et billede
+  // ikke ville op.
+  it('skriver teksten alligevel, når uploaden fejler', async () => {
+    let skrevet: Deltagelse | null = null;
+    const svar = await skrivBidrag(min(), 'Udsigt', [fil()], async (d, filer) => {
+      if (filer.length > 0) return null;
+      skrevet = d;
+      return d;
+    });
+
+    expect(svar).toBe('kun_tekst');
+    expect(skrevet!.journal[0].tekst).toBe('Udsigt');
+  });
+
+  it('svarer fejl, når selve skrivningen ikke lykkes', async () => {
+    expect(await skrivBidrag(min(), 'Udsigt', [], async () => null)).toBe('fejl');
   });
 });

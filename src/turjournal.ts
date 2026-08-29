@@ -1,6 +1,6 @@
 import type { GaesteJournal, Gaestesnapshot } from './gaest';
-import type { Deltagelse } from './deltagelse';
-import { visningsnavn } from './deltagelse';
+import type { Bidrag, Deltagelse } from './deltagelse';
+import { visningsnavn, billedurl } from './deltagelse';
 
 // Turens journal, som den ser ud, når flere har været med til at skrive den.
 //
@@ -31,6 +31,10 @@ export interface Journalindgang {
   navn: string;
   // Om det er læserens egen indgang. Kun de egne kan rettes.
   min: boolean;
+  // Adresserne på indgangens billeder, klar til at vise. Tomme på ejerens
+  // egne indgange: hendes billeder ligger i turens galleri og ikke på en
+  // deltagelsesrække.
+  billeder: string[];
 }
 
 export interface Journaldag {
@@ -58,14 +62,18 @@ export function journalen(
       tid: n.tid,
       tekst: n.tekst,
       navn: n.skrevet_af || ejerens_navn,
-      min: false
+      min: false,
+      billeder: []
     })),
     ...deltagelser.flatMap((d) => d.journal.map((b) => ({
       id: b.id,
       tid: b.tid,
       tekst: b.tekst,
       navn: visningsnavn(d),
-      min: !!mig && d.user === mig
+      min: !!mig && d.user === mig,
+      // Filerne ligger på den række, indgangen står på — derfor slås de op
+      // her, hvor rækken er ved hånden.
+      billeder: b.billeder.map((f) => billedurl(d, f)).filter(Boolean)
     })))
   ];
 
@@ -113,6 +121,53 @@ export function antalSkribenter(dage: Journaldag[]): number {
 
 // En ny indgang på ens egen række. Id'et er stabilt fra det øjeblik, den
 // skrives, så den samme indgang ikke kan komme op to gange.
-export function nytBidrag(tekst: string, nu: Date = new Date()) {
-  return { id: crypto.randomUUID(), tid: nu.toISOString(), tekst: tekst.trim() };
+//
+// Billederne er de filnavne, serveren gav filerne. De kendes først, når
+// uploaden er sket — derfor skrives en indgang med billeder i to trin. Se
+// `skrivBidrag`.
+export function nytBidrag(tekst: string, billeder: string[] = [], nu: Date = new Date()): Bidrag {
+  return { id: crypto.randomUUID(), tid: nu.toISOString(), tekst: tekst.trim(), billeder };
+}
+
+// Hvad der kom ud af at skrive en indgang.
+//
+// `kun_tekst` er den vigtige: teksten kom op, billederne gjorde ikke. Det sker,
+// hvis `billeder`-feltet mangler i PocketBase — så dropper serveren filerne og
+// svarer 200, som om alt gik godt. Uden det her ville billederne forsvinde
+// uden et ord. Se POCKETBASE.md.
+export type Skriveresultat = 'ok' | 'kun_tekst' | 'fejl';
+
+// Skriver en journalindgang på deltagerens egen række.
+//
+// To trin, og det er ikke til at komme udenom: PocketBase bestemmer selv,
+// hvad filerne kommer til at hedde, og indgangen skal pege på de navne. Så
+// filerne sendes først, og navnene læses af svaret, før indgangen skrives.
+//
+// Slår første trin fejl, skrives teksten alligevel. En note, man har skrevet i
+// felten, skal ikke gå tabt, fordi et billede ikke ville op.
+export async function skrivBidrag(
+  min: Deltagelse,
+  tekst: string,
+  filer: File[],
+  gem: (d: Deltagelse, filer: File[]) => Promise<Deltagelse | null>,
+  nu: Date = new Date()
+): Promise<Skriveresultat> {
+  let raekke = min;
+  let navne: string[] = [];
+
+  if (filer.length > 0) {
+    const medFiler = await gem(min, filer);
+    if (medFiler) {
+      raekke = medFiler;
+      navne = medFiler.billedfiler.filter((n) => !min.billedfiler.includes(n));
+    }
+  }
+
+  const skrevet = await gem(
+    { ...raekke, journal: [...raekke.journal, nytBidrag(tekst, navne, nu)] },
+    []
+  );
+
+  if (!skrevet) return 'fejl';
+  return filer.length > 0 && navne.length === 0 ? 'kun_tekst' : 'ok';
 }

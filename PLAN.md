@@ -635,11 +635,25 @@ skal aldrig kunne nå inventaret — det er dokumentets eget §7. Delt er derfor
 *fanerækken* (`Fanerakke` i `ui.tsx`) og det visuelle sprog, ikke skærmen.
 Samme mentale model, uden at gæstekoden får en vej ind i ejerens data.
 
-**Billeder fra deltagere er ikke med endnu.** Journalen tager tekst. Billeder
-kræver filupload til en samling, gæsten må skrive i, plus komprimering og en
-sync-kø for en tur, der ikke er ens egen. Det er den næste bid, og den er stor
-nok til at stå alene.
+**Billeder fra deltagere** kom med i anden omgang. De hører til journalen, som
+dokumentets §6 siger, og ikke i en menu for sig: så får de kontekst — hvem,
+hvornår, hvilken dag — uden at nogen skal skrive den.
 
-Og én ting jeg ikke kan gøre herfra: `turdeltagelse` skal have et
-**`journal`**-felt af typen json, ellers forsvinder deltagernes indgange
-lydløst på vej op. Se POCKETBASE.md.
+Filerne ligger på deltagelsesrækken, samme sted som teksten, så de deler
+sikkerhedsgrænse. Filnavnene bestemmer PocketBase selv, og indgangen skal pege
+på dem; derfor skrives en indgang med billeder i to trin — filerne først,
+navnene læst af svaret, indgangen bagefter. Går første trin galt, skrives
+teksten alligevel: en note, man har skrevet i felten, skal ikke gå tabt, fordi
+et billede ikke ville op.
+
+**Gæsten fik ejerens pakkeliste.** Afkrydsning, fremdrift og "markér alle" som
+på turskærmen. Afkrydsningen ligger lokalt på telefonen og ikke på turen: "har
+jeg lagt den i tasken" er ens eget spørgsmål om ens egen taske, og de andre har
+ikke brug for at vide, hvor langt man er. Det er også derfor, den ikke koster
+et felt i PocketBase.
+
+Og to ting jeg ikke kan gøre herfra: `turdeltagelse` skal have et
+**`journal`**-felt (json) og et **`billeder`**-felt (file, multiple), ellers
+forsvinder deltagernes bidrag lydløst på vej op. Se POCKETBASE.md. Appen siger
+selv til om det manglende billedfelt; det manglende journalfelt kan den ikke se
+forskel på fra "der var ingen indgange".

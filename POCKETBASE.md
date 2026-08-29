@@ -431,13 +431,25 @@ står herunder.
 Denne har **ikke** `uid` — den synkroniseres ikke som de andre.
 
 `tur` Relation → `ture` (single) · `user` Relation → `users` (single) ·
-`navn` text · `medbragt` json · `baerer` json · `journal` json
+`navn` text · `medbragt` json · `baerer` json · `journal` json ·
+`billeder` file (multiple)
 
-> **`journal` er nyt.** Mangler feltet, kan deltagerne skrive i turens journal
-> på skærmen, men indgangene forsvinder på vej op — PocketBase dropper ukendte
-> felter uden at sige noget. Tilføj et **json**-felt ved navn `journal` til
-> `turdeltagelse`, før I tager den i brug. Reglerne skal ikke ændres: en
-> deltager skriver stadig kun i sin egen række.
+> **`journal` og `billeder` er nye.** Uden dem kan deltagerne skrive og vælge
+> billeder på skærmen, men det forsvinder på vej op — PocketBase dropper
+> ukendte felter uden at sige noget.
+>
+> Tilføj to felter til `turdeltagelse`, før I tager journalen i brug:
+>
+> | Navn | Type | Indstillinger |
+> |---|---|---|
+> | `journal` | JSON | — |
+> | `billeder` | File | **Max files: 20** · Max size 5 MB · Mime types: `image/jpeg`, `image/png`, `image/webp` |
+>
+> Reglerne skal ikke ændres: en deltager skriver stadig kun i sin egen række.
+>
+> Appen siger selv til, hvis `billeder` mangler — så gemmes noten, og der står
+> "billederne kom ikke op". Mangler `journal`, forsvinder hele indgangen, og
+> det opdager man kun ved at kigge efter.
 
 **API-regler.** List og View — gæster skal kunne se hinandens bidrag på den
 samme tur:

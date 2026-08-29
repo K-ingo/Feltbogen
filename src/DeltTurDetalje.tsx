@@ -12,7 +12,8 @@ import DeltTurVisning from './DeltTurVisning';
 import MitGrej from './MitGrej';
 import { datoTekst } from './datotekst';
 import { mitNavn } from './pb';
-import { nytBidrag } from './turjournal';
+import { skrivBidrag } from './turjournal';
+import type { Skriveresultat } from './turjournal';
 import { DetaljeHeader, Indlaeser } from './ui';
 import { layout } from './layout';
 
@@ -65,8 +66,8 @@ function DeltTurDetalje({ deltTurId, tilbage }: Props) {
     tilbage();
   };
 
-  const skrivMig = async (naeste: Deltagelse): Promise<Deltagelse | null> => {
-    const gemt = await gemDeltagelse(naeste, token);
+  const skrivMig = async (naeste: Deltagelse, filer: File[] = []): Promise<Deltagelse | null> => {
+    const gemt = await gemDeltagelse(naeste, token, filer);
     if (gemt.slags !== 'ok') return null;
 
     setDeltagelser((foer) => [...foer.filter((d) => d.user !== gemt.data.user), gemt.data]);
@@ -75,11 +76,11 @@ function DeltTurDetalje({ deltTurId, tilbage }: Props) {
 
   // Samme skrivning som på gæstesiden: indgangen lægges på ens egen
   // deltagelsesrække. Se turjournal.ts.
-  const skrivJournal = async (tekst: string): Promise<boolean> => {
-    if (!bruger || !turPbId) return false;
+  const skrivJournal = async (tekst: string, filer: File[]): Promise<Skriveresultat> => {
+    if (!bruger || !turPbId) return 'fejl';
 
     const min = minDeltagelse(deltagelser, bruger.id) ?? nyDeltagelse(turPbId, bruger.id, mitNavn());
-    return !!(await skrivMig({ ...min, journal: [...min.journal, nytBidrag(tekst)] }));
+    return skrivBidrag(min, tekst, filer, (d, f) => skrivMig(d, f));
   };
 
   const meldFra = async (pbId: string): Promise<boolean> => {
@@ -97,6 +98,7 @@ function DeltTurDetalje({ deltTurId, tilbage }: Props) {
         deltagelser={deltagelser}
         mig={bruger?.id}
         ejer={deltTur.snapshot.ejer}
+        token={token}
         kanMelde={!!bruger && !!turPbId}
         opdater={{
           hent: () => void hentForfra(),

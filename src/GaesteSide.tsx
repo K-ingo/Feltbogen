@@ -7,7 +7,8 @@ import {
 import type { Deltagelse } from './deltagelse';
 import { useAuth } from './useAuth';
 import { mitNavn } from './pb';
-import { nytBidrag } from './turjournal';
+import { skrivBidrag } from './turjournal';
+import type { Skriveresultat } from './turjournal';
 import AuthSide from './AuthSide';
 import DeltTurVisning from './DeltTurVisning';
 import MitGrej from './MitGrej';
@@ -78,8 +79,8 @@ function GaesteSide({ token, tilAppen }: Props) {
 
   // Ens egen række skrives til serveren og lægges så ind i den liste alle
   // ser — så står ens eget grej på pakkelisten med det samme.
-  const skrivMig = async (naeste: Deltagelse): Promise<Deltagelse | null> => {
-    const svar = await gemDeltagelse(naeste, token);
+  const skrivMig = async (naeste: Deltagelse, filer: File[] = []): Promise<Deltagelse | null> => {
+    const svar = await gemDeltagelse(naeste, token, filer);
     if (svar.slags !== 'ok') return null;
 
     setDeltagelser((foer) => [
@@ -91,11 +92,11 @@ function GaesteSide({ token, tilAppen }: Props) {
 
   // En journalindgang skrives på ens egen deltagelsesrække — den eneste post
   // på turen, en gæst har adgang til. Se turjournal.ts.
-  const skrivJournal = async (tekst: string): Promise<boolean> => {
-    if (!bruger || !turPbId) return false;
+  const skrivJournal = async (tekst: string, filer: File[]): Promise<Skriveresultat> => {
+    if (!bruger || !turPbId) return 'fejl';
 
     const min = minDeltagelse(deltagelser, bruger.id) ?? nyDeltagelse(turPbId, bruger.id, mitNavn());
-    return !!(await skrivMig({ ...min, journal: [...min.journal, nytBidrag(tekst)] }));
+    return skrivBidrag(min, tekst, filer, (d, f) => skrivMig(d, f));
   };
 
   const meldFra = async (pbId: string): Promise<boolean> => {
@@ -133,6 +134,7 @@ function GaesteSide({ token, tilAppen }: Props) {
             deltagelser={deltagelser}
             mig={bruger.id}
             ejer={snapshot.ejer}
+            token={token}
             kanMelde
             skrivJournal={skrivJournal}
             mitGrej={

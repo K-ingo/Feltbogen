@@ -11,7 +11,7 @@ import {
 import type { Deltagelse } from './deltagelse';
 
 const deltager = (over: Partial<Deltagelse> = {}): Deltagelse => ({
-  pb_id: 'd1', tur: 'pb-tur', user: 'bruger1', navn: 'Emil', medbragt: [], baerer: [], journal: [], ...over
+  pb_id: 'd1', tur: 'pb-tur', user: 'bruger1', navn: 'Emil', medbragt: [], baerer: [], journal: [], billedfiler: [], ...over
 });
 
 beforeEach(() => pbMock.reset());
@@ -49,13 +49,15 @@ describe('laesDeltagelse', () => {
     const d = laesDeltagelse({
       id: 'd1', tur: 'pb-tur', user: 'u1', navn: 'Sofie',
       medbragt: [{ navn: 'Tarp', vaegt_g: 500 }], baerer: ['u-telt'],
-      journal: [{ id: 'b1', tid: '2026-09-19T11:26:00.000Z', tekst: 'Sindssygt flot udsigt herfra.' }]
+      journal: [{ id: 'b1', tid: '2026-09-19T11:26:00.000Z', tekst: 'Sindssygt flot udsigt herfra.', billeder: ['a.jpg'] }],
+      billeder: ['a.jpg']
     } as never);
 
     expect(d).toEqual({
       pb_id: 'd1', tur: 'pb-tur', user: 'u1', navn: 'Sofie',
       medbragt: [{ navn: 'Tarp', vaegt_g: 500 }], baerer: ['u-telt'],
-      journal: [{ id: 'b1', tid: '2026-09-19T11:26:00.000Z', tekst: 'Sindssygt flot udsigt herfra.' }]
+      journal: [{ id: 'b1', tid: '2026-09-19T11:26:00.000Z', tekst: 'Sindssygt flot udsigt herfra.', billeder: ['a.jpg'] }],
+      billedfiler: ['a.jpg']
     });
   });
 
