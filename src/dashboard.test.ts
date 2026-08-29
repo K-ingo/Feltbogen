@@ -506,13 +506,24 @@ describe('syncstatus ved fejl', () => {
     expect(syncstatus(3, true, false, fejl).tilstand).toBe('kun_lokalt');
   });
 
+  // "Gemt på denne enhed" er sandt og samtidig let at læse som en
+  // betryggelse. Den, der tror hun synkroniserer, skal kunne se, at hun ikke
+  // gør — og komme videre derfra, hvor hun står.
+  it('siger uden en konto både hvad det betyder og hvad man kan gøre', () => {
+    const status = syncstatus(0, true, false);
+    expect(status.tilstand).toBe('kun_lokalt');
+    expect(status.forklaring).toContain('sendes ikke op');
+    expect(status.kanLoggeInd).toBe(true);
+  });
+
   // Teksten og knappen skal komme fra den samme beslutning. Ellers kan linjen
   // sige én ting og knappen under den noget andet.
   it('tilbyder kun login ved den fejl, det hjælper på', () => {
     expect(syncstatus(3, true, true, udloebet).kanLoggeInd).toBe(true);
     expect(syncstatus(3, true, true, fejl).kanLoggeInd).toBe(false);
     expect(syncstatus(3, false, true, udloebet).kanLoggeInd).toBeUndefined();
-    expect(syncstatus(3, true, false, null).kanLoggeInd).toBeUndefined();
+    // Uden konto er der ikke en fejl, men der er stadig et login at tilbyde.
+    expect(syncstatus(3, true, false, null).tilstand).toBe('kun_lokalt');
   });
 
   it('opfører sig som før uden en fejl', () => {
@@ -573,10 +584,12 @@ describe('sidstTilfoejede', () => {
 
 describe('syncstatus', () => {
   it('siger at data ligger lokalt når der ikke er en konto', () => {
-    expect(syncstatus(7, true, false)).toEqual({
-      tilstand: 'kun_lokalt',
-      tekst: 'Gemt på denne enhed'
-    });
+    const status = syncstatus(7, true, false);
+    expect(status.tilstand).toBe('kun_lokalt');
+    expect(status.tekst).toBe('Gemt på denne enhed');
+    // Køen nævnes ikke: uden en konto er de syv ændringer ikke noget der
+    // venter, de er bare det der står på enheden.
+    expect(status.tekst).not.toContain('7');
   });
 
   it('kalder ikke usendte ændringer en fejl når man er offline', () => {

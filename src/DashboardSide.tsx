@@ -431,12 +431,15 @@ function Synclinje({ status, tilLogin }: { status: Syncstatus; tilLogin: () => v
         </div>
       )}
 
-      {/* Kun den ene fejl kan man selv gøre noget ved med det samme. Resten
-          retter sig af sig selv eller kræver, at nogen kigger på serveren —
-          og en knap, der ikke hjælper, er værre end ingen knap. */}
+      {/* Knappen står, hvor der er noget at gøre: uden konto, og når en
+          session er udløbet. Resten retter sig af sig selv eller kræver, at
+          nogen kigger på serveren — og en knap, der ikke hjælper, er værre
+          end ingen knap. */}
       {status.kanLoggeInd && (
         <div style={{ marginTop: 'var(--plads-2)', marginLeft: '15px' }}>
-          <Knap onClick={tilLogin}>Log ind igen</Knap>
+          <Knap onClick={tilLogin}>
+            {status.tilstand === 'kun_lokalt' ? 'Log ind for at synkronisere' : 'Log ind igen'}
+          </Knap>
         </div>
       )}
     </div>
