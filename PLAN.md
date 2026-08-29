@@ -657,3 +657,28 @@ Og to ting jeg ikke kan gøre herfra: `turdeltagelse` skal have et
 forsvinder deltagernes bidrag lydløst på vej op. Se POCKETBASE.md. Appen siger
 selv til om det manglende billedfelt; det manglende journalfelt kan den ikke se
 forskel på fra "der var ingen indgange".
+
+### Billederne begge veje, og en pakkeliste der er ens egen
+
+**Ejeren ser nu deltagernes bidrag.** Deres noter står under hendes egne i
+turloggen, og deres billeder under hendes egne i billedsektionen — begge steder
+adskilt under "Fra deltagerne", fordi de ikke er hendes at rette, sætte som
+forside eller slette. Reglen i PocketBase siger det samme: `user =
+@request.auth.id` på Update og Delete.
+
+Det krævede ingen ny vej ind. `hentDeltagelser` hentede allerede rækkerne til
+delingssektionen, og de bærer nu journal og billeder med. Jeg skrev først en
+`hentBidragSomEjer` og opdagede så, at den var overflødig.
+
+**Gæstens pakkeliste er hendes egen.** Den viste hele turens grej; nu viser den
+det, hun selv har skrevet ind, og det, hun har fået at bære — enten fordi hun
+selv har meldt sig, eller fordi ejeren har fordelt det til hende, i hånden
+eller ved at tage imod motorens forslag. Hele listen ligger under Deltagere,
+hvor man kan se, hvordan byrden ligger.
+
+Koblingen sker på navn og ikke på id: snapshottet bærer navne, fordi en gæst
+ikke skal kunne se ejerens deltager-id'er. Navnet tages fra kontoen og ikke fra
+deltagelsesrækken — den findes ikke, før man har skrevet sig på, og indtil da
+ville man ellers ikke kunne se det gear, man har fået tildelt. Hedder man noget
+andet på turen end på sin konto, får man ikke sit gear at se, og så er det
+navnet, der skal rettes.

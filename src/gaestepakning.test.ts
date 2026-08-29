@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { linjenoegle, laesPakkede, veksl, fremdrift, fremdriftstekst, alle, noegleFor } from './gaestepakning';
+import { linjenoegle, laesPakkede, veksl, fremdrift, fremdriftstekst, alle, noegleFor, mineLinjer } from './gaestepakning';
 import type { Pakkelinje } from './smartMotor';
 
 const linje = (over: Partial<Pakkelinje> = {}): Pakkelinje => ({
@@ -99,5 +99,35 @@ describe('alle', () => {
   it('giver nøglen på hver linje', () => {
     expect(alle([linje({ uid: 'i1' }), linje({ navn: 'Kniv', vaegt_g: 90 })]))
       .toEqual(['i1', 'fri:Kniv:90']);
+  });
+});
+
+describe('mineLinjer', () => {
+  const l = (navn: string, baerer: string) => linje({ uid: navn, navn, baerer });
+
+  it('tager det ejeren har fordelt til én', () => {
+    const alle = [l('Telt', 'Jakob'), l('Økse', 'Sofie'), l('Tarp', '')];
+    expect(mineLinjer(alle, 'Jakob').map((x) => x.navn)).toEqual(['Telt']);
+  });
+
+  it('er ligeglad med store og små bogstaver og mellemrum', () => {
+    expect(mineLinjer([l('Telt', 'jakob ')], ' Jakob').map((x) => x.navn)).toEqual(['Telt']);
+  });
+
+  // To der har taget den samme ting står som "Emil og Jakob". Den er begges.
+  it('tager en ting, to har meldt sig til', () => {
+    expect(mineLinjer([l('Telt', 'Emil og Jakob')], 'Jakob')).toHaveLength(1);
+    expect(mineLinjer([l('Telt', 'Emil og Jakob')], 'Emil')).toHaveLength(1);
+  });
+
+  it('tager ikke noget, ingen har fået', () => {
+    expect(mineLinjer([l('Tarp', '')], 'Jakob')).toEqual([]);
+  });
+
+  // Uden et navn er der ikke noget at matche på, og så ville et tomt
+  // bærer-felt ellers regnes som ens eget.
+  it('giver tomt uden et navn', () => {
+    expect(mineLinjer([l('Tarp', '')], '')).toEqual([]);
+    expect(mineLinjer([l('Telt', 'Jakob')], '   ')).toEqual([]);
   });
 });

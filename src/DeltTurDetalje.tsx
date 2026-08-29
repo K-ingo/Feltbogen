@@ -98,6 +98,7 @@ function DeltTurDetalje({ deltTurId, tilbage }: Props) {
         deltagelser={deltagelser}
         mig={bruger?.id}
         ejer={deltTur.snapshot.ejer}
+        mitNavn={mitNavn()}
         token={token}
         kanMelde={!!bruger && !!turPbId}
         opdater={{

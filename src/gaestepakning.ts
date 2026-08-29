@@ -84,6 +84,34 @@ export function fremdriftstekst(f: Gaestefremdrift): string {
   return `${f.pakket} af ${f.ialt} pakket`;
 }
 
+// Gæstens egen bunke.
+//
+// Pakkelisten skal svare på ét spørgsmål: hvad skal *jeg* have i tasken. Hele
+// turens grej er en anden liste — den hører til under Deltagere, hvor man kan
+// se, hvordan byrden ligger.
+//
+// Tre ting er ens egne, og de kommer tre steder fra:
+//
+// Det man selv har skrevet, man tager med. Det står på ens egen række.
+//
+// Det fælles, man selv har meldt sig til at bære. Også ens egen række.
+//
+// Og det, ejeren har fordelt til én — enten i hånden eller ved at tage imod
+// motorens forslag. Det står i snapshottet som et navn på gearet, for det er
+// alt, en gæst får at vide om de andres fordeling.
+//
+// Navnematchet er skrøbeligt, og det er med vilje synligt her: snapshottet
+// bærer navne og ikke id'er, fordi en gæst ikke skal kunne se ejerens
+// deltager-id'er. Hedder man noget andet på turen, end man hedder på sin
+// konto, får man ikke sit gear at se — og så er det navnet, der skal rettes.
+export function mineLinjer(linjer: Pakkelinje[], mitNavn: string): Pakkelinje[] {
+  const mig = mitNavn.trim().toLowerCase();
+  if (!mig) return [];
+
+  return linjer.filter((l) =>
+    l.baerer.split(' og ').some((navn) => navn.trim().toLowerCase() === mig));
+}
+
 // Alle linjer krydset af, eller listen tømt. Samme to knapper som ejeren har.
 export function alle(linjer: Pakkelinje[]): string[] {
   return linjer.map(linjenoegle);

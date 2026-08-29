@@ -115,7 +115,7 @@ import type { Pakkefremdrift } from './pakning';
 import { useValg, useKropsdata, useTekst, PAK_AF_NIVEAU_VALG, AFGANGS_SKABELON } from './indstillinger';
 import { nytDeletoken, lavSnapshot, deleLink, linkadvarsel, linkvaert } from './gaest';
 import { formatterPeriode } from './datotekst';
-import { hentDeltagelser, baererePrGear, visningsnavn } from './deltagelse';
+import { hentDeltagelser, baererePrGear, visningsnavn, deltagerbilleder } from './deltagelse';
 import type { Deltagelse } from './deltagelse';
 import { layout } from './layout';
 import { useErDesktop, useErBredskaerm } from './useMedie';
@@ -254,6 +254,9 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
 
   // Bidragene ligger på serveren og ikke i den lokale base — de kommer fra
   // andres enheder. Uden forbindelse vises turen bare uden dem.
+  //
+  // De samme rækker bærer deltagernes journalindgange og billeder, så ejeren
+  // kan se, hvad de har skrevet og lagt op, uden at hente noget ekstra.
   const token = tur?.dele_token ?? '';
   const turPbId = tur?.pb_id ?? '';
   useEffect(() => {
@@ -493,6 +496,7 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
 
   const gemAfgang = (nyt: AfgangsTjek) => void opdater({ afgangs_tjek: nyt });
   const gemNoter = (nye: Feltnote[]) => void opdater({ feltnoter: nye });
+
 
   const gaaPaaTur = async () => {
     await sikrAfgangsTjek();
@@ -834,7 +838,7 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
   const feltnoteSektion = (
     <Foldbar
       titel="Turlog"
-      resume={feltnoteResume(tur.feltnoter ?? [])}
+      resume={turlogResume(feltnoteResume(tur.feltnoter ?? []), deltagelser)}
       // På en tur der er i gang er det den man skal have fat i.
       aabenFra={tur.status === 'aktiv'}
     >
@@ -844,6 +848,10 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
         saet={(id, t) => gemNoter(saetFeltnote(tur.feltnoter ?? [], id, t))}
         fjern={(id) => gemNoter(fjernFeltnote(tur.feltnoter ?? [], id))}
       />
+      {/* Det de andre har skrevet. Det står under ens egne noter og ikke
+          blandet ind i dem: deres er deres, og de kan hverken rettes eller
+          slettes herfra — reglen i PocketBase siger det samme. */}
+      <Deltagernoter bidrag={deltagelser} />
     </Foldbar>
   );
 
@@ -857,9 +865,14 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
     </Foldbar>
   );
 
+  // Resuméet skal ikke sige "1 billede" over en sektion, der siger "ingen
+  // billeder endnu". Tallet foran er ejerens egne; deltagernes står for sig,
+  // fordi de også ligger for sig og ikke kan sættes som forside.
+  const fraDeltagere = deltagerbilleder(deltagelser).length;
+  const fraTekst = fraDeltagere > 0 ? `${fraDeltagere} fra deltagerne` : '';
   const billedResume = antalBilleder === 0
-    ? 'Ingen'
-    : `${antalBilleder} ${antalBilleder === 1 ? 'billede' : 'billeder'}`;
+    ? (fraTekst || 'Ingen')
+    : [`${antalBilleder} ${antalBilleder === 1 ? 'billede' : 'billeder'}`, fraTekst].filter(Boolean).join(' · ');
 
   const billedSektion = (
     <Foldbar
@@ -869,6 +882,10 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
       aabenFra={tur.status === 'aktiv'}
     >
       <BilledSektion tur={tur} saetHero={(uid) => void opdater({ hero_billede: uid })} />
+      {/* Deltagernes billeder ligger på deres egne rækker og ikke i ejerens
+          billedtabel. De vises her, hvor man kigger på turens billeder, men
+          de kan ikke sættes som forside eller slettes: de er ikke hendes. */}
+      <Deltagerbilleder billeder={deltagerbilleder(deltagelser)} />
     </Foldbar>
   );
 
@@ -2327,6 +2344,77 @@ function Fordeling({ deltagere, pakItems, baerer, vaegte, toggle, forslag, navn,
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+// "3 indgange · 2 fra deltagerne" — så man kan se, at der er kommet noget,
+// uden at folde loggen ud.
+function turlogResume(egne: string, bidrag: Deltagelse[]): string {
+  const fra = bidrag.reduce((n, d) => n + d.journal.length, 0);
+  if (fra === 0) return egne;
+  return `${egne} · ${fra} fra deltagerne`;
+}
+
+// Det deltagerne har skrevet i turens journal.
+//
+// De står for sig og ikke blandet ind i ejerens egne noter. To grunde: de er
+// ikke hendes at rette, og det er en oplysning i sig selv, hvem der har været
+// med til at skrive turen ned.
+function Deltagernoter({ bidrag }: { bidrag: Deltagelse[] }) {
+  const indgange = bidrag
+    .flatMap((d) => d.journal.map((b) => ({ ...b, navn: visningsnavn(d), fra: d })))
+    .sort((a, b) => b.tid.localeCompare(a.tid));
+
+  if (indgange.length === 0) return null;
+
+  return (
+    <div style={{ marginTop: 'var(--plads-5)', paddingTop: 'var(--plads-4)', borderTop: '1px solid var(--border-svag)' }}>
+      <SektionsTitel>Fra deltagerne</SektionsTitel>
+      <div style={{ display: 'grid', gap: 'var(--plads-3)' }}>
+        {indgange.map((i) => (
+          <div key={i.id} style={{
+            padding: '10px 12px',
+            borderRadius: 'var(--runding-lille)',
+            border: '1px solid var(--border-svag)',
+            background: 'var(--bg-forhoejet)'
+          }}>
+            <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginBottom: '4px' }}>
+              {i.navn} · {tidstekst(i.tid)}
+            </div>
+            <div style={{ fontSize: '13px', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>{i.tekst}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Billeder deltagerne har lagt op. De ligger på deres egne rækker, ikke i
+// ejerens billedtabel — derfor kan de hverken sættes som forside eller
+// slettes herfra. De er ikke hendes.
+function Deltagerbilleder({ billeder }: { billeder: { url: string; navn: string; tid: string }[] }) {
+  if (billeder.length === 0) return null;
+
+  return (
+    <div style={{ marginTop: 'var(--plads-5)', paddingTop: 'var(--plads-4)', borderTop: '1px solid var(--border-svag)' }}>
+      <SektionsTitel>Fra deltagerne</SektionsTitel>
+      <div style={{ display: 'flex', gap: 'var(--plads-2)', flexWrap: 'wrap' }}>
+        {billeder.map((b) => (
+          <a key={b.url} href={b.url} target="_blank" rel="noreferrer noopener" title={`${b.navn} · ${tidstekst(b.tid)}`}>
+            <img
+              src={b.url}
+              alt={b.navn}
+              loading="lazy"
+              style={{
+                width: '96px', height: '96px', objectFit: 'cover',
+                borderRadius: 'var(--runding-lille)', display: 'block',
+                background: 'var(--bg-forhoejet)'
+              }}
+            />
+          </a>
+        ))}
+      </div>
     </div>
   );
 }

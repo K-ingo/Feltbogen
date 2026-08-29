@@ -134,6 +134,7 @@ function GaesteSide({ token, tilAppen }: Props) {
             deltagelser={deltagelser}
             mig={bruger.id}
             ejer={snapshot.ejer}
+            mitNavn={mitNavn()}
             token={token}
             kanMelde
             skrivJournal={skrivJournal}

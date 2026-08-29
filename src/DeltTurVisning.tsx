@@ -4,7 +4,7 @@ import type { GaesteBillede, GaesteItem, Gaestesnapshot } from './gaest';
 import { ledigtFaelles, gaestetitel } from './gaest';
 import type { Deltagelse } from './deltagelse';
 import { baererePrGear, samletMedbragtVaegt, visningsnavn } from './deltagelse';
-import { vejrIkonKode, linjerEfterPerson, medDeltagernes, samletVaegt, linjeAfMedbragt } from './smartMotor';
+import { vejrIkonKode, linjerEfterPerson, samletVaegt, linjeAfMedbragt } from './smartMotor';
 import type { Pakkelinje, Pakkeafsnit } from './smartMotor';
 import { formatterPeriode, kortDag, datoTekst } from './datotekst';
 import { Chip, Fanerakke, Infokort, Knap, SektionsTitel, Tekstomraade } from './ui';
@@ -21,7 +21,8 @@ import {
   hentPakkede,
   fremdrift as pakkefremdrift,
   fremdriftstekst as pakketekst,
-  alle as allePakkede
+  alle as allePakkede,
+  mineLinjer
 } from './gaestepakning';
 import type { Journaldag } from './turjournal';
 
@@ -30,7 +31,7 @@ import type { Journaldag } from './turjournal';
 // hvor det kommer fra basen. De skal se ens ud — det er den samme tur.
 
 function DeltTurVisning({
-  snapshot, deltagelser = [], mig, opdater, mitGrej, foed, kanMelde, ejer, skrivJournal, token
+  snapshot, deltagelser = [], mig, opdater, mitGrej, foed, kanMelde, ejer, mitNavn, skrivJournal, token
 }: {
   snapshot: Gaestesnapshot;
   // Det de andre har skrevet sig på for. Tom når turen læses fra en gemt kopi
@@ -57,6 +58,14 @@ function DeltTurVisning({
   // Ejerens navn, til hendes egne journalindgange. Snapshottet kender det
   // ikke, og en indgang uden afsender ser ud, som om ingen skrev den.
   ejer?: string;
+  // Gæstens eget navn, som det står på hendes konto.
+  //
+  // Det er dét, ejerens fordeling peger på: snapshottet bærer navne og ikke
+  // id'er, fordi en gæst ikke skal kunne se ejerens deltager-id'er. Navnet
+  // skal derfor komme udefra og ikke fra deltagelsesrækken — den findes ikke,
+  // før man har skrevet sig på, og indtil da ville man ikke kunne se det
+  // gear, man har fået tildelt.
+  mitNavn?: string;
   // Skriver en indgang i turens journal. Mangler den, kan journalen kun
   // læses — sådan er det, når man ikke er logget ind, eller når turen blev
   // gemt, før man kunne skrive sig på.
@@ -69,7 +78,6 @@ function DeltTurVisning({
   const k = snapshot.koordinater;
   const baerere = baererePrGear(deltagelser);
   const medbragtVaegt = samletMedbragtVaegt(deltagelser);
-  const [efterPerson, setEfterPerson] = useState(false);
   const [fane, setFane] = useState<Gaestefane>('overblik');
 
   // Turens historie: ejerens indgange fra snapshottet og deltagernes fra
@@ -125,19 +133,31 @@ function DeltTurVisning({
       linjeAfMedbragt(g.navn, g.vaegt_g, visningsnavn(d))))
   ];
 
-  const pakning = pakkefremdrift(pakkede, linjer);
+  // Pakkelisten er gæstens egen bunke og ikke hele turens grej: den svarer på
+  // "hvad skal jeg have i tasken". Resten står under Deltagere, hvor man kan
+  // se, hvordan byrden ligger. Se gaestepakning.ts.
+  const mit = mineLinjer(linjer, minRaekke ? visningsnavn(minRaekke) : (mitNavn ?? ''));
+  const pakning = pakkefremdrift(pakkede, mit);
 
   // Ejerens egen opdeling, med deltagernes grej lagt til sidst — eller alt
   // samlet efter hvem der tager det med, som er den man pakker efter.
-  const afsnit: Pakkeafsnit[] = efterPerson
-    ? linjerEfterPerson(linjer)
-    : medDeltagernes(
-        snapshot.afsnit.map((a) => ({
-          titel: a.titel,
-          linjer: linjer.filter((l) => l.egen && a.items.some((i) => i.uid === l.uid && i.navn === l.navn))
-        })).filter((a) => a.linjer.length > 0),
-        linjer
-      );
+  // Ejerens egen opdeling, med kun det der er mit i hver gruppe. Grupperne er
+  // stadig hendes — det er dem, gearet er pakket i.
+  const mineAfsnit: Pakkeafsnit[] = snapshot.afsnit
+    .map((a) => ({
+      titel: a.titel,
+      linjer: mit.filter((l) => l.egen && a.items.some((i) => i.uid === l.uid && i.navn === l.navn))
+    }))
+    .filter((a) => a.linjer.length > 0);
+
+  // Det man selv har skrevet ind, står til sidst: det er ikke en af ejerens
+  // grupper, og det skal ikke lade som om.
+  const mitEget = mit.filter((l) => !l.egen);
+  if (mitEget.length > 0) mineAfsnit.push({ titel: 'Det du selv tager med', linjer: mitEget });
+
+  // Hele turens grej, samlet efter hvem der tager det med — det er den, der
+  // står under Deltagere.
+  const alleAfsnit: Pakkeafsnit[] = linjerEfterPerson(linjer);
 
   return (
     <div style={{ display: 'grid', gap: '18px' }}>
@@ -252,26 +272,12 @@ function DeltTurVisning({
       {fane === 'pakkeliste' && (
         <div style={{ display: 'grid', gap: '18px' }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
-              <SektionsTitel>Pakkeliste</SektionsTitel>
-              {/* Hele listen er det man planlægger efter; ens egen bunke er det
-                  man pakker efter. Begge dele skal kunne ses. */}
-              <button
-                onClick={() => setEfterPerson(!efterPerson)}
-                style={{
-                  background: 'transparent', border: '1px solid var(--border)', borderRadius: '16px',
-                  padding: '4px 12px', fontSize: '11px', cursor: 'pointer', color: 'var(--tekst-dæmpet)',
-                  marginBottom: '10px'
-                }}
-              >
-                {efterPerson ? 'Vis efter gruppe' : 'Vis efter person'}
-              </button>
-            </div>
+            <SektionsTitel>Din pakkeliste</SektionsTitel>
 
             {/* Den samme status som på ejerens pakkeliste. Afkrydsningen er
                 gæstens egen og ligger på hendes telefon — se
                 gaestepakning.ts. */}
-            {linjer.length > 0 && (
+            {mit.length > 0 && (
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 'var(--plads-2)', flexWrap: 'wrap',
                 marginBottom: 'var(--plads-3)', paddingBottom: 'var(--plads-3)',
@@ -285,14 +291,14 @@ function DeltTurVisning({
                 </span>
                 {pakning.faerdig
                   ? <Knap onClick={() => void saetPakkede([])}>Ryd afkrydsning</Knap>
-                  : <Knap onClick={() => void saetPakkede(allePakkede(linjer))}>Markér alle som pakket</Knap>}
+                  : <Knap onClick={() => void saetPakkede(allePakkede(mit))}>Markér alle som pakket</Knap>}
               </div>
             )}
 
-            {afsnit.length === 0 ? (
-              <div style={{ fontSize: '13px', color: 'var(--tekst-svag)' }}>Der er ikke valgt gear endnu.</div>
+            {mineAfsnit.length === 0 ? (
+              <Tomliste linjer={linjer.length} kanMelde={!!kanMelde} />
             ) : (
-              afsnit.map((a) => (
+              mineAfsnit.map((a) => (
                 <div key={a.titel} style={{ marginBottom: '14px' }}>
                   <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', fontWeight: 600, marginBottom: '5px' }}>
                     {gaestetitel(a.titel)}
@@ -326,15 +332,11 @@ function DeltTurVisning({
                         </span>
                       </span>
                       <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '12px', whiteSpace: 'nowrap' }}>
-                        {/* I "efter person" står navnet allerede som overskrift. */}
-                        {!efterPerson && l.baerer && <span style={{ marginRight: '8px' }}>{l.baerer}</span>}
-                        {/* "delt" sagde, hvad det var, og ikke hvad der manglede.
-                            Forskellen på "det tager Emil" og "det tager ingen" er
-                            den vigtigste på listen for en gæst. */}
-                        {l.delt && !l.baerer && (
-                          <span style={{ fontSize: '10px', marginRight: '6px', color: 'var(--advarsel)' }}>
-                            ingen bærer
-                          </span>
+                        {/* Alt på listen er ens eget, så bæreren behøver ikke
+                            stå ved hver linje. Men fælles grej er noget, andre
+                            regner med, at man har med. */}
+                        {l.delt && (
+                          <span style={{ fontSize: '10px', marginRight: '6px', color: 'var(--tekst-svag)' }}>fælles</span>
                         )}
                         {l.vaegt_g} g
                       </span>
@@ -356,6 +358,10 @@ function DeltTurVisning({
       {fane === 'deltagere' && (
         <div style={{ display: 'grid', gap: '18px' }}>
           <Gruppen linjer={linjer} navne={alleDeltagere} />
+          {/* Hele turens grej, samlet efter hvem der tager det med. Det er den
+              liste, man planlægger efter — pakkelisten er den, man pakker
+              efter, og den er ens egen. */}
+          <Helelisten afsnit={alleAfsnit} />
         </div>
       )}
 
@@ -427,6 +433,61 @@ function Gruppen({ linjer, navne }: { linjer: Pakkelinje[]; navne: string[] }) {
               ? 'intet endnu'
               : `${r.antal} ${r.antal === 1 ? 'ting' : 'ting'} · ${(r.vaegt / 1000).toFixed(2)} kg`}
           </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Pakkelisten er tom, fordi der ikke er noget til én. Det kan betyde to ting,
+// og de kræver hver sit — så de skal ikke sige det samme.
+function Tomliste({ linjer, kanMelde }: { linjer: number; kanMelde: boolean }) {
+  return (
+    <div style={{ fontSize: '13px', color: 'var(--tekst-svag)', lineHeight: 1.6 }}>
+      {linjer === 0
+        ? 'Der er ikke valgt gear til turen endnu.'
+        : kanMelde
+          ? 'Du har ikke fået noget at bære endnu. Under Deltagere kan du se, hvad de andre tager — og under Mit grej kan du melde dig til noget af det fælles.'
+          : 'Du har ikke fået noget at bære endnu. Under Deltagere kan du se, hvad de andre tager med.'}
+    </div>
+  );
+}
+
+// Hele turens grej, samlet efter hvem der tager det med.
+function Helelisten({ afsnit }: { afsnit: Pakkeafsnit[] }) {
+  if (afsnit.length === 0) return null;
+
+  return (
+    <div>
+      <SektionsTitel>Alt grej på turen</SektionsTitel>
+      {afsnit.map((a) => (
+        <div key={a.titel} style={{ marginBottom: '14px' }}>
+          <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', fontWeight: 600, marginBottom: '5px' }}>
+            {gaestetitel(a.titel)}
+          </div>
+          {a.linjer.map((l, n) => (
+            <div
+              key={`${l.navn}-${n}`}
+              style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+                gap: '10px', padding: '6px 0', borderBottom: '1px solid var(--border-svag)',
+                fontSize: '13px'
+              }}
+            >
+              <span style={{ minWidth: 0 }}>{l.navn || 'Uden navn'}</span>
+              <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                {l.delt && !l.baerer && (
+                  <span style={{ fontSize: '10px', marginRight: '6px', color: 'var(--advarsel)' }}>
+                    ingen bærer
+                  </span>
+                )}
+                {l.vaegt_g} g
+              </span>
+            </div>
+          ))}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: '11px', color: 'var(--tekst-svag)', paddingTop: '4px' }}>
+            {(samletVaegt(a.linjer) / 1000).toFixed(2)} kg
+          </div>
         </div>
       ))}
     </div>
