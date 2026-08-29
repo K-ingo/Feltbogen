@@ -29,6 +29,7 @@ import type { Fane } from './Skal';
 import { useErDesktop, useErOnline } from './useMedie';
 import { Knap, Chip, Infokort, SektionsTitel, ListeRaekke, TomListe, Hvorfor, Forslagskort } from './ui';
 import { useTekst } from './indstillinger';
+import { useSyncfejl } from './syncfejl';
 import { laesKladde, KLADDE_NOEGLE } from './foersteTur';
 
 interface Props {
@@ -39,6 +40,9 @@ interface Props {
   aabnAar: (aar: number) => void;
   nytItem: () => void;
   nyTur: () => void;
+  // Sync kan fejle, fordi sessionen er udløbet. Så skal linjen nederst kunne
+  // føre hen til login — se syncfejl.ts og turmaal.ts.
+  tilLogin: () => void;
   // Det guidede flow til den første tur. Se foersteTur.ts.
   foersteTur: () => void;
 }
@@ -55,7 +59,7 @@ const MAKS_SIDST_TILFOEJET = 5;
 // De fire første spørgsmål skal kunne besvares på under fem sekunder. Derfor
 // er der loft over både handlinger og forslag: en startskærm der ruller, er
 // en opgaveliste, og en opgaveliste lukker man.
-function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur, foersteTur }: Props) {
+function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur, foersteTur, tilLogin }: Props) {
   const erDesktop = useErDesktop();
 
   const { erLoggetInd } = useAuth();
@@ -82,7 +86,8 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
   // forlader skærmen, og det er også dét, den lover.
   const [afviste, setAfviste] = useState<Set<string>>(new Set());
   const forslag = udenAfviste(forslagTilTur(tur, grupper, items, ture), afviste);
-  const sync = syncstatus(usendt, online, erLoggetInd);
+  const syncfejl = useSyncfejl();
+  const sync = syncstatus(usendt, online, erLoggetInd, syncfejl);
   const aar = tureIAar(ture);
   const nyeste = sidstTilfoejede(items, MAKS_SIDST_TILFOEJET);
   const opgoerelse = aarsopgoerelseAtSe(ture);
@@ -268,7 +273,7 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
           )}
         </section>
 
-        <Synclinje status={sync} />
+        <Synclinje status={sync} tilLogin={tilLogin} />
       </div>
     </Skal>
   );
@@ -385,32 +390,55 @@ function Situationskort({ situation, items, grupper, aabn, opret, foersteTur, ha
   );
 }
 
-function Synclinje({ status }: { status: Syncstatus }) {
+// Statuslinjen nederst på startskærmen.
+//
+// Den må ikke ligne en fejl, når den ikke er en: ændringer der ligger og
+// venter uden dækning er den normale tilstand for en app, man bruger i skoven.
+// Men når det *er* en fejl, skal den både ses og forklares — ellers står
+// linjen og siger "på vej op" om noget, der aldrig kommer op. Se syncfejl.ts.
+function Synclinje({ status, tilLogin }: { status: Syncstatus; tilLogin: () => void }) {
   const prik = {
     synkroniseret: 'var(--succes)',
     venter: 'var(--accent)',
     offline: 'var(--tekst-svag)',
-    kun_lokalt: 'var(--tekst-svag)'
+    kun_lokalt: 'var(--tekst-svag)',
+    fejl: 'var(--fejl)'
   }[status.tilstand];
+
+  const erFejl = status.tilstand === 'fejl';
 
   return (
     <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 'var(--plads-2)',
       paddingTop: 'var(--plads-3)',
       borderTop: '1px solid var(--border-svag)',
       fontSize: 'var(--skrift-lille)',
-      color: 'var(--tekst-svag)'
+      color: erFejl ? 'var(--tekst-dæmpet)' : 'var(--tekst-svag)'
     }}>
-      <span style={{
-        width: '7px',
-        height: '7px',
-        borderRadius: 'var(--runding-pille)',
-        background: prik,
-        flexShrink: 0
-      }} />
-      {status.tekst}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--plads-2)' }}>
+        <span style={{
+          width: '7px',
+          height: '7px',
+          borderRadius: 'var(--runding-pille)',
+          background: prik,
+          flexShrink: 0
+        }} />
+        {status.tekst}
+      </div>
+
+      {status.forklaring && (
+        <div style={{ marginTop: '6px', marginLeft: '15px', lineHeight: 1.5 }}>
+          {status.forklaring}
+        </div>
+      )}
+
+      {/* Kun den ene fejl kan man selv gøre noget ved med det samme. Resten
+          retter sig af sig selv eller kræver, at nogen kigger på serveren —
+          og en knap, der ikke hjælper, er værre end ingen knap. */}
+      {status.kanLoggeInd && (
+        <div style={{ marginTop: 'var(--plads-2)', marginLeft: '15px' }}>
+          <Knap onClick={tilLogin}>Log ind igen</Knap>
+        </div>
+      )}
     </div>
   );
 }

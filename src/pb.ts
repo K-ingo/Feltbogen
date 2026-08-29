@@ -1,4 +1,5 @@
 import PocketBase from 'pocketbase';
+import { noterFejl, rydFejl } from './syncfejl';
 
 // Overstyres med VITE_PB_URL i .env — fallback er den nuværende Railway-instans,
 // så appen virker uden opsætning indtil vi flytter til egen server.
@@ -14,6 +15,14 @@ export interface Bruger {
   name?: string;
   created: string;
   updated: string;
+}
+
+// Hvilken server appen faktisk taler med. Den er sat af `VITE_PB_URL` ved
+// build, og en forkert værdi er ikke til at se på nogen anden måde: appen
+// opfører sig ens, den bliver bare ved med at ringe til den forkerte adresse.
+// Derfor står den på indstillingsskærmen.
+export function serveradresse(): string {
+  return PB_URL;
 }
 
 export function erLoggetInd(): boolean {
@@ -61,6 +70,9 @@ export async function logInd(email: string, password: string): Promise<Bruger> {
 
 export function logUd(): void {
   pb.authStore.clear();
+  // En fejl fra den forrige session skal ikke blive stående og bede en, der
+  // selv har logget ud, om at logge ind igen.
+  void rydFejl();
 }
 
 // Forlænger sessionen ved opstart og når forbindelsen kommer tilbage.
@@ -78,9 +90,20 @@ export async function fornyLogin(): Promise<void> {
 
   try {
     await pb.collection('users').authRefresh();
+    return;
   } catch (e) {
     const status = (e as { status?: number })?.status;
-    if (status === 401 || status === 403) pb.authStore.clear();
+    // En netværksfejl rører ikke sessionen: står man uden dækning, skal man
+    // blive logget ind.
+    if (status !== 401 && status !== 403) return;
+
+    // Serveren afviste tokenet. Sessionen ryddes — og det skal noteres, før
+    // den er væk: bagefter står appen som "uden konto", og så ville det se ud
+    // som om man aldrig havde været logget ind. Det var netop det, der gjorde
+    // en udløbet session tavs: alt holdt op med at komme op, og skærmen sagde
+    // "Gemt på denne enhed". Se syncfejl.ts.
+    await noterFejl(e);
+    pb.authStore.clear();
   }
 }
 // Navnet man optræder med for de andre på en delt tur. E-mailen er ikke et

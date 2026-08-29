@@ -16,6 +16,9 @@ import { logUd, gemNavn } from './pb';
 import { hentNyesteUdgave, byggetekst } from './opdatering';
 import { useAuth } from './useAuth';
 import { afstemMedServer, fjernDubletter, usendtAntal, uidFeltMangler } from './sync';
+import { serveradresse } from './pb';
+import { useSyncfejl, FEJLTEKST } from './syncfejl';
+import { datoTekst } from './datotekst';
 import {
   lavSikkerhedskopi,
   tilJson,
@@ -77,6 +80,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
   const personerIBasen = useLiveQuery(() => db.personer.toArray()) ?? [];
   // Tælles om når basen ændrer sig, så tallet ikke står og lyver efter en sync.
   const usendt = useLiveQuery(usendtAntal, [], 0);
+  const syncfejl = useSyncfejl();
   const pakAfNiveau = useValg(PAK_AF_NIVEAU_VALG, PAK_AF_NIVEAU, 'let');
   const krop = useKropsdata();
   const afgangsSkabelon = laesSkabelon(useTekst(AFGANGS_SKABELON));
@@ -210,6 +214,11 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
               vaerdi={usendt === 0 ? 'Intet' : `${usendt} ${usendt === 1 ? 'ændring' : 'ændringer'}`}
               fremhaev={usendt > 0}
             />
+            {/* Adressen står her, fordi en forkert værdi ellers er usynlig:
+                appen opfører sig ens, den ringer bare til den forkerte server.
+                En .env på maskinen eller en variabel i udrulningen kan sætte
+                den, og så er det her, det kan ses. */}
+            <Raekke label="Server" vaerdi={serveradresse()} />
 
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
               <Knap variant="primaer" onClick={synkroniser} disabled={arbejder !== null}>
@@ -221,6 +230,25 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
             </div>
 
             <Kvittering besked={syncBesked} />
+
+            {/* Den seneste fejl, hvis der var en. Baggrundssync fangede sine
+                fejl og skrev dem i konsollen — hvor ingen kigger. Se
+                syncfejl.ts. */}
+            {syncfejl && (
+              <Advarsel>
+                {FEJLTEKST[syncfejl.art]}
+                {syncfejl.detalje && (
+                  <div style={{ marginTop: '6px', opacity: 0.8 }}>
+                    Serveren sagde: {syncfejl.detalje}
+                  </div>
+                )}
+                {syncfejl.hvornaar && (
+                  <div style={{ marginTop: '6px', opacity: 0.8 }}>
+                    Sidst forsøgt {datoTekst(syncfejl.hvornaar)}
+                  </div>
+                )}
+              </Advarsel>
+            )}
 
             {uidFeltMangler() && (
               <Advarsel>

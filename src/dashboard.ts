@@ -4,6 +4,8 @@ import { filtrererTure } from './statistik';
 import { manglerPakAfTjek, dageSidenSlut, PAK_AF_FRIST_DAGE } from './pakAfTjek';
 import type { Turmaal } from './turmaal';
 import { udlaanteItems, dageUdlaant, erOverskredet, laengde, LANGT_UDLAAN_DAGE } from './udlaan';
+import { FEJLTEKST, kraeverLogin } from './syncfejl';
+import type { Syncfejl } from './syncfejl';
 import { forfaldne, forfaldstekst, VARSEL_DAGE } from './vedligehold';
 
 // Logikken bag startskærmen. Alt herinde er rene funktioner, så rækkefølgen og
@@ -442,29 +444,75 @@ function garantiFrist(dage: number): string {
 // skoven, og ikke noget der er gået galt.
 // ─────────────────────────────────────────────
 
-export type SyncTilstand = 'synkroniseret' | 'venter' | 'offline' | 'kun_lokalt';
+export type SyncTilstand = 'synkroniseret' | 'venter' | 'offline' | 'kun_lokalt' | 'fejl';
 
 export interface Syncstatus {
   tilstand: SyncTilstand;
   tekst: string;
+  // Kun sat ved 'fejl': det, brugeren kan gøre ved det. Se syncfejl.ts.
+  forklaring?: string;
+  // Om skærmen skal tilbyde et login. Den står her og ikke i skærmen, fordi
+  // teksten og knappen skal komme fra den samme beslutning — ellers kan de
+  // modsige hinanden, og det gjorde de: linjen sagde "Gemt på denne enhed",
+  // mens knappen under den bad om at logge ind igen.
+  kanLoggeInd?: boolean;
 }
 
-export function syncstatus(usendt: number, online: boolean, harKonto: boolean): Syncstatus {
+export function syncstatus(
+  usendt: number,
+  online: boolean,
+  harKonto: boolean,
+  fejl: Syncfejl | null = null
+): Syncstatus {
   // Uden konto er der ikke noget at synkronisere med. Så er "usendt" ikke en
   // kø, det er bare det, der står på enheden — og det er ikke en mangel.
+  //
+  // Med én undtagelse: en udløbet session rydder sig selv, og så står appen
+  // som "uden konto". Det er sandt, men ikke hele sandheden — man *var* logget
+  // ind, og der er noget, der ikke kommer op. Den skal siges, ikke gemmes bag
+  // "Gemt på denne enhed".
   if (!harKonto) {
+    if (fejl?.art === 'ikke_logget_ind') {
+      return {
+        tilstand: 'fejl',
+        tekst: 'Du er blevet logget ud',
+        forklaring: FEJLTEKST.ikke_logget_ind,
+        kanLoggeInd: true
+      };
+    }
     return { tilstand: 'kun_lokalt', tekst: 'Gemt på denne enhed' };
   }
 
-  if (usendt === 0) {
-    return { tilstand: 'synkroniseret', tekst: online ? 'Alt er sendt op' : 'Alt er sendt op · offline' };
+  // Uden dækning er en fejl forventet, og så er den ikke en fejl. At skrive
+  // "kunne ikke nå serveren" til en, der selv kan se, at der ikke er net, er
+  // at gøre den normale tilstand i skoven til noget, der er gået galt.
+  if (!online) {
+    return usendt === 0
+      ? { tilstand: 'synkroniseret', tekst: 'Alt er sendt op · offline' }
+      : { tilstand: 'offline', tekst: `${aendringstekst(usendt)} venter på dækning` };
   }
 
-  const aendringer = `${usendt} ${usendt === 1 ? 'ændring' : 'ændringer'}`;
+  // Fejlen går forud for optællingen. Er hentningen den, der fejlede, er der
+  // ingenting usendt — og så ville "alt er sendt op" være rigtigt om det, der
+  // skulle op, og forkert om det, appen lige har prøvet.
+  if (fejl) {
+    return {
+      tilstand: 'fejl',
+      tekst: usendt === 0 ? 'Sync fejlede' : `${aendringstekst(usendt)} kom ikke op`,
+      forklaring: FEJLTEKST[fejl.art],
+      kanLoggeInd: kraeverLogin(fejl)
+    };
+  }
 
-  return online
-    ? { tilstand: 'venter', tekst: `${aendringer} på vej op` }
-    : { tilstand: 'offline', tekst: `${aendringer} venter på dækning` };
+  if (usendt === 0) {
+    return { tilstand: 'synkroniseret', tekst: 'Alt er sendt op' };
+  }
+
+  return { tilstand: 'venter', tekst: `${aendringstekst(usendt)} på vej op` };
+}
+
+function aendringstekst(usendt: number): string {
+  return `${usendt} ${usendt === 1 ? 'ændring' : 'ændringer'}`;
 }
 
 // ─────────────────────────────────────────────

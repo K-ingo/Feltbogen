@@ -14,6 +14,7 @@ import {
 } from './db';
 import { pb, nuvaerendeBruger } from './pb';
 import { fejlDetaljer } from './pbFejl';
+import { noterFejl, rydFejl } from './syncfejl';
 import { gyldig as gyldigVurdering } from './vurdering';
 import type {
   Billede,
@@ -673,9 +674,13 @@ async function synkroniser<T extends Post>(samling: Samling<T>, id: number): Pro
       gemt.server_aendret = tekst(svar.updated);
       if (!nyereAendring) gemt.usendt_aendring = false;
     });
+    // Det lykkedes. Står der en fejl fra sidst, er den ikke sand længere.
+    await rydFejl();
     return true;
   } catch (e) {
     console.error(`Kunne ikke synkronisere ${samling.pbNavn} "${post.navn}":`, fejlDetaljer(e));
+    // Konsollen er ikke et sted, brugeren kigger. Se syncfejl.ts.
+    await noterFejl(e);
     return false;
   }
 }
@@ -836,6 +841,7 @@ async function sletIPb(pbNavn: string, pbId: string): Promise<boolean> {
   } catch (e) {
     if (erIkkeFundet(e)) return true;
     console.error(`Kunne ikke slette ${pbNavn} ${pbId} i PocketBase:`, fejlDetaljer(e));
+    await noterFejl(e);
     return false;
   }
 }
@@ -1072,8 +1078,10 @@ export async function hentFraPocketBase(): Promise<void> {
       hent(personSamling, bruger.id),
       hent(billedSamling, bruger.id)
     ]);
+    await rydFejl();
   } catch (e) {
     console.error('Kunne ikke hente data fra PocketBase:', fejlDetaljer(e));
+    await noterFejl(e);
   }
 }
 
