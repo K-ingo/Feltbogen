@@ -185,6 +185,19 @@ export async function hentDeltagelser(turPbId: string, token: string): Promise<S
   }
 }
 
+// Alle billeder deltagerne har lagt op, nyeste først. Til ejerens galleri, hvor
+// de står sammen med hendes egne.
+export function deltagerbilleder(alle: Deltagelse[]): { url: string; navn: string; tid: string }[] {
+  return alle
+    .flatMap((d) => d.journal.flatMap((b) => b.billeder.map((fil) => ({
+      url: billedurl(d, fil),
+      navn: visningsnavn(d),
+      tid: b.tid
+    }))))
+    .filter((b) => b.url)
+    .sort((a, b) => b.tid.localeCompare(a.tid));
+}
+
 // Skriver ens egen række. Findes den ikke, oprettes den — man bliver deltager
 // ved at skrive sig på, ikke ved at ejeren gør noget.
 export async function gemDeltagelse(
