@@ -1,26 +1,58 @@
 import { useState } from 'react';
-import type { GaesteBillede, Gaestesnapshot } from './gaest';
+import type { ReactNode } from 'react';
+import type { GaesteBillede, GaesteItem, Gaestesnapshot } from './gaest';
+import { ledigtFaelles, gaestetitel } from './gaest';
 import type { Deltagelse } from './deltagelse';
 import { baererePrGear, samletMedbragtVaegt, visningsnavn } from './deltagelse';
 import { vejrIkonKode, linjerEfterPerson, medDeltagernes, samletVaegt, linjeAfMedbragt } from './smartMotor';
 import type { Pakkelinje, Pakkeafsnit } from './smartMotor';
 import { formatterPeriode, kortDag, datoTekst } from './datotekst';
-import { Chip, Infokort, SektionsTitel } from './ui';
+import { Chip, Infokort, Knap, SektionsTitel } from './ui';
 
 // Selve turen som den ser ud for en der har fået den delt. Bruges to steder:
 // på gæstesiden, hvor snapshottet lige er hentet, og på en gemt delt tur,
 // hvor det kommer fra basen. De skal se ens ud — det er den samme tur.
 
-function DeltTurVisning({ snapshot, deltagelser = [] }: {
+function DeltTurVisning({ snapshot, deltagelser = [], mig, opdater, children, kanMelde }: {
   snapshot: Gaestesnapshot;
   // Det de andre har skrevet sig på for. Tom når turen læses fra en gemt kopi
   // uden forbindelse.
   deltagelser?: Deltagelse[];
+  // Gæstens eget bruger-id, når hun er logget ind. Bruges til at svare på det
+  // spørgsmål, ejeren ikke har: hvad kommer *jeg* til at bære?
+  mig?: string;
+  // At hente ejerens nyeste hører til dér, hvor der står, at udgaven kan være
+  // gammel. Se turmaal.ts: siger appen, at noget mangler, skal man kunne gøre
+  // noget ved det, hvor man står.
+  opdater?: { hent: () => void; henter: boolean; besked?: string };
+  // Gæstens egen del — "Mit grej" og det, der hører til den. Den står inde i
+  // visningen og ikke efter den, så fodnoten om øjebliksbilledet bliver ved
+  // med at være det sidste på siden. Ellers stod forbeholdet midt i det hele.
+  children?: ReactNode;
+  // Om gæsten faktisk kan melde sig til at bære. Uden den ville kortet om
+  // ledigt grej henvise til et "Mit grej", der ikke er der — og så er det
+  // ikke en henvisning, det er en blindgyde.
+  kanMelde?: boolean;
 }) {
   const k = snapshot.koordinater;
   const baerere = baererePrGear(deltagelser);
   const medbragtVaegt = samletMedbragtVaegt(deltagelser);
   const [efterPerson, setEfterPerson] = useState(false);
+
+  // Fælles grej ingen har taget. Det er gæstens eneste håndtag på siden.
+  const ledige = ledigtFaelles(snapshot.afsnit, baerere);
+  const ledigVaegt = ledige.reduce((s, i) => s + i.vaegt_g, 0);
+
+  // Hvad gæsten selv kommer til at bære: det hun har skrevet, hun tager med,
+  // plus det fælles, hun har meldt sig til. Begge dele står på hendes egen
+  // række — der er ikke noget at slå op i ejerens tal.
+  const minRaekke = mig ? deltagelser.find((d) => d.user === mig) : undefined;
+  const minVaegt = minRaekke
+    ? minRaekke.medbragt.reduce((s, g) => s + g.vaegt_g, 0)
+      + snapshot.afsnit.flatMap((a) => a.items)
+        .filter((i) => i.uid && minRaekke.baerer.includes(i.uid))
+        .reduce((s, i) => s + i.vaegt_g, 0)
+    : 0;
 
   // Ejerens egen liste, plus dem der har skrevet sig på siden turen blev delt.
   // Uden dem stod man ikke på deltagerlisten, selvom man havde taget turen
@@ -71,7 +103,7 @@ function DeltTurVisning({ snapshot, deltagelser = [] }: {
             rel="noreferrer noopener"
             style={{ fontSize: '12px', color: 'var(--accent)', display: 'inline-block', marginTop: '7px' }}
           >
-            {k.lat}, {k.lng} · Åbn i kort ↗
+            Åbn stedet i kort ↗
           </a>
         )}
       </div>
@@ -98,6 +130,8 @@ function DeltTurVisning({ snapshot, deltagelser = [] }: {
         </div>
       )}
 
+      {ledige.length > 0 && <Ledigt items={ledige} vaegt={ledigVaegt} kanMelde={!!kanMelde} />}
+
       {snapshot.vejr && snapshot.vejr.dage.length > 0 && (
         <Infokort label="Vejrudsigt da turen blev delt">
           <div style={{ display: 'grid', gap: '4px', fontSize: '13px' }}>
@@ -123,16 +157,33 @@ function DeltTurVisning({ snapshot, deltagelser = [] }: {
         </Infokort>
       )}
 
-      <Infokort label="Samlet vægt" fremhaevet>
+      {/* Tallet er alt grejet på turen — ikke noget nogen enkelt bærer. Det
+          stod før som "Samlet vægt · fordelt på 4 personer", og det læses som
+          om man selv slipper med en fjerdedel. Har gæsten skrevet sig på,
+          står hendes eget tal ved siden af; det er dét, hun spurgte om. */}
+      <Infokort label="Alt grej på turen" fremhaevet>
         <div style={{ fontSize: '22px', fontFamily: "'Fraunces', Georgia, serif" }}>
           {((snapshot.vaegt_i_alt_g + medbragtVaegt) / 1000).toFixed(2)} kg
         </div>
         <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginTop: '3px' }}>
           {[
-            snapshot.personer > 1 ? `fordelt på ${snapshot.personer} personer` : null,
+            `ejerens og deltagernes tilsammen${snapshot.personer > 1 ? `, ${snapshot.personer} af sted` : ''}`,
             medbragtVaegt > 0 ? `heraf ${(medbragtVaegt / 1000).toFixed(2)} kg fra deltagerne` : null
           ].filter(Boolean).join(' · ')}
         </div>
+
+        {minRaekke && (
+          <div style={{
+            marginTop: '10px',
+            paddingTop: '10px',
+            borderTop: '1px solid var(--accent-border)',
+            fontSize: '13px'
+          }}>
+            {minVaegt > 0
+              ? <>Du bærer <strong>{(minVaegt / 1000).toFixed(2)} kg</strong></>
+              : 'Du har ikke skrevet noget på endnu'}
+          </div>
+        )}
       </Infokort>
 
       <div>
@@ -158,7 +209,7 @@ function DeltTurVisning({ snapshot, deltagelser = [] }: {
           afsnit.map((a) => (
             <div key={a.titel} style={{ marginBottom: '14px' }}>
               <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', fontWeight: 600, marginBottom: '5px' }}>
-                {a.titel}
+                {gaestetitel(a.titel)}
               </div>
               {a.linjer.map((l, n) => (
                 <div
@@ -173,7 +224,14 @@ function DeltTurVisning({ snapshot, deltagelser = [] }: {
                   <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '12px', whiteSpace: 'nowrap' }}>
                     {/* I "efter person" står navnet allerede som overskrift. */}
                     {!efterPerson && l.baerer && <span style={{ marginRight: '8px' }}>{l.baerer}</span>}
-                    {l.delt && !l.baerer && <span style={{ fontSize: '10px', marginRight: '6px' }}>delt</span>}
+                    {/* "delt" sagde, hvad det var, og ikke hvad der manglede.
+                        Forskellen på "det tager Emil" og "det tager ingen" er
+                        den vigtigste på listen for en gæst. */}
+                    {l.delt && !l.baerer && (
+                      <span style={{ fontSize: '10px', marginRight: '6px', color: 'var(--advarsel)' }}>
+                        ingen bærer
+                      </span>
+                    )}
                     {l.vaegt_g} g
                   </span>
                 </div>
@@ -186,8 +244,57 @@ function DeltTurVisning({ snapshot, deltagelser = [] }: {
         )}
       </div>
 
-      <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', textAlign: 'center', paddingTop: '6px' }}>
-        Et øjebliksbillede fra {datoTekst(snapshot.delt_den)}. Turen kan være ændret siden.
+      {children}
+
+      <div style={{ textAlign: 'center', paddingTop: '6px' }}>
+        <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', lineHeight: 1.6 }}>
+          {opdater?.besked
+            ?? `Et øjebliksbillede fra ${datoTekst(snapshot.delt_den)}. Turen kan være ændret siden.`}
+        </div>
+        {opdater && (
+          <div style={{ marginTop: '8px' }}>
+            <Knap onClick={opdater.hent} disabled={opdater.henter}>
+              {opdater.henter ? 'Henter…' : 'Hent ejerens nyeste'}
+            </Knap>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Det fælles grej, ingen har taget.
+//
+// Kortet står højt oppe og ikke nede i listen, fordi det er det eneste på
+// siden, en gæst kan gøre noget ved — og fordi et stykke fælles grej uden en
+// bærer er den fejl, man opdager på fjeldet og ikke før.
+function Ledigt({ items, vaegt, kanMelde }: { items: GaesteItem[]; vaegt: number; kanMelde: boolean }) {
+  return (
+    <div style={{
+      padding: '12px 14px',
+      borderRadius: '10px',
+      background: 'var(--advarsel-bg)',
+      border: '1px solid var(--advarsel)',
+      fontSize: '13px',
+      lineHeight: 1.55
+    }}>
+      <strong>
+        {items.length === 1
+          ? 'Ét stykke fælles grej mangler en bærer'
+          : `${items.length} stykker fælles grej mangler en bærer`}
+      </strong>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', margin: '8px 0' }}>
+        {items.map((i) => (
+          <Chip key={i.uid || i.navn} farve="advarsel">
+            {i.navn || 'Uden navn'} · {i.vaegt_g} g
+          </Chip>
+        ))}
+      </div>
+      <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)' }}>
+        {(vaegt / 1000).toFixed(2)} kg i alt.
+        {kanMelde
+          ? <> Under <strong>Mit grej</strong> nedenfor kan du melde dig til at bære noget af det.</>
+          : ' Sig til den, der har delt turen, hvis du kan tage noget af det.'}
       </div>
     </div>
   );

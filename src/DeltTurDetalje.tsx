@@ -12,7 +12,7 @@ import DeltTurVisning from './DeltTurVisning';
 import MitGrej from './MitGrej';
 import { datoTekst } from './datotekst';
 import { mitNavn } from './pb';
-import { DetaljeHeader, Knap, Indlaeser } from './ui';
+import { DetaljeHeader, Indlaeser } from './ui';
 import { layout } from './layout';
 
 interface Props {
@@ -82,32 +82,31 @@ function DeltTurDetalje({ deltTurId, tilbage }: Props) {
     <div style={layout.container}>
       <DetaljeHeader tilbage={tilbage} sletLabel="Fjern turen" slet={() => void fjern()} />
 
-      <DeltTurVisning snapshot={deltTur.snapshot} deltagelser={deltagelser} />
+      <DeltTurVisning
+        snapshot={deltTur.snapshot}
+        deltagelser={deltagelser}
+        mig={bruger?.id}
+        kanMelde={!!bruger && !!turPbId}
+        opdater={{
+          hent: () => void hentForfra(),
+          henter,
+          besked: svar
+            ? beskedOm(svar)
+            : `Et øjebliksbillede, gemt hos dig ${datoTekst(deltTur.opdateret.toISOString())}. Turen kan være ændret siden.`
+        }}
+      >
+        {bruger && turPbId ? (
+          <MitGrej
+            mig={minDeltagelse(deltagelser, bruger.id) ?? nyDeltagelse(turPbId, bruger.id, mitNavn())}
+            faelles={deltTur.snapshot.afsnit}
+            gem={skrivMig}
+            meldFra={meldFra}
+          />
+        ) : (
+          <Kanikkebidrage loggetInd={!!bruger} />
+        )}
+      </DeltTurVisning>
 
-      {bruger && turPbId ? (
-        <MitGrej
-          mig={minDeltagelse(deltagelser, bruger.id) ?? nyDeltagelse(turPbId, bruger.id, mitNavn())}
-          faelles={deltTur.snapshot.afsnit}
-          gem={skrivMig}
-          meldFra={meldFra}
-        />
-      ) : (
-        <Kanikkebidrage loggetInd={!!bruger} />
-      )}
-
-      <div style={{
-        marginTop: '22px',
-        paddingTop: '16px',
-        borderTop: '1px solid var(--border-svag)',
-        textAlign: 'center'
-      }}>
-        <Knap onClick={() => void hentForfra()} disabled={henter}>
-          {henter ? 'Henter…' : 'Hent ejerens nyeste'}
-        </Knap>
-        <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', marginTop: '10px', lineHeight: 1.6 }}>
-          {svar ? beskedOm(svar) : `Gemt hos dig ${datoTekst(deltTur.opdateret.toISOString())}.`}
-        </div>
-      </div>
     </div>
   );
 }

@@ -12,7 +12,8 @@ import {
   hentDeltTur,
   lavSnapshot
 } from './gaest';
-import type { Gaestesnapshot } from './gaest';
+import type { Gaestesnapshot, GaesteItem } from './gaest';
+import { ledigtFaelles, gaestetitel } from './gaest';
 import { lavItem, lavGruppe, lavTur } from './test/data';
 
 // Et gæstelink er et kig, ikke en kopi. Herunder testes det gæsten kan gøre
@@ -181,5 +182,58 @@ describe('afgrænsning', () => {
   it('sender ikke noget til PocketBase når man gemmer', async () => {
     await gemDeltTur('7'.repeat(32), snapshotFor('Rold Skov'), KILDE);
     expect(pbMock.kald.filter((k) => k.metode === 'create')).toHaveLength(0);
+  });
+});
+
+// ─────────────────────────────────────────────
+// Turen læst med gæstens øjne
+// ─────────────────────────────────────────────
+
+describe('ledigtFaelles', () => {
+  const item = (navn: string, felter: Partial<GaesteItem> = {}): GaesteItem => ({
+    uid: navn.toLowerCase(), navn, vaegt_g: 500, delt: false, baerer: '', ...felter
+  });
+
+  it('finder fælles grej som ingen har taget', () => {
+    const afsnit = [{ titel: 'Køkken', items: [
+      item('Trangia', { delt: true }),
+      item('Gasdåse', { delt: true, baerer: 'Mikkel' })
+    ]}];
+
+    expect(ledigtFaelles(afsnit).map((i) => i.navn)).toEqual(['Trangia']);
+  });
+
+  // Ejerens egen sovepose uden bærer er hendes eget. Det er ikke noget en
+  // gæst kan melde sig til at bære.
+  it('rører ikke ejerens personlige grej', () => {
+    const afsnit = [{ titel: 'Sovegrej', items: [item('Sovepose')] }];
+    expect(ledigtFaelles(afsnit)).toEqual([]);
+  });
+
+  it('regner grej som taget, når en deltager selv har meldt sig', () => {
+    const afsnit = [{ titel: 'Køkken', items: [item('Trangia', { delt: true })] }];
+    const meldte = new Map([['trangia', ['Sofie']]]);
+
+    expect(ledigtFaelles(afsnit, meldte)).toEqual([]);
+  });
+
+  // Gear fra et gammelt link har intet uid og kan ikke peges på. Det tælles
+  // stadig som ledigt — man kan bare ikke klikke sig til det.
+  it('tæller gear uden uid med', () => {
+    const afsnit = [{ titel: 'Køkken', items: [item('Trangia', { uid: '', delt: true })] }];
+    expect(ledigtFaelles(afsnit)).toHaveLength(1);
+  });
+});
+
+describe('gaestetitel', () => {
+  // "Uden tag" er ejerens ord om sit eget system. En gæst ved ikke hvad et
+  // tag er, og skal ikke lære det for at læse en pakkeliste.
+  it('oversætter ejerens interne afsnitsnavne', () => {
+    expect(gaestetitel('Uden tag')).toBe('Andet');
+    expect(gaestetitel('Ikke fordelt endnu')).toBe('Ingen har taget den endnu');
+  });
+
+  it('lader ejerens egne tags stå som de er', () => {
+    expect(gaestetitel('Sovegrej')).toBe('Sovegrej');
   });
 });
