@@ -75,6 +75,46 @@ export interface Gaestesnapshot {
   delt_den: string;
 }
 
+// ─────────────────────────────────────────────
+// Turen læst med gæstens øjne
+//
+// Gæsten har ét spørgsmål, som ejeren ikke har: "hvad skal jeg med?" Resten af
+// pakkelisten er ejerens, og den kan hun kun kigge på.
+// ─────────────────────────────────────────────
+
+// Fælles grej, som ingen har taget endnu.
+//
+// Det er det eneste sted på hele siden, hvor en gæst kan gøre noget. Uden det
+// står linjerne uden bærer bare tomme, og så er forskellen på "det tager Emil"
+// og "det tager ingen" ikke til at se — mens den anden er den, der gør, at
+// nogen står uden kogegrej på fjeldet.
+//
+// Kun det delte tælles med. Ejerens personlige grej uden bærer er hendes eget;
+// det er ikke noget en gæst kan melde sig til.
+export function ledigtFaelles(
+  afsnit: GaesteAfsnit[],
+  meldte: Map<string, string[]> = new Map()
+): GaesteItem[] {
+  return afsnit
+    .flatMap((a) => a.items)
+    .filter((i) => i.delt && !i.baerer && (i.uid ? (meldte.get(i.uid) ?? []).length === 0 : true));
+}
+
+// Afsnitsnavne, som en gæst kan forstå.
+//
+// "Uden tag" er ejerens ord om sit eget system: gear, hun ikke har mærket op.
+// En gæst ved ikke, hvad et tag er, og skal ikke lære det for at læse en
+// pakkeliste. Oversættelsen sker ved visningen og ikke i snapshottet, så den
+// også gælder de links, der allerede er sendt ud.
+const GAESTENAVNE: Record<string, string> = {
+  'Uden tag': 'Andet',
+  'Ikke fordelt endnu': 'Ingen har taget den endnu'
+};
+
+export function gaestetitel(titel: string): string {
+  return GAESTENAVNE[titel] ?? titel;
+}
+
 // 128 bit fra crypto — for langt til at gætte, kort nok til et link man kan
 // sende i en sms.
 export function nytDeletoken(): string {

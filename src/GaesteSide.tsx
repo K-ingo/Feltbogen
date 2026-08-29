@@ -118,8 +118,7 @@ function GaesteSide({ token, tilAppen }: Props) {
           />
         )}
         {tilstand === 'ok' && snapshot && (
-          <>
-            <DeltTurVisning snapshot={snapshot} deltagelser={deltagelser} />
+          <DeltTurVisning snapshot={snapshot} deltagelser={deltagelser} mig={bruger.id} kanMelde>
             <MitGrej
               mig={minDeltagelse(deltagelser, bruger.id) ?? nyDeltagelse(turPbId, bruger.id, mitNavn())}
               faelles={snapshot.afsnit}
@@ -127,7 +126,7 @@ function GaesteSide({ token, tilAppen }: Props) {
               meldFra={meldFra}
             />
             <Gemfelt gemt={gemt} gem={() => void gem()} tilAppen={tilAppen} />
-          </>
+          </DeltTurVisning>
         )}
       </div>
     </div>
