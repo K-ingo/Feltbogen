@@ -12,6 +12,7 @@ import DeltTurVisning from './DeltTurVisning';
 import MitGrej from './MitGrej';
 import { datoTekst } from './datotekst';
 import { mitNavn } from './pb';
+import { nytBidrag } from './turjournal';
 import { DetaljeHeader, Indlaeser } from './ui';
 import { layout } from './layout';
 
@@ -72,6 +73,15 @@ function DeltTurDetalje({ deltTurId, tilbage }: Props) {
     return gemt.data;
   };
 
+  // Samme skrivning som på gæstesiden: indgangen lægges på ens egen
+  // deltagelsesrække. Se turjournal.ts.
+  const skrivJournal = async (tekst: string): Promise<boolean> => {
+    if (!bruger || !turPbId) return false;
+
+    const min = minDeltagelse(deltagelser, bruger.id) ?? nyDeltagelse(turPbId, bruger.id, mitNavn());
+    return !!(await skrivMig({ ...min, journal: [...min.journal, nytBidrag(tekst)] }));
+  };
+
   const meldFra = async (pbId: string): Promise<boolean> => {
     if (!await forladTur(pbId)) return false;
     setDeltagelser((foer) => foer.filter((d) => d.pb_id !== pbId));
@@ -86,6 +96,7 @@ function DeltTurDetalje({ deltTurId, tilbage }: Props) {
         snapshot={deltTur.snapshot}
         deltagelser={deltagelser}
         mig={bruger?.id}
+        ejer={deltTur.snapshot.ejer}
         kanMelde={!!bruger && !!turPbId}
         opdater={{
           hent: () => void hentForfra(),
@@ -94,8 +105,8 @@ function DeltTurDetalje({ deltTurId, tilbage }: Props) {
             ? beskedOm(svar)
             : `Et øjebliksbillede, gemt hos dig ${datoTekst(deltTur.opdateret.toISOString())}. Turen kan være ændret siden.`
         }}
-      >
-        {bruger && turPbId ? (
+        skrivJournal={bruger && turPbId ? skrivJournal : undefined}
+        mitGrej={bruger && turPbId ? (
           <MitGrej
             mig={minDeltagelse(deltagelser, bruger.id) ?? nyDeltagelse(turPbId, bruger.id, mitNavn())}
             faelles={deltTur.snapshot.afsnit}
@@ -105,7 +116,7 @@ function DeltTurDetalje({ deltTurId, tilbage }: Props) {
         ) : (
           <Kanikkebidrage loggetInd={!!bruger} />
         )}
-      </DeltTurVisning>
+      />
 
     </div>
   );

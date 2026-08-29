@@ -607,3 +607,39 @@ har ikke ændret sig siden første runde.
 Router, engelske mappenavne og AI/naturligt sprog står som de gjorde i §4.
 Kvitteringsfil er den ene nye: den kræver et fil-felt i PocketBase, og
 dokumentet er selv i tvivl om, hvorvidt den hører til 2.0.
+
+## 10. Deltageroplevelsen — hvad jeg fulgte og hvad jeg ikke gjorde
+
+Dokumentet *Deltageroplevelse & fælles tur* beder om, at en delt tur føles som
+den samme tur for ejer og deltager, bare med forskellige rettigheder. Det er
+rigtigt, og gæstesiden var en lang strøm. Det er nu ejerens faner.
+
+Fire steder gjorde jeg noget andet end dokumentet, og her er hvorfor.
+
+**Ikke seks faner, men fire.** Dokumentet vil have Overblik, Pakning,
+Pakkeliste, Deltagere, Kort og Journal. *Pakning* måles på
+`pakkede_item_uids`, som ikke er i snapshottet, og *Kort* forudsætter en rute,
+der ikke findes endnu (den er §9 trin 6). En fane, der altid stod tom, er et
+løfte, appen ikke holder. De to kommer, når der er noget at vise.
+
+**Ikke `GuestContribution` som ny samling.** `turdeltagelse` findes allerede og
+løser præcis den opgave: én række pr. deltager pr. tur, hvor PocketBase-reglen
+er grænsen, og hvor man kun kan røre sin egen. Journalbidrag er lagt som et
+felt på den række. Det giver den samme sikkerhedsmodel uden en samling mere,
+og det er ét felt at oprette i stedet for en samling med fire regler.
+
+**Ikke den samme `TurDetalje`-komponent.** Dokumentet foreslår én komponent med
+rollebaseret adfærd. `TurDetalje` læser `db.items`, `db.grupper` og hele
+inventaret og skriver gennem `opdaterTur`; en gæst har et frosset snapshot og
+skal aldrig kunne nå inventaret — det er dokumentets eget §7. Delt er derfor
+*fanerækken* (`Fanerakke` i `ui.tsx`) og det visuelle sprog, ikke skærmen.
+Samme mentale model, uden at gæstekoden får en vej ind i ejerens data.
+
+**Billeder fra deltagere er ikke med endnu.** Journalen tager tekst. Billeder
+kræver filupload til en samling, gæsten må skrive i, plus komprimering og en
+sync-kø for en tur, der ikke er ens egen. Det er den næste bid, og den er stor
+nok til at stå alene.
+
+Og én ting jeg ikke kan gøre herfra: `turdeltagelse` skal have et
+**`journal`**-felt af typen json, ellers forsvinder deltagernes indgange
+lydløst på vej op. Se POCKETBASE.md.

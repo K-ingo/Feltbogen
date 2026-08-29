@@ -51,6 +51,7 @@ import {
   Chip,
   DetaljeHeader,
   Dropdown,
+  Fanerakke,
   Felt,
   FjernKnap,
   Hvorfor,
@@ -1142,7 +1143,8 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
         <Naesteskridt fase={fase} gaaTil={gaaTilMaal} />
       )}
 
-      <Faner
+      <Fanerakke
+        blade={FANEBLADE}
         valgt={fane}
         vaelg={(f) => { setFane(f); setSigtet(null); }}
         tal={fanetal}
@@ -1289,63 +1291,6 @@ function Naesteskridt({ fase, gaaTil }: { fase: Turfase; gaaTil: (m: Turmaal) =>
 //
 // Markeringen er en streg under den valgte fane og ikke kun en farve — den
 // skal også kunne aflæses af én der ikke skelner farverne.
-function Faner({ valgt, vaelg, tal }: {
-  valgt: Turfane;
-  vaelg: (f: Turfane) => void;
-  tal: Partial<Record<Turfane, number>>;
-}) {
-  return (
-    <div
-      role="tablist"
-      style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: '2px',
-        marginTop: '18px',
-        marginBottom: '16px',
-        borderBottom: '1px solid var(--border-svag)'
-      }}
-    >
-      {FANEBLADE.map((f) => {
-        const erAktiv = f.id === valgt;
-        const antal = tal[f.id];
-
-        return (
-          <button
-            key={f.id}
-            role="tab"
-            aria-selected={erAktiv}
-            onClick={() => vaelg(f.id)}
-            style={{
-              // Skal kunne rammes med en handske på. Rørehøjden er 44 px på
-              // en touchskærm og 36 med mus — se index.css.
-              minHeight: 'var(--roerehoejde)',
-              padding: '0 var(--plads-3)',
-              background: 'transparent',
-              border: 'none',
-              // Stregen ligger oven i kassens egen, så fanerækken ikke
-              // hopper en pixel når man skifter fane.
-              borderBottom: `2px solid ${erAktiv ? 'var(--accent)' : 'transparent'}`,
-              marginBottom: '-1px',
-              color: erAktiv ? 'var(--tekst)' : 'var(--tekst-dæmpet)',
-              fontSize: 'var(--skrift-knap)',
-              fontWeight: erAktiv ? 600 : 500,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            {f.label}
-            {antal ? (
-              <span style={{ color: 'var(--tekst-dæmpet)', fontWeight: 500 }}> {antal}</span>
-            ) : null}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-
 // Sådan står turen, øverst på overblikket.
 //
 // Specens §6 vil have pakkeprogression, totalvægt og deltagere på overblikket.

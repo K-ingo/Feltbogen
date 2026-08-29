@@ -7,6 +7,7 @@ import {
 import type { Deltagelse } from './deltagelse';
 import { useAuth } from './useAuth';
 import { mitNavn } from './pb';
+import { nytBidrag } from './turjournal';
 import AuthSide from './AuthSide';
 import DeltTurVisning from './DeltTurVisning';
 import MitGrej from './MitGrej';
@@ -88,6 +89,15 @@ function GaesteSide({ token, tilAppen }: Props) {
     return svar.data;
   };
 
+  // En journalindgang skrives på ens egen deltagelsesrække — den eneste post
+  // på turen, en gæst har adgang til. Se turjournal.ts.
+  const skrivJournal = async (tekst: string): Promise<boolean> => {
+    if (!bruger || !turPbId) return false;
+
+    const min = minDeltagelse(deltagelser, bruger.id) ?? nyDeltagelse(turPbId, bruger.id, mitNavn());
+    return !!(await skrivMig({ ...min, journal: [...min.journal, nytBidrag(tekst)] }));
+  };
+
   const meldFra = async (pbId: string): Promise<boolean> => {
     if (!await forladTur(pbId)) return false;
     setDeltagelser((foer) => foer.filter((d) => d.pb_id !== pbId));
@@ -118,15 +128,23 @@ function GaesteSide({ token, tilAppen }: Props) {
           />
         )}
         {tilstand === 'ok' && snapshot && (
-          <DeltTurVisning snapshot={snapshot} deltagelser={deltagelser} mig={bruger.id} kanMelde>
-            <MitGrej
-              mig={minDeltagelse(deltagelser, bruger.id) ?? nyDeltagelse(turPbId, bruger.id, mitNavn())}
-              faelles={snapshot.afsnit}
-              gem={skrivMig}
-              meldFra={meldFra}
-            />
-            <Gemfelt gemt={gemt} gem={() => void gem()} tilAppen={tilAppen} />
-          </DeltTurVisning>
+          <DeltTurVisning
+            snapshot={snapshot}
+            deltagelser={deltagelser}
+            mig={bruger.id}
+            ejer={snapshot.ejer}
+            kanMelde
+            skrivJournal={skrivJournal}
+            mitGrej={
+              <MitGrej
+                mig={minDeltagelse(deltagelser, bruger.id) ?? nyDeltagelse(turPbId, bruger.id, mitNavn())}
+                faelles={snapshot.afsnit}
+                gem={skrivMig}
+                meldFra={meldFra}
+              />
+            }
+            foed={<Gemfelt gemt={gemt} gem={() => void gem()} tilAppen={tilAppen} />}
+          />
         )}
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { pb } from './pb';
+import { pb, mitNavn } from './pb';
 import { db } from './db';
 import type { Billede, Item, Gruppe, Tur, DeltTur } from './db';
 import { billederPaaTur } from './billeder';
@@ -21,7 +21,12 @@ import type { VejrData } from './smartMotor';
 // 2 gav hvert stykke gear sit uid med, så en deltager kan sige "jeg tager
 // den". Ældre snapshots læses stadig — de har bare ingen uid'er, og så kan
 // deres grej ikke fordeles.
-export const SNAPSHOT_VERSION = 4;
+//
+// 5 tager turens journal med — turens historie hører til hos alle, der var
+// med, og ikke kun hos den, der ejer turen i basen. Ejerens navn kommer med
+// af samme grund: hendes egne indgange skal ikke stå med "Ejeren" på en tur,
+// man tog sammen.
+export const SNAPSHOT_VERSION = 5;
 
 export interface GaesteItem {
   // Ejerens uid for gearet. Tomt i snapshots fra version 1.
@@ -32,6 +37,17 @@ export interface GaesteItem {
   // Navnet på den der bærer det, eller tom hvis det ikke er fordelt. Kun
   // navnet — gæsten har ikke brug for deltagernes id'er.
   baerer: string;
+}
+
+// En indgang i turens journal, som en gæst ser den: hvem, hvornår, hvad.
+export interface GaesteJournal {
+  id: string;
+  // ISO.
+  tid: string;
+  tekst: string;
+  // Den der skrev den. Tom på ejerens egne indgange fra før journalen blev
+  // fælles — dem stod hun selv for.
+  skrevet_af: string;
 }
 
 export interface GaesteAfsnit {
@@ -65,12 +81,22 @@ export interface Gaestesnapshot {
   personer: number;
   baereafstand_km: number;
   besked_fra_ejer: string;
+  // Den der delte turen. Tom i snapshots før version 5, og tom hvis hun ikke
+  // har sat et navn på sin konto — så skriver skærmen selv noget neutralt.
+  ejer: string;
   // Kun navnene. Gæsten har ikke brug for de andres gearlister.
   deltagere: string[];
   vejr: VejrData | null;
   afsnit: GaesteAfsnit[];
   // Tom i snapshots fra version 1 og 2.
   billeder: GaesteBillede[];
+  // Ejerens egne journalindgange. Tom i snapshots før version 5 — og tom, så
+  // længe ingen har skrevet noget.
+  //
+  // Deltagernes egne indgange står ikke her: de skrives efter turen blev
+  // delt, og et snapshot er frosset. De hentes ved siden af, fra
+  // deltagelsesrækkerne — se deltagelse.ts.
+  journal: GaesteJournal[];
   vaegt_i_alt_g: number;
   delt_den: string;
 }
@@ -156,10 +182,19 @@ export function lavSnapshot(
     personer: tur.personer,
     baereafstand_km: tur.baereafstand_km,
     besked_fra_ejer: tur.besked_fra_ejer,
+    ejer: mitNavn(),
     deltagere: tur.deltagere.map((d) => d.navn).filter(Boolean),
     vejr: laesVejr(tur.vejrsnapshot),
     afsnit,
     billeder: gaestebilleder(tur, billeder),
+    // Ejerens journal, som den står. Navnet sættes ikke her: på ejerens egne
+    // indgange er "hvem" underforstået, og gæstesiden skriver det ud.
+    journal: tur.feltnoter.map((n) => ({
+      id: n.id,
+      tid: n.tid,
+      tekst: n.tekst,
+      skrevet_af: ''
+    })),
     vaegt_i_alt_g: pakItems.reduce((s, i) => s + i.vaegt_g, 0),
     delt_den: nu.toISOString()
   };
@@ -180,6 +215,23 @@ function gaestebilleder(tur: Tur, billeder: Billede[]): GaesteBillede[] {
     original: b.original_url,
     original_byte: b.original_byte
   }));
+}
+
+// Journalen fra et snapshot. Alt der ikke har den rigtige form, ryger — en
+// tur, der ikke kan vises, fordi én indgang er i stykker, er værre end en tur
+// uden den indgang.
+function gaestejournalFra(raa: unknown): GaesteJournal[] {
+  if (!Array.isArray(raa)) return [];
+
+  return raa
+    .filter((n): n is Record<string, unknown> => !!n && typeof n === 'object')
+    .map((n) => ({
+      id: tekst(n.id),
+      tid: tekst(n.tid),
+      tekst: tekst(n.tekst),
+      skrevet_af: tekst(n.skrevet_af)
+    }))
+    .filter((n) => n.tekst.trim() !== '');
 }
 
 function laesVejr(raa: string): VejrData | null {
@@ -219,10 +271,12 @@ export function laesSnapshot(raa: unknown): Gaestesnapshot | null {
     personer: tal(s.personer, 1),
     baereafstand_km: tal(s.baereafstand_km),
     besked_fra_ejer: tekst(s.besked_fra_ejer),
+    ejer: tekst(s.ejer),
     deltagere: Array.isArray(s.deltagere) ? s.deltagere.map(String).filter(Boolean) : [],
     vejr: vejr(s.vejr),
     afsnit: afsnit(s.afsnit),
     billeder: gaestebillederFra(s.billeder),
+    journal: gaestejournalFra(s.journal),
     vaegt_i_alt_g: tal(s.vaegt_i_alt_g),
     delt_den: tekst(s.delt_den)
   };
