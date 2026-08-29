@@ -480,7 +480,20 @@ export function syncstatus(
         kanLoggeInd: true
       };
     }
-    return { tilstand: 'kun_lokalt', tekst: 'Gemt på denne enhed' };
+    // "Gemt på denne enhed" er sandt, men det er ikke til at høre, at det
+    // også betyder "og kommer ingen steder". Den, der tror hun synkroniserer,
+    // læser det som en betryggelse — og opdager først, at det ikke skete, når
+    // hun står med en ny telefon.
+    //
+    // Derfor står vejen videre lige der. Det er den samme regel som i
+    // turmaal.ts: siger appen, at noget mangler, skal man kunne gøre noget
+    // ved det, hvor man står.
+    return {
+      tilstand: 'kun_lokalt',
+      tekst: 'Gemt på denne enhed',
+      forklaring: 'Uden en konto bliver dine ting på den her telefon — de sendes ikke op, og du kan ikke dele en tur.',
+      kanLoggeInd: true
+    };
   }
 
   // Uden dækning er en fejl forventet, og så er den ikke en fejl. At skrive
