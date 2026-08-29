@@ -24,6 +24,25 @@ export interface MedbragtGear {
   vaegt_g: number;
 }
 
+// En journalindgang skrevet af en deltager.
+//
+// Den ligger på deltagerens egen række og ikke i en samling for sig. Det er
+// den samme grænse, resten af deltagelsen bruger: PocketBase kan kun give
+// adgang til hele poster, så en deltager, der måtte skrive i turens journal,
+// også kunne slette turen. Her kan hun kun røre sin egen række — og dermed
+// kun sine egne indgange.
+//
+// Prisen er, at indgangene ikke kan sorteres af serveren. Det er en tur med en
+// håndfuld mennesker og en håndfuld dage; de sorteres på skærmen.
+export interface Bidrag {
+  // Stabilt på tværs af enheder, så den samme indgang ikke kommer op to
+  // gange. Se sync-reglerne i sync.ts.
+  id: string;
+  // ISO.
+  tid: string;
+  tekst: string;
+}
+
 export interface Deltagelse {
   pb_id?: string;
   // Turens record-id i PocketBase. Deltagelsen hænger på turen og ikke på
@@ -34,6 +53,8 @@ export interface Deltagelse {
   medbragt: MedbragtGear[];
   // uid'er på ejerens fælles gear, som denne deltager har sagt ja til at bære.
   baerer: Reference[];
+  // Det hun har skrevet i turens journal.
+  journal: Bidrag[];
 }
 
 // ─────────────────────────────────────────────
@@ -47,6 +68,16 @@ function tekst(v: unknown): string {
 
 function tal(v: unknown): number {
   return typeof v === 'number' && Number.isFinite(v) ? Math.round(v) : 0;
+}
+
+export function laesJournal(v: unknown): Bidrag[] {
+  if (!Array.isArray(v)) return [];
+
+  return v
+    .filter((b): b is Record<string, unknown> => !!b && typeof b === 'object')
+    .map((b) => ({ id: tekst(b.id), tid: tekst(b.tid), tekst: tekst(b.tekst) }))
+    // En tom indgang er en halvfærdig indtastning, ikke turens historie.
+    .filter((b) => b.tekst.trim() !== '');
 }
 
 export function laesMedbragt(v: unknown): MedbragtGear[] {
@@ -67,7 +98,8 @@ export function laesDeltagelse(r: RecordModel): Deltagelse {
     user: tekst(r.user),
     navn: tekst(r.navn),
     medbragt: laesMedbragt(r.medbragt),
-    baerer: Array.isArray(r.baerer) ? r.baerer.map(String).filter(Boolean) : []
+    baerer: Array.isArray(r.baerer) ? r.baerer.map(String).filter(Boolean) : [],
+    journal: laesJournal(r.journal)
   };
 }
 
@@ -149,7 +181,8 @@ export async function gemDeltagelse(deltagelse: Deltagelse, token: string): Prom
     user: bruger.id,
     navn: deltagelse.navn,
     medbragt: deltagelse.medbragt,
-    baerer: deltagelse.baerer
+    baerer: deltagelse.baerer,
+    journal: deltagelse.journal
   };
 
   try {
@@ -174,5 +207,5 @@ export async function forladTur(pbId: string): Promise<boolean> {
 
 // En tom række til en der lige er kommet ind ad linket.
 export function nyDeltagelse(turPbId: string, brugerId: string, navn = ''): Deltagelse {
-  return { tur: turPbId, user: brugerId, navn, medbragt: [], baerer: [] };
+  return { tur: turPbId, user: brugerId, navn, medbragt: [], baerer: [], journal: [] };
 }

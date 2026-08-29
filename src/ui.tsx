@@ -911,3 +911,69 @@ export function Forslagskort({ forslag, aabn, tagImod, afvis }: {
     </div>
   );
 }
+
+// Fanerækken på en tur.
+//
+// Den bor her og ikke i TurDetalje, fordi den bruges to steder: af ejeren og
+// af en, der er inviteret med. En gæst skal have den samme mentale model som
+// ejeren — samme faner, samme sted, samme udseende — og ikke sin egen
+// navigation ved siden af. Det er kun *hvilke* faner der er, og hvad man må
+// gøre på dem, der skifter med rollen.
+export function Fanerakke<T extends string>({ blade, valgt, vaelg, tal = {} }: {
+  blade: readonly { id: T; label: string }[];
+  valgt: T;
+  vaelg: (f: T) => void;
+  // Tallet efter navnet, fx antallet af deltagere. Udeladt hvor der ikke er
+  // et tal at sige.
+  tal?: Partial<Record<T, number>>;
+}) {
+  return (
+    <div
+      role="tablist"
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '2px',
+        marginTop: '18px',
+        marginBottom: '16px',
+        borderBottom: '1px solid var(--border-svag)'
+      }}
+    >
+      {blade.map((f) => {
+        const erAktiv = f.id === valgt;
+        const antal = tal[f.id];
+
+        return (
+          <button
+            key={f.id}
+            role="tab"
+            aria-selected={erAktiv}
+            onClick={() => vaelg(f.id)}
+            style={{
+              // Skal kunne rammes med en handske på. Rørehøjden er 44 px på
+              // en touchskærm og 36 med mus — se index.css.
+              minHeight: 'var(--roerehoejde)',
+              padding: '0 var(--plads-3)',
+              background: 'transparent',
+              border: 'none',
+              // Stregen ligger oven i kassens egen, så fanerækken ikke
+              // hopper en pixel når man skifter fane.
+              borderBottom: `2px solid ${erAktiv ? 'var(--accent)' : 'transparent'}`,
+              marginBottom: '-1px',
+              color: erAktiv ? 'var(--tekst)' : 'var(--tekst-dæmpet)',
+              fontSize: 'var(--skrift-knap)',
+              fontWeight: erAktiv ? 600 : 500,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {f.label}
+            {antal ? (
+              <span style={{ color: 'var(--tekst-dæmpet)', fontWeight: 500 }}> {antal}</span>
+            ) : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+}

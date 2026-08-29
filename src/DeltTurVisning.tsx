@@ -7,13 +7,19 @@ import { baererePrGear, samletMedbragtVaegt, visningsnavn } from './deltagelse';
 import { vejrIkonKode, linjerEfterPerson, medDeltagernes, samletVaegt, linjeAfMedbragt } from './smartMotor';
 import type { Pakkelinje, Pakkeafsnit } from './smartMotor';
 import { formatterPeriode, kortDag, datoTekst } from './datotekst';
-import { Chip, Infokort, Knap, SektionsTitel } from './ui';
+import { Chip, Fanerakke, Infokort, Knap, SektionsTitel, Tekstomraade } from './ui';
+import { GAESTEFANER } from './gaestefane';
+import type { Gaestefane } from './gaestefane';
+import { journalen } from './turjournal';
+import type { Journaldag } from './turjournal';
 
 // Selve turen som den ser ud for en der har fået den delt. Bruges to steder:
 // på gæstesiden, hvor snapshottet lige er hentet, og på en gemt delt tur,
 // hvor det kommer fra basen. De skal se ens ud — det er den samme tur.
 
-function DeltTurVisning({ snapshot, deltagelser = [], mig, opdater, children, kanMelde }: {
+function DeltTurVisning({
+  snapshot, deltagelser = [], mig, opdater, mitGrej, foed, kanMelde, ejer, skrivJournal
+}: {
   snapshot: Gaestesnapshot;
   // Det de andre har skrevet sig på for. Tom når turen læses fra en gemt kopi
   // uden forbindelse.
@@ -25,19 +31,35 @@ function DeltTurVisning({ snapshot, deltagelser = [], mig, opdater, children, ka
   // gammel. Se turmaal.ts: siger appen, at noget mangler, skal man kunne gøre
   // noget ved det, hvor man står.
   opdater?: { hent: () => void; henter: boolean; besked?: string };
-  // Gæstens egen del — "Mit grej" og det, der hører til den. Den står inde i
-  // visningen og ikke efter den, så fodnoten om øjebliksbilledet bliver ved
-  // med at være det sidste på siden. Ellers stod forbeholdet midt i det hele.
-  children?: ReactNode;
+  // Gæstens eget grej. Det står på pakkelisten, hvor det hører hjemme, og
+  // ikke som en sektion for sig under det hele.
+  mitGrej?: ReactNode;
+  // Handlinger, der hører til siden og ikke til en enkelt fane — at gemme
+  // turen hos sig selv, fx. De står efter fanerne, men før fodnoten om
+  // øjebliksbilledet, så forbeholdet bliver ved med at være det sidste.
+  foed?: ReactNode;
   // Om gæsten faktisk kan melde sig til at bære. Uden den ville kortet om
   // ledigt grej henvise til et "Mit grej", der ikke er der — og så er det
   // ikke en henvisning, det er en blindgyde.
   kanMelde?: boolean;
+  // Ejerens navn, til hendes egne journalindgange. Snapshottet kender det
+  // ikke, og en indgang uden afsender ser ud, som om ingen skrev den.
+  ejer?: string;
+  // Skriver en indgang i turens journal. Mangler den, kan journalen kun
+  // læses — sådan er det, når man ikke er logget ind, eller når turen blev
+  // gemt, før man kunne skrive sig på.
+  skrivJournal?: (tekst: string) => Promise<boolean>;
 }) {
   const k = snapshot.koordinater;
   const baerere = baererePrGear(deltagelser);
   const medbragtVaegt = samletMedbragtVaegt(deltagelser);
   const [efterPerson, setEfterPerson] = useState(false);
+  const [fane, setFane] = useState<Gaestefane>('overblik');
+
+  // Turens historie: ejerens indgange fra snapshottet og deltagernes fra
+  // deres egne rækker, lagt sammen. Se turjournal.ts.
+  const dage = journalen(snapshot, deltagelser, mig, ejer || 'Ejeren');
+  const antalIndgange = dage.reduce((n, d) => n + d.indgange.length, 0);
 
   // Fælles grej ingen har taget. Det er gæstens eneste håndtag på siden.
   const ledige = ledigtFaelles(snapshot.afsnit, baerere);
@@ -108,143 +130,167 @@ function DeltTurVisning({ snapshot, deltagelser = [], mig, opdater, children, ka
         )}
       </div>
 
-      {/* Billederne står før beskeden: de er det første man gerne vil se, når
-          nogen har delt en tur med én. Gæsten henter dem direkte fra
-          PocketBase — url'erne er det eneste hun får, aldrig resten af
-          turen. */}
-      {(snapshot.billeder ?? []).length > 0 && (
-        <Gaestegalleri billeder={snapshot.billeder} navn={snapshot.navn} />
-      )}
+      {/* Gæsten får ejerens faner og ikke sin egen navigation. En delt tur
+          er den samme tur — det er kun, hvad man må gøre på den, der skifter
+          med rollen. Se gaestefane.ts for, hvorfor der er fire og ikke seks. */}
+      <Fanerakke
+        blade={GAESTEFANER}
+        valgt={fane}
+        vaelg={setFane}
+        tal={{ deltagere: alleDeltagere.length, journal: antalIndgange }}
+      />
 
-      {snapshot.besked_fra_ejer && (
-        <div style={{
-          padding: '12px 14px',
-          borderRadius: '10px',
-          background: 'var(--accent-bg)',
-          border: '1px solid var(--accent-border)',
-          fontSize: '13px',
-          lineHeight: 1.55,
-          whiteSpace: 'pre-wrap'
-        }}>
-          {snapshot.besked_fra_ejer}
-        </div>
-      )}
+      {fane === 'overblik' && (
+        <div style={{ display: 'grid', gap: '18px' }}>
+          {/* Billederne står før beskeden: de er det første man gerne vil se, når
+              nogen har delt en tur med én. Gæsten henter dem direkte fra
+              PocketBase — url'erne er det eneste hun får, aldrig resten af
+              turen. */}
+          {(snapshot.billeder ?? []).length > 0 && (
+            <Gaestegalleri billeder={snapshot.billeder} navn={snapshot.navn} />
+          )}
 
-      {ledige.length > 0 && <Ledigt items={ledige} vaegt={ledigVaegt} kanMelde={!!kanMelde} />}
-
-      {snapshot.vejr && snapshot.vejr.dage.length > 0 && (
-        <Infokort label="Vejrudsigt da turen blev delt">
-          <div style={{ display: 'grid', gap: '4px', fontSize: '13px' }}>
-            {snapshot.vejr.dage.map((d) => (
-              <div key={d.dato} style={{ display: 'grid', gridTemplateColumns: '54px 22px 1fr auto', gap: '8px', alignItems: 'center' }}>
-                <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '11px' }}>{kortDag(d.dato)}</span>
-                <span style={{ fontSize: '15px' }}>{vejrIkonKode(d.vejrkode)}</span>
-                <span>{d.temp_min}–{d.temp_max}°C</span>
-                <span style={{ fontSize: '11px', color: d.nedboer_mm > 0 ? 'var(--advarsel)' : 'var(--tekst-svag)' }}>
-                  {d.nedboer_mm > 0 ? `${d.nedboer_mm} mm` : '—'}
-                </span>
-              </div>
-            ))}
-          </div>
-        </Infokort>
-      )}
-
-      {alleDeltagere.length > 0 && (
-        <Infokort label={`Deltagere (${alleDeltagere.length})`}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-            {alleDeltagere.map((navn) => <Chip key={navn}>{navn}</Chip>)}
-          </div>
-        </Infokort>
-      )}
-
-      {/* Tallet er alt grejet på turen — ikke noget nogen enkelt bærer. Det
-          stod før som "Samlet vægt · fordelt på 4 personer", og det læses som
-          om man selv slipper med en fjerdedel. Har gæsten skrevet sig på,
-          står hendes eget tal ved siden af; det er dét, hun spurgte om. */}
-      <Infokort label="Alt grej på turen" fremhaevet>
-        <div style={{ fontSize: '22px', fontFamily: "'Fraunces', Georgia, serif" }}>
-          {((snapshot.vaegt_i_alt_g + medbragtVaegt) / 1000).toFixed(2)} kg
-        </div>
-        <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginTop: '3px' }}>
-          {[
-            `ejerens og deltagernes tilsammen${snapshot.personer > 1 ? `, ${snapshot.personer} af sted` : ''}`,
-            medbragtVaegt > 0 ? `heraf ${(medbragtVaegt / 1000).toFixed(2)} kg fra deltagerne` : null
-          ].filter(Boolean).join(' · ')}
-        </div>
-
-        {minRaekke && (
-          <div style={{
-            marginTop: '10px',
-            paddingTop: '10px',
-            borderTop: '1px solid var(--accent-border)',
-            fontSize: '13px'
-          }}>
-            {minVaegt > 0
-              ? <>Du bærer <strong>{(minVaegt / 1000).toFixed(2)} kg</strong></>
-              : 'Du har ikke skrevet noget på endnu'}
-          </div>
-        )}
-      </Infokort>
-
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
-          <SektionsTitel>Pakkeliste</SektionsTitel>
-          {/* Hele listen er det man planlægger efter; ens egen bunke er det
-              man pakker efter. Begge dele skal kunne ses. */}
-          <button
-            onClick={() => setEfterPerson(!efterPerson)}
-            style={{
-              background: 'transparent', border: '1px solid var(--border)', borderRadius: '16px',
-              padding: '4px 12px', fontSize: '11px', cursor: 'pointer', color: 'var(--tekst-dæmpet)',
-              marginBottom: '10px'
-            }}
-          >
-            {efterPerson ? 'Vis efter gruppe' : 'Vis efter person'}
-          </button>
-        </div>
-
-        {afsnit.length === 0 ? (
-          <div style={{ fontSize: '13px', color: 'var(--tekst-svag)' }}>Der er ikke valgt gear endnu.</div>
-        ) : (
-          afsnit.map((a) => (
-            <div key={a.titel} style={{ marginBottom: '14px' }}>
-              <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', fontWeight: 600, marginBottom: '5px' }}>
-                {gaestetitel(a.titel)}
-              </div>
-              {a.linjer.map((l, n) => (
-                <div
-                  key={`${l.navn}-${n}`}
-                  style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
-                    gap: '10px', padding: '6px 0', borderBottom: '1px solid var(--border-svag)',
-                    fontSize: '13px'
-                  }}
-                >
-                  <span style={{ minWidth: 0 }}>{l.navn || 'Uden navn'}</span>
-                  <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '12px', whiteSpace: 'nowrap' }}>
-                    {/* I "efter person" står navnet allerede som overskrift. */}
-                    {!efterPerson && l.baerer && <span style={{ marginRight: '8px' }}>{l.baerer}</span>}
-                    {/* "delt" sagde, hvad det var, og ikke hvad der manglede.
-                        Forskellen på "det tager Emil" og "det tager ingen" er
-                        den vigtigste på listen for en gæst. */}
-                    {l.delt && !l.baerer && (
-                      <span style={{ fontSize: '10px', marginRight: '6px', color: 'var(--advarsel)' }}>
-                        ingen bærer
-                      </span>
-                    )}
-                    {l.vaegt_g} g
-                  </span>
-                </div>
-              ))}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: '11px', color: 'var(--tekst-svag)', paddingTop: '4px' }}>
-                {(samletVaegt(a.linjer) / 1000).toFixed(2)} kg
-              </div>
+          {snapshot.besked_fra_ejer && (
+            <div style={{
+              padding: '12px 14px',
+              borderRadius: '10px',
+              background: 'var(--accent-bg)',
+              border: '1px solid var(--accent-border)',
+              fontSize: '13px',
+              lineHeight: 1.55,
+              whiteSpace: 'pre-wrap'
+            }}>
+              {snapshot.besked_fra_ejer}
             </div>
-          ))
-        )}
-      </div>
+          )}
 
-      {children}
+
+          {ledige.length > 0 && <Ledigt items={ledige} vaegt={ledigVaegt} kanMelde={!!kanMelde} />}
+
+          {snapshot.vejr && snapshot.vejr.dage.length > 0 && (
+            <Infokort label="Vejrudsigt da turen blev delt">
+              <div style={{ display: 'grid', gap: '4px', fontSize: '13px' }}>
+                {snapshot.vejr.dage.map((d) => (
+                  <div key={d.dato} style={{ display: 'grid', gridTemplateColumns: '54px 22px 1fr auto', gap: '8px', alignItems: 'center' }}>
+                    <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '11px' }}>{kortDag(d.dato)}</span>
+                    <span style={{ fontSize: '15px' }}>{vejrIkonKode(d.vejrkode)}</span>
+                    <span>{d.temp_min}–{d.temp_max}°C</span>
+                    <span style={{ fontSize: '11px', color: d.nedboer_mm > 0 ? 'var(--advarsel)' : 'var(--tekst-svag)' }}>
+                      {d.nedboer_mm > 0 ? `${d.nedboer_mm} mm` : '—'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Infokort>
+          )}
+
+          {/* Tallet er alt grejet på turen — ikke noget nogen enkelt bærer. Det
+              stod før som "Samlet vægt · fordelt på 4 personer", og det læses som
+              om man selv slipper med en fjerdedel. Har gæsten skrevet sig på,
+              står hendes eget tal ved siden af; det er dét, hun spurgte om. */}
+          <Infokort label="Alt grej på turen" fremhaevet>
+            <div style={{ fontSize: '22px', fontFamily: "'Fraunces', Georgia, serif" }}>
+              {((snapshot.vaegt_i_alt_g + medbragtVaegt) / 1000).toFixed(2)} kg
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginTop: '3px' }}>
+              {[
+                `ejerens og deltagernes tilsammen${snapshot.personer > 1 ? `, ${snapshot.personer} af sted` : ''}`,
+                medbragtVaegt > 0 ? `heraf ${(medbragtVaegt / 1000).toFixed(2)} kg fra deltagerne` : null
+              ].filter(Boolean).join(' · ')}
+            </div>
+
+            {minRaekke && (
+              <div style={{
+                marginTop: '10px',
+                paddingTop: '10px',
+                borderTop: '1px solid var(--accent-border)',
+                fontSize: '13px'
+              }}>
+                {minVaegt > 0
+                  ? <>Du bærer <strong>{(minVaegt / 1000).toFixed(2)} kg</strong></>
+                  : 'Du har ikke skrevet noget på endnu'}
+              </div>
+            )}
+          </Infokort>
+
+        </div>
+      )}
+
+      {fane === 'pakkeliste' && (
+        <div style={{ display: 'grid', gap: '18px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+              <SektionsTitel>Pakkeliste</SektionsTitel>
+              {/* Hele listen er det man planlægger efter; ens egen bunke er det
+                  man pakker efter. Begge dele skal kunne ses. */}
+              <button
+                onClick={() => setEfterPerson(!efterPerson)}
+                style={{
+                  background: 'transparent', border: '1px solid var(--border)', borderRadius: '16px',
+                  padding: '4px 12px', fontSize: '11px', cursor: 'pointer', color: 'var(--tekst-dæmpet)',
+                  marginBottom: '10px'
+                }}
+              >
+                {efterPerson ? 'Vis efter gruppe' : 'Vis efter person'}
+              </button>
+            </div>
+
+            {afsnit.length === 0 ? (
+              <div style={{ fontSize: '13px', color: 'var(--tekst-svag)' }}>Der er ikke valgt gear endnu.</div>
+            ) : (
+              afsnit.map((a) => (
+                <div key={a.titel} style={{ marginBottom: '14px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', fontWeight: 600, marginBottom: '5px' }}>
+                    {gaestetitel(a.titel)}
+                  </div>
+                  {a.linjer.map((l, n) => (
+                    <div
+                      key={`${l.navn}-${n}`}
+                      style={{
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+                        gap: '10px', padding: '6px 0', borderBottom: '1px solid var(--border-svag)',
+                        fontSize: '13px'
+                      }}
+                    >
+                      <span style={{ minWidth: 0 }}>{l.navn || 'Uden navn'}</span>
+                      <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                        {/* I "efter person" står navnet allerede som overskrift. */}
+                        {!efterPerson && l.baerer && <span style={{ marginRight: '8px' }}>{l.baerer}</span>}
+                        {/* "delt" sagde, hvad det var, og ikke hvad der manglede.
+                            Forskellen på "det tager Emil" og "det tager ingen" er
+                            den vigtigste på listen for en gæst. */}
+                        {l.delt && !l.baerer && (
+                          <span style={{ fontSize: '10px', marginRight: '6px', color: 'var(--advarsel)' }}>
+                            ingen bærer
+                          </span>
+                        )}
+                        {l.vaegt_g} g
+                      </span>
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: '11px', color: 'var(--tekst-svag)', paddingTop: '4px' }}>
+                    {(samletVaegt(a.linjer) / 1000).toFixed(2)} kg
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {mitGrej}
+        </div>
+      )}
+
+      {fane === 'deltagere' && (
+        <div style={{ display: 'grid', gap: '18px' }}>
+          <Gruppen linjer={linjer} navne={alleDeltagere} />
+        </div>
+      )}
+
+      {fane === 'journal' && (
+        <Journal dage={dage} skriv={skrivJournal} />
+      )}
+
+      {foed}
 
       <div style={{ textAlign: 'center', paddingTop: '6px' }}>
         <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', lineHeight: 1.6 }}>
@@ -261,6 +307,151 @@ function DeltTurVisning({ snapshot, deltagelser = [], mig, opdater, children, ka
       </div>
     </div>
   );
+}
+
+// Hvem der er med, og hvad de slæber.
+//
+// En liste med navne er ikke en fane værd — det står allerede i tallet på
+// fanebladet. Det, en gæst vil vide om selskabet, er hvordan byrden ligger:
+// hvem der har taget meget, og om der er nogen, der ikke har taget noget.
+function Gruppen({ linjer, navne }: { linjer: Pakkelinje[]; navne: string[] }) {
+  // Vægten pr. person regnes af den samme opdeling som pakkelisten bruger, så
+  // de to steder ikke kan komme til at sige hver sit.
+  const baaret = new Map<string, { antal: number; vaegt: number }>();
+  for (const l of linjer) {
+    if (!l.baerer) continue;
+    // "Emil og Sofie" er to, der har taget den samme ting. Den tæller hos
+    // begge — det er netop noget, ejeren skal kunne se.
+    for (const navn of l.baerer.split(' og ')) {
+      const foer = baaret.get(navn) ?? { antal: 0, vaegt: 0 };
+      baaret.set(navn, { antal: foer.antal + 1, vaegt: foer.vaegt + l.vaegt_g });
+    }
+  }
+
+  // Alle på turen med, også dem der ikke har taget noget. At stå med nul er
+  // en oplysning; at mangle på listen er en fejl.
+  const raekker = [...new Set([...navne, ...baaret.keys()])]
+    .map((navn) => ({ navn, ...(baaret.get(navn) ?? { antal: 0, vaegt: 0 }) }))
+    .sort((a, b) => b.vaegt - a.vaegt);
+
+  if (raekker.length === 0) return null;
+
+  return (
+    <div>
+      <SektionsTitel>Hvem bærer hvad</SektionsTitel>
+      {raekker.map((r) => (
+        <div
+          key={r.navn}
+          style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+            gap: '10px', padding: '8px 0', borderBottom: '1px solid var(--border-svag)',
+            fontSize: '13px'
+          }}
+        >
+          <span style={{ minWidth: 0 }}>{r.navn}</span>
+          <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '12px', whiteSpace: 'nowrap' }}>
+            {r.antal === 0
+              ? 'intet endnu'
+              : `${r.antal} ${r.antal === 1 ? 'ting' : 'ting'} · ${(r.vaegt / 1000).toFixed(2)} kg`}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Turens journal.
+//
+// Den er fælles: ejerens indgange og deltagernes står i den samme historie,
+// sorteret efter dag. Hvem der skrev hvad, står ved hver indgang — det er
+// forskellen på en journal og en opslagstavle.
+//
+// Kan man skrive, står feltet øverst. "Tilføj til journal" er den ene tydelige
+// handling på fanen; alt andet er læsning.
+function Journal({ dage, skriv }: {
+  dage: Journaldag[];
+  skriv?: (tekst: string) => Promise<boolean>;
+}) {
+  const [tekst, setTekst] = useState('');
+  const [tilstand, setTilstand] = useState<'ren' | 'skriver' | 'fejl'>('ren');
+
+  const send = async () => {
+    if (!skriv || !tekst.trim()) return;
+    setTilstand('skriver');
+    if (await skriv(tekst)) {
+      setTekst('');
+      setTilstand('ren');
+    } else {
+      setTilstand('fejl');
+    }
+  };
+
+  return (
+    <div style={{ display: 'grid', gap: '18px' }}>
+      {skriv ? (
+        <div>
+          <Tekstomraade
+            label="Tilføj til journal"
+            value={tekst}
+            onChange={setTekst}
+            placeholder="Hvad skete der?"
+          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--plads-3)', marginTop: 'var(--plads-2)' }}>
+            <Knap variant="primaer" onClick={() => void send()} disabled={!tekst.trim() || tilstand === 'skriver'}>
+              {tilstand === 'skriver' ? 'Gemmer…' : 'Tilføj til journal'}
+            </Knap>
+            {tilstand === 'fejl' && (
+              <span style={{ fontSize: '12px', color: 'var(--fejl)' }}>
+                Kunne ikke gemme. Prøv igen, når du har forbindelse.
+              </span>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', lineHeight: 1.6 }}>
+          Log ind for at skrive i turens journal.
+        </div>
+      )}
+
+      {dage.length === 0 ? (
+        <div style={{ fontSize: '13px', color: 'var(--tekst-svag)', lineHeight: 1.6 }}>
+          Der er ikke skrevet noget endnu. Det, I skriver her, bliver turens historie.
+        </div>
+      ) : (
+        dage.map((dag) => (
+          <div key={dag.dato}>
+            <SektionsTitel>
+              {dag.nummer > 0 ? `Dag ${dag.nummer}` : 'Før turen'}
+            </SektionsTitel>
+            <div style={{ display: 'grid', gap: '12px' }}>
+              {dag.indgange.map((i) => (
+                <div key={i.id} style={{
+                  padding: '10px 12px',
+                  borderRadius: 'var(--runding-lille)',
+                  border: `1px solid ${i.min ? 'var(--accent-border)' : 'var(--border-svag)'}`,
+                  background: i.min ? 'var(--accent-bg)' : 'var(--bg-forhoejet)'
+                }}>
+                  <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginBottom: '4px' }}>
+                    {i.navn}{i.min && ' · dig'} · {klokken(i.tid)}
+                  </div>
+                  <div style={{ fontSize: '13px', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
+                    {i.tekst}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+// "11:26". Kun klokkeslættet — dagen står allerede som overskrift.
+function klokken(tid: string): string {
+  const d = new Date(tid);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
 }
 
 // Det fælles grej, ingen har taget.

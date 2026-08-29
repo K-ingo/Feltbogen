@@ -431,7 +431,13 @@ står herunder.
 Denne har **ikke** `uid` — den synkroniseres ikke som de andre.
 
 `tur` Relation → `ture` (single) · `user` Relation → `users` (single) ·
-`navn` text · `medbragt` json · `baerer` json
+`navn` text · `medbragt` json · `baerer` json · `journal` json
+
+> **`journal` er nyt.** Mangler feltet, kan deltagerne skrive i turens journal
+> på skærmen, men indgangene forsvinder på vej op — PocketBase dropper ukendte
+> felter uden at sige noget. Tilføj et **json**-felt ved navn `journal` til
+> `turdeltagelse`, før I tager den i brug. Reglerne skal ikke ændres: en
+> deltager skriver stadig kun i sin egen række.
 
 **API-regler.** List og View — gæster skal kunne se hinandens bidrag på den
 samme tur:
@@ -458,6 +464,10 @@ Man kan altså kun røre sin egen række. Det er grunden til at deltagelserne
 ligger i deres egen samling og ikke som et felt på turen: PocketBase giver
 adgang til hele poster, ikke til enkelte felter, så måtte en deltager skrive på
 turen, kunne hun også slette den.
+
+Det er også grunden til, at journalbidrag ligger her og ikke i turens egne
+`feltnoter`: de to lister lægges sammen på skærmen — se `src/turjournal.ts` —
+men de skrives hver for sig, af hver sin ejer.
 
 ---
 
