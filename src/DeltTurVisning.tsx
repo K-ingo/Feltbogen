@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { GaesteBillede, GaesteItem, Gaestesnapshot } from './gaest';
 import { ledigtFaelles, gaestetitel } from './gaest';
@@ -11,6 +11,18 @@ import { Chip, Fanerakke, Infokort, Knap, SektionsTitel, Tekstomraade } from './
 import { GAESTEFANER } from './gaestefane';
 import type { Gaestefane } from './gaestefane';
 import { journalen } from './turjournal';
+import type { Skriveresultat } from './turjournal';
+import { MAKS_BYTE, erBillede, skaler } from './billeder';
+import {
+  linjenoegle,
+  laesPakkede,
+  veksl as vekslNoegle,
+  gemPakkede,
+  hentPakkede,
+  fremdrift as pakkefremdrift,
+  fremdriftstekst as pakketekst,
+  alle as allePakkede
+} from './gaestepakning';
 import type { Journaldag } from './turjournal';
 
 // Selve turen som den ser ud for en der har fået den delt. Bruges to steder:
@@ -18,7 +30,7 @@ import type { Journaldag } from './turjournal';
 // hvor det kommer fra basen. De skal se ens ud — det er den samme tur.
 
 function DeltTurVisning({
-  snapshot, deltagelser = [], mig, opdater, mitGrej, foed, kanMelde, ejer, skrivJournal
+  snapshot, deltagelser = [], mig, opdater, mitGrej, foed, kanMelde, ejer, skrivJournal, token
 }: {
   snapshot: Gaestesnapshot;
   // Det de andre har skrevet sig på for. Tom når turen læses fra en gemt kopi
@@ -48,7 +60,11 @@ function DeltTurVisning({
   // Skriver en indgang i turens journal. Mangler den, kan journalen kun
   // læses — sådan er det, når man ikke er logget ind, eller når turen blev
   // gemt, før man kunne skrive sig på.
-  skrivJournal?: (tekst: string) => Promise<boolean>;
+  skrivJournal?: (tekst: string, filer: File[]) => Promise<Skriveresultat>;
+  // Turens delingstoken. Afkrydsningen på pakkelisten gemmes under den, så to
+  // delte ture på den samme telefon ikke deler liste. Mangler den, kan der
+  // ikke krydses af — se gaestepakning.ts.
+  token?: string;
 }) {
   const k = snapshot.koordinater;
   const baerere = baererePrGear(deltagelser);
@@ -60,6 +76,21 @@ function DeltTurVisning({
   // deres egne rækker, lagt sammen. Se turjournal.ts.
   const dage = journalen(snapshot, deltagelser, mig, ejer || 'Ejeren');
   const antalIndgange = dage.reduce((n, d) => n + d.indgange.length, 0);
+
+  // Hvad gæsten har lagt i tasken. Det står på hendes egen telefon og ikke på
+  // turen: det er hendes taske, og de andre har ikke brug for at vide, hvor
+  // langt hun er.
+  const [pakkede, setPakkede] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (!token) return;
+    void hentPakkede(token).then((gemt) => setPakkede(laesPakkede(gemt)));
+  }, [token]);
+
+  const saetPakkede = async (noegler: string[]) => {
+    setPakkede(new Set(noegler));
+    if (token) await gemPakkede(token, noegler);
+  };
+  const vekslPakket = (noegle: string) => void saetPakkede(vekslNoegle(pakkede, noegle));
 
   // Fælles grej ingen har taget. Det er gæstens eneste håndtag på siden.
   const ledige = ledigtFaelles(snapshot.afsnit, baerere);
@@ -93,6 +124,8 @@ function DeltTurVisning({
     ...deltagelser.flatMap((d) => d.medbragt.map((g) =>
       linjeAfMedbragt(g.navn, g.vaegt_g, visningsnavn(d))))
   ];
+
+  const pakning = pakkefremdrift(pakkede, linjer);
 
   // Ejerens egen opdeling, med deltagernes grej lagt til sidst — eller alt
   // samlet efter hvem der tager det med, som er den man pakker efter.
@@ -235,6 +268,27 @@ function DeltTurVisning({
               </button>
             </div>
 
+            {/* Den samme status som på ejerens pakkeliste. Afkrydsningen er
+                gæstens egen og ligger på hendes telefon — se
+                gaestepakning.ts. */}
+            {linjer.length > 0 && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 'var(--plads-2)', flexWrap: 'wrap',
+                marginBottom: 'var(--plads-3)', paddingBottom: 'var(--plads-3)',
+                borderBottom: '1px solid var(--border-svag)'
+              }}>
+                <span style={{
+                  flex: 1, minWidth: '120px', fontSize: 'var(--skrift-brod)', fontWeight: 500,
+                  color: pakning.faerdig ? 'var(--succes)' : 'var(--tekst)'
+                }}>
+                  {pakketekst(pakning)}
+                </span>
+                {pakning.faerdig
+                  ? <Knap onClick={() => void saetPakkede([])}>Ryd afkrydsning</Knap>
+                  : <Knap onClick={() => void saetPakkede(allePakkede(linjer))}>Markér alle som pakket</Knap>}
+              </div>
+            )}
+
             {afsnit.length === 0 ? (
               <div style={{ fontSize: '13px', color: 'var(--tekst-svag)' }}>Der er ikke valgt gear endnu.</div>
             ) : (
@@ -243,16 +297,34 @@ function DeltTurVisning({
                   <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', fontWeight: 600, marginBottom: '5px' }}>
                     {gaestetitel(a.titel)}
                   </div>
-                  {a.linjer.map((l, n) => (
-                    <div
+                  {a.linjer.map((l, n) => {
+                    const noegle = linjenoegle(l);
+                    const erPakket = pakkede.has(noegle);
+
+                    return (
+                    <label
                       key={`${l.navn}-${n}`}
                       style={{
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                         gap: '10px', padding: '6px 0', borderBottom: '1px solid var(--border-svag)',
-                        fontSize: '13px'
+                        fontSize: '13px', cursor: 'pointer'
                       }}
                     >
-                      <span style={{ minWidth: 0 }}>{l.navn || 'Uden navn'}</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                        <input
+                          type="checkbox"
+                          checked={erPakket}
+                          onChange={() => vekslPakket(noegle)}
+                          style={{ width: 'auto', flexShrink: 0 }}
+                        />
+                        <span style={{
+                          minWidth: 0,
+                          textDecoration: erPakket ? 'line-through' : 'none',
+                          color: erPakket ? 'var(--tekst-dæmpet)' : 'var(--tekst)'
+                        }}>
+                          {l.navn || 'Uden navn'}
+                        </span>
+                      </span>
                       <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '12px', whiteSpace: 'nowrap' }}>
                         {/* I "efter person" står navnet allerede som overskrift. */}
                         {!efterPerson && l.baerer && <span style={{ marginRight: '8px' }}>{l.baerer}</span>}
@@ -266,8 +338,9 @@ function DeltTurVisning({
                         )}
                         {l.vaegt_g} g
                       </span>
-                    </div>
-                  ))}
+                    </label>
+                    );
+                  })}
                   <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: '11px', color: 'var(--tekst-svag)', paddingTop: '4px' }}>
                     {(samletVaegt(a.linjer) / 1000).toFixed(2)} kg
                   </div>
@@ -370,20 +443,43 @@ function Gruppen({ linjer, navne }: { linjer: Pakkelinje[]; navne: string[] }) {
 // handling på fanen; alt andet er læsning.
 function Journal({ dage, skriv }: {
   dage: Journaldag[];
-  skriv?: (tekst: string) => Promise<boolean>;
+  skriv?: (tekst: string, filer: File[]) => Promise<Skriveresultat>;
 }) {
   const [tekst, setTekst] = useState('');
-  const [tilstand, setTilstand] = useState<'ren' | 'skriver' | 'fejl'>('ren');
+  const [filer, setFiler] = useState<File[]>([]);
+  const [tilstand, setTilstand] = useState<'ren' | 'skriver' | 'fejl' | 'kun_tekst'>('ren');
+  const vaelger = useRef<HTMLInputElement>(null);
+
+  // Billederne skaleres på telefonen, før der bliver spurgt om net. Man tager
+  // dem i en skov uden dækning, og en original på otte megapixel skal ikke stå
+  // og vente på at komme igennem et hul i signalet.
+  const vaelg = async (valgte: FileList | null) => {
+    if (!valgte) return;
+    const klar: File[] = [];
+
+    for (const fil of Array.from(valgte)) {
+      if (!erBillede(fil.type) || fil.size > MAKS_BYTE) continue;
+      const lille = await skaler(fil);
+      klar.push(new File([lille.blob], fil.name, { type: lille.blob.type }));
+    }
+
+    setFiler((foer) => [...foer, ...klar]);
+    setTilstand('ren');
+  };
 
   const send = async () => {
     if (!skriv || !tekst.trim()) return;
     setTilstand('skriver');
-    if (await skriv(tekst)) {
-      setTekst('');
-      setTilstand('ren');
-    } else {
+
+    const svar = await skriv(tekst, filer);
+    if (svar === 'fejl') {
       setTilstand('fejl');
+      return;
     }
+
+    setTekst('');
+    setFiler([]);
+    setTilstand(svar === 'kun_tekst' ? 'kun_tekst' : 'ren');
   };
 
   return (
@@ -396,13 +492,43 @@ function Journal({ dage, skriv }: {
             onChange={setTekst}
             placeholder="Hvad skete der?"
           />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--plads-3)', marginTop: 'var(--plads-2)' }}>
+          {filer.length > 0 && (
+            <div style={{ display: 'flex', gap: 'var(--plads-2)', flexWrap: 'wrap', marginTop: 'var(--plads-2)' }}>
+              {filer.map((f, n) => (
+                <Chip key={`${f.name}-${n}`} onFjern={() => setFiler(filer.filter((_, i) => i !== n))}>
+                  {f.name}
+                </Chip>
+              ))}
+            </div>
+          )}
+
+          <input
+            ref={vaelger}
+            type="file"
+            accept="image/*"
+            multiple
+            hidden
+            onChange={(e) => { void vaelg(e.target.files); e.target.value = ''; }}
+          />
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--plads-2)', flexWrap: 'wrap', marginTop: 'var(--plads-2)' }}>
             <Knap variant="primaer" onClick={() => void send()} disabled={!tekst.trim() || tilstand === 'skriver'}>
               {tilstand === 'skriver' ? 'Gemmer…' : 'Tilføj til journal'}
+            </Knap>
+            <Knap onClick={() => vaelger.current?.click()} disabled={tilstand === 'skriver'}>
+              Tilføj billeder
             </Knap>
             {tilstand === 'fejl' && (
               <span style={{ fontSize: '12px', color: 'var(--fejl)' }}>
                 Kunne ikke gemme. Prøv igen, når du har forbindelse.
+              </span>
+            )}
+            {/* Serveren tog imod teksten og smed billederne væk. Det sker, når
+                `billeder`-feltet mangler i PocketBase — se POCKETBASE.md. Uden
+                den her besked ville de forsvinde uden et ord. */}
+            {tilstand === 'kun_tekst' && (
+              <span style={{ fontSize: '12px', color: 'var(--advarsel)' }}>
+                Noten er gemt, men billederne kom ikke op. Sig til den, der ejer turen.
               </span>
             )}
           </div>
@@ -437,6 +563,24 @@ function Journal({ dage, skriv }: {
                   <div style={{ fontSize: '13px', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
                     {i.tekst}
                   </div>
+                  {i.billeder.length > 0 && (
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+                      {i.billeder.map((url) => (
+                        <a key={url} href={url} target="_blank" rel="noreferrer noopener">
+                          <img
+                            src={url}
+                            alt=""
+                            loading="lazy"
+                            style={{
+                              width: '96px', height: '96px', objectFit: 'cover',
+                              borderRadius: 'var(--runding-lille)', display: 'block',
+                              background: 'var(--bg-forhoejet)'
+                            }}
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

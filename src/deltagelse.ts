@@ -41,6 +41,11 @@ export interface Bidrag {
   // ISO.
   tid: string;
   tekst: string;
+  // Filnavnene på de billeder, der hører til indgangen, som PocketBase gemte
+  // dem. Selve filerne ligger i rækkens `billeder`-felt; her står kun, hvilke
+  // af dem der hører til hvilken indgang. Uden koblingen ville alle billeder
+  // på en række se ud, som om de hørte til den nyeste note.
+  billeder: string[];
 }
 
 export interface Deltagelse {
@@ -55,6 +60,10 @@ export interface Deltagelse {
   baerer: Reference[];
   // Det hun har skrevet i turens journal.
   journal: Bidrag[];
+  // Filnavnene på de billeder, rækken har liggende i PocketBase. Kun læst —
+  // nye billeder sendes som filer, ikke som navne, og serveren bestemmer selv
+  // det endelige navn.
+  billedfiler: string[];
 }
 
 // ─────────────────────────────────────────────
@@ -75,7 +84,12 @@ export function laesJournal(v: unknown): Bidrag[] {
 
   return v
     .filter((b): b is Record<string, unknown> => !!b && typeof b === 'object')
-    .map((b) => ({ id: tekst(b.id), tid: tekst(b.tid), tekst: tekst(b.tekst) }))
+    .map((b) => ({
+      id: tekst(b.id),
+      tid: tekst(b.tid),
+      tekst: tekst(b.tekst),
+      billeder: Array.isArray(b.billeder) ? b.billeder.map(String).filter(Boolean) : []
+    }))
     // En tom indgang er en halvfærdig indtastning, ikke turens historie.
     .filter((b) => b.tekst.trim() !== '');
 }
@@ -99,7 +113,8 @@ export function laesDeltagelse(r: RecordModel): Deltagelse {
     navn: tekst(r.navn),
     medbragt: laesMedbragt(r.medbragt),
     baerer: Array.isArray(r.baerer) ? r.baerer.map(String).filter(Boolean) : [],
-    journal: laesJournal(r.journal)
+    journal: laesJournal(r.journal),
+    billedfiler: Array.isArray(r.billeder) ? r.billeder.map(String).filter(Boolean) : []
   };
 }
 
@@ -172,11 +187,18 @@ export async function hentDeltagelser(turPbId: string, token: string): Promise<S
 
 // Skriver ens egen række. Findes den ikke, oprettes den — man bliver deltager
 // ved at skrive sig på, ikke ved at ejeren gør noget.
-export async function gemDeltagelse(deltagelse: Deltagelse, token: string): Promise<Svar<Deltagelse>> {
+export async function gemDeltagelse(
+  deltagelse: Deltagelse,
+  token: string,
+  // Nye billeder, allerede skaleret. De lægges til dem, rækken har i
+  // forvejen — derfor `billeder+` og ikke `billeder`, som ville erstatte
+  // hele feltet og slette de gamle.
+  nyeBilleder: File[] = []
+): Promise<Svar<Deltagelse>> {
   const bruger = nuvaerendeBruger();
   if (!bruger) return { slags: 'fejl' };
 
-  const krop = {
+  const felter: Record<string, unknown> = {
     tur: deltagelse.tur,
     user: bruger.id,
     navn: deltagelse.navn,
@@ -184,6 +206,18 @@ export async function gemDeltagelse(deltagelse: Deltagelse, token: string): Prom
     baerer: deltagelse.baerer,
     journal: deltagelse.journal
   };
+
+  // Uden filer sendes almindelig JSON. Med filer skal det være FormData, og
+  // så skal JSON-felterne skrives som tekst — PocketBase læser dem tilbage.
+  let krop: Record<string, unknown> | FormData = felter;
+  if (nyeBilleder.length > 0) {
+    const form = new FormData();
+    for (const [navn, vaerdi] of Object.entries(felter)) {
+      form.append(navn, typeof vaerdi === 'string' ? vaerdi : JSON.stringify(vaerdi));
+    }
+    for (const fil of nyeBilleder) form.append(deltagelse.pb_id ? 'billeder+' : 'billeder', fil);
+    krop = form;
+  }
 
   try {
     const svar = deltagelse.pb_id
@@ -193,6 +227,13 @@ export async function gemDeltagelse(deltagelse: Deltagelse, token: string): Prom
   } catch {
     return { slags: 'fejl' };
   }
+}
+
+// Adressen på et billede, en deltager har lagt op. Filen ligger på hendes
+// række, og navnet er det, serveren gav den.
+export function billedurl(deltagelse: Deltagelse, filnavn: string): string {
+  if (!deltagelse.pb_id) return '';
+  return pb.files.getURL({ id: deltagelse.pb_id, collectionName: SAMLING }, filnavn);
 }
 
 // Melder man fra, forsvinder ens grej fra de andres liste igen.
@@ -207,5 +248,5 @@ export async function forladTur(pbId: string): Promise<boolean> {
 
 // En tom række til en der lige er kommet ind ad linket.
 export function nyDeltagelse(turPbId: string, brugerId: string, navn = ''): Deltagelse {
-  return { tur: turPbId, user: brugerId, navn, medbragt: [], baerer: [], journal: [] };
+  return { tur: turPbId, user: brugerId, navn, medbragt: [], baerer: [], journal: [], billedfiler: [] };
 }
