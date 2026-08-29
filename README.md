@@ -46,6 +46,9 @@ appen starter.
 | Vedligehold | `src/vedligehold.ts` | Imprægnering, slibning — intervaller der går i ring |
 | Vægt-brydere | `src/vaegtbrydere.ts` | Lettere alternativer i skabet, deres risiko, og tags ingen gruppe har |
 | Smart-forslag | `src/forslag.ts` | Motorens forslag i én form: forklaring, virkning, tiltro og to handlinger |
+| Første tur | `src/foersteTur.ts` | Kladden bag det guidede flow, og turen den bliver til |
+| Bæringen | `src/fordeling.ts` | Hvem der bærer det fælles grej, og et forslag om at dele det jævnt |
+| Hvorfor sync ikke virker | `src/syncfejl.ts` | Den seneste fejl fra baggrundssync, oversat til noget man kan handle på |
 | Hvor et forslag lander | `src/turmaal.ts`, `src/indstillingsmaal.ts` | Fanen *og* sektionen man skal stå i, når man trykker på noget appen selv har bragt på bane |
 | Ligesom sidst | `src/ligesomSidst.ts` | Tidligere ture der lignede, som grej kan kopieres fra |
 | Fortryd sletning | `src/fortryd.ts` | Vinduet på 25 sekunder efter en sletning |

@@ -467,6 +467,61 @@ describe('begrundelser', () => {
   });
 });
 
+describe('syncstatus ved fejl', () => {
+  const fejl = { art: 'afvist' as const, detalje: '', hvornaar: '' };
+  const udloebet = { art: 'ikke_logget_ind' as const, detalje: '', hvornaar: '' };
+
+  it('siger til når ændringer ikke kom op', () => {
+    const status = syncstatus(3, true, true, fejl);
+    expect(status.tilstand).toBe('fejl');
+    expect(status.tekst).toBe('3 ændringer kom ikke op');
+    expect(status.forklaring).toContain('PocketBase');
+  });
+
+  // Hentningen kan fejle uden at der er noget usendt. "Alt er sendt op" ville
+  // være rigtigt om det der skulle op, og forkert om det appen lige prøvede.
+  it('siger til om en fejl, også når der ikke er noget usendt', () => {
+    const status = syncstatus(0, true, true, fejl);
+    expect(status.tilstand).toBe('fejl');
+    expect(status.tekst).toBe('Sync fejlede');
+  });
+
+  // At stå uden dækning i skoven er ikke noget der er gået galt.
+  it('kalder det ikke en fejl når man bare er offline', () => {
+    expect(syncstatus(3, false, true, fejl).tilstand).toBe('offline');
+    expect(syncstatus(0, false, true, fejl).tilstand).toBe('synkroniseret');
+  });
+
+  // En udløbet session rydder sig selv, så appen står som "uden konto". At
+  // sige "Gemt på denne enhed" ville være sandt og samtidig skjule, at der er
+  // noget, der ikke kommer op.
+  it('siger det, når man er blevet logget ud undervejs', () => {
+    const status = syncstatus(3, true, false, udloebet);
+    expect(status.tilstand).toBe('fejl');
+    expect(status.tekst).toBe('Du er blevet logget ud');
+    expect(status.kanLoggeInd).toBe(true);
+  });
+
+  it('nævner ikke sync uden konto, når fejlen ikke handler om login', () => {
+    expect(syncstatus(3, true, false, fejl).tilstand).toBe('kun_lokalt');
+  });
+
+  // Teksten og knappen skal komme fra den samme beslutning. Ellers kan linjen
+  // sige én ting og knappen under den noget andet.
+  it('tilbyder kun login ved den fejl, det hjælper på', () => {
+    expect(syncstatus(3, true, true, udloebet).kanLoggeInd).toBe(true);
+    expect(syncstatus(3, true, true, fejl).kanLoggeInd).toBe(false);
+    expect(syncstatus(3, false, true, udloebet).kanLoggeInd).toBeUndefined();
+    expect(syncstatus(3, true, false, null).kanLoggeInd).toBeUndefined();
+  });
+
+  it('opfører sig som før uden en fejl', () => {
+    expect(syncstatus(0, true, true).tekst).toBe('Alt er sendt op');
+    expect(syncstatus(1, true, true).tekst).toBe('1 ændring på vej op');
+    expect(syncstatus(2, false, true).tekst).toBe('2 ændringer venter på dækning');
+  });
+});
+
 describe('tureIAar', () => {
   it('tæller årets ture og sammenligner med sidste år', () => {
     const ture = [

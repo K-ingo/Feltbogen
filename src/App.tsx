@@ -362,6 +362,7 @@ function App(): ReactElement | null {
           nytItem={nytItem}
           nyTur={nyTur}
           foersteTur={() => setViserFoersteTur(true)}
+          tilLogin={() => setViserLogin(true)}
         />
       );
     case 'folk': return <FolkSide fane={fane} skift={skiftFane} />;
