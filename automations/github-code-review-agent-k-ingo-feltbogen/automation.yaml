@@ -1,0 +1,29 @@
+enabled: true
+entrypoint: python3 main.py
+keep_alive: null
+model: null
+name: GitHub Code Review Agent - K-ingo/Feltbogen
+preset_metadata:
+  first_run:
+    failure_stage: dispatch
+    recorded_at: '2026-08-30T16:30:14.196404+00:00'
+    status: failure
+    template_version: 1.0.0
+  template:
+    config:
+      repos:
+      - K-ingo/Feltbogen
+      review_tone: concise
+      trigger_label: openhands-review
+    id: github-pr-reviewer
+    version: 1.0.0
+prompt: null
+setup_script_path: null
+tarball_source:
+  type: internal
+  url: null
+timeout: 600
+trigger:
+  schedule: '*/15 * * * *'
+  timezone: Europe/Copenhagen
+  type: cron
