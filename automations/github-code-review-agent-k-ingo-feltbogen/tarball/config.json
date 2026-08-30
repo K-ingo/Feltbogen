@@ -1,0 +1,7 @@
+{
+  "repos": [
+    "K-ingo/Feltbogen"
+  ],
+  "trigger_label": "openhands-review",
+  "review_tone": "concise"
+}
