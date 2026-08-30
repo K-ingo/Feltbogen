@@ -4,11 +4,6 @@ keep_alive: null
 model: qwen3.5-9b
 name: GitHub Code Review Agent - K-ingo/Feltbogen
 preset_metadata:
-  first_run:
-    failure_stage: dispatch
-    recorded_at: '2026-08-30T16:30:14.196404+00:00'
-    status: failure
-    template_version: 1.0.0
   template:
     config:
       repos:
