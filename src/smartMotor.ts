@@ -190,7 +190,7 @@ export function saesonfaktor(dato: string): number {
 
 export function beregnForbrug(tur: Tur, krop: Kropsdata = {}): Beregninger {
   const dage = Math.max(1, tur.naetter + 1);
-  const personer = tur.personer;
+  const personer = Math.max(1, tur.personer || 1);
   const faktor = saesonfaktor(tur.startdato);
 
   const vaegtfaktor = beregnVaegtfaktor(krop.kropsvaegt_kg);
