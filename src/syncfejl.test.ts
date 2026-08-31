@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { fejlartAf, laesSyncfejl, kraeverLogin, FEJLTEKST } from './syncfejl';
+import { fejlartAf, laesSyncfejl, kraeverLogin, FEJLTEKST, fejltekst, noterFejl, SYNCFEJL_NOEGLE } from './syncfejl';
+import { laes } from './indstillinger';
 import type { Fejlart } from './syncfejl';
 
 describe('fejlartAf', () => {
@@ -60,5 +61,42 @@ describe('laesSyncfejl', () => {
 
   it('tåler at de andre felter mangler', () => {
     expect(laesSyncfejl('{"art":"server"}')).toEqual({ art: 'server', detalje: '', hvornaar: '' });
+  });
+});
+
+describe('fejltekst', () => {
+  // Den samme art betyder to forskellige ting: enten er man selv uden
+  // dækning, eller også svarer serveren ikke. Forskellen er hele forskellen
+  // på "vent" og "der er noget galt med serveren".
+  it('siger noget andet om en tavs server, når man selv er på nettet', () => {
+    const paaNettet = fejltekst('ingen_forbindelse', true);
+    expect(paaNettet).toContain('Serveren svarede ikke');
+    expect(paaNettet).not.toBe(FEJLTEKST.ingen_forbindelse);
+  });
+
+  it('bruger den almindelige tekst, når man er offline', () => {
+    expect(fejltekst('ingen_forbindelse', false)).toBe(FEJLTEKST.ingen_forbindelse);
+  });
+
+  it('lader de andre arter være', () => {
+    expect(fejltekst('afvist', true)).toBe(FEJLTEKST.afvist);
+    expect(fejltekst('ikke_logget_ind', true)).toBe(FEJLTEKST.ikke_logget_ind);
+  });
+});
+
+describe('noterFejl', () => {
+  // PocketBase-klienten sætter selv "Something went wrong." på fejlen, når
+  // svaret ikke havde nogen besked. Skærmen skrev den ud som "Serveren sagde:
+  // Something went wrong." om en server, der aldrig svarede.
+  it('gemmer kun det, serveren selv sagde', async () => {
+    await noterFejl({ status: 0, message: 'Something went wrong.' });
+    expect(laesSyncfejl(await laes(SYNCFEJL_NOEGLE))?.detalje).toBe('');
+  });
+
+  it('gemmer serverens egen besked, når der er en', async () => {
+    await noterFejl({ status: 400, response: { message: 'Failed to create record.' }, message: 'Failed to create record.' });
+    const gemt = laesSyncfejl(await laes(SYNCFEJL_NOEGLE));
+    expect(gemt?.art).toBe('afvist');
+    expect(gemt?.detalje).toBe('Failed to create record.');
   });
 });

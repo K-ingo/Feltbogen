@@ -45,6 +45,11 @@ export interface Syncfejl {
   // Serverens egen tekst, hvis den sagde noget. Den er engelsk, men den er
   // præcis — og den er det eneste, der kan skelne to afviste felter fra
   // hinanden.
+  //
+  // Kun `response.message` tæller. PocketBase-klienten sætter selv en
+  // `message` på fejlen, når svaret ikke havde nogen — "Something went wrong."
+  // — og den er klientens ord, ikke serverens. Skærmen skrev den ud som
+  // "Serveren sagde: Something went wrong." om en server, der aldrig svarede.
   detalje: string;
   // ISO. Bruges til at sige hvornår det gik galt, ikke til at rydde op efter.
   hvornaar: string;
@@ -52,7 +57,6 @@ export interface Syncfejl {
 
 interface PbFejl {
   status?: number;
-  message?: string;
   response?: { message?: string };
 }
 
@@ -77,6 +81,20 @@ export const FEJLTEKST: Record<Fejlart, string> = {
   ukendt: 'Noget gik galt undervejs op. Dine ting står stadig på enheden.'
 };
 
+// Teksten på skærmen.
+//
+// `ingen_forbindelse` betyder to forskellige ting, og de kræver hver sit: enten
+// er man selv uden dækning, eller også svarer serveren ikke. Browseren ved
+// hvilken, og forskellen er hele forskellen på "vent" og "der er noget galt med
+// serveren".
+export function fejltekst(art: Fejlart, online: boolean = true): string {
+  if (art === 'ingen_forbindelse' && online) {
+    return 'Serveren svarede ikke. Din enhed er på nettet, så det er serveren, der ikke er oppe — eller også afviser den kald fra appens adresse. '
+      + 'Dine ting står sikkert på enheden og bliver sendt, så snart den svarer igen.';
+  }
+  return FEJLTEKST[art];
+}
+
 // Kun den ene art kan brugeren selv gøre noget ved med det samme.
 export function kraeverLogin(fejl: Syncfejl | null): boolean {
   return fejl?.art === 'ikke_logget_ind';
@@ -89,7 +107,7 @@ export async function noterFejl(e: unknown, nu: Date = new Date()): Promise<void
 
   await saet(SYNCFEJL_NOEGLE, JSON.stringify({
     art: fejlartAf(e),
-    detalje: fejl.response?.message || fejl.message || '',
+    detalje: fejl.response?.message ?? '',
     hvornaar: nu.toISOString()
   } satisfies Syncfejl));
 }

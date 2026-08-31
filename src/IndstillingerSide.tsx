@@ -17,7 +17,8 @@ import { hentNyesteUdgave, byggetekst } from './opdatering';
 import { useAuth } from './useAuth';
 import { afstemMedServer, fjernDubletter, usendtAntal, uidFeltMangler } from './sync';
 import { serveradresse } from './pb';
-import { useSyncfejl, FEJLTEKST } from './syncfejl';
+import { useSyncfejl, fejltekst } from './syncfejl';
+import { useErOnline } from './useMedie';
 import { datoTekst } from './datotekst';
 import {
   lavSikkerhedskopi,
@@ -81,6 +82,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
   // Tælles om når basen ændrer sig, så tallet ikke står og lyver efter en sync.
   const usendt = useLiveQuery(usendtAntal, [], 0);
   const syncfejl = useSyncfejl();
+  const online = useErOnline();
   const pakAfNiveau = useValg(PAK_AF_NIVEAU_VALG, PAK_AF_NIVEAU, 'let');
   const krop = useKropsdata();
   const afgangsSkabelon = laesSkabelon(useTekst(AFGANGS_SKABELON));
@@ -91,9 +93,12 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
     try {
       await afstemMedServer();
       const tilbage = await usendtAntal();
+      // Grunden står i advarslen nedenunder — kvitteringen siger kun, hvad der
+      // kom ud af trykket. To beskeder om det samme, hvor den ene gætter på
+      // årsagen ("prøv igen når du har forbindelse"), er en for meget.
       setSyncBesked(tilbage === 0
         ? { slags: 'ok', tekst: 'Alt er synkroniseret.' }
-        : { slags: 'fejl', tekst: `${tilbage} ${tilbage === 1 ? 'ændring' : 'ændringer'} kunne ikke sendes. Prøv igen når du har forbindelse.` });
+        : { slags: 'fejl', tekst: `${tilbage} ${tilbage === 1 ? 'ændring ligger' : 'ændringer ligger'} stadig og venter.` });
     } catch {
       setSyncBesked({ slags: 'fejl', tekst: 'Kunne ikke få fat i serveren.' });
     }
@@ -236,7 +241,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
                 syncfejl.ts. */}
             {syncfejl && (
               <Advarsel>
-                {FEJLTEKST[syncfejl.art]}
+                {fejltekst(syncfejl.art, online)}
                 {syncfejl.detalje && (
                   <div style={{ marginTop: '6px', opacity: 0.8 }}>
                     Serveren sagde: {syncfejl.detalje}

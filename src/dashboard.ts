@@ -4,7 +4,7 @@ import { filtrererTure } from './statistik';
 import { manglerPakAfTjek, dageSidenSlut, PAK_AF_FRIST_DAGE } from './pakAfTjek';
 import type { Turmaal } from './turmaal';
 import { udlaanteItems, dageUdlaant, erOverskredet, laengde, LANGT_UDLAAN_DAGE } from './udlaan';
-import { FEJLTEKST, kraeverLogin } from './syncfejl';
+import { FEJLTEKST, fejltekst, kraeverLogin } from './syncfejl';
 import type { Syncfejl } from './syncfejl';
 import { forfaldne, forfaldstekst, VARSEL_DAGE } from './vedligehold';
 
@@ -512,7 +512,9 @@ export function syncstatus(
     return {
       tilstand: 'fejl',
       tekst: usendt === 0 ? 'Sync fejlede' : `${aendringstekst(usendt)} kom ikke op`,
-      forklaring: FEJLTEKST[fejl.art],
+      // Grenen her nås kun, når browseren siger, den er online — se
+      // offline-tjekket ovenfor. Så er det den tekst, der passer.
+      forklaring: fejltekst(fejl.art, true),
       kanLoggeInd: kraeverLogin(fejl)
     };
   }
