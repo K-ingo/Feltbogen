@@ -1,9 +1,22 @@
 import PocketBase from 'pocketbase';
 import { noterFejl, rydFejl } from './syncfejl';
 
-// Overstyres med VITE_PB_URL i .env — fallback er den nuværende Railway-instans,
-// så appen virker uden opsætning indtil vi flytter til egen server.
-const PB_URL = import.meta.env.VITE_PB_URL ?? 'https://pocketbase-production-6188.up.railway.app';
+// Appen taler med sit eget domæne. Caddy tager /api/ og sender det videre til
+// PocketBase over Railways private netværk, så PocketBase ikke behøver en
+// offentlig adresse — se Caddyfile.
+//
+// En relativ adresse er ikke det samme som ingen adresse: PocketBase-klienten
+// sætter `window.location.origin` foran, når basen ikke starter med http.
+// Url'er ud af SDK'en — også dem til billedfiler — bliver altså stadig
+// absolutte. Det er en forudsætning ét sted til: filteret i gaest.ts, der kun
+// lukker http(s) igennem fra et delt snapshot, ville ellers kaste alle
+// billeder væk.
+//
+// VITE_PB_URL overstyrer stadig, og skal pege på en server med adresse og det
+// hele. Den bages ind i bundlen ved build — så et privat .railway.internal-
+// domæne hører ikke hjemme her: det findes kun inde i Railway, og appen kører
+// i en browser ude i skoven.
+const PB_URL = import.meta.env.VITE_PB_URL ?? '/';
 
 export const pb = new PocketBase(PB_URL);
 
@@ -22,7 +35,14 @@ export interface Bruger {
 // opfører sig ens, den bliver bare ved med at ringe til den forkerte adresse.
 // Derfor står den på indstillingsskærmen.
 export function serveradresse(): string {
-  return PB_URL;
+  if (/^https?:\/\//i.test(PB_URL)) return PB_URL;
+
+  // Relativ adresse: appen og PocketBase deler domæne. Origin alene ville
+  // ikke sige om kaldene går gennem proxyen eller direkte til en server et
+  // andet sted — og det er præcis det, rækken er sat op for at vise.
+  const origin = typeof window === 'undefined' ? '' : window.location.origin;
+  const base = `${origin}${PB_URL === '/' ? '' : PB_URL}`;
+  return base ? `${base} (samme domæne som appen)` : 'samme domæne som appen';
 }
 
 export function erLoggetInd(): boolean {

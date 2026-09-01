@@ -282,7 +282,10 @@ de skal alle stå som `user = @request.auth.id`.
 
 ### Virker appen stadig?
 
-1. Sæt `VITE_PB_URL` til serverens adresse — se `.env.example`.
+1. Peg appen mod serveren. I udvikling er det `PB_PROXY_TARGET`; i
+   udrulningen går kaldene gennem appens eget domæne og videre til
+   PocketBase over det private netværk — se `.env.example` og README
+   under **Udrulning**.
 2. Log ind.
 3. **Indstillinger → Synkronisering → Synkronisér nu.** Der skal stå "Alt er
    synkroniseret". Står der et antal ændringer der ikke kunne sendes, står
@@ -332,7 +335,7 @@ konsollen (`Login fejlede: {status, url, besked, felter}`).
 |---|---|---|
 | `"message": "Failed to authenticate."` | Kontoen findes ikke, kodeordet er forkert, **eller** samlingens auth-regel afviser kontoen | Prøv en konto du ved findes. Bliver den også afvist, se de to næste rækker |
 | `"data": { "identity": … }` | Feltet manglede eller validerede ikke | Fejlen er i appen, ikke i opsætningen |
-| `"message": "Something went wrong."` og status **0** | Serveren blev aldrig nået | Railway-instansen sover eller er væk — tjek `VITE_PB_URL` |
+| `"message": "Something went wrong."` og status **0** | Serveren blev aldrig nået | Railway-instansen sover eller er væk. Går kaldene gennem proxyen, så tjek også `POCKETBASE_ORIGIN` på web-servicen — se README under **Udrulning** |
 
 To ting i PocketBase kan give "Failed to authenticate." for en konto der
 findes, og begge sidder på `users`-samlingen under **Options**:

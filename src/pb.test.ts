@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { pb, erLoggetInd, fornyLogin, nuvaerendeBruger } from './pb';
+import { pb, erLoggetInd, fornyLogin, nuvaerendeBruger, serveradresse } from './pb';
 
 // Et token appen kan tro på: PocketBase-klienten læser kun `exp` ud af
 // nyttelasten, så resten behøver ikke være ægte.
@@ -117,5 +117,38 @@ describe('fornyLogin', () => {
     await fornyLogin();
 
     expect(kald).not.toHaveBeenCalled();
+  });
+});
+
+// Adressen står på indstillingsskærmen, fordi en forkert server ellers er
+// usynlig: appen opfører sig ens, den ringer bare det forkerte sted hen.
+describe('serveradresse', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it('viser appens eget domæne når adressen er relativ', async () => {
+    vi.stubGlobal('window', { location: { origin: 'https://feltbogen.dk' } });
+    vi.resetModules();
+
+    const { serveradresse: fra } = await import('./pb');
+
+    expect(fra()).toBe('https://feltbogen.dk (samme domæne som appen)');
+  });
+
+  it('viser adressen som den er når VITE_PB_URL peger et andet sted hen', async () => {
+    vi.stubEnv('VITE_PB_URL', 'https://pb.eksempel.dk');
+    vi.resetModules();
+
+    const { serveradresse: fra } = await import('./pb');
+
+    expect(fra()).toBe('https://pb.eksempel.dk');
+  });
+
+  // Uden et vindue — som her i testene — er der ingen origin at sætte foran.
+  // Så skal der stadig stå noget forståeligt frem for en tom række.
+  it('siger stadig noget når der ikke er noget vindue', () => {
+    expect(serveradresse()).toBe('samme domæne som appen');
   });
 });
