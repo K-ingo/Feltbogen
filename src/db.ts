@@ -389,6 +389,31 @@ export interface Indstilling {
   vaerdi: string;
 }
 
+// En besked fra smart-motoren, man har sagt nej tak til.
+//
+// Afvisningen lå før i skærmens egen useState. Det holdt præcis så længe man
+// blev stående: gik man ud af turen og ind i den igen, stod forslaget der
+// igen, og man skulle afvise det forfra. Et "nej tak", appen glemmer i det
+// øjeblik man vender ryggen til, er ikke et svar — det er en pause.
+//
+// Derfor står den her. Rækken er ikke data om turen, og den synkroniseres
+// ikke: hvad man ikke gider høre om, hører til den enhed, man sad ved, på
+// samme måde som resten af `indstillinger`.
+//
+// `aftryk` er det, der gør, at et nej ikke bliver et nej for evigt. Det er et
+// aftryk af dét, forslaget byggede på, da man afviste det. Ændrer man det man
+// tager med, så motoren har noget nyt at sige, passer aftrykket ikke længere,
+// og forslaget kommer frem igen. Rører man ikke ved noget, er det det samme
+// forslag — og så bliver det væk.
+export interface AfvistForslag {
+  // Nøglen er turen og forslaget tilsammen: ét nej pr. forslag pr. tur, så
+  // tabellen ikke vokser med én række for hver gang man afviser det samme.
+  tur_uid: Reference;
+  forslag_id: string;
+  aftryk: string;
+  afvist: Date;
+}
+
 // En tur en anden har delt med én, gemt så den kan findes igen uden linket.
 //
 // Den ligger ikke i `ture`: den er ikke ens egen, den kan ikke redigeres, og
@@ -422,6 +447,9 @@ export class FeltbogenDB extends Dexie {
   steder!: Table<Sted, number>;
   personer!: Table<Person, number>;
   billeder!: Table<Billede, number>;
+  // Sammensat nøgle, ikke ++id: rækken *er* turen og forslaget, og så er der
+  // ikke noget id at finde på.
+  afviste_forslag!: Table<AfvistForslag, [Reference, string]>;
 
   constructor() {
     super('FeltbogenDB');
@@ -517,6 +545,23 @@ export class FeltbogenDB extends Dexie {
       steder: '++id, &uid, navn, oprettet',
       personer: '++id, &uid, navn, oprettet',
       billeder: '++id, &uid, tur_uid, tid, oprettet'
+    });
+
+    // v11 husker de forslag, man har sagt nej tak til. Ingen upgrade:
+    // tabellen er tom til at begynde med, og en tom tabel betyder "intet
+    // afvist endnu" — hvilket er den rigtige værdi for enhver, der ikke har
+    // afvist noget.
+    this.version(11).stores({
+      items: '++id, &uid, navn, status, oprettet',
+      grupper: '++id, &uid, navn, oprettet',
+      ture: '++id, &uid, navn, startdato, status, oprettet, dele_token',
+      slettede: '++id, samling, pb_id, [samling+pb_id]',
+      indstillinger: '&noegle',
+      delte_ture: '++id, &token, gemt',
+      steder: '++id, &uid, navn, oprettet',
+      personer: '++id, &uid, navn, oprettet',
+      billeder: '++id, &uid, tur_uid, tid, oprettet',
+      afviste_forslag: '[tur_uid+forslag_id], tur_uid'
     });
   }
 }

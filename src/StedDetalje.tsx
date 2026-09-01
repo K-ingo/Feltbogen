@@ -10,7 +10,7 @@ import { soegSted } from './smartMotor';
 import type { StedForslag } from './smartMotor';
 import { formatterPeriode } from './datotekst';
 import { sletSted, opdaterSted } from './sync';
-import { meldSletning } from './fortryd';
+import { meldFortrydelse } from './fortryd';
 import { useRedigerbar } from './useRedigerbar';
 import { layout } from './layout';
 import {
@@ -122,7 +122,7 @@ function StedDetalje({ stedId, tilbage, aabnTur, opretTurHer, nyOprettet }: Prop
       : undefined;
 
     const genskab = await sletSted(sted.id);
-    if (genskab) meldSletning({ slags: 'Stedet', navn: sted.navn, detalje, genskab });
+    if (genskab) meldFortrydelse({ slags: 'Stedet', navn: sted.navn, detalje, genskab });
     tilbage();
   };
 

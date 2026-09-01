@@ -37,7 +37,7 @@ import {
 } from './ui';
 import { layout } from './layout';
 import { sletItem, opdaterItem } from './sync';
-import { meldSletning } from './fortryd';
+import { meldFortrydelse } from './fortryd';
 import { useRedigerbar } from './useRedigerbar';
 
 interface Props {
@@ -89,7 +89,7 @@ function ItemDetalje({ itemId, tilbage, nyOprettet }: Props) {
   const slet = async () => {
     if (item?.id === undefined) return;
     const genskab = await sletItem(item.id);
-    if (genskab) meldSletning({ slags: 'Gearet', navn: item.navn, genskab });
+    if (genskab) meldFortrydelse({ slags: 'Gearet', navn: item.navn, genskab });
     tilbage();
   };
 

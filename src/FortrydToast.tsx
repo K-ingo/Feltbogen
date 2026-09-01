@@ -1,4 +1,4 @@
-import { FORTRYD_MS, afvisFortrydelse, fortrydBesked, fortrydSletning, useFortrydelse } from './fortryd';
+import { FORTRYD_MS, afvisFortrydelse, fortrydBesked, fortryd, useFortrydelse } from './fortryd';
 
 // Striben er udsmykning, ikke information man mister uden den. Beder man om
 // mindre bevægelse, står den stille.
@@ -15,7 +15,7 @@ interface Props {
   bund: string;
 }
 
-// Beskeden efter en sletning, med vejen tilbage.
+// Beskeden efter en sletning eller en afvisning, med vejen tilbage.
 //
 // Nedtællingen tegnes som en stribe der løber ud. En CSS-animation frem for
 // et sekundur betyder at tiden kan ses uden at appen tegner sig selv om 25
@@ -26,13 +26,14 @@ export function FortrydToast({ bund }: Props) {
 
   return (
     <div
-      // Sletningen er sket, og beskeden er et tilbud — ikke noget der skal
+      // Handlingen er sket, og beskeden er et tilbud — ikke noget der skal
       // afbryde oplæsningen midt i en sætning.
       role="status"
       aria-live="polite"
       // Nøglen giver en ny stribe hver gang, så nedtællingen starter forfra
-      // når den næste sletning afløser den forrige.
-      key={fortrydelse.navn + fortrydelse.slags}
+      // når den næste besked afløser den forrige — også når de to siger det
+      // samme. Derfor meldingens nummer og ikke dens ord.
+      key={fortrydelse.nr}
       style={{
         position: 'fixed',
         left: '16px',
@@ -73,7 +74,7 @@ export function FortrydToast({ bund }: Props) {
         </div>
 
         <button
-          onClick={() => void fortrydSletning()}
+          onClick={() => void fortryd()}
           style={{
             flexShrink: 0,
             background: 'transparent',
