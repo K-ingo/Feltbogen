@@ -15,6 +15,11 @@ function commit(): string {
   const fraVercel = process.env.VERCEL_GIT_COMMIT_SHA
   if (fraVercel) return fraVercel.slice(0, 7)
 
+  // Railway bygger i Docker, hvor .git ikke er med i konteksten. Uden den her
+  // ville versionslinjen stå på "ukendt" fra den dag vi flyttede derover.
+  const fraRailway = process.env.RAILWAY_GIT_COMMIT_SHA
+  if (fraRailway) return fraRailway.slice(0, 7)
+
   try {
     return execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim()
   } catch {
@@ -22,8 +27,26 @@ function commit(): string {
   }
 }
 
+// I produktion serverer Caddy appen og sender /api/ videre til PocketBase over
+// det private netværk. `npm run dev` og `npm run preview` har ingen Caddy, så
+// de gør det samme selv — ellers ville en relativ adresse ramme Vites egen
+// server og give index.html tilbage på hvert API-kald.
+//
+// Sæt PB_PROXY_TARGET for at udvikle mod en anden PocketBase. (Skal appen
+// tale udenom proxyen, er det VITE_PB_URL — den bages ind i bundlen.)
+const pbProxy = process.env.PB_PROXY_TARGET ?? 'https://pocketbase-production-6188.up.railway.app'
+
+const proxy = {
+  '/api': {
+    target: pbProxy,
+    changeOrigin: true
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
+  server: { proxy },
+  preview: { proxy },
   // Versionen står ét sted — i package.json — og bages ind ved build, så
   // indstillingsskærmen ikke skal holdes ved lige i hånden.
   define: {
