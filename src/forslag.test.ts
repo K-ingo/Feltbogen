@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { forslagTilTur, udenAfviste, tiltroAf } from './forslag';
+import { forslagTilTur, udenAfviste, tiltroAf, aftrykAf } from './forslag';
 import { lavGruppe, lavItem, lavTur } from './test/data';
 
 describe('forslagTilTur', () => {
@@ -196,13 +196,58 @@ describe('fordelingsforslag', () => {
 describe('udenAfviste', () => {
   const tungt = lavItem({ navn: 'Stort telt', vaegt_g: 4000, tags: ['ly'] });
   const let_ = lavItem({ navn: 'Tarp', vaegt_g: 600, tags: ['ly'] });
+  const endnuEt = lavItem({ navn: 'Stor sovepose', vaegt_g: 2000, tags: ['ly'] });
+  const letSovepose = lavItem({ navn: 'Let sovepose', vaegt_g: 800, tags: ['ly'] });
   const tur = lavTur({ loese_item_ids: [tungt.uid] });
 
   it('sorterer et afvist forslag fra', () => {
     const forslag = forslagTilTur(tur, [], [tungt, let_], []);
     expect(forslag).toHaveLength(1);
 
-    expect(udenAfviste(forslag, new Set([forslag[0].id]))).toEqual([]);
+    expect(udenAfviste(forslag, new Set([aftrykAf(forslag[0])]))).toEqual([]);
     expect(udenAfviste(forslag, new Set(['noget-andet']))).toEqual(forslag);
+  });
+
+  // Det er hele pointen med aftrykket: nej'et skal holde, når man går ud af
+  // turen og ind i den igen — og kun så længe forslaget er det samme.
+  it('holder afvisningen når det samme forslag regnes ud igen', () => {
+    const foerste = forslagTilTur(tur, [], [tungt, let_], []);
+    const afviste = new Set([aftrykAf(foerste[0])]);
+
+    const igen = forslagTilTur(tur, [], [tungt, let_], []);
+    expect(udenAfviste(igen, afviste)).toEqual([]);
+  });
+
+  it('viser forslaget igen når grundlaget har ændret sig', () => {
+    const foer = forslagTilTur(tur, [], [tungt, let_], []);
+    const afviste = new Set([aftrykAf(foer[0])]);
+
+    // Én tung ting mere med på turen: der er nu mere at hente, og forslaget
+    // siger noget andet, end det man sagde nej tak til.
+    const merePaa = lavTur({ loese_item_ids: [tungt.uid, endnuEt.uid] });
+    const efter = forslagTilTur(merePaa, [], [tungt, let_, endnuEt, letSovepose], []);
+
+    expect(efter).toHaveLength(1);
+    expect(udenAfviste(efter, afviste)).toEqual(efter);
+  });
+});
+
+describe('aftrykAf', () => {
+  const tungt = lavItem({ navn: 'Stort telt', vaegt_g: 4000, tags: ['ly'] });
+  const let_ = lavItem({ navn: 'Tarp', vaegt_g: 600, tags: ['ly'] });
+  const tur = lavTur({ loese_item_ids: [tungt.uid] });
+
+  it('er det samme for de samme data', () => {
+    const a = forslagTilTur(tur, [], [tungt, let_], [])[0];
+    const b = forslagTilTur(tur, [], [tungt, let_], [])[0];
+    expect(aftrykAf(a)).toBe(aftrykAf(b));
+  });
+
+  it('bærer forslagets id, så to forslag aldrig deler aftryk', () => {
+    const saet = lavGruppe({ navn: 'Vintersæt', tags: ['vinter'] });
+    const vintertur = lavTur({ terraen: 'skov', loese_item_ids: [tungt.uid], navn: 'vinter' });
+    const alle = forslagTilTur(vintertur, [saet], [tungt, let_], []);
+    const aftryk = new Set(alle.map(aftrykAf));
+    expect(aftryk.size).toBe(alle.length);
   });
 });

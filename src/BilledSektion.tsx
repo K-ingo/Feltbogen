@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import type { Billede, Tur } from './db';
 import { Knap } from './ui';
-import { meldSletning } from './fortryd';
+import { meldFortrydelse } from './fortryd';
 import { opdaterBillede, opretBillede, sletBillede } from './sync';
 import {
   MAKS_BYTE,
@@ -93,7 +93,7 @@ function BilledSektion({ tur, saetHero }: Props) {
     setValgt(null);
 
     const genskab = await sletBillede(billede.id);
-    if (genskab) meldSletning({ slags: 'Billedet', navn: billede.navn, genskab });
+    if (genskab) meldFortrydelse({ slags: 'Billedet', navn: billede.navn, genskab });
   };
 
   const ikkeSendt = usendte(billeder);

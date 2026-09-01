@@ -10,6 +10,9 @@ import { formatterPeriode } from './datotekst';
 import { foreslaaSteder, sorterEfterBesoeg } from './steder';
 import { itemsPaaTur } from './smartMotor';
 import { forslagTilTur, maalFor, udenAfviste } from './forslag';
+import { afvisForslag, useAfviste } from './afviste';
+import { meldFortrydelse } from './fortryd';
+import { FortrydToast } from './FortrydToast';
 import type { Forslag } from './forslag';
 import { kopierGrej } from './ligesomSidst';
 import {
@@ -26,7 +29,8 @@ import {
   turFraKladde,
   hentKladde,
   gemKladde,
-  rydKladde
+  rydKladde,
+  KLADDE_UID
 } from './foersteTur';
 import type { Kladde, Trin } from './foersteTur';
 
@@ -48,8 +52,12 @@ function FoersteTur({ fortryd, faerdig }: Props) {
   // null mens kladden hentes. Uden den mellemtilstand ville de tomme felter
   // nå at blinke forbi, før det gemte kom ind i dem.
   const [kladde, setKladde] = useState<Kladde | null>(null);
-  const [afviste, setAfviste] = useState<Set<string>>(new Set());
   const [opretter, setOpretter] = useState(false);
+
+  // Kladden har sit eget uid, indtil turen bliver til noget, så afvisningerne
+  // på de fire trin kan hænge samme sted som turenes. De ryddes med kladden —
+  // både når man begynder forfra og når turen er oprettet.
+  const afviste = useAfviste(KLADDE_UID);
 
   const steder = useLiveQuery(() => db.steder.toArray()) ?? [];
   const ture = useLiveQuery(() => db.ture.toArray()) ?? [];
@@ -75,10 +83,19 @@ function FoersteTur({ fortryd, faerdig }: Props) {
   // Vægtforslag hører ikke hjemme her. De skal ende på turens bytteliste, og
   // den findes ikke endnu — et forslag, der ikke kan handles på det sted, det
   // står, er præcis dét, landingsreglen findes for. Se turmaal.ts.
-  const forslag = udenAfviste(
-    forslagTilTur(tur, grupper, items, ture).filter((f) => f.type !== 'vaegt'),
-    afviste
-  );
+  const forslag = afviste
+    ? udenAfviste(
+        forslagTilTur(tur, grupper, items, ture).filter((f) => f.type !== 'vaegt'),
+        afviste
+      )
+    : [];
+
+  // Afvisningen holder ud over de fem trin — den ryddes først med kladden —
+  // så den får en vej tilbage med, ligesom på de andre skærme.
+  const afvis = async (f: Forslag) => {
+    const genskab = await afvisForslag(KLADDE_UID, f);
+    meldFortrydelse({ slags: 'Forslaget', navn: f.titel, gjort: 'afvist', genskab });
+  };
 
   const tagImod = (f: Forslag) => {
     if (f.type === 'grej') {
@@ -141,7 +158,7 @@ function FoersteTur({ fortryd, faerdig }: Props) {
               nok={nokTilForslag(kladde)}
               tagImod={tagImod}
               fjernGruppe={(uid) => ret({ gruppe_ids: kladde.gruppe_ids.filter((g) => g !== uid) })}
-              afvis={(id) => setAfviste(new Set([...afviste, id]))}
+              afvis={(f) => void afvis(f)}
             />
           )}
         </div>
@@ -158,7 +175,6 @@ function FoersteTur({ fortryd, faerdig }: Props) {
               variant="tekst"
               onClick={() => {
                 setKladde(TOM_KLADDE);
-                setAfviste(new Set());
                 setTrin('hvor');
                 void rydKladde();
               }}
@@ -182,6 +198,13 @@ function FoersteTur({ fortryd, faerdig }: Props) {
           )}
         </div>
       </div>
+
+      {/* Flowet tegnes uden for skallen — det har hverken navigation eller
+          FAB — så den toast, skallen ellers viser, findes ikke her. Uden den
+          ville et afvist forslag på sidste trin være det eneste sted i appen,
+          man ikke kunne fortryde. Højden holder den fri af trinknapperne
+          nedenunder: knaprækkens højde, containerens bundluft og et mellemrum. */}
+      <FortrydToast bund="calc(var(--roerehoejde) + var(--plads-6) + var(--plads-2) + env(safe-area-inset-bottom))" />
     </div>
   );
 }
@@ -422,7 +445,7 @@ function Forslagstrin({ kladde, tur, grupper, items, forslag, nok, tagImod, fjer
   nok: boolean;
   tagImod: (f: Forslag) => void;
   fjernGruppe: (uid: string) => void;
-  afvis: (id: string) => void;
+  afvis: (forslag: Forslag) => void;
 }) {
   // Det, der rent faktisk er valgt — talt op ad samme vej som på turens egen
   // skærm, så tallet er det samme de to steder.
@@ -442,7 +465,7 @@ function Forslagstrin({ kladde, tur, grupper, items, forslag, nok, tagImod, fjer
           // trykker "Opret turen". Kortet gør derfor det samme som knappen.
           aabn={() => tagImod(f)}
           tagImod={() => tagImod(f)}
-          afvis={() => afvis(f.id)}
+          afvis={() => afvis(f)}
         />
       ))}
 

@@ -2,6 +2,7 @@ import type { Aktivitet, Overnatning, Reference, Tur } from './db';
 import { AKTIVITET, OVERNATNING } from './db';
 import { maanedsnavn } from './datotekst';
 import { saet, laes } from './indstillinger';
+import { rydAfvisninger } from './afviste';
 import { mitNavn } from './pb';
 
 // Den første tur.
@@ -263,8 +264,12 @@ export async function hentKladde(): Promise<Kladde | null> {
   return laesKladde(await laes(KLADDE_NOEGLE));
 }
 
-export function rydKladde(): Promise<void> {
-  return saet(KLADDE_NOEGLE, '');
+// Kladden ryddes både når man begynder forfra og når turen er oprettet. De
+// forslag, man vinkede af undervejs, hører til den kladde og ikke til den
+// næste — så de går med.
+export async function rydKladde(): Promise<void> {
+  await saet(KLADDE_NOEGLE, '');
+  await rydAfvisninger(KLADDE_UID);
 }
 
 // Læsningen tror ikke på noget. Teksten kan komme fra en ældre udgave af

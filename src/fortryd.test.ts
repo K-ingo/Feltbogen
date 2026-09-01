@@ -3,8 +3,9 @@ import {
   FORTRYD_MS,
   afvisFortrydelse,
   fortrydBesked,
-  fortrydSletning,
-  meldSletning
+  fortryd,
+  meldFortrydelse,
+  nuvaerendeFortrydelse
 } from './fortryd';
 
 const intet = () => Promise.resolve();
@@ -31,12 +32,12 @@ describe('fortrydBesked', () => {
   });
 });
 
-describe('fortrydSletning', () => {
+describe('fortryd', () => {
   it('kalder genskabelsen', async () => {
     const genskab = vi.fn(intet);
-    meldSletning({ slags: 'Gearet', navn: 'Tarp', genskab });
+    meldFortrydelse({ slags: 'Gearet', navn: 'Tarp', genskab });
 
-    await fortrydSletning();
+    await fortryd();
 
     expect(genskab).toHaveBeenCalledTimes(1);
   });
@@ -44,25 +45,37 @@ describe('fortrydSletning', () => {
   // To hurtige tryk må ikke lægge posten tilbage to gange.
   it('kan kun fortrydes én gang', async () => {
     const genskab = vi.fn(intet);
-    meldSletning({ slags: 'Gearet', navn: 'Tarp', genskab });
+    meldFortrydelse({ slags: 'Gearet', navn: 'Tarp', genskab });
 
-    await Promise.all([fortrydSletning(), fortrydSletning()]);
+    await Promise.all([fortryd(), fortryd()]);
 
     expect(genskab).toHaveBeenCalledTimes(1);
   });
 
   it('gør ingenting når der ikke er noget at fortryde', async () => {
-    await expect(fortrydSletning()).resolves.toBeUndefined();
+    await expect(fortryd()).resolves.toBeUndefined();
+  });
+});
+
+// Et afvist forslag er ikke slettet, og beskeden må ikke sige at det er.
+describe('fortrydBesked med gjort', () => {
+  it('siger hvad der faktisk skete', () => {
+    expect(fortrydBesked({
+      slags: 'Forslaget',
+      navn: 'Lettere gear i skabet',
+      gjort: 'afvist',
+      genskab: intet
+    })).toBe('Forslaget "Lettere gear i skabet" er afvist');
   });
 });
 
 describe('vinduet', () => {
   it('lukker af sig selv efter 25 sekunder', async () => {
     const genskab = vi.fn(intet);
-    meldSletning({ slags: 'Gearet', navn: 'Tarp', genskab });
+    meldFortrydelse({ slags: 'Gearet', navn: 'Tarp', genskab });
 
     vi.advanceTimersByTime(FORTRYD_MS);
-    await fortrydSletning();
+    await fortryd();
 
     // Sletningen står ved magt — det er den rigtige vej rundt.
     expect(genskab).not.toHaveBeenCalled();
@@ -70,10 +83,10 @@ describe('vinduet', () => {
 
   it('står stadig lige inden tiden er gået', async () => {
     const genskab = vi.fn(intet);
-    meldSletning({ slags: 'Gearet', navn: 'Tarp', genskab });
+    meldFortrydelse({ slags: 'Gearet', navn: 'Tarp', genskab });
 
     vi.advanceTimersByTime(FORTRYD_MS - 1);
-    await fortrydSletning();
+    await fortryd();
 
     expect(genskab).toHaveBeenCalledTimes(1);
   });
@@ -84,9 +97,9 @@ describe('vinduet', () => {
     const foerste = vi.fn(intet);
     const anden = vi.fn(intet);
 
-    meldSletning({ slags: 'Gearet', navn: 'Først', genskab: foerste });
-    meldSletning({ slags: 'Turen', navn: 'Så', genskab: anden });
-    await fortrydSletning();
+    meldFortrydelse({ slags: 'Gearet', navn: 'Først', genskab: foerste });
+    meldFortrydelse({ slags: 'Turen', navn: 'Så', genskab: anden });
+    await fortryd();
 
     expect(foerste).not.toHaveBeenCalled();
     expect(anden).toHaveBeenCalledTimes(1);
@@ -96,23 +109,38 @@ describe('vinduet', () => {
   it('starter nedtællingen forfra ved den næste sletning', async () => {
     const genskab = vi.fn(intet);
 
-    meldSletning({ slags: 'Gearet', navn: 'Først', genskab: intet });
+    meldFortrydelse({ slags: 'Gearet', navn: 'Først', genskab: intet });
     vi.advanceTimersByTime(FORTRYD_MS - 1000);
-    meldSletning({ slags: 'Turen', navn: 'Så', genskab });
+    meldFortrydelse({ slags: 'Turen', navn: 'Så', genskab });
 
     vi.advanceTimersByTime(2000);
-    await fortrydSletning();
+    await fortryd();
 
     expect(genskab).toHaveBeenCalledTimes(1);
   });
 
   it('kan afvises i hånden', async () => {
     const genskab = vi.fn(intet);
-    meldSletning({ slags: 'Gearet', navn: 'Tarp', genskab });
+    meldFortrydelse({ slags: 'Gearet', navn: 'Tarp', genskab });
 
     afvisFortrydelse();
-    await fortrydSletning();
+    await fortryd();
 
     expect(genskab).not.toHaveBeenCalled();
+  });
+});
+
+// To beskeder kan sagtens sige det samme — to ting med samme navn, to ens
+// forslag. Nedtællingen skal begynde forfra alligevel, og det er nummeret der
+// bærer det.
+describe('meldingens nummer', () => {
+  it('tæller op, også når beskeden er den samme', () => {
+    meldFortrydelse({ slags: 'Forslaget', navn: 'Rygsækkene er skæve', genskab: intet });
+    const foerste = nuvaerendeFortrydelse()?.nr ?? 0;
+
+    meldFortrydelse({ slags: 'Forslaget', navn: 'Rygsækkene er skæve', genskab: intet });
+    const anden = nuvaerendeFortrydelse()?.nr ?? 0;
+
+    expect(anden).toBeGreaterThan(foerste);
   });
 });

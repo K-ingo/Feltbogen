@@ -120,7 +120,7 @@ import type { Deltagelse } from './deltagelse';
 import { layout } from './layout';
 import { useErDesktop, useErBredskaerm } from './useMedie';
 import { sletTur, opdaterTur } from './sync';
-import { meldSletning } from './fortryd';
+import { meldFortrydelse } from './fortryd';
 import { soltider, skumringstekst } from './soltider';
 import { baaltjek, FORBUD_LINK } from './baalforbud';
 import { jagtvarsel, JAGTDAGE_LINK, JAGTTIDER_LINK } from './jagt';
@@ -129,6 +129,7 @@ import { billederPaaTur } from './billeder';
 import { opretTomtSted } from './opret';
 import { useRedigerbar } from './useRedigerbar';
 import { forslagTilTur, udenAfviste, maalFor } from './forslag';
+import { afvisForslag, useAfviste } from './afviste';
 import type { Forslag } from './forslag';
 import { MAALETS_FANE } from './turmaal';
 import { foreslaaFordeling, anvendFordeling, navnFor } from './fordeling';
@@ -208,10 +209,6 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
   // gik byttet igennem, er der ikke længere en vægtsektion at skrive i, så
   // beskeden står uden for den og ikke inde i den.
   const [byttebesked, setByttebesked] = useState('');
-  // Forslag man har vinket af på den her tur. Holder til man forlader
-  // skærmen, af samme grund som på startskærmen: hvad man ikke gider høre om
-  // lige nu, er ikke data om turen.
-  const [afviste, setAfviste] = useState<Set<string>>(new Set());
   const [stedForslag, setStedForslag] = useState<StedForslag[]>([]);
   const [stedSoeger, setStedSoeger] = useState(false);
   // Hvad de inviterede har skrevet sig på for. Hentes kun når turen er delt.
@@ -242,6 +239,10 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
       }
     }
   });
+
+  // Forslag man har vinket af på den her tur. De ligger i basen og ikke i en
+  // useState: et nej, der kun holder til man forlader skærmen, er ikke et nej.
+  const afviste = useAfviste(tur?.uid);
 
   // Niveauet er en vane og ikke en egenskab ved turen, så det står i
   // indstillingerne. Det følger med ind i tjekket, hvor det kan rettes for den
@@ -373,7 +374,7 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
   const slet = async () => {
     if (tur?.id === undefined) return;
     const genskab = await sletTur(tur.id);
-    if (genskab) meldSletning({ slags: 'Turen', navn: tur.navn, genskab });
+    if (genskab) meldFortrydelse({ slags: 'Turen', navn: tur.navn, genskab });
     tilbage();
   };
 
@@ -610,10 +611,23 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
   // Historik-forslaget er ikke med her: "Ligesom sidst" ovenfor er den samme
   // idé med en bedre flade — den viser tre gamle ture at vælge imellem og
   // hvor meget hver især ville lægge til. Ét forslag om det samme er nok.
-  const turforslag = udenAfviste(
-    forslagTilTur(tur, grupper ?? [], items ?? [], alleTure).filter((f) => f.type !== 'historik'),
-    afviste
-  );
+  //
+  // Tom, indtil afvisningerne er læst. Ellers ville et forslag, man har sagt
+  // nej tak til, nå at stå på skærmen et øjeblik, hver gang turen åbnes.
+  const turforslag = afviste
+    ? udenAfviste(
+        forslagTilTur(tur, grupper ?? [], items ?? [], alleTure).filter((f) => f.type !== 'historik'),
+        afviste
+      )
+    : [];
+
+  // At sige nej tak. Afvisningen huskes, og derfor følger der en vej tilbage
+  // med — et fejltryk rettede sig selv før, da den kun holdt til man forlod
+  // skærmen.
+  const afvisForslaget = async (f: Forslag) => {
+    const genskab = await afvisForslag(tur.uid, f);
+    meldFortrydelse({ slags: 'Forslaget', navn: f.titel, gjort: 'afvist', genskab });
+  };
 
   // At tage imod. Alt sker på turen selv, så der er ingen skærm at sende
   // nogen hen til først — bortset fra vægtbytterne, hvor man skal vælge
@@ -1023,7 +1037,7 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
                   forslag={f}
                   aabn={() => gaaTilMaal(f.type === 'vaegt' ? 'vaegt' : 'pakning')}
                   tagImod={() => void tagImodForslag(f)}
-                  afvis={() => setAfviste(new Set([...afviste, f.id]))}
+                  afvis={() => void afvisForslaget(f)}
                 />
               ))}
             </div>
