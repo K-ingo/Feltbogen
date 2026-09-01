@@ -13,6 +13,7 @@ import { aarsopgoerelseAtSe } from './aarsopgoerelse';
 import type { Handling, Syncstatus, Hjemsituation } from './dashboard';
 import { forslagTilTur, udenAfviste, maalFor } from './forslag';
 import { afvisForslag, useAfviste } from './afviste';
+import { meldFortrydelse } from './fortryd';
 import type { Forslag } from './forslag';
 import type { Turmaal } from './turmaal';
 import { kopierGrej } from './ligesomSidst';
@@ -98,6 +99,14 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
   // Tælles i ting og ikke i handlinger: en tarp der både skal imprægneres og
   // have lynlåsen smurt, er stadig én ting at tage sig af.
   const skalPasses = new Set(forfaldne(ejet).map((f) => f.item.uid)).size;
+
+  // At sige nej tak. Afvisningen huskes på tværs af besøg, så den får en vej
+  // tilbage med — se fortryd.ts.
+  const afvis = async (f: Forslag) => {
+    if (!tur) return;
+    const genskab = await afvisForslag(tur.uid, f);
+    meldFortrydelse({ slags: 'Forslaget', navn: f.titel, gjort: 'afvist', genskab });
+  };
 
   // At tage imod et forslag.
   //
@@ -213,7 +222,7 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
                   forslag={f}
                   aabn={() => tur?.id !== undefined && aabnTur(tur.id)}
                   tagImod={() => void tagImod(f)}
-                  afvis={() => { if (tur) void afvisForslag(tur.uid, f); }}
+                  afvis={() => void afvis(f)}
                 />
               ))}
             </div>

@@ -91,6 +91,29 @@ describe('rydAfvisninger', () => {
   });
 });
 
+// Afvisningen huskes, og derfor skal der være en vej tilbage fra et fejltryk.
+describe('fortryd afvisningen', () => {
+  it('fjerner rækken igen', async () => {
+    const genskab = await afvisForslag(TUR, etForslag());
+
+    await genskab();
+
+    expect(await aftrykFor(TUR)).toEqual(new Set());
+  });
+
+  it('lægger den forrige afvisning tilbage, ikke ingenting', async () => {
+    const gammelt = etForslag({ detalje: '0.9 kg at hente på 1 ting' });
+    await afvisForslag(TUR, gammelt);
+    const genskab = await afvisForslag(TUR, etForslag());
+
+    await genskab();
+
+    // Det gamle nej stod stadig ved magt, da man afviste igen — så det er
+    // dét, man kommer tilbage til.
+    expect(await aftrykFor(TUR)).toEqual(new Set([aftrykAf(gammelt)]));
+  });
+});
+
 // Afvisningerne hører til turen. Bliver den slettet, skal de ikke blive
 // liggende og tie et forslag ihjel på noget, der ikke findes mere.
 describe('sletTur', () => {

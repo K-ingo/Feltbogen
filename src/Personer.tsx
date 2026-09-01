@@ -6,7 +6,7 @@ import { antalTurePrPerson, personprofil, ukendteNavne } from './personer';
 import type { Personprofil } from './personer';
 import { opretTomPerson } from './opret';
 import { opdaterPerson, sletPerson } from './sync';
-import { meldSletning } from './fortryd';
+import { meldFortrydelse } from './fortryd';
 import { Knap, Felt, Segment, Tekstomraade } from './ui';
 
 // Rejseselskabet. Selve listen — skærmen omkring den er FolkSide.
@@ -58,7 +58,7 @@ function Personer() {
       : undefined;
 
     const genskab = await sletPerson(person.id);
-    if (genskab) meldSletning({ slags: 'Personen', navn: person.navn, detalje, genskab });
+    if (genskab) meldFortrydelse({ slags: 'Personen', navn: person.navn, detalje, genskab });
   };
 
   return (

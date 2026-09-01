@@ -11,6 +11,8 @@ import { foreslaaSteder, sorterEfterBesoeg } from './steder';
 import { itemsPaaTur } from './smartMotor';
 import { forslagTilTur, maalFor, udenAfviste } from './forslag';
 import { afvisForslag, useAfviste } from './afviste';
+import { meldFortrydelse } from './fortryd';
+import { FortrydToast } from './FortrydToast';
 import type { Forslag } from './forslag';
 import { kopierGrej } from './ligesomSidst';
 import {
@@ -88,6 +90,13 @@ function FoersteTur({ fortryd, faerdig }: Props) {
       )
     : [];
 
+  // Afvisningen holder ud over de fem trin — den ryddes først med kladden —
+  // så den får en vej tilbage med, ligesom på de andre skærme.
+  const afvis = async (f: Forslag) => {
+    const genskab = await afvisForslag(KLADDE_UID, f);
+    meldFortrydelse({ slags: 'Forslaget', navn: f.titel, gjort: 'afvist', genskab });
+  };
+
   const tagImod = (f: Forslag) => {
     if (f.type === 'grej') {
       ret({ gruppe_ids: [...kladde.gruppe_ids, maalFor(f)] });
@@ -149,7 +158,7 @@ function FoersteTur({ fortryd, faerdig }: Props) {
               nok={nokTilForslag(kladde)}
               tagImod={tagImod}
               fjernGruppe={(uid) => ret({ gruppe_ids: kladde.gruppe_ids.filter((g) => g !== uid) })}
-              afvis={(f) => void afvisForslag(KLADDE_UID, f)}
+              afvis={(f) => void afvis(f)}
             />
           )}
         </div>
@@ -189,6 +198,13 @@ function FoersteTur({ fortryd, faerdig }: Props) {
           )}
         </div>
       </div>
+
+      {/* Flowet tegnes uden for skallen — det har hverken navigation eller
+          FAB — så den toast, skallen ellers viser, findes ikke her. Uden den
+          ville et afvist forslag på sidste trin være det eneste sted i appen,
+          man ikke kunne fortryde. Højden holder den fri af trinknapperne
+          nedenunder: knaprækkens højde, containerens bundluft og et mellemrum. */}
+      <FortrydToast bund="calc(var(--roerehoejde) + var(--plads-6) + var(--plads-2) + env(safe-area-inset-bottom))" />
     </div>
   );
 }

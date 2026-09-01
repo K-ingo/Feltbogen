@@ -120,7 +120,7 @@ import type { Deltagelse } from './deltagelse';
 import { layout } from './layout';
 import { useErDesktop, useErBredskaerm } from './useMedie';
 import { sletTur, opdaterTur } from './sync';
-import { meldSletning } from './fortryd';
+import { meldFortrydelse } from './fortryd';
 import { soltider, skumringstekst } from './soltider';
 import { baaltjek, FORBUD_LINK } from './baalforbud';
 import { jagtvarsel, JAGTDAGE_LINK, JAGTTIDER_LINK } from './jagt';
@@ -374,7 +374,7 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
   const slet = async () => {
     if (tur?.id === undefined) return;
     const genskab = await sletTur(tur.id);
-    if (genskab) meldSletning({ slags: 'Turen', navn: tur.navn, genskab });
+    if (genskab) meldFortrydelse({ slags: 'Turen', navn: tur.navn, genskab });
     tilbage();
   };
 
@@ -620,6 +620,14 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
         afviste
       )
     : [];
+
+  // At sige nej tak. Afvisningen huskes, og derfor følger der en vej tilbage
+  // med — et fejltryk rettede sig selv før, da den kun holdt til man forlod
+  // skærmen.
+  const afvisForslaget = async (f: Forslag) => {
+    const genskab = await afvisForslag(tur.uid, f);
+    meldFortrydelse({ slags: 'Forslaget', navn: f.titel, gjort: 'afvist', genskab });
+  };
 
   // At tage imod. Alt sker på turen selv, så der er ingen skærm at sende
   // nogen hen til først — bortset fra vægtbytterne, hvor man skal vælge
@@ -1029,7 +1037,7 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
                   forslag={f}
                   aabn={() => gaaTilMaal(f.type === 'vaegt' ? 'vaegt' : 'pakning')}
                   tagImod={() => void tagImodForslag(f)}
-                  afvis={() => void afvisForslag(tur.uid, f)}
+                  afvis={() => void afvisForslaget(f)}
                 />
               ))}
             </div>

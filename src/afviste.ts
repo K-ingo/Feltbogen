@@ -3,6 +3,9 @@ import { db } from './db';
 import type { Reference } from './db';
 import { aftrykAf } from './forslag';
 import type { Forslag } from './forslag';
+// Kun typen. Runtime-vejen går den anden vej — sync.ts kalder herind, når en
+// tur slettes — og en type koster ingenting ved indlæsningen.
+import type { Genskab } from './sync';
 
 // Hvad man har sagt nej tak til, og hvor længe det gælder.
 //
@@ -31,13 +34,27 @@ export function useAfviste(turUid: Reference | null | undefined): Set<string> | 
 
 // Nej tak. Én række pr. forslag pr. tur: afviser man det samme forslag igen
 // på et nyt grundlag, er det det nye aftryk, der skal gælde — ikke to.
-export async function afvisForslag(turUid: Reference, forslag: Forslag): Promise<void> {
+//
+// Vejen tilbage gives med. Før holdt afvisningen kun til man forlod skærmen,
+// og et fejltryk rettede sig selv, når man kom tilbage. Nu holder den, og så
+// skal der være en dør — se fortryd.ts. Døren fører tilbage til dét, der stod
+// før, og ikke bare til "ingenting": har man afvist forslaget en gang
+// tidligere på et andet grundlag, er det den gamle række, der skal stå igen.
+export async function afvisForslag(turUid: Reference, forslag: Forslag): Promise<Genskab> {
+  const noegle: [Reference, string] = [turUid, forslag.id];
+  const foer = await db.afviste_forslag.get(noegle);
+
   await db.afviste_forslag.put({
     tur_uid: turUid,
     forslag_id: forslag.id,
     aftryk: aftrykAf(forslag),
     afvist: new Date()
   });
+
+  return async () => {
+    if (foer) await db.afviste_forslag.put(foer);
+    else await db.afviste_forslag.delete(noegle);
+  };
 }
 
 // Alt hvad turen har fået nej til. Bruges når turen forsvinder — en slettet
