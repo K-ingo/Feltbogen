@@ -16,6 +16,7 @@ import { pb, nuvaerendeBruger } from './pb';
 import { fejlDetaljer } from './pbFejl';
 import { noterFejl, rydFejl } from './syncfejl';
 import { gyldig as gyldigVurdering } from './vurdering';
+import { rydAfvisninger } from './afviste';
 import type {
   Billede,
   Item,
@@ -1029,9 +1030,15 @@ export async function sletTur(id: number): Promise<Genskab | null> {
   const genskabTuren = await slet(turSamling, id);
   if (!genskabTuren) return null;
 
+  // De forslag turen har fået nej tak til, hører lige så lidt til uden den som
+  // billederne gør. De ryddes efter sletningen, så de kun forsvinder hvis den
+  // faktisk gik igennem — og de kommer med tilbage, hvis man fortryder.
+  const genskabAfviste = tur ? await rydAfvisninger(tur.uid) : null;
+
   return async () => {
     await genskabTuren();
     for (const tilbage of genskabBilleder) await tilbage();
+    await genskabAfviste?.();
   };
 }
 

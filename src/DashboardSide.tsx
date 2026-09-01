@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import type { Item, Gruppe } from './db';
@@ -13,6 +12,7 @@ import {
 import { aarsopgoerelseAtSe } from './aarsopgoerelse';
 import type { Handling, Syncstatus, Hjemsituation } from './dashboard';
 import { forslagTilTur, udenAfviste, maalFor } from './forslag';
+import { afvisForslag, useAfviste } from './afviste';
 import type { Forslag } from './forslag';
 import type { Turmaal } from './turmaal';
 import { kopierGrej } from './ligesomSidst';
@@ -80,12 +80,14 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
   const tur = situation.tur;
   // Turkortet øverst ejer sin tur, så den ikke bliver sagt to gange.
   const alleHandlinger = udenDubletAfSituationen(handlinger(items, ture, grupper), situation);
-  // Afvisningen lever her og ikke i basen. Hvad man ikke gider høre om lige
-  // nu, er ikke data om turen — og et felt til det skulle synkroniseres og
-  // gemmes for evigt for at slippe for et kort i tre dage. Den holder til man
-  // forlader skærmen, og det er også dét, den lover.
-  const [afviste, setAfviste] = useState<Set<string>>(new Set());
-  const forslag = udenAfviste(forslagTilTur(tur, grupper, items, ture), afviste);
+  // Afvisningen lever på enheden og ikke i skærmen. Den hænger på turen, så
+  // et nej her også gælder inde på turen — det er det samme forslag, og det
+  // var ikke stedet, man svarede på. Se afviste.ts.
+  //
+  // Tom liste indtil afvisningerne er læst: et kort, man har vinket af, må
+  // ikke nå at blinke forbi på vej ind på startskærmen.
+  const afviste = useAfviste(tur?.uid);
+  const forslag = afviste ? udenAfviste(forslagTilTur(tur, grupper, items, ture), afviste) : [];
   const syncfejl = useSyncfejl();
   const sync = syncstatus(usendt, online, erLoggetInd, syncfejl);
   const aar = tureIAar(ture);
@@ -211,7 +213,7 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
                   forslag={f}
                   aabn={() => tur?.id !== undefined && aabnTur(tur.id)}
                   tagImod={() => void tagImod(f)}
-                  afvis={() => setAfviste(new Set([...afviste, f.id]))}
+                  afvis={() => { if (tur) void afvisForslag(tur.uid, f); }}
                 />
               ))}
             </div>

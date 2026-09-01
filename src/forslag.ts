@@ -219,9 +219,34 @@ export function maalFor(forslag: Forslag): Reference {
   return forslag.id.slice(forslag.id.indexOf(':') + 1);
 }
 
-// Forslag man har afvist, sorteret fra. Afvisningen holdes af skærmen og
-// ikke her: hvad man ikke gider høre om lige nu, er ikke data om turen, og
-// et felt til det ville skulle synkroniseres og gemmes for evigt.
+// Aftrykket af et forslag: hvad det handler om, og hvad det bygger på.
+//
+// Id'et alene kan ikke bære en afvisning, der skal overleve, at man går ud af
+// turen og ind i den igen. Id'et er udledt af *målet* — det tunge stykke
+// gear, grejsættet, turen — og det bliver ved med at være det samme, selvom
+// tallene bag forslaget flytter sig. Afviste man "1,2 kg at hente på 3 ting"
+// og pakkede tre tunge ting mere, ville det samme id dække over noget helt
+// andet, og nej'et ville gælde et forslag, man aldrig havde set.
+//
+// Aftrykket tager derfor det med, forslaget siger: titlen, detaljen og
+// virkningen. De er alle sammen regnet af turens data, så de flytter sig
+// præcis når grundlaget gør — og kun da. Begrundelsen er ikke med: den er
+// lang, og den forklarer den samme regel som de tre andre allerede bærer
+// tallene fra.
+//
+// Det er samme aftale som id'et: samme input giver samme aftryk. To
+// renderinger af den samme situation må ikke give to forskellige aftryk,
+// ellers ville et afvist forslag komme igen af sig selv.
+export function aftrykAf(forslag: Forslag): string {
+  const v = forslag.virkning;
+  const virkning = v ? `${v.vaegt_g ?? ''}/${v.antal ?? ''}` : '';
+  return [forslag.id, forslag.titel, forslag.detalje, virkning].join('|');
+}
+
+// Forslag man har afvist, sorteret fra.
+//
+// Sættet er aftryk og ikke id'er — se `aftrykAf`. Hvor afvisningerne gemmes,
+// er ikke motorens sag: den her fil rører aldrig basen. Se `afviste.ts`.
 export function udenAfviste(forslag: Forslag[], afviste: Set<string>): Forslag[] {
-  return forslag.filter((f) => !afviste.has(f.id));
+  return forslag.filter((f) => !afviste.has(aftrykAf(f)));
 }
