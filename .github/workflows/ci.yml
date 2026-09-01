@@ -35,3 +35,15 @@ jobs:
       # Kører tsc -b først, så typefejl også fanges her.
       - name: Build
         run: npm run build
+
+      # Et privat Railway-domæne slås kun op inde i Railway, og kun mens noget
+      # kører. Bages det ind i bundlen — via VITE_PB_URL — kan ingen browser
+      # nå serveren, og appen er død for alle på én gang. Fejlen ser man ikke
+      # i et build, kun i produktion, så den fanges her.
+      - name: Ingen privat adresse i bundlen
+        run: |
+          if grep -rl 'railway\.internal' dist; then
+            echo "::error::Et privat Railway-domæne er havnet i bundlen. Se README under Udrulning."
+            exit 1
+          fi
+          echo "Ingen private adresser i dist/."

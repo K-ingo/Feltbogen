@@ -306,9 +306,77 @@ PNG-varianterne er rasteriseret fra dem.
 Der er ingen service worker under `npm run dev`. Test offline med
 `npm run build && npm run preview`.
 
+## Udrulning
+
+Appen og PocketBase ligger på **samme domæne**. Caddy serverer de statiske
+filer og sender `/api/` videre til PocketBase over Railways private netværk,
+så PocketBase ikke behøver en offentlig adresse: admin-fladen på `/_/` kan
+ikke nås udefra, og der er ingen offentlig adresse at scanne eller banke på.
+
+```
+browser ──https──> Caddy ──http──> pocketbase.railway.internal:8090
+                     │
+                     └── dist/  (appen selv)
+```
+
+`Dockerfile` bygger appen og lægger den ind i et Caddy-image. Railway samler
+selv de to op.
+
+### Opsætning i Railway
+
+På web-servicen sættes én variabel, som en reference til PocketBase-servicen:
+
+```
+POCKETBASE_ORIGIN=http://${{ pocketbase.RAILWAY_PRIVATE_DOMAIN }}:8090
+```
+
+Hedder servicen noget andet end `pocketbase`, er det det navn der skal stå.
+Er variablen tom, nægter Caddy at starte — det er med vilje: en forkert
+opsætning skal vise sig som en fejlet udrulning frem for en app, der er oppe
+og svarer 502 på alting.
+
+`PORT` sætter Railway selv.
+
+### Den fælde, der slår appen ihjel
+
+**Det private domæne må aldrig havne i `VITE_PB_URL`.**
+
+Private adresser slås kun op inde i Railway, og kun mens noget kører — aldrig
+under et build. `VITE_PB_URL` bages ind i JS-bundlen af Vite ved build, og
+bundlen kører i en browser ude i skoven. Sætter man
+`VITE_PB_URL=${{ pocketbase.RAILWAY_PRIVATE_DOMAIN }}`, beder hver eneste
+telefon om et domæne, der ikke findes: login, sync og deling holder op med at
+virke på én gang, og der er intet i et build, der afslører det.
+
+Derfor er `VITE_PB_URL` slet ikke sat i udrulningen — appen bruger sit eget
+domæne — og CI fejler, hvis `railway.internal` dukker op i `dist/`.
+
+### Rækkefølge, når PocketBases offentlige domæne fjernes
+
+Billed-url'er gemmes som de er i IndexedDB (`sync.ts`), og delte ture har dem
+liggende i deres `dele_snapshot` på serveren. De url'er peger på den adresse,
+der var gældende, da de blev lavet — de opdaterer sig ikke af sig selv.
+
+1. Rul proxyen ud og bekræft, at appen virker med PocketBase stadig
+   offentligt tilgængelig.
+2. Lad brugerne synkronisere. Deres billed-url'er skrives om til det nye
+   domæne, efterhånden som posterne kommer ned igen.
+3. Del de ture igen, der har et aktivt delelink — et snapshot laves om ved
+   deling, ikke ved sync.
+4. Fjern først derefter PocketBases offentlige domæne.
+
+Springes 2 og 3 over, står billederne tomme for dem, der ikke har nået at
+synkronisere, og delte ture mister deres billeder helt.
+
+### Administration bagefter
+
+Når det offentlige domæne er væk, er `/_/` heller ikke til at nå for dig.
+Skal reglerne rettes, slås PocketBases offentlige domæne til igen midlertidigt
+i Railway — og fra igen bagefter.
+
 ## Eksterne tjenester
 
-- **PocketBase** — sync og konti. URL sættes med `VITE_PB_URL` (se `.env.example`).
+- **PocketBase** — sync og konti. Ligger bag `/api/` på appens eget domæne; se **Udrulning** og `.env.example`.
 - **open-meteo.com** — vejrudsigt og geocoding. Gratis, ingen nøgle.
 - **api.dataforsyningen.dk (DAWA)** — danske adresser og stednavne. Gratis, ingen nøgle.
 

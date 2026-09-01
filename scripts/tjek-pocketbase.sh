@@ -4,6 +4,10 @@
 #
 #   ./scripts/tjek-pocketbase.sh https://din-server.dk
 #
+# Ligger PocketBase bag appens domæne (se README under "Udrulning"), er det
+# appens adresse der skal gives med — /api/ sendes videre af proxyen, og
+# prøven ser præcis det, en fremmed kan nå.
+#
 # Prøven kalder som en helt uindlogget fremmed. Den skriver ikke noget og
 # ændrer ikke noget — den henter kun og kigger på svaret.
 #
@@ -26,6 +30,7 @@ SERVER="${1:-${VITE_PB_URL:-}}"
 if [ -z "$SERVER" ]; then
   echo "Brug: $0 https://din-server.dk"
   echo "  (eller sæt VITE_PB_URL)"
+  echo "  Ligger PocketBase bag appens domæne, så giv appens adresse."
   exit 64
 fi
 

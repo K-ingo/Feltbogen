@@ -1,0 +1,60 @@
+# Feltbogen og PocketBase på samme domæne.
+#
+# Browseren taler kun med det her domæne. Caddy sender /api/ videre til
+# PocketBase over Railways private netværk, og PocketBase behøver derfor
+# ikke et offentligt domæne overhovedet: admin-fladen på /_/ kan ikke nås
+# udefra, og der er ingen offentlig adresse at scanne eller banke på.
+#
+# Sikkerheden i dataene ligger stadig i API-reglerne. Caddy videresender alt
+# hvad browseren sender, så en tom regel er lige så åben bagefter — se
+# POCKETBASE.md.
+#
+# POCKETBASE_ORIGIN sættes i Railway som en reference-variabel:
+#
+#   POCKETBASE_ORIGIN=http://${{ pocketbase.RAILWAY_PRIVATE_DOMAIN }}:8090
+#
+# (`pocketbase` er servicens navn). Den slås først op når containeren kører —
+# aldrig under build. Derfor må adressen ikke i nærheden af VITE_PB_URL, som
+# Vite bager ind i JS-bundlen; se README under "Udrulning".
+#
+# Står variablen tom, nægter Caddy at starte. Det er med vilje: en tom
+# upstream skal vise sig som en fejlet udrulning, ikke som en app der er oppe
+# og svarer 502 på alting.
+{
+	admin off
+	# Railway terminerer TLS ude i kanten. Her inde er det almindelig HTTP,
+	# og et forsøg på at hente certifikat ville kun fejle.
+	auto_https off
+	persist_config off
+}
+
+:{$PORT:8080} {
+	log
+
+	encode zstd gzip
+
+	# Kun /api/ går videre. Alt andet på PocketBase — admin-fladen først og
+	# fremmest — bliver hvor det er. Det er hele pointen med at fjerne det
+	# offentlige domæne.
+	handle /api/* {
+		reverse_proxy {$POCKETBASE_ORIGIN}
+	}
+
+	handle {
+		root * /srv
+
+		# Vite lægger indholdshash i filnavnet, så de her kan caches for evigt.
+		@uforanderlige path /assets/* /workbox-*.js
+		header @uforanderlige Cache-Control "public, max-age=31536000, immutable"
+
+		# De her skifter uden at skifte navn. Bliver service workeren cachet,
+		# kan en ny udrulning ikke komme frem — appen ville blive stående på
+		# den gamle udgave, uden at nogen kunne se hvorfor.
+		@altid_ny path / /index.html /sw.js /manifest.webmanifest
+		header @altid_ny Cache-Control "no-cache"
+
+		# Appen router selv. Alt hvad der ikke er en fil, er en side i appen.
+		try_files {path} /index.html
+		file_server
+	}
+}
