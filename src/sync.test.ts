@@ -653,3 +653,50 @@ describe('fejlen fra en kørsel', () => {
     expect(fejl?.hvor).toBe('items · oprettelse af "Toaks 1L gryde"');
   });
 });
+
+// Posten er væk deroppe.
+//
+// `pb_id` bliver liggende lokalt, når record'et bliver slettet i PocketBase —
+// samlingen ryddet i admin, en anden konto, en sletning fra en anden enhed. Så
+// prøvede appen at opdatere noget, der ikke var der, fik 404, og gjorde det
+// igen ved næste sync: ændringen kom aldrig op, og køen blev aldrig tømt.
+describe('en post, der ikke findes i PocketBase længere', () => {
+  it('oprettes på ny, så ændringen kommer op', async () => {
+    const id = await opretItem(lavItem({ navn: 'Test2' }));
+    expect((await db.items.get(id))?.pb_id).toBe('pb1');
+
+    // Record'et forsvinder deroppe, uden at appen får det at vide.
+    pbMock.records.get('items')?.delete('pb1');
+
+    await opdaterItem(id, { navn: 'Test2 rettet' });
+    await sendAfventende();
+
+    const lokal = await db.items.get(id);
+    expect(lokal?.pb_id).toBe('pb2');
+    expect(lokal?.usendt_aendring).toBe(false);
+    expect(pbMock.records.get('items')?.get('pb2')?.navn).toBe('Test2 rettet');
+  });
+
+  it('beholder sit uid, så grupper og pakkelister stadig peger rigtigt', async () => {
+    const id = await opretItem(lavItem({ navn: 'Test2' }));
+    const uid = (await db.items.get(id))?.uid;
+
+    pbMock.records.get('items')?.delete('pb1');
+    await opdaterItem(id, { vaegt_g: 480 });
+    await sendAfventende();
+
+    expect((await db.items.get(id))?.uid).toBe(uid);
+    expect(pbMock.records.get('items')?.get('pb2')?.uid).toBe(uid);
+  });
+
+  it('efterlader ingen fejl på skærmen', async () => {
+    const id = await opretItem(lavItem({ navn: 'Test2' }));
+    pbMock.records.get('items')?.delete('pb1');
+
+    await opdaterItem(id, { navn: 'Test2 rettet' });
+    await sendAfventende();
+
+    expect(await laesSeneste()).toBeNull();
+    expect(await usendtAntal()).toBe(0);
+  });
+});

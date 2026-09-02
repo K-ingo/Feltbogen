@@ -37,8 +37,16 @@ describe('fejlartAf', () => {
     expect(fejlartAf({ status: 502 })).toBe('server');
   });
 
+  // En 404 er ikke et afslag på dataene, og rådet om at kigge i skemaet
+  // passede ikke på den: enten er posten slettet deroppe, eller også findes
+  // samlingen ikke.
+  it('skelner noget, der ikke findes, fra noget, der blev afvist', () => {
+    expect(fejlartAf({ status: 404 })).toBe('findes_ikke');
+    expect(FEJLTEKST.findes_ikke).not.toBe(FEJLTEKST.afvist);
+  });
+
   it('har en tekst til hver art, og hver tekst siger hvad man kan gøre', () => {
-    const arter: Fejlart[] = ['ingen_forbindelse', 'ikke_logget_ind', 'afvist', 'server', 'ukendt'];
+    const arter: Fejlart[] = ['ingen_forbindelse', 'ikke_logget_ind', 'afvist', 'findes_ikke', 'server', 'ukendt'];
     for (const art of arter) {
       expect(FEJLTEKST[art].length).toBeGreaterThan(20);
     }

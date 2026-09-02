@@ -39,6 +39,10 @@ export type Fejlart =
   // POCKETBASE.md — et felt, samlingen ikke har, forsvinder lydløst, mens en
   // regel, der ikke passer, giver et rungende afslag.
   | 'afvist'
+  // Det, appen spurgte efter, er der ikke. En 404 er ikke et afslag på
+  // dataene, og rådet om at kigge i skemaet passede ikke på den: er det en
+  // post, er den slettet deroppe, og er det en hel samling, findes den ikke.
+  | 'findes_ikke'
   | 'server'
   | 'ukendt';
 
@@ -100,6 +104,7 @@ export function fejlartAf(e: unknown): Fejlart {
   if (status === 0 || status === undefined) return 'ingen_forbindelse';
   if (status === 401 || status === 403) return 'ikke_logget_ind';
   if (status >= 500) return 'server';
+  if (status === 404) return 'findes_ikke';
   if (status >= 400) return 'afvist';
   return 'ukendt';
 }
@@ -110,6 +115,7 @@ export const FEJLTEKST: Record<Fejlart, string> = {
   ingen_forbindelse: 'Kunne ikke nå serveren. Dine ting står sikkert på enheden og bliver sendt, så snart den svarer igen.',
   ikke_logget_ind: 'Din session er udløbet. Log ind igen, så kommer det op.',
   afvist: 'Serveren afviste dataene. Det plejer at betyde, at et felt mangler i PocketBase-skemaet — se POCKETBASE.md.',
+  findes_ikke: 'Det, appen spurgte efter, findes ikke på serveren. Er det en post, er den slettet deroppe, og så opretter appen den på ny næste gang, den sender. Er det en hel samling, mangler den i PocketBase — se POCKETBASE.md.',
   server: 'Serveren har problemer lige nu. Appen prøver igen af sig selv.',
   ukendt: 'Noget gik galt undervejs op. Dine ting står stadig på enheden.'
 };
