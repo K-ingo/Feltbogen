@@ -30,7 +30,7 @@ function GrupperListe({ fane, skift, aabnGruppe, nyGruppe }: Props) {
       handlinger={<Knap variant="primaer" onClick={nyGruppe}>+ Nyt sæt</Knap>}
       fab={nyGruppe}
     >
-      {grupper?.length === 0 && <TomListe>Ingen grupper endnu. Opret din første.</TomListe>}
+      {grupper?.length === 0 && <TomListe>Ingen grejsæt endnu. Saml det, du alligevel altid tager med.</TomListe>}
       {grupper?.map((g) => {
         const info = beregnInfo(g);
         return (

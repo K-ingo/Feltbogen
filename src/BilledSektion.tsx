@@ -127,8 +127,8 @@ function BilledSektion({ tur, saetHero }: Props) {
 
       {billeder.length === 0 ? (
         <div style={{ fontSize: '13px', color: 'var(--tekst-svag)', lineHeight: 1.6 }}>
-          Ingen billeder endnu. De bliver gemt på enheden med det samme og sendt
-          op når der er dækning — så du kan tage dem i skoven.
+          Gem et øjeblik fra turen. Billederne bliver liggende på enheden med det
+          samme og sendt op når der er dækning — så du kan tage dem i skoven.
         </div>
       ) : (
         <div style={{

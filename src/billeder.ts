@@ -232,3 +232,58 @@ export function medOriginal(billeder: Billede[]): Billede[] {
 export function usendte(billeder: Billede[]): number {
   return billeder.filter((b) => !b.url).length;
 }
+
+// ─────────────────────────────────────────────
+// Seneste minder
+// ─────────────────────────────────────────────
+
+// Et billede sammen med den tur, det blev taget på. Turen skal med, fordi et
+// billede på startskærmen skal kunne føre hen til historien om det — ellers
+// er det bare et billede.
+export interface Minde {
+  billede: Billede;
+  tur: Tur;
+}
+
+// Højst så mange fra den samme tur. Uden loftet fylder én tur med tyve
+// billeder hele stribens plads, og "seneste minder" bliver "seneste tur".
+const PR_TUR = 2;
+
+// De nyeste billeder på tværs af turene, nyeste først.
+//
+// Kun ture der er begyndt. En tur, man har planlagt, kan sagtens have et
+// billede hængt på — af stedet, af ruten — men det er ikke et minde endnu.
+export function senesteMinder(
+  billeder: Billede[],
+  ture: Tur[],
+  antal: number,
+  nu: Date = new Date()
+): Minde[] {
+  const idag = `${nu.getFullYear()}-${String(nu.getMonth() + 1).padStart(2, '0')}-${String(nu.getDate()).padStart(2, '0')}`;
+
+  const turePrUid = new Map(
+    ture.filter((t) => t.startdato === '' || t.startdato <= idag).map((t) => [t.uid, t])
+  );
+
+  const brugt = new Map<string, number>();
+  const minder: Minde[] = [];
+
+  const nyesteFoerst = [...billeder].sort(
+    (a, b) => b.tid.localeCompare(a.tid) || b.uid.localeCompare(a.uid)
+  );
+
+  for (const billede of nyesteFoerst) {
+    if (minder.length >= antal) break;
+
+    const tur = turePrUid.get(billede.tur_uid);
+    if (!tur) continue;
+
+    const taget = brugt.get(tur.uid) ?? 0;
+    if (taget >= PR_TUR) continue;
+
+    brugt.set(tur.uid, taget + 1);
+    minder.push({ billede, tur });
+  }
+
+  return minder;
+}

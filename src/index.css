@@ -70,6 +70,19 @@
      rettes uden at flytte alt det andet grønne med. */
   --fokus: var(--accent);
 
+  /* Turens hero.
+     Båndet øverst på en tur er enten turens eget billede eller — når der ikke
+     er taget nogen — et mørkegrønt felt i stedet for. Begge dele er lyse
+     eller mørke af sig selv og ikke af temaet: et fotografi skifter ikke
+     farve, fordi telefonen står i mørk tilstand, og erstatningen for det skal
+     ikke gøre det alene. Derfor står de her og ikke sammen med de andre
+     farver, og derfor bliver de stående i @media-blokken nedenfor. */
+  --hero-bund: #4a6042;
+  --hero-top: #33422c;
+  --hero-streg: rgba(232, 240, 214, 0.16);
+  --paa-billede: #f9f5eb;
+  --paa-billede-dæmpet: rgba(249, 245, 235, 0.78);
+
   /* Mindste mål på noget man skal kunne ramme.
      44 px er kravet, når det er en finger — og Feltbogen bruges udendørs,
      hvor sigtet er dårligere end ved et skrivebord, nogle gange med handske
@@ -220,12 +233,22 @@ button {
   to   { transform: scaleX(0); }
 }
 
+/* Titlen når den står på turens hero.
+   Den anden — og eneste anden — klasse i appen, og af samme grund som
+   printreglerne nedenfor: ::placeholder kan ikke sættes fra en inline-style.
+   Standardens dæmpede sandfarve forsvinder både i et lyst fotografi og i det
+   mørkegrønne bånd, så den skal have sin egen. */
+.titel-lys::placeholder {
+  color: rgba(249, 245, 235, 0.62);
+}
+
 /* ─────────────────────────────────────────────
    Print — årets feltbog
 
-   Det eneste sted i appen der bruger klasser. Resten er inline-styles, men
-   @media print kan ikke ramme dem: en printregel skal kunne overskrive, og
-   inline vinder altid. Klasserne holdes derfor til det her ene formål.
+   Det ene af de to steder i appen der bruger klasser — det andet er
+   ::placeholder ovenfor. Resten er inline-styles, men @media print kan ikke
+   ramme dem: en printregel skal kunne overskrive, og inline vinder altid.
+   Klasserne holdes derfor til de formål, en inline-style ikke rækker til.
    ───────────────────────────────────────────── */
 
 /* Sideskiftet skal også virke på skærmen, hvor bogen kan læses igennem inden

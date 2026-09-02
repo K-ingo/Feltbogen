@@ -103,7 +103,8 @@ function Personer() {
 
       {sorteret.length === 0 ? (
         <div style={{ fontSize: '13px', color: 'var(--tekst-svag)' }}>
-          Ingen personer endnu. Tilføj dem du tager afsted med.
+          Ingen endnu. Skriv dem ind, du tager afsted med — så husker Feltbogen,
+          hvem der plejer at være med, og hvad de plejer at bære.
         </div>
       ) : (
         <div style={{ display: 'grid', gap: '2px' }}>
@@ -153,7 +154,9 @@ function Personraekke({ person, ture, profil, aaben, skiftAaben, opdater, fjern 
       >
         <span style={{ flex: 1, minWidth: 0, fontSize: '13px' }}>{person.navn || 'Uden navn'}</span>
         <span style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)' }}>
-          {ture === 0 ? 'ingen ture' : `${ture} ${ture === 1 ? 'tur' : 'ture'}`}
+          {/* "sammen" og ikke bare tallet: rækken står under et menneskes navn,
+              og det er ikke personens ture, det er dem I har været på. */}
+          {ture === 0 ? 'ingen ture endnu' : `${ture} ${ture === 1 ? 'tur' : 'ture'} sammen`}
         </span>
         <span style={{ color: 'var(--tekst-svag)', fontSize: '13px' }}>{aaben ? '−' : '+'}</span>
       </button>

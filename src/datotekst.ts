@@ -46,3 +46,40 @@ export function maanedsnavn(dato: string): string {
   const d = new Date(dato);
   return Number.isNaN(d.getTime()) ? '' : MAANEDER[d.getMonth()];
 }
+
+// "2026-06-12" set fra september → "for 3 måneder siden".
+//
+// Til de steder hvor det ikke er datoen, der er svaret. Et sted, man har
+// været, står med "senest 12.–14. juni 2026", og det er præcist — men
+// spørgsmålet, man stiller sig foran et shelter, er hvor længe siden det er,
+// og dét skal man ikke regne ud selv.
+//
+// Grovkornet med vilje. Uger op til en måned, derefter måneder, derefter år:
+// forskellen på 89 og 91 dage betyder ingenting for den, der spørger, og et
+// tal på dagen ville love en præcision, ingen har brug for.
+export function siden(dato: string, nu: Date = new Date()): string {
+  const d = new Date(dato);
+  if (!dato || Number.isNaN(d.getTime())) return '';
+
+  // Regnes i hele døgn og ikke i timer. Ellers er "i går klokken 20" pludselig
+  // ikke i går længere, fordi klokken er 14 nu.
+  const dage = Math.floor(
+    (Date.UTC(nu.getFullYear(), nu.getMonth(), nu.getDate())
+      - Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())) / 86_400_000
+  );
+
+  // Fremtiden hører ikke til her: det her er noget, der har været.
+  if (dage < 0) return '';
+  if (dage === 0) return 'i dag';
+  if (dage === 1) return 'i går';
+  if (dage < 7) return `for ${dage} dage siden`;
+  if (dage < 14) return 'for en uge siden';
+  if (dage < 31) return `for ${Math.floor(dage / 7)} uger siden`;
+
+  const maaneder = Math.round(dage / 30.4);
+  if (maaneder < 2) return 'for en måned siden';
+  if (maaneder < 12) return `for ${maaneder} måneder siden`;
+
+  const aar = Math.floor(dage / 365);
+  return aar <= 1 ? 'for et år siden' : `for ${aar} år siden`;
+}

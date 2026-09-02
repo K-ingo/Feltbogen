@@ -413,8 +413,9 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
 // Byggeklodser
 // ─────────────────────────────────────────────
 
-// Navnet er det de andre ser på en delt tur. Det gemmes med en knap og ikke
-// pr. tastetryk — hvert gem er et kald til serveren.
+// Navnet er det de andre ser på en delt tur — og det, startskærmen hilser med
+// om morgenen. Det gemmes med en knap og ikke pr. tastetryk: hvert gem er et
+// kald til serveren.
 function Navnefelt({ start, gem }: { start: string; gem: (v: string) => Promise<void> }) {
   const [navn, setNavn] = useState(start);
   const [gemmer, setGemmer] = useState(false);
@@ -426,7 +427,7 @@ function Navnefelt({ start, gem }: { start: string; gem: (v: string) => Promise<
         value={navn}
         onChange={setNavn}
         placeholder="Fx Emil"
-        hjaelp="vises for de andre på delte ture"
+        hjaelp="vises på forsiden og for de andre på delte ture"
       />
       <div style={{ marginTop: '8px' }}>
         <Knap

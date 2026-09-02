@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
-import type { Item, ItemStatus } from './db';
+import type { Item, ItemStatus, Tur, Gruppe } from './db';
 import { opretTomtItem } from './opret';
-import { sidstBrugtPrItem, grupperPrItem } from './statistik';
+import { sidstBrugtPrItem, grupperPrItem, turePrItem } from './statistik';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
 import { useErDesktop } from './useMedie';
@@ -211,25 +211,70 @@ function InventarSide({ fane, skift, aabnItem }: Props) {
           aabn={aabnItem}
         />
       ) : (
-        <div>
-          {filtreret.map((item) => (
-            <ListeRaekke
-              key={item.uid}
-              titel={item.navn}
-              detalje={
-                <>
-                  {item.vaegt_g} g · {item.delt ? 'delt' : `${item.pris_kr.toLocaleString('da-DK')} kr`}
-                  {item.antal > 1 && ` · ${item.antal} stk`}
-                </>
-              }
-              onClick={() => item.id !== undefined && aabnItem(item.id)}
-            >
-              <TagChips tags={item.tags} />
-            </ListeRaekke>
-          ))}
-        </div>
+        <Mobilliste items={filtreret} ture={ture} grupper={grupper} aabn={aabnItem} />
       )}
     </Skal>
+  );
+}
+
+// Grejlisten på telefonen.
+//
+// Tabellen på PC har haft en kolonne der hedder "Sidst brugt" hele tiden, men
+// på telefonen stod der kun vægt og pris — altså hvad tingen er værd og hvad
+// den koster at bære, og ingenting om hvad man har brugt den til. Det er den
+// samme historie som findes inde på gearet selv (`turePrItem`), sagt kort nok
+// til at stå i en liste.
+//
+// Har gearet aldrig været med på en tur, står der ingenting. "Aldrig brugt" er
+// en dom over noget, man måske lige har købt — og de ubrugte ting har deres
+// eget udsnit under Statistik, hvor det er sagt med vilje.
+function Mobilliste({ items, ture, grupper, aabn }: {
+  items: Item[];
+  ture: Tur[];
+  grupper: Gruppe[];
+  aabn: (id: number) => void;
+}) {
+  const brugt = turePrItem(ture, grupper);
+
+  return (
+    <div>
+      {items.map((item) => (
+        <ListeRaekke
+          key={item.uid}
+          titel={item.navn}
+          detalje={
+            <>
+              <div>
+                {item.vaegt_g} g · {item.delt ? 'delt' : `${item.pris_kr.toLocaleString('da-DK')} kr`}
+                {item.antal > 1 && ` · ${item.antal} stk`}
+              </div>
+              <Brugslinje ture={brugt.get(item.uid) ?? []} />
+            </>
+          }
+          onClick={() => item.id !== undefined && aabn(item.id)}
+        >
+          <TagChips tags={item.tags} />
+        </ListeRaekke>
+      ))}
+    </div>
+  );
+}
+
+// "Brugt på 14 ture · sidst Øhavsstien".
+//
+// Turens navn og ikke dens dato: man husker turen, ikke den fjerde weekend i
+// juni. Har turen intet navn, falder linjen tilbage på antallet alene — "sidst
+// Uden navn" siger mindre end ingenting.
+function Brugslinje({ ture }: { ture: Tur[] }) {
+  if (ture.length === 0) return null;
+
+  const sidste = ture[0]?.navn.trim() ?? '';
+  const antal = `Brugt på ${ture.length} ${ture.length === 1 ? 'tur' : 'ture'}`;
+
+  return (
+    <div style={{ color: 'var(--tekst-svag)', marginTop: '1px' }}>
+      {sidste ? `${antal} · sidst ${sidste}` : antal}
+    </div>
   );
 }
 

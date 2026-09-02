@@ -9,6 +9,7 @@ import {
   hentenavn,
   hero,
   heroForSted,
+  senesteMinder,
   kanVises,
   medOriginal,
   optagetid,
@@ -252,5 +253,59 @@ describe('heroForSted', () => {
     const medBillede = [...billeder, lavBillede({ uid: 'b-udato', tur_uid: 't-udato' })];
 
     expect(heroForSted(medBillede, [udenDato, ...ture], 's-mols')?.uid).toBe('b-ny');
+  });
+});
+
+describe('senesteMinder', () => {
+  const mols = lavTur({ uid: 't-mols', startdato: '2026-06-01' });
+  const roeld = lavTur({ uid: 't-roeld', startdato: '2026-07-01' });
+  // Planlagt. Et billede hængt på den er ikke et minde endnu.
+  const kommende = lavTur({ uid: 't-kommende', startdato: '2026-09-01' });
+  const NU = new Date('2026-07-30T12:00:00');
+
+  it('giver de nyeste først, med turen de hører til', () => {
+    const billeder = [
+      lavBillede({ uid: 'b1', tur_uid: 't-mols', tid: '2026-06-01T09:00:00Z' }),
+      lavBillede({ uid: 'b2', tur_uid: 't-roeld', tid: '2026-07-01T09:00:00Z' })
+    ];
+
+    const minder = senesteMinder(billeder, [mols, roeld], 5, NU);
+
+    expect(minder.map((m) => m.billede.uid)).toEqual(['b2', 'b1']);
+    expect(minder[0].tur.uid).toBe('t-roeld');
+  });
+
+  it('lader én tur fylde højst to pladser', () => {
+    const billeder = [
+      lavBillede({ uid: 'r1', tur_uid: 't-roeld', tid: '2026-07-01T09:00:00Z' }),
+      lavBillede({ uid: 'r2', tur_uid: 't-roeld', tid: '2026-07-01T10:00:00Z' }),
+      lavBillede({ uid: 'r3', tur_uid: 't-roeld', tid: '2026-07-01T11:00:00Z' }),
+      lavBillede({ uid: 'm1', tur_uid: 't-mols', tid: '2026-06-01T09:00:00Z' })
+    ];
+
+    const minder = senesteMinder(billeder, [mols, roeld], 5, NU);
+
+    expect(minder.map((m) => m.billede.uid)).toEqual(['r3', 'r2', 'm1']);
+  });
+
+  it('tager ikke billeder med fra en tur der ikke er begyndt', () => {
+    const billeder = [lavBillede({ uid: 'k1', tur_uid: 't-kommende', tid: '2026-07-20T09:00:00Z' })];
+
+    expect(senesteMinder(billeder, [kommende], 5, NU)).toEqual([]);
+  });
+
+  it('springer billeder over hvis turen er væk', () => {
+    const billeder = [lavBillede({ uid: 'x1', tur_uid: 't-slettet' })];
+
+    expect(senesteMinder(billeder, [mols, roeld], 5, NU)).toEqual([]);
+  });
+
+  it('holder sig til det antal der er bedt om', () => {
+    const billeder = [
+      lavBillede({ uid: 'r1', tur_uid: 't-roeld', tid: '2026-07-01T09:00:00Z' }),
+      lavBillede({ uid: 'm1', tur_uid: 't-mols', tid: '2026-06-01T09:00:00Z' })
+    ];
+
+    expect(senesteMinder(billeder, [mols, roeld], 1, NU)).toHaveLength(1);
   });
 });

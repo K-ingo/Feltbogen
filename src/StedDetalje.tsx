@@ -8,7 +8,7 @@ import { heroForSted } from './billeder';
 import { Billedvisning } from './BilledSektion';
 import { soegSted } from './smartMotor';
 import type { StedForslag } from './smartMotor';
-import { formatterPeriode } from './datotekst';
+import { formatterPeriode, siden } from './datotekst';
 import { sletSted, opdaterSted } from './sync';
 import { meldFortrydelse } from './fortryd';
 import { useRedigerbar } from './useRedigerbar';
@@ -162,7 +162,13 @@ function StedDetalje({ stedId, tilbage, aabnTur, opretTurHer, nyOprettet }: Prop
           <div style={{ fontSize: '14px', fontWeight: 500 }}>{besoegstekst(besoegte.length)}</div>
           {besoegte[0]?.startdato && (
             <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
-              Senest {formatterPeriode(besoegte[0].startdato, besoegte[0].slutdato)}
+              {/* Datoen er svaret på hvornår; "for tre måneder siden" er
+                  svaret på det man faktisk spørger om, når man står og
+                  overvejer at tage tilbage. Begge dele står der — den ene er
+                  præcis, den anden er til at mærke. */}
+              {['Senest ' + formatterPeriode(besoegte[0].startdato, besoegte[0].slutdato),
+                siden(besoegte[0].slutdato || besoegte[0].startdato)]
+                .filter(Boolean).join(' · ')}
             </div>
           )}
         </Kort>
