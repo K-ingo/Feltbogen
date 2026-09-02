@@ -532,8 +532,9 @@ startkommando, der kalder `npx`, findes der ikke noget til at udføre.
 
 Feltet skal stå **tomt**, så `CMD ["caddy", "run", ...]` får lov at køre.
 Kommandoen er en rest fra dengang appen blev serveret med `npx serve -s dist`,
-før Caddy kom til; `serve` ligger stadig i devDependencies uden at blive brugt
-af noget, og det er dét, der får en sådan startkommando til at se rigtig ud.
+før Caddy kom til. `serve` er fjernet fra devDependencies igen, netop for at
+en sådan startkommando ikke skal se plausibel ud: der er ikke længere noget i
+repoet, der peger på den.
 
 Bemærk, at bygningen lykkes hele vejen. Fejlen kommer først i
 `Deploy › Create container`, altså efter en grøn build — så det ligner en
