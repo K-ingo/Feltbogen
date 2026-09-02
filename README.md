@@ -461,7 +461,7 @@ så PocketBase ikke behøver en offentlig adresse: admin-fladen på `/_/` kan
 ikke nås udefra, og der er ingen offentlig adresse at scanne eller banke på.
 
 ```
-browser ──https──> Caddy ──http──> pocketbase.railway.internal:8090
+browser ──https──> Caddy ──http──> pocketbase.railway.internal:8080
                      │
                      └── dist/  (appen selv)
 ```
@@ -474,7 +474,7 @@ selv de to op.
 På web-servicen sættes én variabel, som en reference til PocketBase-servicen:
 
 ```
-POCKETBASE_ORIGIN=http://${{ pocketbase.RAILWAY_PRIVATE_DOMAIN }}:8090
+POCKETBASE_ORIGIN=http://${{ pocketbase.RAILWAY_PRIVATE_DOMAIN }}:8080
 ```
 
 Hedder servicen noget andet end `pocketbase`, er det det navn der skal stå.
@@ -483,6 +483,25 @@ opsætning skal vise sig som en fejlet udrulning frem for en app, der er oppe
 og svarer 502 på alting.
 
 `PORT` sætter Railway selv.
+
+**Portnummeret skal passe med det, PocketBase faktisk lytter på.** Det er
+ikke en indstilling, appen ejer — det er en egenskab ved PocketBase-servicen,
+og den kan skifte, hvis servicen bygges om eller får et andet image. Tallet
+her er ikke et facit; det er en note om, hvad der gjaldt, sidst nogen kiggede.
+Slå det op i pocketbase-servicens deploy-log, hvor den skriver sin egen
+adresse ud ved opstart:
+
+```
+> Server started at: http://0.0.0.0:8080
+```
+
+Passer de to tal ikke, svarer Caddy 502 på alt under `/api/`, og appen siger
+"Serveren har problemer lige nu." Fejlteksten i Caddys log er
+`connection refused` — bemærk, at det ikke betyder "kunne ikke finde": værten
+blev nået, der lyttede bare ikke noget på den port. Og PocketBases eget
+offentlige domæne kan sagtens svare 200 på `/api/health` imens, for den vej
+kommer ind gennem Railways kant og ikke over det private net. En grøn
+health-prøve udelukker altså ikke den her fejl.
 
 ### Den fælde, der slår appen ihjel
 

@@ -17,6 +17,14 @@
 # aldrig under build. Derfor må adressen ikke i nærheden af VITE_PB_URL, som
 # Vite bager ind i JS-bundlen; se README under "Udrulning".
 #
+# Portnummeret er PocketBases og ikke vores: det skal passe med det, den
+# service faktisk lytter på, og den skriver det selv ud ved opstart. Passer de
+# to tal ikke, svarer Caddy 502 på alt under /api/ med `connection refused` i
+# loggen — værten blev nået, der lyttede bare ikke noget. Bemærk, at 8080 herunder
+# er en anden port end den i POCKETBASE_ORIGIN ovenfor: dén er PocketBases, denne
+# er Caddys egen, og at de har samme tal lige nu er et sammentræf. De ligger i
+# hver sin container.
+#
 # Står variablen tom, nægter Caddy at starte. Det er med vilje: en tom
 # upstream skal vise sig som en fejlet udrulning, ikke som en app der er oppe
 # og svarer 502 på alting.
