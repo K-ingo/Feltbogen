@@ -45,6 +45,96 @@ export function serveradresse(): string {
   return base ? `${base} (samme domæne som appen)` : 'samme domæne som appen';
 }
 
+// ─────────────────────────────────────────────
+// Tjek af forbindelsen
+//
+// Sync fortæller kun noget, når der er noget at sende. Er køen tom, og virker
+// det alligevel ikke, står man med en app, der ikke siger noget, og en server,
+// man ikke kan se. Det her spørger PocketBase direkte, om den er der, og
+// oversætter svaret — også de svar, der ligner et svar uden at være det.
+//
+// Formen på fejlene er kendt på forhånd, fordi de følger af opsætningen:
+// proxyen sender /api/ videre (Caddyfile), og gør den ikke det, svarer
+// adressen med appens egen index.html — 200 OK på noget, der ikke er
+// PocketBase. Det er den fejl, der ellers er sværest at få øje på.
+// ─────────────────────────────────────────────
+
+export interface Forbindelsestjek {
+  ok: boolean;
+  tekst: string;
+}
+
+// Adressen helbredstjekket går til. Bygges af den samme base som alle andre
+// kald, så tjekket ikke kan komme til at svare for en anden server end den,
+// appen bruger.
+export function helbredsadresse(): string {
+  const base = /^https?:\/\//i.test(PB_URL)
+    ? PB_URL
+    : `${typeof window === 'undefined' ? '' : window.location.origin}${PB_URL}`;
+  return `${base.replace(/\/+$/, '')}/api/health`;
+}
+
+// Svaret, oversat. Ligger for sig selv, fordi det er her, det er værd at være
+// præcis: de tre-fire måder opsætningen kan være gal på, giver hver sit svar,
+// og de skal kunne kendes fra hinanden uden en netværksfane.
+export function laesHelbred(status: number, indholdstype: string, krop: string): Forbindelsestjek {
+  const erJson = indholdstype.includes('json') || krop.trimStart().startsWith('{');
+
+  if (status >= 200 && status < 300) {
+    if (erJson) return { ok: true, tekst: 'PocketBase svarer. Forbindelsen er i orden.' };
+
+    // 200 OK, og alligevel forkert: proxyen sendte ikke /api/ videre, så
+    // adressen svarede med appens egen side. Alle kald får HTML tilbage, hvor
+    // de venter JSON.
+    return {
+      ok: false,
+      tekst: 'Adressen svarede, men med appens egen side i stedet for PocketBase. '
+        + 'Kaldene til /api/ bliver ikke sendt videre — se handle /api/* i Caddyfile, '
+        + 'eller PB_PROXY_TARGET hvis det er npm run dev.'
+    };
+  }
+
+  if (status === 404) {
+    return {
+      ok: false,
+      tekst: 'Serveren svarede 404 på /api/health. Der er ikke nogen PocketBase på adressen — '
+        + 'enten peger proxyen et forkert sted hen, eller også er VITE_PB_URL sat til noget andet.'
+    };
+  }
+
+  if (status === 502 || status === 503 || status === 504) {
+    return {
+      ok: false,
+      tekst: `Proxyen svarede ${status}. Den blev nået, men den kunne ikke nå PocketBase — `
+        + 'tjek POCKETBASE_ORIGIN og porten, PocketBase faktisk lytter på (se Caddyfile).'
+    };
+  }
+
+  if (status === 401 || status === 403) {
+    return { ok: false, tekst: `Serveren svarede ${status} på et kald, der ikke kræver login. Den afviser appen.` };
+  }
+
+  return { ok: false, tekst: `Serveren svarede ${status}.` };
+}
+
+export async function tjekForbindelse(): Promise<Forbindelsestjek> {
+  const adresse = helbredsadresse();
+
+  try {
+    const svar = await fetch(adresse, { cache: 'no-store' });
+    return laesHelbred(svar.status, svar.headers.get('content-type') ?? '', await svar.text());
+  } catch {
+    // Der kom aldrig et svar. Browseren siger ikke hvorfor — en server, der er
+    // nede, og en, der afviser appens adresse, ser ens ud herfra — så begge
+    // muligheder skal stå der.
+    return {
+      ok: false,
+      tekst: `Kunne ikke nå ${adresse} overhovedet. Enten er du uden forbindelse, `
+        + 'eller også er serveren nede eller afviser kald fra appens adresse.'
+    };
+  }
+}
+
 export function erLoggetInd(): boolean {
   return pb.authStore.isValid;
 }
@@ -122,7 +212,7 @@ export async function fornyLogin(): Promise<void> {
     // som om man aldrig havde været logget ind. Det var netop det, der gjorde
     // en udløbet session tavs: alt holdt op med at komme op, og skærmen sagde
     // "Gemt på denne enhed". Se syncfejl.ts.
-    await noterFejl(e);
+    await noterFejl(e, 'fornyelse af login');
     pb.authStore.clear();
   }
 }

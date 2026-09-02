@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { pb, erLoggetInd, fornyLogin, nuvaerendeBruger, serveradresse } from './pb';
+import { pb, erLoggetInd, fornyLogin, nuvaerendeBruger, serveradresse, laesHelbred, helbredsadresse, tjekForbindelse } from './pb';
 
 // Et token appen kan tro på: PocketBase-klienten læser kun `exp` ud af
 // nyttelasten, så resten behøver ikke være ægte.
@@ -150,5 +150,63 @@ describe('serveradresse', () => {
   // Så skal der stadig stå noget forståeligt frem for en tom række.
   it('siger stadig noget når der ikke er noget vindue', () => {
     expect(serveradresse()).toBe('samme domæne som appen');
+  });
+});
+
+// Fejlen skal kunne findes uden en netværksfane.
+//
+// Opsætningen kan være gal på nogle få kendte måder, og de ser ens ud inde i
+// appen: alt bliver bare ved med at ligge i køen. Helbredstjekket spørger
+// direkte og oversætter svaret — også det svar, der er et 200 uden at være
+// fra PocketBase.
+describe('laesHelbred', () => {
+  it('siger god for et JSON-svar fra PocketBase', () => {
+    const svar = laesHelbred(200, 'application/json', '{"code":200,"message":"API is healthy."}');
+    expect(svar.ok).toBe(true);
+  });
+
+  // Den fejl, der ellers er sværest at få øje på: proxyen sender ikke /api/
+  // videre, så adressen svarer 200 med appens egen index.html. Hvert kald får
+  // HTML tilbage, hvor det venter JSON.
+  it('afslører en proxy, der svarer med appens egen side', () => {
+    const svar = laesHelbred(200, 'text/html', '<!doctype html><html></html>');
+
+    expect(svar.ok).toBe(false);
+    expect(svar.tekst).toContain('/api/');
+  });
+
+  it('skelner en proxy, der ikke nåede PocketBase, fra en, der ikke findes', () => {
+    expect(laesHelbred(502, 'text/plain', '').tekst).toContain('502');
+    expect(laesHelbred(404, 'text/plain', '').tekst).toContain('404');
+  });
+
+  it('svarer stadig noget på en kode, den ikke kender', () => {
+    const svar = laesHelbred(418, 'text/plain', '');
+    expect(svar.ok).toBe(false);
+    expect(svar.tekst).toContain('418');
+  });
+});
+
+describe('tjekForbindelse', () => {
+  it('spørger den server, appen selv taler med', async () => {
+    const kald = vi.fn(async (adresse: string) => { void adresse; return svar(200, { code: 200 }); });
+    vi.stubGlobal('fetch', kald);
+
+    const resultat = await tjekForbindelse();
+
+    expect(kald).toHaveBeenCalledWith(helbredsadresse(), expect.anything());
+    expect(helbredsadresse()).toMatch(/\/api\/health$/);
+    expect(resultat.ok).toBe(true);
+  });
+
+  // Browseren siger ikke hvorfor: en server, der er nede, og en, der afviser
+  // appens adresse, ser ens ud herfra. Begge dele skal stå der.
+  it('nævner både en server, der er nede, og en, der afviser appen', async () => {
+    serveren(async () => { throw new TypeError('Failed to fetch'); });
+
+    const resultat = await tjekForbindelse();
+
+    expect(resultat.ok).toBe(false);
+    expect(resultat.tekst).toContain(helbredsadresse());
   });
 });
