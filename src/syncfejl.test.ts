@@ -1,5 +1,16 @@
 import { describe, it, expect } from 'vitest';
-import { fejlartAf, laesSyncfejl, kraeverLogin, FEJLTEKST, fejltekst, noterFejl, SYNCFEJL_NOEGLE } from './syncfejl';
+import {
+  fejlartAf,
+  laesSyncfejl,
+  kraeverLogin,
+  FEJLTEKST,
+  fejltekst,
+  noterFejl,
+  rydFejl,
+  laesSeneste,
+  synckvittering,
+  SYNCFEJL_NOEGLE
+} from './syncfejl';
 import { laes } from './indstillinger';
 import type { Fejlart } from './syncfejl';
 
@@ -98,5 +109,56 @@ describe('noterFejl', () => {
     const gemt = laesSyncfejl(await laes(SYNCFEJL_NOEGLE));
     expect(gemt?.art).toBe('afvist');
     expect(gemt?.detalje).toBe('Failed to create record.');
+  });
+});
+
+describe('synckvittering', () => {
+  const serverfejl = { art: 'server' as const, detalje: '', hvornaar: '2026-09-02T10:00:00.000Z' };
+
+  it('siger god for det, når køen er tom og intet fejlede', () => {
+    expect(synckvittering(0, null)).toEqual({ slags: 'ok', tekst: 'Alt er synkroniseret.' });
+  });
+
+  // Kernen i fejlen: køen tæller kun det, der skal op. Fejlede hentningen ned,
+  // er den stadig tom — og "Alt er synkroniseret." stod side om side med
+  // advarslen om at serveren ikke svarede.
+  it('siger ikke god for det, når køen er tom men hentningen fejlede', () => {
+    const kvittering = synckvittering(0, serverfejl);
+
+    expect(kvittering.slags).toBe('fejl');
+    expect(kvittering.tekst).not.toContain('Alt er synkroniseret');
+  });
+
+  it('tæller det, der stadig venter, når der er noget', () => {
+    expect(synckvittering(3, null)).toEqual({
+      slags: 'fejl',
+      tekst: '3 ændringer ligger stadig og venter.'
+    });
+    expect(synckvittering(1, null).tekst).toBe('1 ændring ligger stadig og venter.');
+  });
+
+  it('tæller stadig køen, når der også står en fejl', () => {
+    expect(synckvittering(2, serverfejl).tekst).toBe('2 ændringer ligger stadig og venter.');
+  });
+
+  // Årsagen hører til i advarslen under kvitteringen, som kender både arten og
+  // om enheden er på nettet. Kvitteringen svarer kun på, hvordan det gik.
+  it('gætter ikke på årsagen', () => {
+    Object.values(FEJLTEKST).forEach((tekst) => {
+      expect(synckvittering(0, serverfejl).tekst).not.toBe(tekst);
+    });
+  });
+});
+
+describe('laesSeneste', () => {
+  it('giver den fejl, der står lige nu', async () => {
+    await noterFejl({ status: 503 });
+    expect((await laesSeneste())?.art).toBe('server');
+  });
+
+  it('giver ingenting, når fejlen er ryddet', async () => {
+    await noterFejl({ status: 503 });
+    await rydFejl();
+    expect(await laesSeneste()).toBeNull();
   });
 });

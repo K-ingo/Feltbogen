@@ -144,6 +144,52 @@ export function laesSyncfejl(tekst: string | null): Syncfejl | null {
   };
 }
 
+// Den gemte fejl, læst her og nu.
+//
+// Skærmen har den allerede gennem `useSyncfejl`, men den værdi er den, der
+// gjaldt da skærmen sidst blev tegnet. Skal man svare på, hvordan det gik med
+// en kørsel, man selv lige har sat i gang, skal fejlen læses efter kørslen og
+// ikke før — ellers svarer man på det forrige forsøg.
+export async function laesSeneste(): Promise<Syncfejl | null> {
+  return laesSyncfejl(await laes(SYNCFEJL_NOEGLE));
+}
+
+// Kvitteringen på et tryk på "Synkronisér nu".
+//
+// Den stod før på ét tal: var der ingenting tilbage i køen, sagde den "Alt er
+// synkroniseret." Men køen er kun det, der skal *op*. Har man ingen lokale
+// ændringer, er den tom, uanset hvordan det gik med at hente ned — og så stod
+// den grønne kvittering og den orange advarsel side om side og sagde hver
+// sit om det samme tryk.
+//
+// Reglen er den samme som `syncstatus` i dashboard.ts allerede følger: fejlen
+// går forud for optællingen. Forskellen på de to er, at statuslinjen
+// beskriver en tilstand, mens den her svarer på noget, man selv bad om — og
+// derfor tæller offline også som "det kom ikke igennem". At svare "Alt er
+// synkroniseret." på et tryk, hvor intet nåede frem, er forkert, uanset hvor
+// god grunden er.
+//
+// Årsagen står ikke her. Den står i advarslen lige under, som kender både
+// arten og om enheden er på nettet — se `fejltekst`. To beskeder om det
+// samme, hvor den ene gætter, er en for meget.
+export function synckvittering(
+  usendt: number,
+  fejl: Syncfejl | null
+): { slags: 'ok' | 'fejl'; tekst: string } {
+  if (usendt > 0) {
+    return {
+      slags: 'fejl',
+      tekst: `${usendt} ${usendt === 1 ? 'ændring ligger' : 'ændringer ligger'} stadig og venter.`
+    };
+  }
+
+  if (fejl) {
+    return { slags: 'fejl', tekst: 'Intet venter på at blive sendt, men appen nåede ikke serveren.' };
+  }
+
+  return { slags: 'ok', tekst: 'Alt er synkroniseret.' };
+}
+
 export function useSyncfejl(): Syncfejl | null {
   return laesSyncfejl(useLiveQuery(() => laes(SYNCFEJL_NOEGLE)) ?? null);
 }

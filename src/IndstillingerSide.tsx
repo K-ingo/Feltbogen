@@ -17,7 +17,7 @@ import { hentNyesteUdgave, byggetekst } from './opdatering';
 import { useAuth } from './useAuth';
 import { afstemMedServer, fjernDubletter, usendtAntal, uidFeltMangler } from './sync';
 import { serveradresse } from './pb';
-import { useSyncfejl, fejltekst } from './syncfejl';
+import { useSyncfejl, fejltekst, laesSeneste, synckvittering } from './syncfejl';
 import { useErOnline } from './useMedie';
 import { datoTekst } from './datotekst';
 import {
@@ -92,13 +92,10 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
     setSyncBesked(null);
     try {
       await afstemMedServer();
-      const tilbage = await usendtAntal();
-      // Grunden står i advarslen nedenunder — kvitteringen siger kun, hvad der
-      // kom ud af trykket. To beskeder om det samme, hvor den ene gætter på
-      // årsagen ("prøv igen når du har forbindelse"), er en for meget.
-      setSyncBesked(tilbage === 0
-        ? { slags: 'ok', tekst: 'Alt er synkroniseret.' }
-        : { slags: 'fejl', tekst: `${tilbage} ${tilbage === 1 ? 'ændring ligger' : 'ændringer ligger'} stadig og venter.` });
+      // Køen alene kan ikke svare på, hvordan det gik: den tæller kun det, der
+      // skal op, og er tom uanset om hentningen ned lykkedes. Fejlen læses
+      // derfor efter kørslen og vejer tungest — reglen ligger i syncfejl.ts.
+      setSyncBesked(synckvittering(await usendtAntal(), await laesSeneste()));
     } catch {
       setSyncBesked({ slags: 'fejl', tekst: 'Kunne ikke få fat i serveren.' });
     }
