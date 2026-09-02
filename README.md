@@ -517,6 +517,46 @@ virke på én gang, og der er intet i et build, der afslører det.
 Derfor er `VITE_PB_URL` slet ikke sat i udrulningen — appen bruger sit eget
 domæne — og CI fejler, hvis `railway.internal` dukker op i `dist/`.
 
+### To fejl, der peger et forkert sted hen
+
+Begge er set i produktion, og begge kostede en udrulningsrunde — ikke fordi
+de er svære at rette, men fordi fejlteksten handler om noget andet end
+årsagen. De ligger begge i Railways egne indstillinger og ikke i repoet,
+så der er ingenting i en `git diff`, der afslører dem.
+
+**`The executable 'npx' could not be found.`**
+
+En **Custom Start Command** på web-servicen overskriver Dockerfilens `CMD`.
+Slutimaget er `caddy:2-alpine` og har hverken node eller npx — så en
+startkommando, der kalder `npx`, findes der ikke noget til at udføre.
+
+Feltet skal stå **tomt**, så `CMD ["caddy", "run", ...]` får lov at køre.
+Kommandoen er en rest fra dengang appen blev serveret med `npx serve -s dist`,
+før Caddy kom til; `serve` ligger stadig i devDependencies uden at blive brugt
+af noget, og det er dét, der får en sådan startkommando til at se rigtig ud.
+
+Bemærk, at bygningen lykkes hele vejen. Fejlen kommer først i
+`Deploy › Create container`, altså efter en grøn build — så det ligner en
+kodefejl i den commit, der tilfældigvis blev udrullet.
+
+**`first path segment in URL cannot contain colon`**
+
+Caddy kan ikke læse sin egen konfiguration, og fejlen peger på
+`reverse_proxy`-linjen. Læs, hvad den citerer:
+
+```
+parsing upstream 'POCKETBASE_ORIGIN=http://pocketbase.railway.internal:8080'
+```
+
+Variablens **værdi** indeholder sit eget navn. Det sker, når hele linjen
+`POCKETBASE_ORIGIN=http://...` bliver sat ind i værdi-feltet i stedet for i
+råeditoren, der selv deler `NØGLE=VÆRDI` op. Caddy læser så `POCKETBASE_ORIGIN`
+som et sti-segment, og et sti-segment må ikke indeholde kolon — deraf den
+mærkelige tekst om URL-stier i noget, der er en indtastningsfejl.
+
+Værdien skal være `http://${{ pocketbase.RAILWAY_PRIVATE_DOMAIN }}:8080` og
+ingenting andet. Navnet står allerede i nøglefeltet.
+
 ### Rækkefølge, når PocketBases offentlige domæne fjernes
 
 Billed-url'er gemmes som de er i IndexedDB (`sync.ts`), og delte ture har dem
