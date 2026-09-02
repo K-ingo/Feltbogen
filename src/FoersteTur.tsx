@@ -31,8 +31,8 @@ import {
   gemKladde,
   rydKladde,
   KLADDE_UID
-} from './foersteTur';
-import type { Kladde, Trin } from './foersteTur';
+} from './foersteTurLogik';
+import type { Kladde, Trin } from './foersteTurLogik';
 
 interface Props {
   // Lukker flowet uden at oprette noget. Kladden bliver liggende — det er
@@ -41,7 +41,7 @@ interface Props {
   faerdig: (turId: number) => void;
 }
 
-// Skærmen til den første tur. Reglerne står i foersteTur.ts; her stilles de
+// Skærmen til den første tur. Reglerne står i foersteTurLogik.ts; her stilles de
 // fire spørgsmål ét ad gangen.
 //
 // Ét spørgsmål pr. skærm, og alle fire kan springes over. Det er ikke en

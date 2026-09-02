@@ -93,7 +93,7 @@ import {
   antalTurePrPerson,
   deltagerFraPerson,
   deltagerFraNavn
-} from './personer';
+} from './personerLogik';
 import { foreslaaSteder, sorterEfterBesoeg, besoegPrSted, besoegstekst, naermesteSted } from './steder';
 import { udlaansAdvarsler } from './udlaan';
 import { vaegtresultat, bedsteBytter, byt, manglendeTags } from './vaegtbrydere';

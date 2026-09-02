@@ -35,7 +35,7 @@ import type { Minde } from './billeder';
 import { Billedvisning } from './BilledSektion';
 import { useTekst } from './indstillinger';
 import { useSyncfejl } from './syncfejl';
-import { laesKladde, KLADDE_NOEGLE } from './foersteTur';
+import { laesKladde, KLADDE_NOEGLE } from './foersteTurLogik';
 
 interface Props {
   fane: Fane;
@@ -48,7 +48,7 @@ interface Props {
   // Sync kan fejle, fordi sessionen er udløbet. Så skal linjen nederst kunne
   // føre hen til login — se syncfejl.ts og turmaal.ts.
   tilLogin: () => void;
-  // Det guidede flow til den første tur. Se foersteTur.ts.
+  // Det guidede flow til den første tur. Se foersteTurLogik.ts.
   foersteTur: () => void;
 }
 
@@ -98,7 +98,7 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
       situation.situation === 'klar');
   const erFoersteStart = ture.length === 0 && items.length === 0 && grupper.length === 0;
   // En påbegyndt første tur ligger lokalt og ikke i basen. Den afgør kun, hvad
-  // knappen på det tomme kort hedder — se foersteTur.ts.
+  // knappen på det tomme kort hedder — se foersteTurLogik.ts.
   const kladde = laesKladde(useTekst(KLADDE_NOEGLE));
   const tur = situation.tur;
   // Turkortet øverst ejer sin tur, så den ikke bliver sagt to gange.

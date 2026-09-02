@@ -73,7 +73,7 @@ function App(): ReactElement | null {
   const [viserRundvisning, setViserRundvisning] = useState(false);
   // Det guidede flow til den første tur. Kladden ligger i basen, så den
   // overlever både at man lukker flowet og at man lukker appen — her holdes
-  // kun styr på, om skærmen er fremme. Se foersteTur.ts.
+  // kun styr på, om skærmen er fremme. Se foersteTurLogik.ts.
   const [viserFoersteTur, setViserFoersteTur] = useState(false);
   const [fane, setFane] = useState<Fane>('dashboard');
   // Valget ligger her og ikke i listeskærmene, fordi dashboardet også åbner

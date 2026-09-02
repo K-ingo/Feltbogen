@@ -8,7 +8,7 @@ import {
   personprofil,
   tureMedPerson,
   ukendteNavne
-} from './personer';
+} from './personerLogik';
 import type { Deltager } from './db';
 import { lavItem, lavPerson, lavTur } from './test/data';
 

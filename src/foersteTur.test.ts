@@ -14,8 +14,8 @@ import {
   antalPersoner,
   turFraKladde,
   laesKladde
-} from './foersteTur';
-import type { Kladde } from './foersteTur';
+} from './foersteTurLogik';
+import type { Kladde } from './foersteTurLogik';
 
 const NU = new Date('2026-09-14T09:00:00');
 
