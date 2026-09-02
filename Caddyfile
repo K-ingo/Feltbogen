@@ -11,7 +11,7 @@
 #
 # POCKETBASE_ORIGIN sættes i Railway som en reference-variabel:
 #
-#   POCKETBASE_ORIGIN=http://${{ pocketbase.RAILWAY_PRIVATE_DOMAIN }}:8090
+#   POCKETBASE_ORIGIN=http://${{ pocketbase.RAILWAY_PRIVATE_DOMAIN }}:8080
 #
 # (`pocketbase` er servicens navn). Den slås først op når containeren kører —
 # aldrig under build. Derfor må adressen ikke i nærheden af VITE_PB_URL, som
@@ -58,3 +58,4 @@
 		file_server
 	}
 }
+
