@@ -16,7 +16,7 @@ import { logUd, gemNavn } from './pb';
 import { hentNyesteUdgave, byggetekst } from './opdatering';
 import { useAuth } from './useAuth';
 import { afstemMedServer, fjernDubletter, usendtAntal, uidFeltMangler } from './sync';
-import { serveradresse } from './pb';
+import { serveradresse, tjekForbindelse } from './pb';
 import { useSyncfejl, fejltekst, laesSeneste, synckvittering } from './syncfejl';
 import { useErOnline } from './useMedie';
 import { datoTekst } from './datotekst';
@@ -99,6 +99,20 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
     } catch {
       setSyncBesked({ slags: 'fejl', tekst: 'Kunne ikke få fat i serveren.' });
     }
+    setArbejder(null);
+  };
+
+  // Spørger serveren, om den er der.
+  //
+  // Sync kan kun sige noget, når der er noget at sende: er køen tom, og virker
+  // det alligevel ikke, sagde skærmen før ingenting. Det her kan trykkes når
+  // som helst og svarer på det ene spørgsmål, alt andet hænger på — om appen
+  // og PocketBase overhovedet kan nå hinanden. Se pb.ts.
+  const tjekServer = async () => {
+    setArbejder('tjek');
+    setSyncBesked(null);
+    const svar = await tjekForbindelse();
+    setSyncBesked({ slags: svar.ok ? 'ok' : 'fejl', tekst: svar.tekst });
     setArbejder(null);
   };
 
@@ -226,6 +240,9 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
               <Knap variant="primaer" onClick={synkroniser} disabled={arbejder !== null}>
                 {arbejder === 'sync' ? 'Synkroniserer…' : 'Synkronisér nu'}
               </Knap>
+              <Knap onClick={tjekServer} disabled={arbejder !== null}>
+                {arbejder === 'tjek' ? 'Tjekker…' : 'Tjek forbindelsen'}
+              </Knap>
               <Knap onClick={rydDubletter} disabled={arbejder !== null}>
                 {arbejder === 'dubletter' ? 'Rydder op…' : 'Ryd dubletter'}
               </Knap>
@@ -239,9 +256,24 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
             {syncfejl && (
               <Advarsel>
                 {fejltekst(syncfejl.art, online)}
+                {/* Hvilken post og hvilken samling. Uden den her siger
+                    advarslen at noget blev afvist, og ikke hvad — og så er der
+                    ikke noget at gå efter i PocketBase. Se syncfejl.ts. */}
+                {syncfejl.hvor && (
+                  <div style={{ marginTop: '6px', opacity: 0.8 }}>
+                    Det gik galt under {syncfejl.hvor}.
+                  </div>
+                )}
                 {syncfejl.detalje && (
                   <div style={{ marginTop: '6px', opacity: 0.8 }}>
                     Serveren sagde: {syncfejl.detalje}
+                  </div>
+                )}
+                {/* Feltet serveren pegede på. Det er den ene linje, der siger
+                    hvad der mangler i skemaet. */}
+                {syncfejl.felter && (
+                  <div style={{ marginTop: '6px', opacity: 0.8 }}>
+                    Felter: {syncfejl.felter}
                   </div>
                 )}
                 {syncfejl.hvornaar && (

@@ -18,7 +18,9 @@ import { saet, laes } from './indstillinger';
 //
 // Den ryddes af, at det lykkes, og ikke af tiden. Går forbindelsen ned og kommer
 // igen, skal beskeden væk, fordi der blev sendt — ikke fordi der er gået en
-// time.
+// time. "Det lykkedes" er en hel kørsel og ikke en enkelt post: en sync rører
+// mange poster, og at én af dem gik igennem siger ingenting om de andre. Se
+// `koersel` i sync.ts.
 //
 // Og den ligger på enheden. Om *denne* telefon kunne nå serveren er ikke data
 // om turene, og det skal ikke synkroniseres — allerede fordi det er
@@ -51,13 +53,44 @@ export interface Syncfejl {
   // — og den er klientens ord, ikke serverens. Skærmen skrev den ud som
   // "Serveren sagde: Something went wrong." om en server, der aldrig svarede.
   detalje: string;
+  // Hvad appen var i gang med, da det gik galt — fx `items · oprettelse af
+  // "Toaks 1L gryde"`. Arten siger hvad slags fejl det var, og serverens
+  // besked siger hvad den hedder på engelsk; ingen af dem siger hvilken post
+  // eller hvilken samling. Uden det er en afvisning ikke til at gå efter: man
+  // ved at *noget* blev afvist, og skal så gætte hvad.
+  hvor?: string;
+  // De felter serveren pegede på, når den gjorde det. PocketBase lægger dem i
+  // svarets `data` og ikke i `message` — en afvist post svarer "Failed to
+  // create record." med det egentlige svar, feltet og hvorfor, et andet sted i
+  // kroppen. Det er den ene oplysning, der peger direkte på skemaet.
+  felter?: string;
   // ISO. Bruges til at sige hvornår det gik galt, ikke til at rydde op efter.
   hvornaar: string;
 }
 
 interface PbFejl {
   status?: number;
-  response?: { message?: string };
+  response?: {
+    message?: string;
+    data?: Record<string, { code?: string; message?: string }>;
+  };
+}
+
+// Felterne serveren afviste, som én linje: `uid: Unknown field.`
+//
+// Kun feltnavnet og beskeden. Koden bag ("validation_unknown_field") siger det
+// samme en gang til, på maskinsprog, og linjen skal kunne læses af den, der
+// står med telefonen og skal rette et skema.
+export function felterAf(e: unknown): string {
+  const data = ((e ?? {}) as PbFejl).response?.data;
+  if (!data) return '';
+
+  return Object.entries(data)
+    .map(([felt, detalje]) => {
+      const besked = detalje?.message ?? detalje?.code ?? '';
+      return besked ? `${felt}: ${besked}` : felt;
+    })
+    .join(' · ');
 }
 
 export function fejlartAf(e: unknown): Fejlart {
@@ -102,14 +135,22 @@ export function kraeverLogin(fejl: Syncfejl | null): boolean {
 
 export const SYNCFEJL_NOEGLE = 'seneste_syncfejl';
 
-export async function noterFejl(e: unknown, nu: Date = new Date()): Promise<void> {
+export async function noterFejl(e: unknown, hvor = '', nu: Date = new Date()): Promise<void> {
   const fejl = (e ?? {}) as PbFejl;
+  const felter = felterAf(e);
 
-  await saet(SYNCFEJL_NOEGLE, JSON.stringify({
+  const noteret: Syncfejl = {
     art: fejlartAf(e),
     detalje: fejl.response?.message ?? '',
     hvornaar: nu.toISOString()
-  } satisfies Syncfejl));
+  };
+  // Tomme felter skrives ikke. Beskeden ligger som JSON på enheden og kan være
+  // skrevet af en ældre udgave af appen; jo færre nøgler, jo færre måder den
+  // kan komme til at love noget, den ikke har.
+  if (hvor) noteret.hvor = hvor;
+  if (felter) noteret.felter = felter;
+
+  await saet(SYNCFEJL_NOEGLE, JSON.stringify(noteret));
 }
 
 // Ryddes når noget lykkes. Skrivningen springes over, når der ikke stod
@@ -137,11 +178,14 @@ export function laesSyncfejl(tekst: string | null): Syncfejl | null {
   const art = o.art;
   if (typeof art !== 'string' || !(art in FEJLTEKST)) return null;
 
-  return {
+  const fejl: Syncfejl = {
     art: art as Fejlart,
     detalje: typeof o.detalje === 'string' ? o.detalje : '',
     hvornaar: typeof o.hvornaar === 'string' ? o.hvornaar : ''
   };
+  if (typeof o.hvor === 'string' && o.hvor) fejl.hvor = o.hvor;
+  if (typeof o.felter === 'string' && o.felter) fejl.felter = o.felter;
+  return fejl;
 }
 
 // Den gemte fejl, læst her og nu.

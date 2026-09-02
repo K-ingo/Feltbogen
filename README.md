@@ -396,6 +396,14 @@ den først, når man står og mangler dataene. Derfor huskes den seneste i
 
 Der gemmes én fejl og ikke en log: en liste skulle vedligeholdes og ryddes, og
 ingen læser den. Den ryddes af, at det lykkes, og ikke af, at der er gået tid.
+"Det lykkedes" er en hel kørsel og ikke en enkelt post. Hver post, der gik
+igennem, ryddede før fejlen med det samme, og så var beskeden ulæselig i
+præcis det tilfælde, den er til for: blev én post afvist, mens resten gik fint
+op, skrev den afviste sin fejl, og den næste slettede den igen — advarslen nåede
+at blinke, og tilbage stod "3 ændringer venter" uden en grund. Det samme gjorde
+hentningen ned, som kører efter afsendelsen op. `koersel()` i `sync.ts` tæller
+derfor fejl og succeser for hele kørslen, og fejlen ryddes kun til sidst, af en
+kørsel hvor noget lykkedes og intet fejlede.
 Og den ligger på enheden — om *denne* telefon kunne nå serveren, er ikke data
 om turene, og det ville i øvrigt være synkroniseringen selv, der skulle sende
 det. Arterne følger, hvad man skal gøre ved dem, og ikke HTTP-koderne: ingen
@@ -408,6 +416,24 @@ sagt noget, er der ikke noget at citere. Og "kunne ikke nå serveren" dækkede t
 situationer med hver sin udvej — man er selv uden dækning, eller serveren er
 nede eller afviser kald fra appens adresse. Browseren ved hvilken, så det står
 der nu.
+
+Fejlen siger også, hvor det gik galt — `items · oprettelse af "Toaks 1L gryde"`
+— og hvilke felter serveren pegede på. Arten siger hvad slags fejl det var, og
+serverens besked hvad den hedder på engelsk; ingen af dem siger hvilken post
+eller hvilken samling, og uden det er en afvisning ikke til at gå efter.
+Feltnavnene ligger i svarets `data` og ikke i `message`: en afvist post svarer
+"Failed to create record." og gemmer det egentlige svar et andet sted i kroppen.
+
+Sync kan kun sige noget, når der er noget at sende. Er køen tom, og virker det
+alligevel ikke, sagde skærmen før ingenting — derfor står der en **Tjek
+forbindelsen**-knap ved siden af "Synkronisér nu". Den henter `/api/health` på
+den samme adresse, som alle andre kald går til, og oversætter svaret:
+PocketBase svarer, proxyen svarede med appens egen side i stedet (så bliver
+`/api/` ikke sendt videre — se `handle /api/*` i Caddyfile eller
+`PB_PROXY_TARGET` under `npm run dev`), proxyen nåede ikke PocketBase (502 —
+tjek `POCKETBASE_ORIGIN` og porten), eller der kom slet ikke noget svar. Den
+sidste dækker både en server, der er nede, og en, der afviser kald fra appens
+adresse; browseren siger ikke hvilken.
 
 "Gemt på denne enhed" er sandt uden en konto, men det er ikke til at høre, at
 det også betyder "og kommer ingen steder": den, der tror hun synkroniserer,

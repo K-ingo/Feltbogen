@@ -21,6 +21,7 @@ import {
   usendtAntal
 } from './sync';
 import { lavItem, lavGruppe, lavTur } from './test/data';
+import { laesSeneste, rydFejl } from './syncfejl';
 
 // Opdateringer samles i 800 ms før de sendes.
 const FORSINKELSE = 800;
@@ -34,6 +35,7 @@ beforeEach(async () => {
   await db.billeder.clear();
   await db.slettede.clear();
   pbMock.reset();
+  await rydFejl();
   vi.spyOn(console, 'error').mockImplementation(() => {});
   vi.spyOn(console, 'log').mockImplementation(() => {});
 });
@@ -594,5 +596,60 @@ describe('alle felter kommer med op', () => {
     const sendt = pbMock.records.get('grupper')?.get('pb1');
     const glemte = Object.keys(gruppe).filter((felt) => !KUN_LOKALT.includes(felt) && !(felt in sendt!));
     expect(glemte).toEqual([]);
+  });
+});
+
+// Fejlen skal kunne nå at blive læst.
+//
+// Den blev før ryddet af hver enkelt post, der gik igennem: blev én post
+// afvist, mens de andre gik fint op, slettede den næste post beskeden igen —
+// og hentningen ned, som kører bagefter, ryddede resten. Advarslen nåede at
+// blinke, og tilbage stod en kø der ikke blev tømt, uden en grund. Se
+// `koersel` i sync.ts.
+describe('fejlen fra en kørsel', () => {
+  it('bliver stående, når en anden post i samme kørsel gik igennem', async () => {
+    pbMock.offline = true;
+    await opretItem(lavItem({ navn: 'Afvises' }));
+    await opretItem(lavItem({ navn: 'Går igennem' }));
+    pbMock.offline = false;
+
+    // Den første af de to bliver afvist af serveren; den anden går op.
+    pbMock.afvisNaesteCreate = 'items';
+    await sendAltUsendt();
+
+    const fejl = await laesSeneste();
+    expect(fejl?.art).toBe('afvist');
+    expect(fejl?.hvor).toContain('Afvises');
+  });
+
+  it('overlever en hentning ned, der lykkedes', async () => {
+    pbMock.offline = true;
+    await opretItem(lavItem({ navn: 'Afvises' }));
+    pbMock.offline = false;
+
+    pbMock.afvisNaesteCreate = 'items';
+    await afstemMedServer();
+
+    expect((await laesSeneste())?.art).toBe('afvist');
+  });
+
+  it('ryddes af en kørsel, hvor intet fejlede', async () => {
+    pbMock.offline = true;
+    await opretItem(lavItem({ navn: 'Kommer op til sidst' }));
+    expect(await laesSeneste()).not.toBeNull();
+
+    pbMock.offline = false;
+    await afstemMedServer();
+
+    expect(await laesSeneste()).toBeNull();
+  });
+
+  it('siger hvilken samling og hvilken post det gik galt på', async () => {
+    pbMock.offline = true;
+    await opretItem(lavItem({ navn: 'Toaks 1L gryde' }));
+
+    const fejl = await laesSeneste();
+    expect(fejl?.art).toBe('ingen_forbindelse');
+    expect(fejl?.hvor).toBe('items · oprettelse af "Toaks 1L gryde"');
   });
 });

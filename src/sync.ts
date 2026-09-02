@@ -643,6 +643,57 @@ async function opretIPb<T extends Post>(
   }
 }
 
+// ─────────────────────────────────────────────
+// Én kørsel, ét svar
+//
+// En sync rører mange poster, og hver af dem kunne før rydde den gemte fejl,
+// så snart den selv gik igennem. Det gjorde beskeden ulæselig i præcis det
+// tilfælde, den er til for: bliver én post afvist, mens de andre går fint op,
+// skrev den afviste sin fejl, og den næste post slettede den igen — advarslen
+// nåede at blinke og var væk, og tilbage stod "3 ændringer venter" uden en
+// grund. Det samme gjorde hentningen ned, som kørte efter afsendelsen op og
+// ryddede dens fejl på vej ud.
+//
+// Derfor tælles fejl og succeser for en hel kørsel, og fejlen ryddes først til
+// sidst — og kun af en kørsel, hvor noget lykkedes og intet fejlede.
+//
+// Dybden er der, fordi kørslerne ligger inden i hinanden: afstemMedServer
+// kalder sendAltUsendt, som kalder sendAfventende. Kun den yderste tæller.
+// ─────────────────────────────────────────────
+
+let koerselsdybde = 0;
+let fejlIKoersel = 0;
+let okIKoersel = 0;
+
+async function koersel<T>(arbejde: () => Promise<T>): Promise<T> {
+  if (koerselsdybde === 0) {
+    fejlIKoersel = 0;
+    okIKoersel = 0;
+  }
+  koerselsdybde++;
+
+  try {
+    return await arbejde();
+  } finally {
+    koerselsdybde--;
+    // En kørsel, hvor der ikke var noget at gøre, siger ingenting om
+    // forbindelsen og skal ikke rydde en fejl, der stadig er sand.
+    if (koerselsdybde === 0 && fejlIKoersel === 0 && okIKoersel > 0) {
+      await rydFejl();
+    }
+  }
+}
+
+async function meldFejl(e: unknown, hvor: string): Promise<void> {
+  fejlIKoersel++;
+  // Konsollen er ikke et sted, brugeren kigger. Se syncfejl.ts.
+  await noterFejl(e, hvor);
+}
+
+function meldOk(): void {
+  okIKoersel++;
+}
+
 async function synkroniser<T extends Post>(samling: Samling<T>, id: number): Promise<boolean> {
   const bruger = nuvaerendeBruger();
   if (!bruger) return false;
@@ -675,13 +726,13 @@ async function synkroniser<T extends Post>(samling: Samling<T>, id: number): Pro
       gemt.server_aendret = tekst(svar.updated);
       if (!nyereAendring) gemt.usendt_aendring = false;
     });
-    // Det lykkedes. Står der en fejl fra sidst, er den ikke sand længere.
-    await rydFejl();
+    // Det lykkedes. Om det er nok til at rydde en fejl fra sidst, afgøres når
+    // hele kørslen er ovre — se `koersel`.
+    meldOk();
     return true;
   } catch (e) {
     console.error(`Kunne ikke synkronisere ${samling.pbNavn} "${post.navn}":`, fejlDetaljer(e));
-    // Konsollen er ikke et sted, brugeren kigger. Se syncfejl.ts.
-    await noterFejl(e);
+    await meldFejl(e, `${samling.pbNavn} · ${post.pb_id ? 'opdatering' : 'oprettelse'} af "${post.navn}"`);
     return false;
   }
 }
@@ -716,7 +767,7 @@ function planlaegSync<T extends Post>(samling: Samling<T>, id: number): void {
   const synk = () => synkroniser(samling, id);
   const timer = setTimeout(() => {
     afventende.delete(noegle);
-    void synk();
+    void koersel(synk);
   }, SYNC_FORSINKELSE_MS);
 
   afventende.set(noegle, { timer, synk });
@@ -729,7 +780,7 @@ export async function sendAfventende(): Promise<void> {
   afventende.clear();
   ventende.forEach((v) => clearTimeout(v.timer));
 
-  await Promise.all(ventende.map((v) => v.synk()));
+  await koersel(() => Promise.all(ventende.map((v) => v.synk())));
 }
 
 // Kaldes efter hver lokal skrivning. Delingen bruger den til at bygge
@@ -753,7 +804,7 @@ async function opret<T extends Post>(
     usendt_aendring: true
   } as T);
   efterSkrivning?.();
-  await synkroniser(samling, id);
+  await koersel(() => synkroniser(samling, id));
   return id;
 }
 
@@ -798,7 +849,7 @@ async function genopret<T extends Post>(samling: Samling<T>, post: T): Promise<v
     usendt_aendring: true
   } as T);
   efterSkrivning?.();
-  await synkroniser(samling, id);
+  await koersel(() => synkroniser(samling, id));
 }
 
 // Fortryder sletningen. Findes kun så længe nogen holder fast i den.
@@ -830,7 +881,7 @@ async function slet<T extends Post>(samling: Samling<T>, id: number): Promise<Ge
     slettet: new Date()
   });
 
-  if (await sletIPb(samling.pbNavn, post.pb_id)) {
+  if (await koersel(() => sletIPb(samling.pbNavn, post.pb_id!))) {
     await db.slettede.delete(sporId);
   }
 
@@ -846,7 +897,7 @@ async function sletIPb(pbNavn: string, pbId: string): Promise<boolean> {
   } catch (e) {
     if (erIkkeFundet(e)) return true;
     console.error(`Kunne ikke slette ${pbNavn} ${pbId} i PocketBase:`, fejlDetaljer(e));
-    await noterFejl(e);
+    await meldFejl(e, `${pbNavn} · sletning`);
     return false;
   }
 }
@@ -1061,7 +1112,11 @@ export const sletBillede = (id: number) => slet(billedSamling, id);
 // Sender alt der endnu ikke har nået PocketBase — både nye poster og
 // sletninger. Kaldes ved appstart, så det man lavede offline kommer op så
 // snart der er forbindelse igen.
-export async function sendAltUsendt(): Promise<{ antal: number; fejl: number }> {
+export function sendAltUsendt(): Promise<{ antal: number; fejl: number }> {
+  return koersel(sendAltUsendtNu);
+}
+
+async function sendAltUsendtNu(): Promise<{ antal: number; fejl: number }> {
   if (!nuvaerendeBruger()) return { antal: 0, fejl: 0 };
 
   // Tøm køen først, så en igangværende redigering ikke tælles som usendt.
@@ -1085,7 +1140,11 @@ export async function sendAltUsendt(): Promise<{ antal: number; fejl: number }> 
   return { antal, fejl };
 }
 
-export async function hentFraPocketBase(): Promise<void> {
+export function hentFraPocketBase(): Promise<void> {
+  return koersel(hentFraPocketBaseNu);
+}
+
+async function hentFraPocketBaseNu(): Promise<void> {
   const bruger = nuvaerendeBruger();
   if (!bruger) return;
 
@@ -1098,10 +1157,10 @@ export async function hentFraPocketBase(): Promise<void> {
       hent(personSamling, bruger.id),
       hent(billedSamling, bruger.id)
     ]);
-    await rydFejl();
+    meldOk();
   } catch (e) {
     console.error('Kunne ikke hente data fra PocketBase:', fejlDetaljer(e));
-    await noterFejl(e);
+    await meldFejl(e, 'hentning fra serveren');
   }
 }
 
@@ -1230,15 +1289,16 @@ export function afstemMedServer(): Promise<void> {
   // Flakkende forbindelse kan udløse online-eventet flere gange lige efter
   // hinanden. Uden at lægge kørslerne sammen kunne to samtidige afstemninger
   // oprette samme post to gange i PocketBase.
-  igangvaerendeAfstemning ??= (async () => {
-    try {
-      await fjernDubletter();
-      await sendAltUsendt();
-      await hentFraPocketBase();
-    } finally {
-      igangvaerendeAfstemning = null;
-    }
-  })();
+  // Låsen slippes efter kørslen og ikke inde i den: `koersel` rydder først
+  // fejlen, når arbejdet er ovre, og en afstemning, der nåede at begynde
+  // imens, ville lægge sig inden i den, der var ved at slutte.
+  igangvaerendeAfstemning ??= koersel(async () => {
+    await fjernDubletter();
+    await sendAltUsendt();
+    await hentFraPocketBase();
+  }).finally(() => {
+    igangvaerendeAfstemning = null;
+  });
 
   return igangvaerendeAfstemning;
 }
