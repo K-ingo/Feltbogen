@@ -7,7 +7,8 @@ import {
   handlinger,
   syncstatus,
   tureIAar,
-  sidstTilfoejede
+  sidstTilfoejede,
+  friluftsliv
 } from './dashboard';
 import { lavItem, lavGruppe, lavTur } from './test/data';
 
@@ -763,5 +764,56 @@ describe('udenDubletAfSituationen', () => {
 
     expect(alle.length).toBeGreaterThan(0);
     expect(udenDubletAfSituationen(alle, situation)).toEqual(alle);
+  });
+});
+
+describe('friluftsliv', () => {
+  it('tæller kun ture der er begyndt', () => {
+    const ture = [
+      lavTur({ startdato: '2026-05-01', naetter: 2 }),
+      lavTur({ startdato: '2026-07-20', naetter: 1 }),
+      // Planlagt, ikke begyndt. Den er ikke en nat man har ligget ude endnu.
+      lavTur({ startdato: '2026-09-01', naetter: 3 })
+    ];
+
+    const tal = friluftsliv(ture, NU);
+
+    expect(tal.ture).toBe(2);
+    expect(tal.naetter).toBe(3);
+  });
+
+  it('tæller steder og ikke besøg', () => {
+    const ture = [
+      lavTur({ startdato: '2026-04-01', sted_uid: 's-mols' }),
+      lavTur({ startdato: '2026-05-01', sted_uid: 's-mols' }),
+      lavTur({ startdato: '2026-06-01', sted_uid: 's-roeld' }),
+      // Fritekst siger ingenting om hvor man var.
+      lavTur({ startdato: '2026-06-15', sted_uid: '', sted: 'et sted i skoven' })
+    ];
+
+    expect(friluftsliv(ture, NU).steder).toBe(2);
+  });
+
+  it('lader ture uden dato stå udenfor', () => {
+    const tal = friluftsliv([lavTur({ startdato: '', naetter: 4 })], NU);
+
+    expect(tal.ture).toBe(0);
+    expect(tal.naetter).toBe(0);
+  });
+
+  it('måler mod sidste år når der var noget at måle imod', () => {
+    const ture = [
+      lavTur({ startdato: '2025-06-01' }),
+      lavTur({ startdato: '2025-08-01' }),
+      lavTur({ startdato: '2026-06-01' }),
+      lavTur({ startdato: '2026-07-01' }),
+      lavTur({ startdato: '2026-07-15' })
+    ];
+
+    expect(friluftsliv(ture, NU).aendringPct).toBe(50);
+  });
+
+  it('siger ingenting om ændringen uden ture sidste år', () => {
+    expect(friluftsliv([lavTur({ startdato: '2026-06-01' })], NU).aendringPct).toBeNull();
   });
 });

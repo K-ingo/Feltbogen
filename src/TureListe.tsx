@@ -50,7 +50,7 @@ function TureListe({ fane, skift, aabnTur, aabnDeltTur, nyTur }: Props) {
       handlinger={<Knap variant="primaer" onClick={nyTur}>+ Ny tur</Knap>}
       fab={nyTur}
     >
-      {egne === 0 && antalDelte === 0 && <TomListe>Ingen ture endnu. Opret din første.</TomListe>}
+      {egne === 0 && antalDelte === 0 && <TomListe>Ingen ture endnu. Din første historie starter her.</TomListe>}
 
       {ture?.map((t) => (
         <ListeRaekke

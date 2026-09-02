@@ -6,7 +6,7 @@ import {
   udenDubletAfSituationen,
   handlinger,
   syncstatus,
-  tureIAar,
+  friluftsliv,
   sidstTilfoejede
 } from './dashboard';
 import { aarsopgoerelseAtSe } from './aarsopgoerelse';
@@ -29,6 +29,9 @@ import { Skal } from './Skal';
 import type { Fane } from './Skal';
 import { useErDesktop, useErOnline } from './useMedie';
 import { Knap, Chip, Infokort, SektionsTitel, ListeRaekke, TomListe, Hvorfor, Forslagskort } from './ui';
+import { senesteMinder } from './billeder';
+import type { Minde } from './billeder';
+import { Billedvisning } from './BilledSektion';
 import { useTekst } from './indstillinger';
 import { useSyncfejl } from './syncfejl';
 import { laesKladde, KLADDE_NOEGLE } from './foersteTur';
@@ -52,10 +55,19 @@ interface Props {
 // er ikke en startskærm, den er en opgaveliste man lukker.
 const MAKS_HANDLINGER = 4;
 const MAKS_SIDST_TILFOEJET = 5;
+// Så mange billeder i stribens ene række. Seks er hvad der kan stå uden at
+// gøre startskærmen til et galleri — og et galleri er der allerede et af,
+// inde på hver tur.
+const MAKS_MINDER = 6;
 
 // Fast rækkefølge, og den er specens: næste tur, hvad der kræver
 // opmærksomhed, hvad Feltbogen foreslår, hvordan man står — og til sidst om
 // det er nået op på serveren.
+//
+// "Hvordan man står" begynder med året og ikke med skabet. Grejrækken stod
+// før friluftslivet, og så var det første tal, man mødte efter turen, hvor
+// mange ting man ejer. Det er en rigtig oplysning og et forkert sted at
+// begynde: skærmen hedder ikke "dit lager".
 //
 // De fire første spørgsmål skal kunne besvares på under fem sekunder. Derfor
 // er der loft over både handlinger og forslag: en startskærm der ruller, er
@@ -63,12 +75,13 @@ const MAKS_SIDST_TILFOEJET = 5;
 function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur, foersteTur, tilLogin }: Props) {
   const erDesktop = useErDesktop();
 
-  const { erLoggetInd } = useAuth();
+  const { bruger, erLoggetInd } = useAuth();
   const online = useErOnline();
 
   const items = useLiveQuery(() => db.items.toArray()) ?? [];
   const grupper = useLiveQuery(() => db.grupper.toArray()) ?? [];
   const ture = useLiveQuery(() => db.ture.toArray()) ?? [];
+  const billeder = useLiveQuery(() => db.billeder.toArray()) ?? [];
   // Tælles om når basen ændrer sig, så tallet ikke står og lyver efter en sync.
   const usendt = useLiveQuery(usendtAntal, [], 0);
 
@@ -91,7 +104,8 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
   const forslag = afviste ? udenAfviste(forslagTilTur(tur, grupper, items, ture), afviste) : [];
   const syncfejl = useSyncfejl();
   const sync = syncstatus(usendt, online, erLoggetInd, syncfejl);
-  const aar = tureIAar(ture);
+  const aar = friluftsliv(ture);
+  const minder = senesteMinder(billeder, ture, MAKS_MINDER);
   const nyeste = sidstTilfoejede(items, MAKS_SIDST_TILFOEJET);
   const opgoerelse = aarsopgoerelseAtSe(ture);
 
@@ -160,7 +174,7 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
     <Skal
       fane={fane}
       skift={skift}
-      titel={hilsen()}
+      titel={hilsen(bruger?.name ?? '')}
       handlinger={
         <>
           <Knap onClick={nytItem}>+ Nyt item</Knap>
@@ -229,10 +243,52 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
           </section>
         )}
 
+        {/* Nøgletallene stod her før, og de sagde: værdi i kroner, ture i år,
+            vægt i kilo. To af de tre handler om skabet og ikke om året — det
+            er tal om et inventar, og de er rigtige nok, men de er ikke det man
+            har været ude for.
+
+            De to er flyttet ned på grejrækken, hvor de hører til. Tilbage står
+            det man kan svare på om året: hvor mange gange man kom afsted, hvor
+            mange nætter man lå ude, og hvor mange steder man nåede. Se
+            `friluftsliv` i dashboard.ts. */}
+        <section>
+          <SektionsTitel>Dit friluftsliv</SektionsTitel>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: 'var(--plads-2)'
+          }}>
+            <Noegletal
+              label="Ture i år"
+              vaerdi={`${aar.ture}`}
+              tillaeg={aar.aendringPct === null ? undefined : `${aar.aendringPct > 0 ? '+' : ''}${aar.aendringPct}%`}
+            />
+            <Noegletal label="Nætter ude" vaerdi={`${aar.naetter}`} />
+            <Noegletal label="Steder" vaerdi={`${aar.steder}`} />
+          </div>
+        </section>
+
+        {/* Billederne ligger allerede i basen — de har bare aldrig været andre
+            steder end inde på turen, de blev taget på. Her står de, hvor man
+            kommer forbi hver gang, og fører tilbage til historien om dem. */}
+        {minder.length > 0 && (
+          <section>
+            <SektionsTitel>Seneste minder</SektionsTitel>
+            <Mindestribe
+              minder={minder}
+              aabn={(m) => m.tur.id !== undefined && aabnTur(m.tur.id)}
+            />
+          </section>
+        )}
+
         {/* Specens §3 vil have et gearSummary: hvor meget man har, og hvor
             meget der skal passes. Vedligeholdet står også som handlingskort
             ovenfor, men det er ikke det samme — dér er det de enkelte ting,
-            her er det hvordan skabet står. */}
+            her er det hvordan skabet står.
+
+            Vægten og værdien stod før som nøgletal for sig. De hører til her:
+            det er tal om skabet, og rækken her er skabet. */}
         <section>
           <SektionsTitel>Dit grej</SektionsTitel>
           <ListeRaekke
@@ -243,35 +299,22 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
               // rækken skal sige.
               ejet.length === 0
                 ? 'Skriv det ind, du har — så kan appen regne på det'
-                : skalPasses === 0
-                  ? 'Alt er passet'
-                  : `${skalPasses} ${skalPasses === 1 ? 'ting skal passes' : 'ting skal passes'}`
+                : [
+                    `${(samletVaegt(items) / 1000).toFixed(1)} kg`,
+                    `${kroner(samletInventarvaerdi(items))} kr`,
+                    skalPasses === 0
+                      ? 'alt er passet'
+                      : `${skalPasses} ${skalPasses === 1 ? 'ting skal passes' : 'ting skal passes'}`
+                  ].join(' · ')
             }
             onClick={() => skift('inventar')}
           />
         </section>
 
         <section>
-          <SektionsTitel>Nøgletal</SektionsTitel>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: erDesktop ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)',
-            gap: '8px'
-          }}>
-            <Noegletal label="Værdi" vaerdi={`${kroner(samletInventarvaerdi(items))} kr`} />
-            <Noegletal
-              label="Ture i år"
-              vaerdi={`${aar.iAar}`}
-              tillaeg={aar.aendringPct === null ? undefined : `${aar.aendringPct > 0 ? '+' : ''}${aar.aendringPct}%`}
-            />
-            <Noegletal label="Vægt" vaerdi={`${(samletVaegt(items) / 1000).toFixed(1)} kg`} />
-          </div>
-        </section>
-
-        <section>
           <SektionsTitel>Sidst tilføjet</SektionsTitel>
           {nyeste.length === 0 ? (
-            <TomListe>Intet gear endnu. Tilføj dit første.</TomListe>
+            <TomListe>Intet gear endnu. Skriv den første ting ind.</TomListe>
           ) : (
             nyeste.map((item) => (
               <ListeRaekke
@@ -501,38 +544,106 @@ function HandlingsKort({ handling, aabn }: { handling: Handling; aabn: () => voi
   );
 }
 
+// Billederne fra de seneste ture, som en række man kan trække sidelæns i.
+//
+// En række og ikke et gitter: et gitter vokser nedad, og startskærmen skal
+// kunne aflæses uden at rulle. Trækker man i rækken, er det fordi man selv
+// har valgt at kigge længere tilbage.
+function Mindestribe({ minder, aabn }: { minder: Minde[]; aabn: (m: Minde) => void }) {
+  return (
+    <div style={{
+      display: 'flex',
+      gap: 'var(--plads-2)',
+      overflowX: 'auto',
+      // Uden den klipper skyggen og fokusringen på det første og sidste
+      // billede mod kanten af den rullende kasse.
+      padding: '2px',
+      margin: '-2px',
+      // Elastikken bliver i stribens egen kasse og trækker ikke siden med.
+      overscrollBehaviorX: 'contain',
+      WebkitOverflowScrolling: 'touch'
+    }}>
+      {minder.map((m) => (
+        <button
+          key={m.billede.uid}
+          onClick={() => aabn(m)}
+          title={`${m.tur.navn || 'Uden navn'} — åbn turen`}
+          style={{
+            position: 'relative',
+            flexShrink: 0,
+            width: '104px',
+            height: '104px',
+            padding: 0,
+            border: '1px solid var(--border-svag)',
+            borderRadius: 'var(--runding-lille)',
+            overflow: 'hidden',
+            background: 'var(--bg-forhoejet)',
+            cursor: 'pointer'
+          }}
+        >
+          <Billedvisning billede={m.billede} />
+          {/* Turens navn på billedet. Uden det er striben pæn og siger
+              ingenting — og et minde uden en tur er bare et billede. */}
+          <span style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            padding: '14px 6px 5px',
+            background: 'linear-gradient(to top, rgba(20, 26, 16, 0.85), rgba(20, 26, 16, 0))',
+            color: 'var(--paa-billede)',
+            fontSize: 'var(--skrift-lille)',
+            textAlign: 'left',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
+          }}>
+            {m.tur.navn || 'Uden navn'}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function Noegletal({ label, vaerdi, tillaeg }: { label: string; vaerdi: string; tillaeg?: string }) {
   return (
     <div style={{
       border: '1px solid var(--border-svag)',
-      borderRadius: '10px',
-      padding: '11px 13px',
+      borderRadius: 'var(--runding-lille)',
+      padding: 'var(--plads-3)',
       background: 'var(--bg-forhoejet)'
     }}>
+      {/* Tallet først og etiketten under. Etiketten stod øverst før, dengang
+          feltet var ét af flere slags kort på skærmen og skulle sige hvad det
+          var, inden man læste det. Nu står de tre ved siden af hinanden og
+          siger det samme slags: så ligger tallene på linje, og rækken kan
+          aflæses i én bevægelse i stedet for tre. */}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--plads-1)', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 'var(--skrift-tal)', fontFamily: "'Fraunces', Georgia, serif" }}>{vaerdi}</span>
+        {tillaeg && <span style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)' }}>{tillaeg}</span>}
+      </div>
       <div style={{
-        fontSize: '10px',
+        fontSize: 'var(--skrift-lille)',
         color: 'var(--tekst-dæmpet)',
-        textTransform: 'uppercase',
-        letterSpacing: '0.6px',
-        fontWeight: 600,
-        marginBottom: '3px'
+        marginTop: '2px'
       }}>
         {label}
-      </div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-        <span style={{ fontSize: '20px', fontFamily: "'Fraunces', Georgia, serif" }}>{vaerdi}</span>
-        {tillaeg && <span style={{ fontSize: '11px', color: 'var(--tekst-svag)' }}>{tillaeg}</span>}
       </div>
     </div>
   );
 }
 
-// Ingen navn — vi har kun en e-mail, og et gæt derfra rammer forkert.
-function hilsen(): string {
+// Navnet er det man selv har skrevet under Indstillinger, og som de andre ser
+// på en delt tur. Det gættes ikke ud fra e-mailen — et gæt derfra rammer
+// forkert, og en app der kalder en noget forkert hver morgen er værre end en
+// der ikke kalder en noget.
+function hilsen(navn: string): string {
   const t = new Date().getHours();
-  if (t < 10) return 'Godmorgen';
-  if (t < 18) return 'Goddag';
-  return 'Godaften';
+  const tid = t < 10 ? 'Godmorgen' : t < 18 ? 'Goddag' : 'Godaften';
+
+  const rent = navn.trim();
+  return rent ? `${tid}, ${rent}` : tid;
 }
 
 // 21400 → "21.400", som tal skrives på dansk.

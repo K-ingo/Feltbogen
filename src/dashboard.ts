@@ -561,3 +561,42 @@ export function sidstTilfoejede(items: Item[], antal: number = 5): Item[] {
 function iso(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
+
+// ─────────────────────────────────────────────
+// Dit friluftsliv
+// ─────────────────────────────────────────────
+
+// Tallene under nøgletallene handler om skabet: hvad grejet er værd, og hvad
+// det vejer. Det er rigtige tal, men de er ikke det, man har været ude for.
+//
+// Det her er den anden slags: hvor mange gange man kom afsted, hvor mange
+// nætter man lå ude, og hvor mange steder man nåede. Ingen af dem kan regnes
+// om til kroner, og det er hele pointen — de siger noget om året i stedet for
+// om inventaret.
+//
+// Kun ture der er begyndt. En tur i oktober, man har planlagt i marts, er
+// ikke en nat man har ligget ude endnu, og et sted man ikke har været.
+export interface Friluftsliv {
+  ture: number;
+  naetter: number;
+  steder: number;
+  // Ændringen i antal ture mod sidste år. null når der ikke var nogen ture
+  // sidste år at måle imod — en procent op fra nul betyder ingenting.
+  aendringPct: number | null;
+}
+
+export function friluftsliv(ture: Tur[], nu: Date = new Date()): Friluftsliv {
+  const idag = iso(nu);
+  const begyndte = filtrererTure(ture, 'i_aar', nu)
+    .filter((t) => t.startdato !== '' && t.startdato <= idag);
+
+  return {
+    ture: begyndte.length,
+    naetter: begyndte.reduce((sum, t) => sum + Math.max(0, t.naetter), 0),
+    // Talt som steder og ikke som besøg: to ture til det samme shelter er ét
+    // sted, man kender. Fritekst tæller ikke med — den siger ingenting om
+    // hvor man var.
+    steder: new Set(begyndte.map((t) => t.sted_uid).filter(Boolean)).size,
+    aendringPct: tureIAar(ture, nu).aendringPct
+  };
+}

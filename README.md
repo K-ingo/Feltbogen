@@ -461,7 +461,7 @@ så PocketBase ikke behøver en offentlig adresse: admin-fladen på `/_/` kan
 ikke nås udefra, og der er ingen offentlig adresse at scanne eller banke på.
 
 ```
-browser ──https──> Caddy ──http──> pocketbase.railway.internal:8090
+browser ──https──> Caddy ──http──> pocketbase.railway.internal:8080
                      │
                      └── dist/  (appen selv)
 ```
@@ -474,7 +474,7 @@ selv de to op.
 På web-servicen sættes én variabel, som en reference til PocketBase-servicen:
 
 ```
-POCKETBASE_ORIGIN=http://${{ pocketbase.RAILWAY_PRIVATE_DOMAIN }}:8090
+POCKETBASE_ORIGIN=http://${{ pocketbase.RAILWAY_PRIVATE_DOMAIN }}:8080
 ```
 
 Hedder servicen noget andet end `pocketbase`, er det det navn der skal stå.
@@ -483,6 +483,25 @@ opsætning skal vise sig som en fejlet udrulning frem for en app, der er oppe
 og svarer 502 på alting.
 
 `PORT` sætter Railway selv.
+
+**Portnummeret skal passe med det, PocketBase faktisk lytter på.** Det er
+ikke en indstilling, appen ejer — det er en egenskab ved PocketBase-servicen,
+og den kan skifte, hvis servicen bygges om eller får et andet image. Tallet
+her er ikke et facit; det er en note om, hvad der gjaldt, sidst nogen kiggede.
+Slå det op i pocketbase-servicens deploy-log, hvor den skriver sin egen
+adresse ud ved opstart:
+
+```
+> Server started at: http://0.0.0.0:8080
+```
+
+Passer de to tal ikke, svarer Caddy 502 på alt under `/api/`, og appen siger
+"Serveren har problemer lige nu." Fejlteksten i Caddys log er
+`connection refused` — bemærk, at det ikke betyder "kunne ikke finde": værten
+blev nået, der lyttede bare ikke noget på den port. Og PocketBases eget
+offentlige domæne kan sagtens svare 200 på `/api/health` imens, for den vej
+kommer ind gennem Railways kant og ikke over det private net. En grøn
+health-prøve udelukker altså ikke den her fejl.
 
 ### Den fælde, der slår appen ihjel
 
@@ -497,6 +516,47 @@ virke på én gang, og der er intet i et build, der afslører det.
 
 Derfor er `VITE_PB_URL` slet ikke sat i udrulningen — appen bruger sit eget
 domæne — og CI fejler, hvis `railway.internal` dukker op i `dist/`.
+
+### To fejl, der peger et forkert sted hen
+
+Begge er set i produktion, og begge kostede en udrulningsrunde — ikke fordi
+de er svære at rette, men fordi fejlteksten handler om noget andet end
+årsagen. De ligger begge i Railways egne indstillinger og ikke i repoet,
+så der er ingenting i en `git diff`, der afslører dem.
+
+**`The executable 'npx' could not be found.`**
+
+En **Custom Start Command** på web-servicen overskriver Dockerfilens `CMD`.
+Slutimaget er `caddy:2-alpine` og har hverken node eller npx — så en
+startkommando, der kalder `npx`, findes der ikke noget til at udføre.
+
+Feltet skal stå **tomt**, så `CMD ["caddy", "run", ...]` får lov at køre.
+Kommandoen er en rest fra dengang appen blev serveret med `npx serve -s dist`,
+før Caddy kom til. `serve` er fjernet fra devDependencies igen, netop for at
+en sådan startkommando ikke skal se plausibel ud: der er ikke længere noget i
+repoet, der peger på den.
+
+Bemærk, at bygningen lykkes hele vejen. Fejlen kommer først i
+`Deploy › Create container`, altså efter en grøn build — så det ligner en
+kodefejl i den commit, der tilfældigvis blev udrullet.
+
+**`first path segment in URL cannot contain colon`**
+
+Caddy kan ikke læse sin egen konfiguration, og fejlen peger på
+`reverse_proxy`-linjen. Læs, hvad den citerer:
+
+```
+parsing upstream 'POCKETBASE_ORIGIN=http://pocketbase.railway.internal:8080'
+```
+
+Variablens **værdi** indeholder sit eget navn. Det sker, når hele linjen
+`POCKETBASE_ORIGIN=http://...` bliver sat ind i værdi-feltet i stedet for i
+råeditoren, der selv deler `NØGLE=VÆRDI` op. Caddy læser så `POCKETBASE_ORIGIN`
+som et sti-segment, og et sti-segment må ikke indeholde kolon — deraf den
+mærkelige tekst om URL-stier i noget, der er en indtastningsfejl.
+
+Værdien skal være `http://${{ pocketbase.RAILWAY_PRIVATE_DOMAIN }}:8080` og
+ingenting andet. Navnet står allerede i nøglefeltet.
 
 ### Rækkefølge, når PocketBases offentlige domæne fjernes
 

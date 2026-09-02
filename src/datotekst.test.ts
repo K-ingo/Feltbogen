@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatterPeriode, kortDag, datoTekst, maanedsnavn } from './datotekst';
+import { formatterPeriode, kortDag, datoTekst, maanedsnavn, siden } from './datotekst';
 
 describe('formatterPeriode', () => {
   it('skriver måneden én gang inden for samme måned', () => {
@@ -68,5 +68,41 @@ describe('maanedsnavn', () => {
   it('giver tom tekst på noget der ikke er en dato', () => {
     expect(maanedsnavn('')).toBe('');
     expect(maanedsnavn('til sommer')).toBe('');
+  });
+});
+
+describe('siden', () => {
+  const NU = new Date('2026-09-02T14:00:00');
+
+  it('skriver de nære dage ud som dage', () => {
+    expect(siden('2026-09-02', NU)).toBe('i dag');
+    expect(siden('2026-09-01', NU)).toBe('i går');
+    expect(siden('2026-08-30', NU)).toBe('for 3 dage siden');
+  });
+
+  it('regner i hele døgn og ikke i timer', () => {
+    // I går klokken 20 er stadig i går, selvom der er under et døgn til.
+    expect(siden('2026-09-01T20:00:00', NU)).toBe('i går');
+  });
+
+  it('går over i uger og måneder', () => {
+    expect(siden('2026-08-24', NU)).toBe('for en uge siden');
+    expect(siden('2026-08-12', NU)).toBe('for 3 uger siden');
+    expect(siden('2026-07-20', NU)).toBe('for en måned siden');
+    expect(siden('2026-06-12', NU)).toBe('for 3 måneder siden');
+  });
+
+  it('går over i år', () => {
+    expect(siden('2025-06-12', NU)).toBe('for et år siden');
+    expect(siden('2023-06-12', NU)).toBe('for 3 år siden');
+  });
+
+  it('siger ingenting om en dato der ikke er passeret', () => {
+    expect(siden('2026-10-01', NU)).toBe('');
+  });
+
+  it('siger ingenting om det der ikke er en dato', () => {
+    expect(siden('', NU)).toBe('');
+    expect(siden('ikke en dato', NU)).toBe('');
   });
 });

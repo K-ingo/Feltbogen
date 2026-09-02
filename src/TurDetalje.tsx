@@ -63,10 +63,10 @@ import {
   Segment,
   SektionsTitel,
   Talinput,
-  Tekstomraade,
-  TitelInput
+  Tekstomraade
 } from './ui';
 import PakAfTjekSide from './PakAfTjekSide';
+import Turhero from './Turhero';
 import { Qrkode, Qrfuldskaerm } from './Qrkode';
 import PaaTurTilstand from './PaaTurTilstand';
 import {
@@ -114,7 +114,6 @@ import {
 import type { Pakkefremdrift } from './pakning';
 import { useValg, useKropsdata, useTekst, PAK_AF_NIVEAU_VALG, AFGANGS_SKABELON } from './indstillinger';
 import { nytDeletoken, lavSnapshot, deleLink, linkadvarsel, linkvaert } from './gaest';
-import { formatterPeriode } from './datotekst';
 import { hentDeltagelser, baererePrGear, visningsnavn, deltagerbilleder } from './deltagelse';
 import type { Deltagelse } from './deltagelse';
 import { layout } from './layout';
@@ -934,29 +933,34 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
     tur.baereafstand_km > 0 ? `${tur.baereafstand_km} km bæreafstand` : null
   ].filter(Boolean).join(' · ');
 
+  // Navnet, datoerne, stedet og hvem der er med står nu på turens eget
+  // billede — se Turhero.tsx. Tilbage her er det, der ikke hører til på et
+  // fotografi: hvor turen står i sit forløb, og hvad man kan gøre ved den.
   const titelblok = (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <TitelInput
-          value={tur.navn}
-          onChange={(v) => opdater({ navn: v })}
-          placeholder="Navn på tur"
-          autoFokus={nyOprettet}
-        />
-        <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', marginTop: '-8px', marginBottom: '10px' }}>
-          {[formatterPeriode(tur.startdato, tur.slutdato), tur.sted].filter(Boolean).join(' · ') || 'Ingen datoer valgt'}
-        </div>
+    <>
+      <Turhero
+        tur={tur}
+        opdaterNavn={(v) => opdater({ navn: v })}
+        autoFokus={nyOprettet}
+      />
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: 'var(--plads-4)',
+        flexWrap: 'wrap'
+      }}>
         <Segment vaerdier={TUR_STATUS} valgt={tur.status} vaelg={(s) => opdater({ status: s })} kompakt />
+        {erDesktop && (
+          <div style={{ display: 'flex', gap: 'var(--plads-2)' }}>
+            {tur.status === 'aktiv' && <Knap onClick={() => void gaaPaaTur()}>På tur</Knap>}
+            <Knap variant="primaer" onClick={handling.gaa}>
+              {handling.label}
+            </Knap>
+          </div>
+        )}
       </div>
-      {erDesktop && (
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {tur.status === 'aktiv' && <Knap onClick={() => void gaaPaaTur()}>På tur</Knap>}
-          <Knap variant="primaer" onClick={handling.gaa}>
-            {handling.label}
-          </Knap>
-        </div>
-      )}
-    </div>
+    </>
   );
 
   // Fanerne bærer turen nu. Før stod alt om en tur i én strimmel af foldbare

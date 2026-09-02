@@ -657,16 +657,23 @@ interface TitelInputProps {
   placeholder?: string;
   // Sættes når posten lige er oprettet, så man kan skrive med det samme.
   autoFokus?: boolean;
+  // Titlen står på et billede eller et mørkt bånd og skal være lys. Ikke en
+  // farve, men et valg mellem to: skærmen ved hvad titlen står på, og
+  // komponenten ved hvad der kan læses ovenpå det.
+  lys?: boolean;
 }
 
 // Navnet på en post, redigerbart direkte i overskriften.
-export function TitelInput({ value, onChange, placeholder, autoFokus }: TitelInputProps) {
+export function TitelInput({ value, onChange, placeholder, autoFokus, lys }: TitelInputProps) {
   return (
     <input
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       autoFocus={autoFokus}
+      // Klassen findes kun for ::placeholder, som en inline-style ikke kan
+      // ramme. Se index.css — det er den samme grund som printreglerne har.
+      className={lys ? 'titel-lys' : undefined}
       style={{
         fontFamily: "'Fraunces', Georgia, serif",
         fontSize: 'var(--skrift-titel)',
@@ -675,8 +682,10 @@ export function TitelInput({ value, onChange, placeholder, autoFokus }: TitelInp
         background: 'transparent',
         padding: 'var(--plads-1) 0',
         width: '100%',
-        marginBottom: 'var(--plads-4)',
-        color: 'var(--tekst)'
+        marginBottom: lys ? 0 : 'var(--plads-4)',
+        color: lys ? 'var(--paa-billede)' : 'var(--tekst)',
+        // Skyggen gør titlen læselig, også hvor billedet under den er lyst.
+        textShadow: lys ? '0 1px 12px rgba(0, 0, 0, 0.55)' : undefined
       }}
     />
   );
