@@ -3,6 +3,7 @@ import { db } from './db';
 import type { Item, Gruppe } from './db';
 import {
   hjemsituation,
+  erNaesteWeekendAaben,
   udenDubletAfSituationen,
   handlinger,
   syncstatus,
@@ -88,6 +89,14 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
   // Hvad startskærmen handler om lige nu. Reglerne ligger i dashboard.ts, så
   // de kan afprøves uden en skærm.
   const situation = hjemsituation(ture);
+  // En tur længere ude må ikke få den nærmeste frie weekend til at forsvinde.
+  // En aktiv/nært forestående tur og et manglende efterregnskab beholder
+  // derimod deres plads øverst — de er noget, man allerede står midt i.
+  const visAabenWeekend = erNaesteWeekendAaben(ture) &&
+    (situation.situation === 'ingen_tur' ||
+      situation.situation === 'kladde' ||
+      situation.situation === 'klar');
+  const erFoersteStart = ture.length === 0 && items.length === 0 && grupper.length === 0;
   // En påbegyndt første tur ligger lokalt og ikke i basen. Den afgør kun, hvad
   // knappen på det tomme kort hedder — se foersteTur.ts.
   const kladde = laesKladde(useTekst(KLADDE_NOEGLE));
@@ -175,24 +184,48 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
       fane={fane}
       skift={skift}
       titel={hilsen(bruger?.name ?? '')}
-      handlinger={
+      handlinger={visAabenWeekend ? undefined : (
         <>
-          <Knap onClick={nytItem}>+ Nyt item</Knap>
+          <Knap onClick={nytItem}>+ Nyt grej</Knap>
           <Knap variant="primaer" onClick={nyTur}>+ Ny tur</Knap>
         </>
-      }
-      fab={nytItem}
+      )}
+      fab={visAabenWeekend ? undefined : nytItem}
     >
       <div style={{ display: 'grid', gap: '22px' }}>
-        <Situationskort
-          situation={situation}
-          items={items}
-          grupper={grupper}
-          aabn={(maal) => situation.tur?.id !== undefined && aabnTur(situation.tur.id, false, maal)}
-          opret={nyTur}
-          foersteTur={foersteTur}
-          harKladde={kladde !== null}
-        />
+        {visAabenWeekend ? (
+          <>
+            <AabenWeekendHero
+              erDesktop={erDesktop}
+              harKladde={kladde !== null}
+              foersteTur={foersteTur}
+              opret={nyTur}
+            />
+            {/* Er næste registrerede tur først efter weekenden, bliver den
+                stående som det sekundære svar på "hvad kommer bagefter?". */}
+            {situation.tur && (
+              <Situationskort
+                situation={situation}
+                items={items}
+                grupper={grupper}
+                aabn={(maal) => situation.tur?.id !== undefined && aabnTur(situation.tur.id, false, maal)}
+                opret={nyTur}
+                foersteTur={foersteTur}
+                harKladde={kladde !== null}
+              />
+            )}
+          </>
+        ) : (
+          <Situationskort
+            situation={situation}
+            items={items}
+            grupper={grupper}
+            aabn={(maal) => situation.tur?.id !== undefined && aabnTur(situation.tur.id, false, maal)}
+            opret={nyTur}
+            foersteTur={foersteTur}
+            harKladde={kladde !== null}
+          />
+        )}
 
         {opgoerelse !== null && (
           <Aarskort aar={opgoerelse} aabn={() => aabnAar(opgoerelse)} />
@@ -243,6 +276,10 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
           </section>
         )}
 
+        {erFoersteStart && (
+          <KomGodtFraStart erDesktop={erDesktop} nytItem={nytItem} />
+        )}
+
         {/* Nøgletallene stod her før, og de sagde: værdi i kroner, ture i år,
             vægt i kilo. To af de tre handler om skabet og ikke om året — det
             er tal om et inventar, og de er rigtige nok, men de er ikke det man
@@ -252,7 +289,7 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
             det man kan svare på om året: hvor mange gange man kom afsted, hvor
             mange nætter man lå ude, og hvor mange steder man nåede. Se
             `friluftsliv` i dashboard.ts. */}
-        <section>
+        {!erFoersteStart && <section>
           <SektionsTitel>Dit friluftsliv</SektionsTitel>
           <div style={{
             display: 'grid',
@@ -267,7 +304,7 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
             <Noegletal label="Nætter ude" vaerdi={`${aar.naetter}`} />
             <Noegletal label="Steder" vaerdi={`${aar.steder}`} />
           </div>
-        </section>
+        </section>}
 
         {/* Billederne ligger allerede i basen — de har bare aldrig været andre
             steder end inde på turen, de blev taget på. Her står de, hvor man
@@ -289,7 +326,7 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
 
             Vægten og værdien stod før som nøgletal for sig. De hører til her:
             det er tal om skabet, og rækken her er skabet. */}
-        <section>
+        {!erFoersteStart && <section>
           <SektionsTitel>Dit grej</SektionsTitel>
           <ListeRaekke
             titel={`${ejet.length} ${ejet.length === 1 ? 'ting' : 'ting'}`}
@@ -309,9 +346,9 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
             }
             onClick={() => skift('inventar')}
           />
-        </section>
+        </section>}
 
-        <section>
+        {!erFoersteStart && <section>
           <SektionsTitel>Sidst tilføjet</SektionsTitel>
           {nyeste.length === 0 ? (
             <TomListe>Intet gear endnu. Skriv den første ting ind.</TomListe>
@@ -325,7 +362,7 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
               />
             ))
           )}
-        </section>
+        </section>}
 
         <Synclinje status={sync} tilLogin={tilLogin} />
       </div>
@@ -336,6 +373,180 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
 // ─────────────────────────────────────────────
 // Sektioner
 // ─────────────────────────────────────────────
+
+// Den åbne weekend er en invitation, ikke en advarsel om manglende data.
+// Illustrationen er dekorativ; al betydning står i rigtig tekst og alle
+// handlinger er almindelige knapper, så kortet også virker uden billedet.
+function AabenWeekendHero({ erDesktop, harKladde, foersteTur, opret }: {
+  erDesktop: boolean;
+  harKladde: boolean;
+  foersteTur: () => void;
+  opret: () => void;
+}) {
+  const indhold = (
+    <div style={{
+      position: 'relative',
+      zIndex: 2,
+      width: erDesktop ? '58%' : '100%',
+      maxWidth: erDesktop ? '590px' : undefined,
+      padding: erDesktop ? 'var(--plads-6)' : '20px',
+      background: erDesktop ? undefined : '#111923'
+    }}>
+      <div style={{
+        fontSize: 'var(--skrift-lille)',
+        fontWeight: 600,
+        letterSpacing: '1.1px',
+        textTransform: 'uppercase',
+        color: 'rgba(249, 245, 235, 0.72)',
+        marginBottom: 'var(--plads-2)'
+      }}>
+        Næste weekend
+      </div>
+      <h2 id="aaben-weekend-titel" style={{
+        margin: 0,
+        color: 'var(--paa-billede)',
+        fontSize: erDesktop ? '34px' : '28px',
+        lineHeight: 1.08,
+        letterSpacing: '-0.5px'
+      }}>
+        {harKladde ? 'Turen venter på dig' : 'Weekenden er åben'}
+      </h2>
+      <p style={{
+        margin: 'var(--plads-3) 0 var(--plads-5)',
+        maxWidth: '48ch',
+        color: 'rgba(249, 245, 235, 0.78)',
+        fontSize: erDesktop ? '15px' : '14px',
+        lineHeight: 1.6
+      }}>
+        {harKladde
+          ? 'Du er allerede begyndt. Fortsæt kladden, og få sted, grej og pakkeliste på plads.'
+          : 'Der er ikke lagt en tur fra fredag til søndag. Skal den bruges ude? Feltbogen spørger dig frem til en plan.'}
+      </p>
+      <div style={{ display: 'flex', gap: 'var(--plads-2)', flexWrap: 'wrap' }}>
+        <Knap variant="primaer" onClick={foersteTur} style={{ minWidth: erDesktop ? '150px' : undefined }}>
+          {harKladde ? 'Fortsæt hvor du slap' : 'Planlæg en tur'}
+        </Knap>
+        <Knap
+          onClick={opret}
+          style={{
+            color: 'var(--paa-billede)',
+            borderColor: 'rgba(249, 245, 235, 0.28)',
+            background: 'rgba(12, 18, 25, 0.28)'
+          }}
+        >
+          Opret tom tur
+        </Knap>
+      </div>
+    </div>
+  );
+
+  return (
+    <section
+      aria-labelledby="aaben-weekend-titel"
+      style={{
+        position: 'relative',
+        minHeight: erDesktop ? '280px' : undefined,
+        overflow: 'hidden',
+        borderRadius: 'var(--runding)',
+        border: '1px solid rgba(146, 166, 119, 0.24)',
+        background: '#111923',
+        boxShadow: '0 16px 42px rgba(8, 12, 16, 0.18)'
+      }}
+    >
+      <img
+        src="/illustrations/dashboard-aaben-weekend.png"
+        alt=""
+        aria-hidden="true"
+        style={erDesktop ? {
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          objectPosition: 'center 58%'
+        } : {
+          display: 'block',
+          width: '100%',
+          height: '176px',
+          objectFit: 'cover',
+          objectPosition: '76% 62%'
+        }}
+      />
+      {erDesktop && (
+        <div aria-hidden="true" style={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 1,
+          background: 'linear-gradient(90deg, rgba(12, 18, 25, 0.98) 0%, rgba(12, 18, 25, 0.91) 42%, rgba(12, 18, 25, 0.22) 73%, rgba(12, 18, 25, 0.04) 100%)'
+        }} />
+      )}
+      {indhold}
+    </section>
+  );
+}
+
+function KomGodtFraStart({ erDesktop, nytItem }: { erDesktop: boolean; nytItem: () => void }) {
+  const trin = [
+    {
+      nummer: '01',
+      titel: 'Læg en tur',
+      tekst: 'Svar på få spørgsmål, så dato, sted og rammer falder på plads.'
+    },
+    {
+      nummer: '02',
+      titel: 'Skriv grejet ind',
+      tekst: 'Så kan Feltbogen regne på vægt, mangler og det, der skal passes.'
+    },
+    {
+      nummer: '03',
+      titel: 'Pak med ro',
+      tekst: 'Pakkelisten ligger på enheden og virker også uden dækning.'
+    }
+  ];
+
+  return (
+    <section aria-labelledby="kom-godt-fra-start">
+      <SektionsTitel>Kom godt fra start</SektionsTitel>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: erDesktop ? 'repeat(3, minmax(0, 1fr))' : '1fr',
+        gap: erDesktop ? 0 : 'var(--plads-2)',
+        border: '1px solid var(--border-svag)',
+        borderRadius: 'var(--runding)',
+        background: 'var(--bg-forhoejet)',
+        overflow: 'hidden'
+      }}>
+        {trin.map((t, index) => (
+          <div key={t.nummer} style={{
+            padding: 'var(--plads-4)',
+            borderLeft: erDesktop && index > 0 ? '1px solid var(--border-svag)' : undefined,
+            borderTop: !erDesktop && index > 0 ? '1px solid var(--border-svag)' : undefined
+          }}>
+            <div style={{
+              fontFamily: "'Fraunces', Georgia, serif",
+              fontSize: '18px',
+              color: 'var(--accent)',
+              marginBottom: 'var(--plads-1)'
+            }}>
+              {t.nummer}
+            </div>
+            <div id={index === 0 ? 'kom-godt-fra-start' : undefined} style={{ fontWeight: 600, marginBottom: 'var(--plads-1)' }}>
+              {t.titel}
+            </div>
+            <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)', lineHeight: 1.55 }}>
+              {t.tekst}
+            </div>
+            {index === 1 && (
+              <Knap variant="tekst" onClick={nytItem} style={{ marginTop: 'var(--plads-2)', paddingLeft: 0 }}>
+                Tilføj dit første grej →
+              </Knap>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 // Turkortet på startskærmen.
 //

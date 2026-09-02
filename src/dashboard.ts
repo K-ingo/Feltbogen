@@ -29,6 +29,33 @@ export function naesteTur(ture: Tur[], nu: Date = new Date()): Tur | null {
   return kommende.sort((a, b) => a.startdato.localeCompare(b.startdato))[0];
 }
 
+// Om den næste fredag-søndag stadig er fri.
+//
+// Fra mandag til torsdag betyder "næste weekend" den fredag, der kommer nu.
+// Står man allerede i weekenden, betyder det weekenden efter. Ellers ville
+// kortet fredag aften invitere til en tur, der skulle være begyndt samme dag.
+// En tur tæller, når bare en del af perioden rammer weekenden — torsdag til
+// fredag er også en weekendtur i den betydning, startskærmen bruger.
+export function erNaesteWeekendAaben(ture: Tur[], nu: Date = new Date()): boolean {
+  const ugedag = nu.getDay();
+  const dageTilFredag = ugedag === 0
+    ? 5
+    : ugedag >= 5
+      ? 12 - ugedag
+      : 5 - ugedag;
+
+  const fredag = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate() + dageTilFredag);
+  const soendag = new Date(fredag.getFullYear(), fredag.getMonth(), fredag.getDate() + 2);
+  const fra = iso(fredag);
+  const til = iso(soendag);
+
+  return !ture.some((tur) => {
+    if (tur.status === 'afsluttet' || !tur.startdato) return false;
+    const slut = tur.slutdato || tur.startdato;
+    return tur.startdato <= til && slut >= fra;
+  });
+}
+
 // "om 8 dage" / "i dag" / "i gang" — teksten over turkortet.
 export function naarBegynder(tur: Tur, nu: Date = new Date()): string {
   const dage = dageTil(new Date(tur.startdato), nu);

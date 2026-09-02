@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   naesteTur,
+  erNaesteWeekendAaben,
   hjemsituation,
   udenDubletAfSituationen,
   naarBegynder,
@@ -49,6 +50,36 @@ describe('naesteTur', () => {
 
   it('ignorerer ture uden startdato', () => {
     expect(naesteTur([lavTur({ startdato: '', slutdato: '' })], NU)).toBeNull();
+  });
+});
+
+describe('erNaesteWeekendAaben', () => {
+  const torsdag = new Date('2026-08-27T09:00:00');
+
+  it('er åben uden en tur fredag til søndag', () => {
+    expect(erNaesteWeekendAaben([], torsdag)).toBe(true);
+  });
+
+  it('regner enhver overlapning med weekenden som en plan', () => {
+    const loerdag = lavTur({ startdato: '2026-08-29', slutdato: '2026-08-29' });
+    const torsdagTilFredag = lavTur({ startdato: '2026-08-27', slutdato: '2026-08-28' });
+
+    expect(erNaesteWeekendAaben([loerdag], torsdag)).toBe(false);
+    expect(erNaesteWeekendAaben([torsdagTilFredag], torsdag)).toBe(false);
+  });
+
+  it('lader en senere tur stå uden for den næste weekend', () => {
+    const senere = lavTur({ startdato: '2026-09-04', slutdato: '2026-09-06' });
+    expect(erNaesteWeekendAaben([senere], torsdag)).toBe(true);
+  });
+
+  it('peger på weekenden efter, når fredagen allerede er begyndt', () => {
+    const fredag = new Date('2026-08-28T18:00:00');
+    const denneWeekend = lavTur({ startdato: '2026-08-28', slutdato: '2026-08-30' });
+    const naesteWeekend = lavTur({ startdato: '2026-09-04', slutdato: '2026-09-06' });
+
+    expect(erNaesteWeekendAaben([denneWeekend], fredag)).toBe(true);
+    expect(erNaesteWeekendAaben([naesteWeekend], fredag)).toBe(false);
   });
 });
 
