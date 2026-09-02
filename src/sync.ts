@@ -694,6 +694,38 @@ function meldOk(): void {
   okIKoersel++;
 }
 
+// Opdaterer posten — eller opretter den igen, hvis den er væk deroppe.
+//
+// En 404 på en opdatering betyder, at record'et ikke findes længere: samlingen
+// er ryddet i admin-fladen, kontoen er en anden, eller posten er slettet fra en
+// anden enhed. `pb_id` bliver liggende lokalt, og så prøvede appen at opdatere
+// noget, der ikke var der — hver eneste gang, i det uendelige. Ændringen kom
+// aldrig op, køen blev aldrig tømt, og advarslen sagde "serveren afviste
+// dataene" om noget, der ikke havde med skemaet at gøre.
+//
+// Posten oprettes i stedet på ny. `uid` er identiteten og følger med, så
+// grupper og pakkelister stadig peger på det samme grej — og det lokale er det
+// eneste, der er tilbage af posten, så der er ikke noget deroppe at overskrive.
+async function opdaterIPb<T extends Post>(
+  samling: Samling<T>,
+  pbId: string,
+  payload: Record<string, unknown>,
+  post: T
+): Promise<RecordModel> {
+  try {
+    return await pb.collection(samling.pbNavn).update(pbId, payload);
+  } catch (e) {
+    if (!erIkkeFundet(e)) throw e;
+
+    console.warn(
+      `${samling.pbNavn} ${pbId} findes ikke i PocketBase længere. "${post.navn}" oprettes på ny.`
+    );
+    const svar = await opretIPb(samling, payload, post.navn);
+    advarHvisUidTabt(svar, post.uid, samling.pbNavn);
+    return svar;
+  }
+}
+
 async function synkroniser<T extends Post>(samling: Samling<T>, id: number): Promise<boolean> {
   const bruger = nuvaerendeBruger();
   if (!bruger) return false;
@@ -706,7 +738,7 @@ async function synkroniser<T extends Post>(samling: Samling<T>, id: number): Pro
     let svar: RecordModel;
 
     if (post.pb_id) {
-      svar = await pb.collection(samling.pbNavn).update(post.pb_id, payload);
+      svar = await opdaterIPb(samling, post.pb_id, payload, post);
     } else {
       svar = await opretIPb(samling, payload, post.navn);
       advarHvisUidTabt(svar, post.uid, samling.pbNavn);

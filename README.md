@@ -443,6 +443,17 @@ prikken er grå — at vælge at blive lokal er ikke en fejl. En udløbet sessio
 rydder derimod sig selv og ser bagefter ud som "ingen konto"; den siges som det,
 den er, for man *var* logget ind, og der er noget, der ikke kommer op.
 
+En `404` på en opdatering er ikke et afslag på dataene. Record'et findes ikke
+længere — samlingen er ryddet i admin-fladen, kontoen er en anden, eller posten
+er slettet fra en anden enhed — mens `pb_id` blev liggende lokalt. Appen prøvede
+så at opdatere noget, der ikke var der, og gjorde det igen ved hver sync:
+ændringen kom aldrig op, og køen blev aldrig tømt. `opdaterIPb()` opretter i
+stedet posten på ny. `uid` følger med, så grupper og pakkelister stadig peger på
+det samme grej, og der er ikke noget deroppe at overskrive — det lokale er det
+eneste, der er tilbage af posten. Arten hedder `findes_ikke` og ikke `afvist`:
+rådet om at kigge i skemaet passer ikke på en 404, hvor det enten er posten
+eller hele samlingen, der ikke findes.
+
 Sletninger bruger tabellen `slettede` som spor. Kan PocketBase ikke nås når man
 sletter, bliver postens `pb_id` liggende der, indtil serveren har bekræftet
 sletningen. Sporet gør to ting: det holder posten ude af `hentFraPocketBase()`,
