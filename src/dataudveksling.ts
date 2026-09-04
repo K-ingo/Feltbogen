@@ -1,7 +1,7 @@
 import type { Item, Gruppe, Tur, Sted, Person, Reference } from './db';
 
-// Eksport og import af hele basen som én JSON-fil. Appen er offline-first, så
-// en enhed der går tabt tager alt med sig hvis der ikke er en kopi.
+// Eksport og import af kernedata som én JSON-fil. Billedfiler ligger i en
+// separat tabel og indgår ikke i den almindelige JSON-kopi.
 
 // v2 tog steder og personer med. En v1-fil kan stadig læses: de to lister er
 // bare tomme, hvilket er den rigtige værdi for en base der ikke havde dem.
@@ -67,6 +67,9 @@ export function laesSikkerhedskopi(raa: string): Sikkerhedskopi {
   const k = data as Record<string, unknown>;
   if (typeof k.version !== 'number') {
     throw new KopiFejl('Filen ligner ikke en sikkerhedskopi.');
+  }
+  if (!Number.isInteger(k.version) || k.version < 1) {
+    throw new KopiFejl(`Kopiens version (${k.version}) er ugyldig.`);
   }
   if (k.version > KOPI_VERSION) {
     throw new KopiFejl(`Kopien er lavet med en nyere version (${k.version}). Opdatér appen først.`);

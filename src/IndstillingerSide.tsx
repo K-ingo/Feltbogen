@@ -410,8 +410,9 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
             <Kvittering besked={dataBesked} />
 
             <Hjaelp>
-              Kopien er en JSON-fil med alt dit gear, dine grupper og dine ture. Når du læser
-              en ind, bliver der kun lagt til — poster du allerede har, bliver ikke rørt.
+              Kopien er en JSON-fil med dit gear, dine grupper, ture, steder og personer.
+              Billedfiler er ikke med. Når du læser en kopi ind, bliver der kun lagt til —
+              poster du allerede har, bliver ikke rørt.
             </Hjaelp>
           </Kort>
         </section>

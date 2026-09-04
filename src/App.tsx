@@ -9,14 +9,9 @@ import type { Indstillingsmaal } from './indstillingsmaal';
 import { db } from './db';
 import DashboardSide from './DashboardSide';
 import InventarSide from './InventarSide';
-import ItemDetalje from './ItemDetalje';
 import GrupperListe from './GrupperListe';
-import GruppeDetalje from './GruppeDetalje';
 import TureListe from './TureListe';
-import TurDetalje from './TurDetalje';
 import StederListe from './StederListe';
-import StedDetalje from './StedDetalje';
-import DeltTurDetalje from './DeltTurDetalje';
 
 import FolkSide from './FolkSide';
 import MereSide from './MereSide';
@@ -24,9 +19,7 @@ import MereSide from './MereSide';
 
 
 
-import GaesteSide from './GaesteSide';
 import { tokenFraAdresse } from './gaest';
-import TurkortSide from './TurkortSide';
 import { turkorttokenFraAdresse } from './turkort';
 import type { Turmaal } from './turmaal';
 // Kobler friskningen af delte ture på skrivninger. Importeres for sin
@@ -51,6 +44,15 @@ const Rundvisning = lazy(() => import('./Rundvisning'));
 // Første tur-flowet ses én gang, af dem der ikke har en tur endnu. Det har
 // ingen plads i bundtet, alle andre skal hente ned.
 const FoersteTur = lazy(() => import('./FoersteTur'));
+// Detaljeskærmene fylder især for ture meget, men de er aldrig den første
+// skærm. Del dem fra startbundtet og hent dem først, når en række åbnes.
+const ItemDetalje = lazy(() => import('./ItemDetalje'));
+const GruppeDetalje = lazy(() => import('./GruppeDetalje'));
+const TurDetalje = lazy(() => import('./TurDetalje'));
+const StedDetalje = lazy(() => import('./StedDetalje'));
+const DeltTurDetalje = lazy(() => import('./DeltTurDetalje'));
+const GaesteSide = lazy(() => import('./GaesteSide'));
+const TurkortSide = lazy(() => import('./TurkortSide'));
 
 import { Skal } from './Skal';
 import type { Fane } from './Skal';

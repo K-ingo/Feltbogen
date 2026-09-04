@@ -57,6 +57,7 @@ const MAKS_TYPISK = 5;
 export function personprofil(person: Person, ture: Tur[], items: Item[]): Personprofil {
   const hendes = tureMedPerson(ture, person.uid);
   const vaegte = new Map(items.map((i) => [i.uid, i.vaegt_g]));
+  const itemsPrUid = new Map(items.map((item) => [item.uid, item]));
 
   const gangePrItem = new Map<Reference, number>();
   const baaret: number[] = [];
@@ -78,7 +79,7 @@ export function personprofil(person: Person, ture: Tur[], items: Item[]): Person
   });
 
   const typiskGear = [...gangePrItem.entries()]
-    .map(([uid, gange]) => ({ item: items.find((i) => i.uid === uid), ture: gange }))
+    .map(([uid, gange]) => ({ item: itemsPrUid.get(uid), ture: gange }))
     // Gear der er slettet siden, tælles ikke med — der er ikke noget at vise.
     .filter((x): x is Typiskgear => x.item !== undefined)
     .sort((a, b) => (b.ture - a.ture) || (b.item.vaegt_g - a.item.vaegt_g))

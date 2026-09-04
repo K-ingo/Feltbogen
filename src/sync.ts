@@ -726,7 +726,28 @@ async function opdaterIPb<T extends Post>(
   }
 }
 
-async function synkroniser<T extends Post>(samling: Samling<T>, id: number): Promise<boolean> {
+// To sync-kald for den samme post må aldrig være i luften samtidig. En langsom
+// første request kan ellers svare efter en nyere og skrive den gamle udgave
+// tilbage på serveren. Kæden er pr. post, så forskellige poster stadig kan
+// sendes parallelt.
+const igangvaerende = new Map<string, Promise<boolean>>();
+
+function synkroniser<T extends Post>(samling: Samling<T>, id: number): Promise<boolean> {
+  const noegle = koeNoegle(samling, id);
+  const forrige = igangvaerende.get(noegle) ?? Promise.resolve(true);
+  const denne = forrige
+    .catch(() => false)
+    .then(() => synkroniserNu(samling, id));
+
+  igangvaerende.set(noegle, denne);
+  const ryd = () => {
+    if (igangvaerende.get(noegle) === denne) igangvaerende.delete(noegle);
+  };
+  void denne.then(ryd, ryd);
+  return denne;
+}
+
+async function synkroniserNu<T extends Post>(samling: Samling<T>, id: number): Promise<boolean> {
   const bruger = nuvaerendeBruger();
   if (!bruger) return false;
 
@@ -748,10 +769,12 @@ async function synkroniser<T extends Post>(samling: Samling<T>, id: number): Pro
 
     // Er posten redigeret igen mens kaldet var i luften, står der en ny sync i
     // køen, og så skal flaget blive — ellers ville den ændring kunne tabes.
-    const nyereAendring = afventende.has(koeNoegle(samling, id));
-
     // Kun sync-felterne skrives, så en samtidig redigering ikke overskrives.
     await samling.tabel.update(id, (gemt) => {
+      // Køen kan være tømt af en timer, mens requesten er i luften. Derfor er
+      // postens revisionsdato den autoritative kontrol af, om svaret stadig
+      // gælder den nyeste lokale udgave.
+      const nyereAendring = gemt.aendret.getTime() > post.aendret.getTime();
       gemt.pb_id = svar.id;
       // Vi er lige blevet enige med serveren. Uden det her ville næste
       // hentning tro at nogen havde rørt posten et andet sted.
@@ -849,7 +872,11 @@ async function opdater<T extends Post>(
 ): Promise<void> {
   await samling.tabel.update(id, (post) => {
     Object.assign(post, aendringer);
-    post.aendret = new Date();
+    // Flere ændringer kan ske i samme millisekund. Sørg for en monoton lokal
+    // revision, så et ældre sync-svar aldrig kan ligne den nyeste udgave.
+    const nu = Date.now();
+    const foer = post.aendret.getTime();
+    post.aendret = new Date(Math.max(nu, Number.isFinite(foer) ? foer + 1 : nu));
     post.usendt_aendring = true;
   });
   efterSkrivning?.();

@@ -72,8 +72,8 @@ export function tureFordeltPrMaaned(ture: Tur[]): number[] {
   const maaneder = new Array(12).fill(0);
   ture.forEach((t) => {
     if (t.startdato) {
-      const m = new Date(t.startdato).getMonth();
-      maaneder[m]++;
+      const dato = new Date(t.startdato);
+      if (!Number.isNaN(dato.getTime())) maaneder[dato.getMonth()]++;
     }
   });
   return maaneder;
@@ -86,6 +86,7 @@ interface ItemBrugSum {
 
 export function mestBrugte(items: Item[], ture: Tur[], grupper: Gruppe[], topN: number = 5): ItemBrugSum[] {
   const taeller = new Map<string, number>();
+  const itemsPrUid = new Map(items.map((item) => [item.uid, item]));
 
   ture.forEach((t) => {
     itemUidsPaaTur(t, grupper).forEach((uid) => taeller.set(uid, (taeller.get(uid) ?? 0) + 1));
@@ -93,7 +94,7 @@ export function mestBrugte(items: Item[], ture: Tur[], grupper: Gruppe[], topN: 
 
   return Array.from(taeller.entries())
     .map(([uid, antalTure]) => ({
-      item: items.find((i) => i.uid === uid),
+      item: itemsPrUid.get(uid),
       antalTure
     }))
     .filter((x): x is ItemBrugSum => x.item !== undefined)
