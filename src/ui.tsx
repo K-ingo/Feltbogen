@@ -100,9 +100,10 @@ interface KnapProps {
   disabled?: boolean;
   style?: CSSProperties;
   type?: 'button' | 'submit';
+  ariaExpanded?: boolean;
 }
 
-export function Knap({ children, onClick, variant = 'sekundaer', disabled, style, type = 'button' }: KnapProps) {
+export function Knap({ children, onClick, variant = 'sekundaer', disabled, style, type = 'button', ariaExpanded }: KnapProps) {
   const varianter: Record<string, CSSProperties> = {
     primaer: {
       background: 'var(--accent)',
@@ -133,6 +134,7 @@ export function Knap({ children, onClick, variant = 'sekundaer', disabled, style
       className={`ui-button ui-button--${variant}`}
       onClick={onClick}
       disabled={disabled}
+      aria-expanded={ariaExpanded}
       style={{
         // Højden kommer fra rørehøjden og ikke fra padding, så knappen kan
         // rammes med en finger uden at blive tyk på en skærm med mus.

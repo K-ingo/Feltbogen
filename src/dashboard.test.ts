@@ -131,7 +131,7 @@ describe('handlinger', () => {
       const h = handlinger([brugt, glemt], femTure('u-brugt'), [], NU);
 
       expect(h).toHaveLength(1);
-      expect(h[0].titel).toBe('Ubrugt gear');
+      expect(h[0].titel).toBe('Ubrugt grej');
       expect(h[0].detalje).toBe('Fiskars X7 · 5 ture');
     });
 
@@ -316,7 +316,7 @@ describe('handlinger', () => {
 
       expect(h).toHaveLength(1);
       expect(h[0].type).toBe('udlaan_laenge');
-      expect(h[0].titel).toBe('Udlånt gear');
+      expect(h[0].titel).toBe('Udlånt grej');
       expect(h[0].detalje).toBe('Moonquilt · hos Mikkel i 8 uger');
     });
 

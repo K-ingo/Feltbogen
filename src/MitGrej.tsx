@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import type { Item } from './db';
 import type { Deltagelse, MedbragtGear } from './deltagelse';
+import { kilo } from './talformat';
 import type { GaesteAfsnit } from './gaest';
 import { Knap, Felt, SektionsTitel, Chip } from './ui';
 
@@ -161,7 +162,7 @@ function VaelgMitGrej({ valgt, saet }: {
   if (!mine || mine.length === 0) {
     return (
       <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-svag)', lineHeight: 1.6 }}>
-        Du har ikke noget gear i din Feltbog endnu. Læg det ind under Inventar,
+        Du har ikke noget grej i din Feltbog endnu. Læg det ind under Grej,
         så kan du vælge det her.
       </div>
     );
@@ -187,14 +188,14 @@ function VaelgMitGrej({ valgt, saet }: {
       <input
         value={soeg}
         onChange={(e) => setSoeg(e.target.value)}
-        placeholder="Søg i dit gear"
+        placeholder="Søg i dit grej"
         style={{ width: '100%', fontSize: 'var(--skrift-brod)', marginBottom: '8px' }}
       />
 
       <div style={{ maxHeight: '300px', overflowY: 'auto', display: 'grid', gap: '2px' }}>
         {synlige.length === 0 && (
           <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-svag)' }}>
-            Intet gear passer på søgningen.
+            Intet grej passer på søgningen.
           </div>
         )}
         {synlige.map((i) => (
@@ -219,7 +220,7 @@ function VaelgMitGrej({ valgt, saet }: {
       <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', marginTop: '8px' }}>
         {valgt.length === 0
           ? 'Ingenting valgt endnu.'
-          : `${valgt.length} ${valgt.length === 1 ? 'ting' : 'ting'} · ${(valgt.reduce((s, g) => s + g.vaegt_g, 0) / 1000).toFixed(2)} kg`}
+          : `${valgt.length} ${valgt.length === 1 ? 'ting' : 'ting'} · ${kilo(valgt.reduce((s, g) => s + g.vaegt_g, 0))} kg`}
       </div>
     </div>
   );

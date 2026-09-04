@@ -86,3 +86,24 @@ Mobilvisning er en desktopbrowser med ændret viewport, ikke en fysisk iPhone/An
 ## Screenshots og privatliv
 
 Før/efter-billeder er leveret separat sammen med den lokale rapport. Skærmbilleder med kontoens personer, tursteder og billeder offentliggøres ikke i dette offentlige repository. Testlogin, adgangskoder, tokens, lokale databaser og syntetiske importer indgår ikke i ændringen.
+
+## Afsluttende polish efter første review
+
+Den efterfølgende QA-runde blev kørt på den mergede produktion med en lokal,
+syntetisk profil med 40 grejposter, 12 ture, 5 steder og 4 personer. Den gav
+følgende afsluttende rettelser uden ændringer i backend eller datamodel:
+
+- Dashboardet viser højst to grejopgaver som standard og giver adgang til hele
+  listen med én tydelig handling. Ture uden billeder har fået en rolig,
+  topografisk pladsholder, så næste-tur-kortet ikke bliver en stor tom flade.
+- Jagtvarslet på turen er komprimeret til en synlig advarselsoverskrift med
+  foldbare detaljer. Statusvælgeren er gjort robust på 320 px.
+- Mobilens statusvalg for grej ruller på én linje, og tagfiltrene ligger bag en
+  filterknap med aktivt antal. Desktop beholder filtrene synlige.
+- Ture uden fotos varierer efter terræn og viser aktivitet/terræn. Den kompakte
+  desktopvisning har fået en læsbar maksimalbredde.
+- Folk har fået en introduktionsflade, avatarer og tydeligere personkort.
+- Synlige vægte og tal bruger dansk komma og tusindtalsseparator, og den
+  brugerrettede terminologi er samlet om “grej”.
+
+Verificeret med TypeScript, ESLint, 51 testfiler / 1.120 tests og Vite-build.

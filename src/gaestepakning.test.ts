@@ -91,7 +91,7 @@ describe('fremdriftstekst', () => {
     expect(fremdriftstekst(fremdrift(new Set(['i1']), [linje({ uid: 'i1' }), linje({ uid: 'i2' })])))
       .toBe('1 af 2 pakket');
     expect(fremdriftstekst(fremdrift(new Set(['i1']), [linje({ uid: 'i1' })]))).toBe('Alt er pakket');
-    expect(fremdriftstekst(fremdrift(new Set(), []))).toBe('Der er ikke valgt gear endnu');
+    expect(fremdriftstekst(fremdrift(new Set(), []))).toBe('Der er ikke valgt grej endnu');
   });
 });
 

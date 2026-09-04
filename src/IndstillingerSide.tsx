@@ -289,7 +289,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
                 PocketBase gemmer ikke feltet <code>uid</code>. Tilføj et tekstfelt ved navn
                 <code> uid</code> til samlingerne <code>items</code>, <code>grupper</code> og
                 <code> ture</code>. Uden det kan to enheder ikke blive enige om hvilken post
-                der er hvilken, og gear bliver hentet ned igen som dubletter.
+                der er hvilken, og grej bliver hentet ned igen som dubletter.
               </Advarsel>
             )}
 
@@ -370,7 +370,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
               vaelg={(n) => void saet(PAK_AF_NIVEAU_VALG, n)}
             />
             <Hjaelp>
-              Let er tre knapper pr. stykke gear — brugt, ubrugt, gik i stykker. Grundig
+              Let er tre knapper pr. stykke grej — brugt, ubrugt, gik i stykker. Grundig
               lægger en note pr. item oveni, plus en vurdering af om der var for meget
               eller for lidt med i hver kategori. Niveauet kan skiftes undervejs på den
               enkelte tur.
@@ -381,7 +381,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
         <section ref={sigte('data')}>
           <SektionsTitel>Data</SektionsTitel>
           <Kort>
-            <Raekke label="Gear" vaerdi={`${items.length}`} />
+            <Raekke label="Grej" vaerdi={`${items.length}`} />
             <Raekke label="Grupper" vaerdi={`${grupper.length}`} />
             <Raekke label="Ture" vaerdi={`${ture.length}`} />
             <Raekke label="Steder" vaerdi={`${steder.length}`} />
@@ -410,7 +410,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
             <Kvittering besked={dataBesked} />
 
             <Hjaelp>
-              Kopien er en JSON-fil med dit gear, dine grupper, ture, steder og personer.
+              Kopien er en JSON-fil med dit grej, dine grupper, ture, steder og personer.
               Billedfiler er ikke med. Når du læser en kopi ind, bliver der kun lagt til —
               poster du allerede har, bliver ikke rørt.
             </Hjaelp>
