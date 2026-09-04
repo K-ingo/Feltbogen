@@ -124,8 +124,8 @@ function InventarSide({ fane, skift, aabnItem }: Props) {
       fane={fane}
       skift={skift}
       titel="Grej"
-      undertitel={`${iStatus.length} items · ${vaerdiIStatus.toLocaleString('da-DK')} kr`}
-      handlinger={<Knap variant="primaer" onClick={nytItem}>+ Nyt item</Knap>}
+      undertitel={`${iStatus.length} stykker grej · ${vaerdiIStatus.toLocaleString('da-DK')} kr`}
+      handlinger={<Knap variant="primaer" onClick={nytItem}>+ Tilføj grej</Knap>}
       fab={nytItem}
     >
       {/* Grejsættene stod før som deres egen fane i bunden. De hører til her:
@@ -146,10 +146,11 @@ function InventarSide({ fane, skift, aabnItem }: Props) {
         {FANEBLADE.map(({ udsnit, label }) => (
           <button
             key={udsnit}
+            aria-pressed={valgtStatus === udsnit}
             onClick={() => { setValgtStatus(udsnit); nulstilFiltre(); }}
             style={{
               padding: '6px 14px',
-              fontSize: '12px',
+              fontSize: 'var(--skrift-detalje)',
               borderRadius: '16px',
               cursor: 'pointer',
               fontWeight: 500,
@@ -164,7 +165,9 @@ function InventarSide({ fane, skift, aabnItem }: Props) {
       </div>
 
       <input
-        placeholder="Søg gear, tag…"
+        type="search"
+        aria-label="Søg grej eller tags"
+        placeholder="Søg grej eller tags…"
         value={soegning}
         onChange={(e) => setSoegning(e.target.value)}
         style={{ width: '100%', marginBottom: '12px' }}
@@ -198,9 +201,12 @@ function InventarSide({ fane, skift, aabnItem }: Props) {
       )}
 
       {filtreret.length === 0 ? (
-        <TomListe>
+        <TomListe
+          handling={iStatus.length > 0 ? 'Ryd filtre' : valgtStatus === 'ejer' || valgtStatus === 'overvejer' ? 'Tilføj grej' : 'Se dit grej'}
+          onClick={iStatus.length > 0 ? nulstilFiltre : valgtStatus === 'ejer' || valgtStatus === 'overvejer' ? nytItem : () => { setValgtStatus('ejer'); nulstilFiltre(); }}
+        >
           {iStatus.length === 0
-            ? 'Intet gear her endnu.'
+            ? ({ ejer: 'Dit næste eventyr begynder med det grej, du allerede har. Tilføj den første ting.', overvejer: 'Plads til det grej, du drømmer om at tage med.', solgt: 'Intet solgt grej endnu. Din turhistorik bliver bevaret, når noget får en ny ejer.', laan: 'Ingen aktive lån. Dit grej er klar til næste tur.', vedligehold: 'Ingen vedligeholdelse på listen lige nu. Klar til mere tid ude.' })[valgtStatus]
             : 'Ingen matcher. Prøv en anden søgning eller et andet tag.'}
         </TomListe>
       ) : erDesktop ? (
@@ -282,9 +288,10 @@ function FilterChip({ aktiv, vaelg, children }: { aktiv: boolean; vaelg: () => v
   return (
     <button
       onClick={vaelg}
+      aria-pressed={aktiv}
       style={{
         padding: '4px 12px',
-        fontSize: '11px',
+        fontSize: 'var(--skrift-lille)',
         borderRadius: '14px',
         cursor: 'pointer',
         fontWeight: 500,
@@ -328,18 +335,19 @@ function ItemTabel({ items, sidstBrugt, grupperFor, aabn }: {
   const celle: React.CSSProperties = {
     padding: '10px 12px',
     borderBottom: '1px solid var(--border-svag)',
-    fontSize: '13px',
+    fontSize: 'var(--skrift-knap)',
     textAlign: 'left'
   };
 
   const overskrift = (kolonne: Kolonne, label: string, bredde?: string) => (
     <th
-      onClick={() => skiftSortering(kolonne)}
+      scope="col"
+      aria-sort={sorterEfter === kolonne ? (faldende ? 'descending' : 'ascending') : 'none'}
       style={{
         ...celle,
         width: bredde,
         cursor: 'pointer',
-        fontSize: '11px',
+        fontSize: 'var(--skrift-lille)',
         fontWeight: 600,
         textTransform: 'uppercase',
         letterSpacing: '0.5px',
@@ -347,17 +355,17 @@ function ItemTabel({ items, sidstBrugt, grupperFor, aabn }: {
         whiteSpace: 'nowrap'
       }}
     >
-      {label}{sorterEfter === kolonne && (faldende ? ' ↓' : ' ↑')}
+      <button onClick={() => skiftSortering(kolonne)} style={{ color: 'inherit', font: 'inherit', padding: 0 }}>{label}{sorterEfter === kolonne && (faldende ? ' ↓' : ' ↑')}</button>
     </th>
   );
 
   return (
     <div style={{ overflowX: 'auto', border: '1px solid var(--border-svag)', borderRadius: '12px' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '620px' }}>
+      <table className="gear-table" style={{ width: '100%', borderCollapse: 'collapse', minWidth: '620px' }}>
         <thead style={{ background: 'var(--bg-forhoejet)' }}>
           <tr>
             {overskrift('navn', 'Navn')}
-            <th style={{ ...celle, fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--tekst-dæmpet)' }}>
+            <th style={{ ...celle, fontSize: 'var(--skrift-lille)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--tekst-dæmpet)' }}>
               Grupper
             </th>
             {overskrift('vaegt', 'Vægt', '90px')}
@@ -374,7 +382,7 @@ function ItemTabel({ items, sidstBrugt, grupperFor, aabn }: {
                 onClick={() => item.id !== undefined && aabn(item.id)}
                 style={{ cursor: 'pointer' }}
               >
-                <td style={{ ...celle, fontWeight: 500 }}>{item.navn}</td>
+                <td style={{ ...celle, fontWeight: 500 }}><button className="gear-name" onClick={(e) => { e.stopPropagation(); if (item.id !== undefined) aabn(item.id); }}>{item.navn}</button></td>
                 <td style={{ ...celle, color: 'var(--tekst-dæmpet)' }}>
                   {(grupperFor.get(item.uid) ?? []).join(', ') || '—'}
                 </td>

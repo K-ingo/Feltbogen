@@ -52,7 +52,7 @@ function FeltbogSide({ aar, tilbage }: Props) {
       }}>
         <button
           onClick={tilbage}
-          style={{ background: 'transparent', border: 'none', fontSize: '14px', cursor: 'pointer', color: 'var(--tekst-dæmpet)', padding: '4px 0' }}
+          style={{ background: 'transparent', border: 'none', fontSize: 'var(--skrift-brod)', cursor: 'pointer', color: 'var(--tekst-dæmpet)', padding: '4px 0' }}
         >
           ‹ Tilbage
         </button>
@@ -60,7 +60,7 @@ function FeltbogSide({ aar, tilbage }: Props) {
       </div>
 
       {bog.sider.length === 0 ? (
-        <div className="kun-skaerm" style={{ color: 'var(--tekst-svag)', fontSize: '13px' }}>
+        <div className="kun-skaerm" style={{ color: 'var(--tekst-svag)', fontSize: 'var(--skrift-knap)' }}>
           Der står ingen ture på {aar}, så der er ikke noget at trykke.
         </div>
       ) : (
@@ -90,7 +90,7 @@ function Forside({ aar, overskrift, sider, tal }: {
         {aar}
       </div>
       <div style={{ fontFamily: serif, fontSize: '20px', lineHeight: 1.4 }}>{overskrift}</div>
-      <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginTop: '4px' }}>
+      <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-dæmpet)', marginTop: '4px' }}>
         {tal.dage} dage ude{tal.km > 0 && ` · ${tal.km} km båret`}
       </div>
 
@@ -98,7 +98,7 @@ function Forside({ aar, overskrift, sider, tal }: {
 
       <ol style={{ margin: 0, paddingLeft: '20px', display: 'grid', gap: '6px' }}>
         {sider.map((s) => (
-          <li key={s.tur.uid} style={{ fontSize: '13px' }}>
+          <li key={s.tur.uid} style={{ fontSize: 'var(--skrift-knap)' }}>
             <span style={{ fontWeight: 500 }}>{s.tur.navn.trim() || 'Uden navn'}</span>
             <span style={{ color: 'var(--tekst-dæmpet)' }}>
               {s.periode && ` · ${s.periode}`}{s.sted && ` · ${s.sted}`}
@@ -116,7 +116,7 @@ function Tursider({ side }: { side: Turside }) {
   return (
     <section className="feltbog-side" style={{ marginBottom: '48px' }}>
       <h2 style={{ fontSize: '26px', margin: '0 0 4px' }}>{tur.navn.trim() || 'Uden navn'}</h2>
-      <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginBottom: '18px' }}>
+      <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-dæmpet)', marginBottom: '18px' }}>
         {[side.periode, side.sted].filter(Boolean).join(' · ')}
       </div>
 
@@ -126,20 +126,20 @@ function Tursider({ side }: { side: Turside }) {
         {side.fakta.map((f) => (
           <div key={f.navn}>
             <div style={etiketStil}>{f.navn}</div>
-            <div style={{ fontSize: '14px' }}>{f.vaerdi}</div>
+            <div style={{ fontSize: 'var(--skrift-brod)' }}>{f.vaerdi}</div>
           </div>
         ))}
         {side.vaegt_g > 0 && (
           <div>
             <div style={etiketStil}>Pakket vægt</div>
-            <div style={{ fontSize: '14px' }}>{(side.vaegt_g / 1000).toFixed(2)} kg</div>
+            <div style={{ fontSize: 'var(--skrift-brod)' }}>{(side.vaegt_g / 1000).toFixed(2)} kg</div>
           </div>
         )}
       </div>
 
       {side.deltagere.length > 0 && (
         <Afsnit titel="Med på turen">
-          <div style={{ fontSize: '13px' }}>{side.deltagere.join(', ')}</div>
+          <div style={{ fontSize: 'var(--skrift-knap)' }}>{side.deltagere.join(', ')}</div>
         </Afsnit>
       )}
 
@@ -169,7 +169,7 @@ function Tursider({ side }: { side: Turside }) {
           <div style={{ display: 'grid', gap: '12px' }}>
             {side.pakkeliste.map((del) => (
               <div key={del.navn}>
-                <div style={{ fontSize: '13px', fontWeight: 500, marginBottom: '3px' }}>
+                <div style={{ fontSize: 'var(--skrift-knap)', fontWeight: 500, marginBottom: '3px' }}>
                   {del.navn}
                   <span style={{ color: 'var(--tekst-dæmpet)', fontWeight: 400 }}>
                     {' '}· {(del.vaegt_g / 1000).toFixed(2)} kg
@@ -213,7 +213,7 @@ function Tursider({ side }: { side: Turside }) {
               <div key={dag.dato}>
                 <div style={etiketStil}>{dag.dato ? kortDag(dag.dato) : 'Uden dato'}</div>
                 {dag.indgange.map((n) => (
-                  <div key={n.id} style={{ fontSize: '13px', lineHeight: 1.55, marginTop: '2px' }}>
+                  <div key={n.id} style={{ fontSize: 'var(--skrift-knap)', lineHeight: 1.55, marginTop: '2px' }}>
                     {n.tekst}
                   </div>
                 ))}
@@ -225,7 +225,7 @@ function Tursider({ side }: { side: Turside }) {
 
       {tur.noter.trim() && (
         <Afsnit titel="Noter">
-          <div style={{ fontSize: '13px', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>{tur.noter}</div>
+          <div style={{ fontSize: 'var(--skrift-knap)', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>{tur.noter}</div>
         </Afsnit>
       )}
     </section>
@@ -248,7 +248,7 @@ function Billedstribe({ billeder }: { billeder: Billede[] }) {
         <Billedvisning billede={forside} />
       </div>
       {forside.beskrivelse && (
-        <div style={{ ...etiketStil, marginTop: '4px', textTransform: 'none', letterSpacing: 0, fontSize: '11px' }}>
+        <div style={{ ...etiketStil, marginTop: '4px', textTransform: 'none', letterSpacing: 0, fontSize: 'var(--skrift-lille)' }}>
           {forside.beskrivelse}
         </div>
       )}
@@ -276,7 +276,7 @@ function Billedstribe({ billeder }: { billeder: Billede[] }) {
 function Afsnit({ titel, children }: { titel: string; children: ReactNode }) {
   return (
     <div style={{ marginBottom: '18px' }}>
-      <h3 style={{ fontSize: '14px', margin: '0 0 6px' }}>{titel}</h3>
+      <h3 style={{ fontSize: 'var(--skrift-brod)', margin: '0 0 6px' }}>{titel}</h3>
       {children}
     </div>
   );

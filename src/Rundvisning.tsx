@@ -52,7 +52,7 @@ function Rundvisning({ nytItem, nyTur, tilLogin, faerdig, kunOpslag }: Props) {
             {TRIN[trin].ikon}
           </div>
           <h1 style={{ fontSize: '26px', margin: '0 0 12px' }}>{TRIN[trin].titel}</h1>
-          <div style={{ fontSize: '14px', color: 'var(--tekst-dæmpet)', lineHeight: 1.65 }}>
+          <div style={{ fontSize: 'var(--skrift-brod)', color: 'var(--tekst-dæmpet)', lineHeight: 1.65 }}>
             {TRIN[trin].tekst}
           </div>
           {TRIN[trin].figur && <div style={{ marginTop: '18px' }}>{TRIN[trin].figur}</div>}
@@ -72,7 +72,7 @@ function Rundvisning({ nytItem, nyTur, tilLogin, faerdig, kunOpslag }: Props) {
             <Knap
               variant="primaer"
               onClick={() => setTrin(trin + 1)}
-              style={{ padding: '12px 22px', fontSize: '14px' }}
+              style={{ padding: '12px 22px', fontSize: 'var(--skrift-brod)' }}
             >
               Videre
             </Knap>
@@ -125,7 +125,7 @@ function Kort({ children }: { children: ReactNode }) {
       borderRadius: '10px',
       padding: '12px 14px',
       background: 'var(--bg-forhoejet)',
-      fontSize: '13px'
+      fontSize: 'var(--skrift-knap)'
     }}>
       {children}
     </div>
@@ -142,7 +142,7 @@ function Linje({ navn, hoejre }: { navn: string; hoejre?: ReactNode }) {
       padding: '5px 0'
     }}>
       <span>{navn}</span>
-      <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '12px', whiteSpace: 'nowrap' }}>{hoejre}</span>
+      <span style={{ color: 'var(--tekst-dæmpet)', fontSize: 'var(--skrift-detalje)', whiteSpace: 'nowrap' }}>{hoejre}</span>
     </div>
   );
 }
@@ -231,7 +231,7 @@ const TRIN: Trin[] = [
         <div style={{ marginBottom: '8px' }}>MSR Pocket Rocket kræver <strong>gas</strong></div>
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
           <Chip storrelse="lille" farve="fejl">⚠ gas</Chip>
-          <span style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)' }}>
+          <span style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)' }}>
             intet på turen har det tag
           </span>
         </div>
@@ -274,12 +274,12 @@ const TRIN: Trin[] = [
     ),
     figur: (
       <Kort>
-        <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', fontWeight: 600, marginBottom: '4px' }}>
+        <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', fontWeight: 600, marginBottom: '4px' }}>
           SOVEGREJ
         </div>
         <Linje navn="TTTM Pro Hammock" hoejre="Mikkel · 900 g" />
         <Linje navn="Moonquilt PRO 850" hoejre="Emil · 780 g" />
-        <div style={{ textAlign: 'right', fontSize: '11px', color: 'var(--tekst-svag)', paddingTop: '4px' }}>
+        <div style={{ textAlign: 'right', fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', paddingTop: '4px' }}>
           1.68 kg
         </div>
       </Kort>
@@ -302,7 +302,7 @@ const TRIN: Trin[] = [
       <Kort>
         <Linje navn="Telt Hilleberg" hoejre="Mikkel · 2400 g" />
         <Linje navn="Dunjakke" hoejre="Sofie · 450 g" />
-        <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', paddingTop: '6px' }}>
+        <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', paddingTop: '6px' }}>
           Sofie skrev sig på turen selv
         </div>
       </Kort>
@@ -367,7 +367,7 @@ function Komigang({ nytItem, nyTur, tilLogin, faerdig, kunOpslag, tilbage }: {
   if (kunOpslag) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '24px' }}>
-        <Knap variant="primaer" onClick={faerdig} style={{ padding: '12px 22px', fontSize: '14px' }}>
+        <Knap variant="primaer" onClick={faerdig} style={{ padding: '12px 22px', fontSize: 'var(--skrift-brod)' }}>
           Luk
         </Knap>
         <Knap variant="tekst" onClick={tilbage}>Tilbage</Knap>
@@ -378,16 +378,16 @@ function Komigang({ nytItem, nyTur, tilLogin, faerdig, kunOpslag, tilbage }: {
   return (
     <div style={{ marginTop: '24px' }}>
       <div style={{ display: 'grid', gap: '10px' }}>
-        <Knap variant="primaer" onClick={nytItem} style={{ padding: '12px', fontSize: '14px' }}>
+        <Knap variant="primaer" onClick={nytItem} style={{ padding: '12px', fontSize: 'var(--skrift-brod)' }}>
           Tilføj mit første gear
         </Knap>
-        <Knap onClick={nyTur} style={{ padding: '12px', fontSize: '14px' }}>
+        <Knap onClick={nyTur} style={{ padding: '12px', fontSize: 'var(--skrift-brod)' }}>
           Opret min første tur
         </Knap>
         <Knap
           onClick={() => filvaelger.current?.click()}
           disabled={laeser}
-          style={{ padding: '12px', fontSize: '14px' }}
+          style={{ padding: '12px', fontSize: 'var(--skrift-brod)' }}
         >
           {laeser ? 'Læser…' : 'Importér fra fil'}
         </Knap>
@@ -406,12 +406,12 @@ function Komigang({ nytItem, nyTur, tilLogin, faerdig, kunOpslag, tilbage }: {
       />
 
       {fejl && (
-        <div style={{ fontSize: '12px', color: 'var(--fejl)', textAlign: 'center', marginTop: '12px' }}>
+        <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--fejl)', textAlign: 'center', marginTop: '12px' }}>
           {fejl}
         </div>
       )}
 
-      <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', textAlign: 'center', marginTop: '18px', lineHeight: 1.6 }}>
+      <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', textAlign: 'center', marginTop: '18px', lineHeight: 1.6 }}>
         Alt gemmes på denne enhed og virker uden konto. Med en konto kan du
         synkronisere mellem telefon og PC — og dele ture.
       </div>
@@ -421,7 +421,7 @@ function Komigang({ nytItem, nyTur, tilLogin, faerdig, kunOpslag, tilbage }: {
           onClick={tilLogin}
           style={{
             background: 'transparent', border: 'none', cursor: 'pointer',
-            color: 'var(--tekst-dæmpet)', fontSize: '13px', padding: '6px',
+            color: 'var(--tekst-dæmpet)', fontSize: 'var(--skrift-knap)', padding: '6px',
             textDecoration: 'underline'
           }}
         >
@@ -431,7 +431,7 @@ function Komigang({ nytItem, nyTur, tilLogin, faerdig, kunOpslag, tilbage }: {
           onClick={faerdig}
           style={{
             background: 'transparent', border: 'none', cursor: 'pointer',
-            color: 'var(--tekst-dæmpet)', fontSize: '13px', padding: '6px'
+            color: 'var(--tekst-dæmpet)', fontSize: 'var(--skrift-knap)', padding: '6px'
           }}
         >
           Se mig omkring selv →
@@ -440,7 +440,7 @@ function Komigang({ nytItem, nyTur, tilLogin, faerdig, kunOpslag, tilbage }: {
           onClick={tilbage}
           style={{
             background: 'transparent', border: 'none', cursor: 'pointer',
-            color: 'var(--tekst-svag)', fontSize: '12px', padding: '6px'
+            color: 'var(--tekst-svag)', fontSize: 'var(--skrift-detalje)', padding: '6px'
           }}
         >
           ‹ Tilbage

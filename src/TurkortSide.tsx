@@ -54,14 +54,14 @@ function TurkortSide({ token }: Props) {
 
   return (
     <Ramme>
-      <div style={{ fontSize: '11px', letterSpacing: '1.4px', textTransform: 'uppercase', color: 'var(--tekst-svag)', marginBottom: '10px' }}>
+      <div style={{ fontSize: 'var(--skrift-lille)', letterSpacing: '1.4px', textTransform: 'uppercase', color: 'var(--tekst-svag)', marginBottom: '10px' }}>
         Turkort
       </div>
 
       <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '26px', margin: '0 0 4px' }}>
         {kort.navn || 'Uden navn'}
       </h1>
-      <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginBottom: '22px' }}>
+      <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-dæmpet)', marginBottom: '22px' }}>
         {formatterPeriode(kort.startdato, kort.slutdato) || 'Ingen datoer oplyst'}
       </div>
 
@@ -77,14 +77,14 @@ function TurkortSide({ token }: Props) {
         <div>{kort.sted || 'Ikke oplyst'}</div>
         {kort.koordinater && (
           <>
-            <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginTop: '3px' }}>
+            <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-dæmpet)', marginTop: '3px' }}>
               {kort.koordinater.lat}, {kort.koordinater.lng}
             </div>
             <a
               href={kortlink(kort.koordinater)}
               target="_blank"
               rel="noreferrer"
-              style={{ display: 'inline-block', marginTop: '8px', fontSize: '13px', color: 'var(--accent)' }}
+              style={{ display: 'inline-block', marginTop: '8px', fontSize: 'var(--skrift-knap)', color: 'var(--accent)' }}
             >
               Åbn på kort →
             </a>
@@ -94,7 +94,7 @@ function TurkortSide({ token }: Props) {
 
       {kort.besked && <Felt titel="Besked">{kort.besked}</Felt>}
 
-      <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', marginTop: '30px', lineHeight: 1.6 }}>
+      <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', marginTop: '30px', lineHeight: 1.6 }}>
         Kortet er et øjebliksbillede lavet {returtekst(kort.lavet_den)} og opdaterer sig ikke selv.
         Det er ikke en live-position — det viser hvor turen var planlagt til at gå hen.
       </div>
@@ -140,7 +140,7 @@ function Baand({ farve, baggrund, kant, children }: {
       background: baggrund,
       border: `1px solid ${kant}`,
       color: farve,
-      fontSize: '13px',
+      fontSize: 'var(--skrift-knap)',
       lineHeight: 1.5,
       marginBottom: '22px'
     }}>
@@ -153,7 +153,7 @@ function Felt({ titel, children }: { titel: string; children: React.ReactNode })
   return (
     <section style={{ marginBottom: '18px' }}>
       <div style={{
-        fontSize: '10px',
+        fontSize: 'var(--skrift-mikro)',
         letterSpacing: '1px',
         textTransform: 'uppercase',
         color: 'var(--tekst-dæmpet)',
@@ -181,7 +181,7 @@ function Ramme({ children }: { children: React.ReactNode }) {
 
 function Besked({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ fontSize: '14px', color: 'var(--tekst-dæmpet)', lineHeight: 1.6, paddingTop: '40px' }}>
+    <div style={{ fontSize: 'var(--skrift-brod)', color: 'var(--tekst-dæmpet)', lineHeight: 1.6, paddingTop: '40px' }}>
       {children}
     </div>
   );

@@ -73,8 +73,8 @@ function GruppeDetalje({ gruppeId, tilbage, nyOprettet }: Props) {
         />
 
         <Kort fremhaevet>
-          <div style={{ fontSize: '14px', fontWeight: 500 }}>{valgteItems.length} items</div>
-          <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
+          <div style={{ fontSize: 'var(--skrift-brod)', fontWeight: 500 }}>{valgteItems.length} items</div>
+          <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
             {(totalVaegt / 1000).toFixed(2)} kg · {totalPris} kr
           </div>
         </Kort>
@@ -93,7 +93,7 @@ function GruppeDetalje({ gruppeId, tilbage, nyOprettet }: Props) {
 
       <div>
         {tilgaengeligeItems.length === 0 && (
-          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--tekst-svag)', fontSize: '13px' }}>
+          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--tekst-svag)', fontSize: 'var(--skrift-knap)' }}>
             Ingen items matcher.
           </div>
         )}
@@ -121,8 +121,8 @@ function GruppeDetalje({ gruppeId, tilbage, nyOprettet }: Props) {
                 style={{ width: 'auto' }}
               />
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '13px', color: 'var(--tekst)' }}>{item.navn}</div>
-                <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)' }}>
+                <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst)' }}>{item.navn}</div>
+                <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)' }}>
                   {item.vaegt_g} g · {item.pris_kr} kr{item.delt && ' · delt'}
                 </div>
               </div>

@@ -1,10 +1,13 @@
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useState } from 'react';
+import { Ikon } from './Ikon';
+import { matcherTur } from './turSoegning';
 import { db } from './db';
 import type { Billede, Tur } from './db';
 import { formatterPeriode } from './datotekst';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
-import { Knap, Badge, ListeRaekke, SektionsTitel, TomListe } from './ui';
+import { Knap, Badge, ListeRaekke, SektionsTitel, TomListe, Segment } from './ui';
 import { Billedvisning } from './BilledSektion';
 import { hero } from './billeder';
 import { faseAf, FASENAVN } from './turfase';
@@ -32,6 +35,8 @@ interface Props {
 }
 
 function TureListe({ fane, skift, aabnTur, aabnDeltTur, nyTur }: Props) {
+  const [soegning, setSoegning] = useState('');
+  const [visning, setVisning] = useState<'Kort' | 'Liste'>('Kort');
   const ture = useLiveQuery(() => db.ture.orderBy('startdato').reverse().toArray());
   // Ture andre har delt med én. De ligger i deres egen tabel og kan ikke
   // redigeres, men de hører hjemme her — det er stadig ture man skal med på.
@@ -40,6 +45,9 @@ function TureListe({ fane, skift, aabnTur, aabnDeltTur, nyTur }: Props) {
 
   const egne = ture?.length ?? 0;
   const antalDelte = delte?.length ?? 0;
+  const matcher = (navn: string, sted: string) => matcherTur(navn, sted, soegning);
+  const visteTure = ture?.filter(t => matcher(t.navn, t.sted)) ?? [];
+  const visteDelte = delte?.filter(d => matcher(d.snapshot.navn, d.snapshot.sted)) ?? [];
 
   return (
     <Skal
@@ -50,32 +58,36 @@ function TureListe({ fane, skift, aabnTur, aabnDeltTur, nyTur }: Props) {
       handlinger={<Knap variant="primaer" onClick={nyTur}>+ Ny tur</Knap>}
       fab={nyTur}
     >
-      {egne === 0 && antalDelte === 0 && <TomListe>Ingen ture endnu. Din første historie starter her.</TomListe>}
+      {egne === 0 && antalDelte === 0 && <TomListe handling="Planlæg din første tur" onClick={nyTur}>Ingen ture endnu. Din første historie starter her.</TomListe>}
+      {egne + antalDelte > 0 && <input type="search" aria-label="Søg ture" placeholder="Find en tur eller et sted…" value={soegning} onChange={e => setSoegning(e.target.value)} style={{ width: '100%', marginBottom: '24px' }} />}
+      {soegning && visteTure.length + visteDelte.length === 0 && <TomListe handling="Ryd søgning" onClick={() => setSoegning('')}>Ingen ture matcher “{soegning}”. Prøv et andet navn eller sted.</TomListe>}
 
-      {ture?.map((t) => (
-        <ListeRaekke
+      {egne + antalDelte > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
+        <span style={{ color: 'var(--tekst-dæmpet)', fontSize: 'var(--skrift-detalje)' }}>{soegning ? `${visteTure.length + visteDelte.length} af ${egne + antalDelte} ture` : 'Dine ture'}</span>
+        <Segment vaerdier={['Kort', 'Liste'] as const} valgt={visning} vaelg={setVisning} />
+      </div>}
+      <div className={`trip-grid${visning === 'Liste' ? ' is-compact' : ''}`}>
+      {visteTure.map((t) => (
+        <button
+          className="trip-card"
           key={t.uid}
           onClick={() => t.id !== undefined && aabnTur(t.id)}
-          foran={<Forsidebillede tur={t} billeder={billeder} />}
-          titel={
-            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {t.navn}
-              <Badge niveau={FASE_NIVEAU[faseAf(t)]}>{FASENAVN[faseAf(t)]}</Badge>
-            </span>
-          }
-          detalje={
-            <>
-              {t.sted || 'Intet sted'} · {t.startdato}
-              {t.personer > 1 && ` · ${t.personer} personer`}
-            </>
-          }
-        />
+        >
+          <Forsidebillede tur={t} billeder={billeder} />
+          <span className="trip-card-body">
+            <Badge niveau={FASE_NIVEAU[faseAf(t)]}>{FASENAVN[faseAf(t)]}</Badge>
+            <span className="trip-card-title">{t.navn || 'Din næste tur'}</span>
+            <span className="trip-card-meta">{t.sted || 'Sted ikke valgt'} · {formatterPeriode(t.startdato, t.slutdato) || 'Dato ikke valgt'}</span>
+            <span className="trip-card-meta">{t.personer} {t.personer === 1 ? 'person' : 'personer'} · {t.naetter} {t.naetter === 1 ? 'nat' : 'nætter'}</span>
+          </span>
+        </button>
       ))}
+      </div>
 
-      {antalDelte > 0 && (
+      {visteDelte.length > 0 && (
         <div style={{ marginTop: egne > 0 ? '26px' : '4px' }}>
           <SektionsTitel>Delt med dig</SektionsTitel>
-          {delte?.map((d) => (
+          {visteDelte.map((d) => (
             <ListeRaekke
               key={d.token}
               onClick={() => d.id !== undefined && aabnDeltTur(d.id)}
@@ -108,14 +120,13 @@ function undertitel(egne: number, delte: number): string {
 // der ingenting — en tom pladsholder ville give listen en spalte af huller.
 function Forsidebillede({ tur, billeder }: { tur: Tur; billeder: Billede[] }) {
   const forside = hero(billeder, tur);
-  if (!forside) return null;
+  if (!forside) return <span className="trip-card-photo trip-card-fallback"><Ikon navn="kompas" size={42} /></span>;
 
   return (
-    <div style={{
-      width: '46px',
-      height: '46px',
+    <div className="trip-card-photo" style={{
+      width: '100%',
+      height: '180px',
       flexShrink: 0,
-      borderRadius: '7px',
       overflow: 'hidden',
       background: 'var(--bg-forhoejet)',
       border: '1px solid var(--border-svag)'

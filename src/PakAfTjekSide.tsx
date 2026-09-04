@@ -134,7 +134,7 @@ function PakAfTjekSide({ tur, tjek, pakItems, grupper, gem, tilbage }: Props) {
 
       <div style={{ display: 'grid', gap: '8px' }}>
         <div>
-          <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginBottom: '5px' }}>
+          <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginBottom: '5px' }}>
             Niveau
           </div>
           <Segment
@@ -144,13 +144,13 @@ function PakAfTjekSide({ tur, tjek, pakItems, grupper, gem, tilbage }: Props) {
             kompakt
           />
         </div>
-        <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', lineHeight: 1.5 }}>
+        <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', lineHeight: 1.5 }}>
           {grundig
             ? 'Grundigt: en note pr. item og en vurdering af mængden i hver kategori.'
             : 'Let: tre knapper pr. item. Alt står som brugt — ret kun det der ikke blev.'}
         </div>
         {tal.i_stykker > 0 && (
-          <div style={{ fontSize: '12px', color: 'var(--advarsel)' }}>
+          <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--advarsel)' }}>
             ⚠ {tal.i_stykker === 1 ? 'Én ting' : `${tal.i_stykker} ting`} gik i stykker — se på
             garantien.
           </div>
@@ -168,7 +168,7 @@ function PakAfTjekSide({ tur, tjek, pakItems, grupper, gem, tilbage }: Props) {
       }}>
         Pak-af-tjek
       </h1>
-      <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)' }}>
+      <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)' }}>
         {[tur.navn || 'Uden navn', formatterPeriode(tur.startdato, tur.slutdato)]
           .filter(Boolean)
           .join(' · ')}
@@ -260,9 +260,9 @@ function Itemraekke({ item, status, noter, grundig, saetStatus, saetNoter, saetV
       padding: '10px 12px',
       background: 'var(--bg-forhoejet)'
     }}>
-      <div style={{ fontSize: '13px', marginBottom: '8px' }}>
+      <div style={{ fontSize: 'var(--skrift-knap)', marginBottom: '8px' }}>
         {item.navn || 'Uden navn'}
-        <span style={{ color: 'var(--tekst-svag)', fontSize: '11px', marginLeft: '8px' }}>
+        <span style={{ color: 'var(--tekst-svag)', fontSize: 'var(--skrift-lille)', marginLeft: '8px' }}>
           {item.vaegt_g} g
         </span>
       </div>
@@ -318,7 +318,7 @@ function Kategorikort({ kategori, vurdering, noter, saet }: {
       display: 'grid',
       gap: '8px'
     }}>
-      <div style={{ fontSize: '13px' }}>{kategori}</div>
+      <div style={{ fontSize: 'var(--skrift-knap)' }}>{kategori}</div>
       <Segment
         vaerdier={KATEGORI_VURDERING}
         valgt={vurdering}

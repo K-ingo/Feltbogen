@@ -67,7 +67,7 @@ function MitGrej({ mig, faelles, gem, meldFra }: Props) {
   return (
     <div style={{ marginTop: '26px', paddingTop: '18px', borderTop: '1px solid var(--border-svag)' }}>
       <SektionsTitel>Mit grej</SektionsTitel>
-      <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', marginBottom: '14px', lineHeight: 1.55 }}>
+      <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)', marginBottom: '14px', lineHeight: 1.55 }}>
         Det du skriver her, kan de andre på turen se. Resten af turen er ejerens.
       </div>
 
@@ -100,7 +100,7 @@ function MitGrej({ mig, faelles, gem, meldFra }: Props) {
         {kladde.pb_id && (
           <Knap variant="tekst" onClick={() => void forlad()}>Fjern mig fra turen</Knap>
         )}
-        <span style={{ fontSize: '12px', color: tilstand === 'fejl' ? 'var(--fejl)' : 'var(--tekst-dæmpet)' }}>
+        <span style={{ fontSize: 'var(--skrift-detalje)', color: tilstand === 'fejl' ? 'var(--fejl)' : 'var(--tekst-dæmpet)' }}>
           {kvittering(tilstand)}
         </span>
       </div>
@@ -160,7 +160,7 @@ function VaelgMitGrej({ valgt, saet }: {
 
   if (!mine || mine.length === 0) {
     return (
-      <div style={{ fontSize: '12px', color: 'var(--tekst-svag)', lineHeight: 1.6 }}>
+      <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-svag)', lineHeight: 1.6 }}>
         Du har ikke noget gear i din Feltbog endnu. Læg det ind under Inventar,
         så kan du vælge det her.
       </div>
@@ -188,12 +188,12 @@ function VaelgMitGrej({ valgt, saet }: {
         value={soeg}
         onChange={(e) => setSoeg(e.target.value)}
         placeholder="Søg i dit gear"
-        style={{ width: '100%', fontSize: '14px', marginBottom: '8px' }}
+        style={{ width: '100%', fontSize: 'var(--skrift-brod)', marginBottom: '8px' }}
       />
 
       <div style={{ maxHeight: '300px', overflowY: 'auto', display: 'grid', gap: '2px' }}>
         {synlige.length === 0 && (
-          <div style={{ fontSize: '12px', color: 'var(--tekst-svag)' }}>
+          <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-svag)' }}>
             Intet gear passer på søgningen.
           </div>
         )}
@@ -202,7 +202,7 @@ function VaelgMitGrej({ valgt, saet }: {
             key={i.uid}
             style={{
               display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 2px',
-              borderBottom: '1px solid var(--border-svag)', fontSize: '13px', cursor: 'pointer'
+              borderBottom: '1px solid var(--border-svag)', fontSize: 'var(--skrift-knap)', cursor: 'pointer'
             }}
           >
             <input
@@ -211,12 +211,12 @@ function VaelgMitGrej({ valgt, saet }: {
               onChange={() => skift(i)}
             />
             <span style={{ flex: 1, minWidth: 0 }}>{i.navn}</span>
-            <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '12px' }}>{i.vaegt_g} g</span>
+            <span style={{ color: 'var(--tekst-dæmpet)', fontSize: 'var(--skrift-detalje)' }}>{i.vaegt_g} g</span>
           </label>
         ))}
       </div>
 
-      <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', marginTop: '8px' }}>
+      <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', marginTop: '8px' }}>
         {valgt.length === 0
           ? 'Ingenting valgt endnu.'
           : `${valgt.length} ${valgt.length === 1 ? 'ting' : 'ting'} · ${(valgt.reduce((s, g) => s + g.vaegt_g, 0) / 1000).toFixed(2)} kg`}
@@ -245,7 +245,7 @@ function Faellesgrej({ grej, valgt, saet }: {
               style={{
                 display: 'flex', alignItems: 'center', gap: '10px',
                 padding: '8px 4px', borderBottom: '1px solid var(--border-svag)',
-                fontSize: '13px', cursor: 'pointer'
+                fontSize: 'var(--skrift-knap)', cursor: 'pointer'
               }}
             >
               <input type="checkbox" checked={mit} onChange={() => skift(g.uid)} />
@@ -253,7 +253,7 @@ function Faellesgrej({ grej, valgt, saet }: {
               {/* Ejeren har måske allerede sat en på det. Det skal man kunne
                   se før man melder sig — ikke først bagefter. */}
               {g.baerer && !mit && <Chip storrelse="lille">{g.baerer}</Chip>}
-              <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '12px', whiteSpace: 'nowrap' }}>
+              <span style={{ color: 'var(--tekst-dæmpet)', fontSize: 'var(--skrift-detalje)', whiteSpace: 'nowrap' }}>
                 {g.vaegt_g} g
               </span>
             </label>

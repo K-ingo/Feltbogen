@@ -65,7 +65,7 @@ function AarsopgoerelseSide({ aar, vaelgAar, aabnFeltbog, tilbage, aabnTur, aabn
     <div style={layout.container}>
       <button
         onClick={tilbage}
-        style={{ background: 'transparent', border: 'none', fontSize: '14px', cursor: 'pointer', color: 'var(--tekst-dæmpet)', padding: '4px 0', marginBottom: '10px' }}
+        style={{ background: 'transparent', border: 'none', fontSize: 'var(--skrift-brod)', cursor: 'pointer', color: 'var(--tekst-dæmpet)', padding: '4px 0', marginBottom: '10px' }}
       >
         ‹ Tilbage
       </button>
@@ -83,7 +83,7 @@ function AarsopgoerelseSide({ aar, vaelgAar, aabnFeltbog, tilbage, aabnTur, aabn
       )}
 
       {tal.ture === 0 ? (
-        <div style={{ padding: '30px 0', color: 'var(--tekst-svag)', fontSize: '13px', lineHeight: 1.6 }}>
+        <div style={{ padding: '30px 0', color: 'var(--tekst-svag)', fontSize: 'var(--skrift-knap)', lineHeight: 1.6 }}>
           Der står ingen ture på {aar}. Kladder tælles ikke med — er der en tur
           der mangler, står den måske stadig som kladde.
         </div>
@@ -185,7 +185,7 @@ function AarsopgoerelseSide({ aar, vaelgAar, aabnFeltbog, tilbage, aabnTur, aabn
             </Knap>
           </div>
 
-          <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', lineHeight: 1.6, marginTop: '26px' }}>
+          <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', lineHeight: 1.6, marginTop: '26px' }}>
             Talt op over de {tal.ture} {tal.ture === 1 ? 'tur' : 'ture'} der står på {aar}.
             Kladder tælles ikke med. Nyt grej regnes efter købsdatoen, så gear
             uden dato lander ikke i det år det tilfældigvis blev skrevet ind.
@@ -264,8 +264,8 @@ function Stortal({ tal, enhed, under }: { tal: number; enhed: string; under?: st
       }}>
         {tal.toLocaleString('da-DK')}
       </div>
-      <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', marginTop: '3px' }}>{enhed}</div>
-      {under && <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', marginTop: '1px' }}>{under}</div>}
+      <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)', marginTop: '3px' }}>{enhed}</div>
+      {under && <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', marginTop: '1px' }}>{under}</div>}
     </div>
   );
 }
@@ -293,7 +293,7 @@ function Aarshjul({ maaneder }: { maaneder: number[] }) {
       </div>
       <div style={{ display: 'flex', gap: '3px', marginTop: '5px' }}>
         {MAANEDER.map((m, i) => (
-          <div key={i} style={{ flex: 1, textAlign: 'center', fontSize: '10px', color: 'var(--tekst-svag)' }}>
+          <div key={i} style={{ flex: 1, textAlign: 'center', fontSize: 'var(--skrift-mikro)', color: 'var(--tekst-svag)' }}>
             {m}
           </div>
         ))}
@@ -310,12 +310,12 @@ function Nedslag({ overskrift, tekst, fodnote, aabn }: {
 }) {
   const indhold = (
     <>
-      <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+      <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
         {overskrift}
       </div>
-      <div style={{ fontSize: '14px', marginTop: '3px', color: 'var(--tekst)' }}>{tekst}</div>
+      <div style={{ fontSize: 'var(--skrift-brod)', marginTop: '3px', color: 'var(--tekst)' }}>{tekst}</div>
       {fodnote && (
-        <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', marginTop: '2px' }}>{fodnote}</div>
+        <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', marginTop: '2px' }}>{fodnote}</div>
       )}
     </>
   );
@@ -353,13 +353,13 @@ function Andele({ ture }: { ture: Tur[] }) {
       <div style={{ display: 'grid', gap: '12px' }}>
         {raekker.map((r) => (
           <div key={r.navn}>
-            <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', marginBottom: '5px' }}>{r.navn}</div>
+            <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', marginBottom: '5px' }}>{r.navn}</div>
             <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
               {r.andele.map((a) => (
                 <span
                   key={a.vaerdi}
                   style={{
-                    fontSize: '12px',
+                    fontSize: 'var(--skrift-detalje)',
                     padding: '4px 10px',
                     borderRadius: '999px',
                     background: 'var(--accent-bg)',

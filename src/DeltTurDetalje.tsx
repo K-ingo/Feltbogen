@@ -131,7 +131,7 @@ function Kanikkebidrage({ loggetInd }: { loggetInd: boolean }) {
   return (
     <div style={{
       marginTop: '24px', paddingTop: '16px', borderTop: '1px solid var(--border-svag)',
-      fontSize: '12px', color: 'var(--tekst-dæmpet)', lineHeight: 1.6
+      fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)', lineHeight: 1.6
     }}>
       {loggetInd
         ? 'Turen blev gemt før man kunne skrive sig på. Tryk "Hent ejerens nyeste", så kommer feltet frem.'

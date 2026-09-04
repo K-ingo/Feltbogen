@@ -114,7 +114,7 @@ function BilledSektion({ tur, saetHero }: Props) {
           {arbejder > 0 ? `Behandler ${arbejder}...` : 'Tilføj billeder'}
         </Knap>
         {billeder.length > 0 && (
-          <span style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)' }}>
+          <span style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)' }}>
             {billeder.length} {billeder.length === 1 ? 'billede' : 'billeder'}
             {ikkeSendt > 0 && ` · ${ikkeSendt} venter på at blive sendt`}
           </span>
@@ -122,11 +122,11 @@ function BilledSektion({ tur, saetHero }: Props) {
       </div>
 
       {fejl && (
-        <div style={{ fontSize: '12px', color: 'var(--fejl)', marginBottom: '10px' }}>{fejl}</div>
+        <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--fejl)', marginBottom: '10px' }}>{fejl}</div>
       )}
 
       {billeder.length === 0 ? (
-        <div style={{ fontSize: '13px', color: 'var(--tekst-svag)', lineHeight: 1.6 }}>
+        <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-svag)', lineHeight: 1.6 }}>
           Gem et øjeblik fra turen. Billederne bliver liggende på enheden med det
           samme og sendt op når der er dækning — så du kan tage dem i skoven.
         </div>
@@ -179,7 +179,7 @@ const merke: React.CSSProperties = {
   position: 'absolute',
   top: '3px',
   right: '3px',
-  fontSize: '10px',
+  fontSize: 'var(--skrift-mikro)',
   lineHeight: 1,
   padding: '3px 4px',
   borderRadius: '4px',
@@ -244,7 +244,7 @@ export function Billedvisning({ billede, tilpas = 'cover' }: {
 
   if (!kilde) {
     return (
-      <span style={{ fontSize: '11px', color: 'var(--tekst-svag)' }}>Ikke hentet</span>
+      <span style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)' }}>Ikke hentet</span>
     );
   }
 
@@ -286,7 +286,7 @@ function Billedpanel({ billede, erHero, saetHero, fjern, luk }: {
         style={{ width: '100%', marginBottom: '8px' }}
       />
 
-      <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', marginBottom: '10px' }}>
+      <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', marginBottom: '10px' }}>
         {billede.bredde}×{billede.hoejde} · {filstoerrelse(billede.byte)}
         {!billede.url && ' · ikke sendt endnu'}
       </div>
@@ -314,7 +314,7 @@ export function Hentelinje({ billede }: { billede: Billede }) {
 
   if (!link) {
     return (
-      <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', marginBottom: '10px' }}>
+      <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', marginBottom: '10px' }}>
         {billede.original_blob
           ? 'Originalen er ikke sendt op endnu — den kan hentes når den er.'
           : 'Der er ingen original gemt for det her billede.'}
@@ -329,7 +329,7 @@ export function Hentelinje({ billede }: { billede: Billede }) {
       style={{
         display: 'inline-block',
         marginBottom: '10px',
-        fontSize: '12px',
+        fontSize: 'var(--skrift-detalje)',
         color: 'var(--accent)'
       }}
     >

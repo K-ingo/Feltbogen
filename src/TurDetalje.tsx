@@ -917,7 +917,7 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
   const pakAfSektion = pakAfTjek && (
     <Foldbar titel="Pak-af-tjek" resume={resumetekst(pakAfTjek)}>
       <div style={{ display: 'grid', gap: '10px' }}>
-        <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)' }}>
+        <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)' }}>
           {`Gjort op ${formatterDag(pakAfTjek.udfyldt_dato)} · niveau: ${pakAfTjek.niveau}`}
         </div>
         <Knap onClick={() => void aabnPakAfTjek()}>Åbn pak-af-tjek</Knap>
@@ -1429,7 +1429,7 @@ function Foldbar({ titel, resume, children, aabenFra, advarsel }: {
           justifyContent: 'space-between',
           alignItems: 'center',
           gap: '8px',
-          fontSize: '10px',
+          fontSize: 'var(--skrift-mikro)',
           fontWeight: 600,
           textTransform: 'uppercase',
           letterSpacing: '0.6px',
@@ -1437,11 +1437,11 @@ function Foldbar({ titel, resume, children, aabenFra, advarsel }: {
         }}
       >
         <span>{advarsel && '⚠ '}{titel}</span>
-        <span style={{ fontSize: '11px' }}>{aaben ? '▾' : '▸'}</span>
+        <span style={{ fontSize: 'var(--skrift-lille)' }}>{aaben ? '▾' : '▸'}</span>
       </button>
 
       {resume && (
-        <div style={{ padding: '0 14px 11px', fontSize: '13px', color: 'var(--tekst)', lineHeight: 1.4 }}>
+        <div style={{ padding: '0 14px 11px', fontSize: 'var(--skrift-knap)', color: 'var(--tekst)', lineHeight: 1.4 }}>
           {resume}
         </div>
       )}
@@ -1513,21 +1513,21 @@ function Turparametre({
             border: '1px solid var(--accent-border)'
           }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-              <span style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 500 }}>
+              <span style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--accent)', fontWeight: 500 }}>
                 {valgtSted.navn}
               </span>
-              <span style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)' }}>
+              <span style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)' }}>
                 {besoegstekst(besoeg.get(valgtSted.uid) ?? 0)}
               </span>
               <button
                 onClick={() => void frigoerSted()}
-                style={{ marginLeft: 'auto', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '11px', color: 'var(--tekst-svag)', textDecoration: 'underline' }}
+                style={{ marginLeft: 'auto', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', textDecoration: 'underline' }}
               >
                 frigør
               </button>
             </div>
             {valgtSted.noter && (
-              <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginTop: '4px', lineHeight: 1.5 }}>
+              <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginTop: '4px', lineHeight: 1.5 }}>
                 {valgtSted.noter}
               </div>
             )}
@@ -1535,7 +1535,7 @@ function Turparametre({
         ) : (
           tur.sted.trim() !== '' && (
             <div style={{ marginTop: '6px' }}>
-              <Knap onClick={() => void gemSomSted()} style={{ fontSize: '11px', padding: '4px 10px' }}>
+              <Knap onClick={() => void gemSomSted()} style={{ fontSize: 'var(--skrift-lille)', padding: '4px 10px' }}>
                 Gem som sted
               </Knap>
             </div>
@@ -1553,7 +1553,7 @@ function Turparametre({
                 background: 'transparent',
                 border: 'none',
                 padding: 0,
-                fontSize: '11px',
+                fontSize: 'var(--skrift-lille)',
                 cursor: 'pointer',
                 color: 'var(--accent)',
                 textDecoration: 'underline',
@@ -1575,7 +1575,7 @@ function Turparametre({
                 onClick={() => { void vaelgGemtSted(g); setViserAlleSteder(false); }}
                 style={{
                   padding: '5px 10px',
-                  fontSize: '11px',
+                  fontSize: 'var(--skrift-lille)',
                   background: 'var(--bg-forhoejet)',
                   color: 'var(--accent)',
                   border: '1px solid var(--accent-border)',
@@ -1609,8 +1609,8 @@ function Turparametre({
                   color: 'var(--tekst)'
                 }}
               >
-                <div style={{ fontSize: '13px', fontWeight: 500 }}>{f.navn}</div>
-                {f.detalje && <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)' }}>{f.detalje}</div>}
+                <div style={{ fontSize: 'var(--skrift-knap)', fontWeight: 500 }}>{f.navn}</div>
+                {f.detalje && <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)' }}>{f.detalje}</div>}
               </button>
             ))}
           </div>
@@ -1664,7 +1664,7 @@ function Turparametre({
 
 function Forbrugsforklaring({ label, begrundelse }: { label: string; begrundelse: string }) {
   return (
-    <div style={{ fontSize: '11px', color: 'var(--tekst-svag)' }}>
+    <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)' }}>
       {label}: <Hvorfor begrundelse={begrundelse} />
     </div>
   );
@@ -1702,7 +1702,7 @@ function Pakkeliste({
 }) {
   if (antal === 0) {
     return (
-      <div style={{ fontSize: '13px', color: 'var(--tekst-svag)', padding: '10px 0' }}>
+      <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-svag)', padding: '10px 0' }}>
         Ingen gear valgt endnu. Vælg en gruppe eller enkelte items under "Vælg gear".
       </div>
     );
@@ -1768,7 +1768,7 @@ function Pakkeliste({
               visBaerer={visning !== 'person'}
             />
           ))}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: '11px', color: 'var(--tekst-svag)', paddingTop: '5px' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', paddingTop: '5px' }}>
             {kg(samletVaegt(a.linjer))} kg
           </div>
         </div>
@@ -1836,7 +1836,7 @@ function Pakkeraekke({ linje, advarsler, visBaerer, pakket, veksl }: {
     gap: '8px',
     padding: '7px 0',
     borderBottom: '1px solid var(--border-svag)',
-    fontSize: '13px',
+    fontSize: 'var(--skrift-knap)',
     background: vaerst ? 'var(--advarsel-bg)' : 'transparent'
   };
 
@@ -1847,7 +1847,7 @@ function Pakkeraekke({ linje, advarsler, visBaerer, pakket, veksl }: {
   const Ramme = veksl ? 'label' : 'div';
 
   return (
-    <Ramme style={{ ...raekke, cursor: veksl ? 'pointer' : 'default' }}>
+    <Ramme className="packing-row" style={{ ...raekke, cursor: veksl ? 'pointer' : 'default' }}>
       {/* Pladsen holdes også når der ikke er noget at krydse af, så
           navnene står på linje ned gennem listen. */}
       {veksl ? (
@@ -1858,14 +1858,13 @@ function Pakkeraekke({ linje, advarsler, visBaerer, pakket, veksl }: {
           style={{ width: 'auto', flexShrink: 0 }}
         />
       ) : (
-        <span style={{ width: '13px', flexShrink: 0 }} />
+        <span style={{ width: '22px', flexShrink: 0 }} />
       )}
 
       <span style={{
         flex: 1,
         minWidth: 0,
-        color: pakket ? 'var(--tekst-svag)' : 'var(--tekst)',
-        textDecoration: pakket ? 'line-through' : 'none'
+        color: 'var(--tekst)'
       }}>
         {linje.navn || 'Uden navn'}
       </span>
@@ -1879,10 +1878,10 @@ function Pakkeraekke({ linje, advarsler, visBaerer, pakket, veksl }: {
       )}
 
       {visBaerer && linje.baerer && (
-        <span style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)' }}>{linje.baerer}</span>
+        <span style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)' }}>{linje.baerer}</span>
       )}
-      {linje.delt && !linje.baerer && <span style={{ fontSize: '10px', color: 'var(--tekst-svag)' }}>delt</span>}
-      <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '12px', minWidth: '52px', textAlign: 'right' }}>
+      {linje.delt && !linje.baerer && <span style={{ fontSize: 'var(--skrift-mikro)', color: 'var(--tekst-svag)' }}>delt</span>}
+      <span style={{ color: 'var(--tekst-dæmpet)', fontSize: 'var(--skrift-detalje)', minWidth: '52px', textAlign: 'right' }}>
         {linje.vaegt_g} g
       </span>
     </Ramme>
@@ -1902,10 +1901,10 @@ function Advarselsliste({ advarsler }: { advarsler: Advarsel[] }) {
     <div style={{ display: 'grid', gap: '8px' }}>
       {advarsler.map((a, i) => (
         <div key={i}>
-          <div style={{ fontSize: '12px', fontWeight: 500, color: a.niveau === 'roed' ? 'var(--fejl)' : 'var(--advarsel)' }}>
+          <div style={{ fontSize: 'var(--skrift-detalje)', fontWeight: 500, color: a.niveau === 'roed' ? 'var(--fejl)' : 'var(--advarsel)' }}>
             {a.besked}
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginTop: '1px' }}>
+          <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginTop: '1px' }}>
             {a.detalje} <Hvorfor begrundelse={a.begrundelse} />
           </div>
         </div>
@@ -1929,19 +1928,19 @@ function Vaegt({ prPerson, delt, personligt, personer, baaret }: {
     <Infokort label="Vægt" fremhaevet>
       <div style={{ fontSize: '22px', fontWeight: 500, fontFamily: "'Fraunces', Georgia, serif" }}>
         {kg(prPerson)} kg
-        {personer > 1 && <span style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)' }}> / pers</span>}
+        {personer > 1 && <span style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-dæmpet)' }}> / pers</span>}
       </div>
-      <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginTop: '3px' }}>
+      <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginTop: '3px' }}>
         {erFordelt ? 'I gennemsnit · ' : ''}Delt: {kg(delt)} kg · Personligt: {kg(personligt)} kg
       </div>
 
       {erFordelt && (
         <div style={{ marginTop: '10px', paddingTop: '9px', borderTop: '1px solid var(--accent-border)' }}>
-          <div style={{ fontSize: '10px', color: 'var(--tekst-dæmpet)', textTransform: 'uppercase', letterSpacing: '0.6px', fontWeight: 600, marginBottom: '5px' }}>
+          <div style={{ fontSize: 'var(--skrift-mikro)', color: 'var(--tekst-dæmpet)', textTransform: 'uppercase', letterSpacing: '0.6px', fontWeight: 600, marginBottom: '5px' }}>
             Sådan er det fordelt
           </div>
           {baaret.map((b) => (
-            <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', fontSize: '12px', padding: '2px 0' }}>
+            <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', fontSize: 'var(--skrift-detalje)', padding: '2px 0' }}>
               <span>{b.navn}</span>
               <span style={{ color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>{kg(b.vaegt_g)} kg</span>
             </div>
@@ -1962,30 +1961,30 @@ function Vejrudsigt({ tur, data, hentes, fejl, hent }: {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
-        <Knap onClick={hent} disabled={hentes} variant="primaer" style={{ padding: '5px 12px', fontSize: '11px' }}>
+        <Knap onClick={hent} disabled={hentes} variant="primaer" style={{ padding: '5px 12px', fontSize: 'var(--skrift-lille)' }}>
           {hentes ? 'Henter...' : data ? 'Opdater' : 'Hent vejr'}
         </Knap>
       </div>
 
-      {fejl && <div style={{ fontSize: '12px', color: 'var(--fejl)', marginBottom: '8px' }}>{fejl}</div>}
+      {fejl && <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--fejl)', marginBottom: '8px' }}>{fejl}</div>}
 
       {data ? (
         <>
-          <div style={{ display: 'grid', gap: '4px', fontSize: '13px' }}>
+          <div style={{ display: 'grid', gap: '4px', fontSize: 'var(--skrift-knap)' }}>
             {data.dage.map((d) => (
               <div key={d.dato} style={{ display: 'grid', gridTemplateColumns: '54px 22px minmax(0, 1fr) auto auto', gap: '8px', alignItems: 'center', padding: '3px 0' }}>
-                <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '11px' }}>{formatterDag(d.dato)}</span>
+                <span style={{ color: 'var(--tekst-dæmpet)', fontSize: 'var(--skrift-lille)' }}>{formatterDag(d.dato)}</span>
                 <span style={{ fontSize: '15px' }}>{vejrIkonKode(d.vejrkode)}</span>
                 <span>{d.temp_min}–{d.temp_max}°C</span>
-                <span style={{ color: 'var(--tekst-svag)', fontSize: '11px' }}>{d.vind_ms} m/s</span>
-                <span style={{ color: d.nedboer_mm > 0 ? 'var(--advarsel)' : 'var(--tekst-svag)', fontSize: '11px', minWidth: '38px', textAlign: 'right' }}>
+                <span style={{ color: 'var(--tekst-svag)', fontSize: 'var(--skrift-lille)' }}>{d.vind_ms} m/s</span>
+                <span style={{ color: d.nedboer_mm > 0 ? 'var(--advarsel)' : 'var(--tekst-svag)', fontSize: 'var(--skrift-lille)', minWidth: '38px', textAlign: 'right' }}>
                   {d.nedboer_mm > 0 ? `${d.nedboer_mm} mm` : '—'}
                 </span>
               </div>
             ))}
           </div>
           {data.dage[0] && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--tekst-dæmpet)', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--border-svag)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--border-svag)' }}>
               <span>Sol op {data.dage[0].sol_op}</span>
               <span>Sol ned {data.dage[0].sol_ned}</span>
             </div>
@@ -1996,13 +1995,13 @@ function Vejrudsigt({ tur, data, hentes, fejl, hent }: {
           {data.observationer.length > 0 && (
             <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid var(--border-svag)' }}>
               {data.observationer.map((obs, i) => (
-                <div key={i} style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginBottom: '3px' }}>· {obs}</div>
+                <div key={i} style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginBottom: '3px' }}>· {obs}</div>
               ))}
             </div>
           )}
         </>
       ) : !fejl && (
-        <div style={{ fontSize: '12px', color: 'var(--tekst-svag)' }}>Angiv koordinater og datoer, klik "Hent vejr".</div>
+        <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-svag)' }}>Angiv koordinater og datoer, klik "Hent vejr".</div>
       )}
     </div>
   );
@@ -2021,7 +2020,7 @@ function Deltagere({ deltagere, turensOvernatning, personer, ture, tilfoejPerson
   return (
     <div>
       {deltagere.length === 0 ? (
-        <div style={{ fontSize: '13px', color: 'var(--tekst-svag)', marginBottom: '12px' }}>
+        <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-svag)', marginBottom: '12px' }}>
           Kun dig selv indtil videre.
         </div>
       ) : (
@@ -2031,19 +2030,19 @@ function Deltagere({ deltagere, turensOvernatning, personer, ture, tilfoejPerson
               key={d.id}
               style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 0', borderBottom: '1px solid var(--border-svag)' }}
             >
-              <span style={{ flex: 1, minWidth: 0, fontSize: '13px' }}>
+              <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--skrift-knap)' }}>
                 {d.navn}
                 {/* Prikken viser at deltageren er den samme person som på de
                     andre ture — ikke bare et navn der ligner. */}
                 {d.person_uid && (
-                  <span title="Knyttet til en person" style={{ color: 'var(--accent)', marginLeft: '6px', fontSize: '10px' }}>●</span>
+                  <span title="Knyttet til en person" style={{ color: 'var(--accent)', marginLeft: '6px', fontSize: 'var(--skrift-mikro)' }}>●</span>
                 )}
               </span>
 
               <select
                 value={d.overnatning ?? ''}
                 onChange={(e) => saetOvernatning(d.id, (e.target.value || null) as Overnatning | null)}
-                style={{ padding: '4px 6px', fontSize: '11px', textTransform: 'capitalize', width: 'auto' }}
+                style={{ padding: '4px 6px', fontSize: 'var(--skrift-lille)', textTransform: 'capitalize', width: 'auto' }}
               >
                 <option value="">som turen ({etiket(turensOvernatning)})</option>
                 {OVERNATNING.map((o) => <option key={o} value={o}>{etiket(o)}</option>)}
@@ -2099,7 +2098,7 @@ function Deltagervaelger({ personer, ture, alleredePaaTuren, vaelgPerson, vaelgN
           onChange={(e) => setTekst(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') void tilfoej(); }}
           placeholder="Navn på deltager"
-          style={{ flex: 1, minWidth: 0, fontSize: '13px' }}
+          style={{ flex: 1, minWidth: 0, fontSize: 'var(--skrift-knap)' }}
         />
         <Knap onClick={() => void tilfoej()} disabled={!tekst.trim()}>+ Tilføj</Knap>
       </div>
@@ -2112,7 +2111,7 @@ function Deltagervaelger({ personer, ture, alleredePaaTuren, vaelgPerson, vaelgN
               onClick={() => { void vaelgPerson(p); setTekst(''); }}
               style={{
                 padding: '5px 10px',
-                fontSize: '11px',
+                fontSize: 'var(--skrift-lille)',
                 background: 'var(--bg-forhoejet)',
                 color: 'var(--accent)',
                 border: '1px solid var(--accent-border)',
@@ -2148,22 +2147,22 @@ function Budget({ linjer, tilfoej, opdater, fjern }: {
   return (
     <div>
       {linjer.length === 0 && (
-        <div style={{ fontSize: '13px', color: 'var(--tekst-svag)', marginBottom: '12px' }}>
+        <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-svag)', marginBottom: '12px' }}>
           Ingen budget-linjer endnu.
         </div>
       )}
       {linjer.map((l) => (
         <div key={l.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--border-svag)', display: 'grid', gap: '6px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '6px' }}>
-            <select value={l.kategori} onChange={(e) => opdater(l.id, { kategori: e.target.value })} style={{ padding: '6px', fontSize: '12px', textTransform: 'capitalize' }}>
+            <select value={l.kategori} onChange={(e) => opdater(l.id, { kategori: e.target.value })} style={{ padding: '6px', fontSize: 'var(--skrift-detalje)', textTransform: 'capitalize' }}>
               {BUDGET_KATEGORIER.map((k) => <option key={k} value={k}>{k}</option>)}
             </select>
-            <input placeholder="Beskrivelse" value={l.beskrivelse} onChange={(e) => opdater(l.id, { beskrivelse: e.target.value })} style={{ padding: '6px', fontSize: '12px', minWidth: 0 }} />
+            <input placeholder="Beskrivelse" value={l.beskrivelse} onChange={(e) => opdater(l.id, { beskrivelse: e.target.value })} style={{ padding: '6px', fontSize: 'var(--skrift-detalje)', minWidth: 0 }} />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) auto', gap: '6px', alignItems: 'center' }}>
-            <Talinput placeholder="Forventet" value={l.forventet_kr} onChange={(v) => opdater(l.id, { forventet_kr: Number(v) || 0 })} style={{ padding: '6px', fontSize: '12px', minWidth: 0 }} />
-            <Talinput placeholder="Faktisk" value={l.faktisk_kr} onChange={(v) => opdater(l.id, { faktisk_kr: Number(v) || 0 })} style={{ padding: '6px', fontSize: '12px', minWidth: 0 }} />
-            <button onClick={() => fjern(l.id)} style={{ background: 'transparent', border: 'none', color: 'var(--fejl)', cursor: 'pointer', fontSize: '14px', padding: '0 6px' }}>
+            <Talinput placeholder="Forventet" value={l.forventet_kr} onChange={(v) => opdater(l.id, { forventet_kr: Number(v) || 0 })} style={{ padding: '6px', fontSize: 'var(--skrift-detalje)', minWidth: 0 }} />
+            <Talinput placeholder="Faktisk" value={l.faktisk_kr} onChange={(v) => opdater(l.id, { faktisk_kr: Number(v) || 0 })} style={{ padding: '6px', fontSize: 'var(--skrift-detalje)', minWidth: 0 }} />
+            <button onClick={() => fjern(l.id)} style={{ background: 'transparent', border: 'none', color: 'var(--fejl)', cursor: 'pointer', fontSize: 'var(--skrift-brod)', padding: '0 6px' }}>
               ×
             </button>
           </div>
@@ -2196,7 +2195,7 @@ function Indholdsvalg({ grupper, items, tur, paaTuren, gruppeForslag, savnedeTag
               <button
                 key={f.gruppe.uid}
                 onClick={() => toggleGruppe(f.gruppe.uid)}
-                style={{ padding: '5px 12px', fontSize: '12px', background: 'var(--bg-forhoejet)', color: 'var(--accent)', border: '1px solid var(--accent-border)', borderRadius: '14px', cursor: 'pointer', fontWeight: 500 }}
+                style={{ padding: '5px 12px', fontSize: 'var(--skrift-detalje)', background: 'var(--bg-forhoejet)', color: 'var(--accent)', border: '1px solid var(--accent-border)', borderRadius: '14px', cursor: 'pointer', fontWeight: 500 }}
               >
                 + {f.gruppe.navn}
               </button>
@@ -2216,7 +2215,7 @@ function Indholdsvalg({ grupper, items, tur, paaTuren, gruppeForslag, savnedeTag
           marginBottom: '16px',
           borderRadius: '8px',
           border: '1px dashed var(--border)',
-          fontSize: '11px',
+          fontSize: 'var(--skrift-lille)',
           color: 'var(--tekst-dæmpet)',
           lineHeight: 1.55
         }}>
@@ -2231,7 +2230,7 @@ function Indholdsvalg({ grupper, items, tur, paaTuren, gruppeForslag, savnedeTag
 
       <SektionsTitel>Grupper</SektionsTitel>
       {grupper.length === 0 && (
-        <div style={{ fontSize: '13px', color: 'var(--tekst-svag)', padding: '4px 0' }}>Ingen grupper endnu.</div>
+        <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-svag)', padding: '4px 0' }}>Ingen grupper endnu.</div>
       )}
       {grupper.map((g) => {
         const gItems = items.filter((i) => g.item_ids.includes(i.uid));
@@ -2305,14 +2304,14 @@ function Fordeling({ deltagere, pakItems, baerer, vaegte, toggle, forslag, navn,
               borderRadius: '8px',
               cursor: 'pointer',
               textAlign: 'left',
-              fontSize: '13px',
+              fontSize: 'var(--skrift-knap)',
               border: `1px solid ${v.id === aktiv ? 'var(--accent-border)' : 'transparent'}`,
               background: v.id === aktiv ? 'var(--accent-bg)' : 'transparent',
               color: 'var(--tekst)'
             }}
           >
             <span style={{ fontWeight: v.id === aktiv ? 600 : 400 }}>{v.navn}</span>
-            <span style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>
               {v.antal === 0 ? 'intet endnu' : `${v.antal} ting · ${kg(v.vaegt_g)} kg`}
             </span>
           </button>
@@ -2350,11 +2349,11 @@ function Fordeling({ deltagere, pakItems, baerer, vaegte, toggle, forslag, navn,
                   onChange={() => toggle(aktiv, item)}
                   style={{ width: 'auto' }}
                 />
-                <span style={{ flex: 1, minWidth: 0, fontSize: '13px' }}>
+                <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--skrift-knap)' }}>
                   {item.navn || 'Uden navn'}
-                  {item.delt && <span style={{ fontSize: '10px', color: 'var(--tekst-svag)', marginLeft: '6px' }}>delt</span>}
+                  {item.delt && <span style={{ fontSize: 'var(--skrift-mikro)', color: 'var(--tekst-svag)', marginLeft: '6px' }}>delt</span>}
                 </span>
-                <span style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>
                   {hosAnden ? `hos ${hosNavn}` : `${item.vaegt_g} g`}
                 </span>
               </label>
@@ -2397,10 +2396,10 @@ function Deltagernoter({ bidrag }: { bidrag: Deltagelse[] }) {
             border: '1px solid var(--border-svag)',
             background: 'var(--bg-forhoejet)'
           }}>
-            <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginBottom: '4px' }}>
+            <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginBottom: '4px' }}>
               {i.navn} · {tidstekst(i.tid)}
             </div>
-            <div style={{ fontSize: '13px', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>{i.tekst}</div>
+            <div style={{ fontSize: 'var(--skrift-knap)', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>{i.tekst}</div>
           </div>
         ))}
       </div>
@@ -2460,7 +2459,7 @@ function Fordelingskort({ forslag, navn, fordel }: {
       marginBottom: 'var(--plads-3)'
     }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--plads-2)', flexWrap: 'wrap' }}>
-        <strong style={{ fontSize: '13px' }}>Fordel det fælles grej jævnt</strong>
+        <strong style={{ fontSize: 'var(--skrift-knap)' }}>Fordel det fælles grej jævnt</strong>
         <Hvorfor begrundelse={forslag.begrundelse} />
       </div>
 
@@ -2468,7 +2467,7 @@ function Fordelingskort({ forslag, navn, fordel }: {
         {forslag.linjer.map((l) => {
           const aendring = l.efter_g - l.foer_g;
           return (
-            <div key={l.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', fontSize: '12px' }}>
+            <div key={l.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', fontSize: 'var(--skrift-detalje)' }}>
               <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.navn}</span>
               <span style={{ color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>
                 {kg(l.foer_g)} → {kg(l.efter_g)} kg
@@ -2483,7 +2482,7 @@ function Fordelingskort({ forslag, navn, fordel }: {
         })}
       </div>
 
-      <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginBottom: '10px', lineHeight: 1.5 }}>
+      <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginBottom: '10px', lineHeight: 1.5 }}>
         {forslag.flytninger.map((f) => (
           <div key={f.item.uid}>
             {f.item.navn || 'Uden navn'}: {navn(f.fra)} → {navn(f.til)}
@@ -2528,7 +2527,7 @@ function Deling({ token, snapshot, deltagelser, gearnavne, del, stop }: {
   if (!token) {
     return (
       <div>
-        <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', lineHeight: 1.55, marginBottom: '12px' }}>
+        <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-dæmpet)', lineHeight: 1.55, marginBottom: '12px' }}>
           Lav et link til dem der skal med. De skal logge ind for at åbne det,
           og så kan de skrive hvad de selv tager med, og hvad de bærer af det
           fælles. De ser turen, pakkelisten og din besked — ikke dit øvrige
@@ -2561,10 +2560,10 @@ function Deling({ token, snapshot, deltagelser, gearnavne, del, stop }: {
         readOnly
         value={link}
         onFocus={(e) => e.currentTarget.select()}
-        style={{ width: '100%', fontSize: '12px', marginBottom: '8px' }}
+        style={{ width: '100%', fontSize: 'var(--skrift-detalje)', marginBottom: '8px' }}
       />
 
-      <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', marginBottom: '10px' }}>
+      <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', marginBottom: '10px' }}>
         Gæsten lander på <strong style={{ fontWeight: 500 }}>{linkvaert()}</strong>
       </div>
 
@@ -2577,7 +2576,7 @@ function Deling({ token, snapshot, deltagelser, gearnavne, del, stop }: {
         <Knap variant="fare" onClick={stop}>Stop deling</Knap>
       </div>
 
-      <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', marginTop: '12px', lineHeight: 1.55 }}>
+      <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', marginTop: '12px', lineHeight: 1.55 }}>
         De andre ser turen som den er nu — den følger med af sig selv, når du
         retter noget. Sidst opdateret {delt}. Alle med linket og en konto kan
         se turen, indtil du stopper delingen.
@@ -2718,7 +2717,7 @@ function Ligesomsidst({ forslag, tur, grupper, items, kopier }: {
 }) {
   return (
     <Infokort label="Ligesom sidst" fremhaevet>
-      <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', lineHeight: 1.55, marginBottom: '10px' }}>
+      <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)', lineHeight: 1.55, marginBottom: '10px' }}>
         Turen ligner nogle du har været på før. Kopiér grejet, og ret bagefter.
       </div>
 
@@ -2729,16 +2728,16 @@ function Ligesomsidst({ forslag, tur, grupper, items, kopier }: {
           return (
             <div key={f.tur.uid}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <span style={{ flex: 1, minWidth: 0, fontSize: '13px' }}>
+                <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--skrift-knap)' }}>
                   {f.tur.navn || 'Uden navn'}
-                  <span style={{ color: 'var(--tekst-svag)', fontSize: '11px', marginLeft: '6px' }}>
+                  <span style={{ color: 'var(--tekst-svag)', fontSize: 'var(--skrift-lille)', marginLeft: '6px' }}>
                     matcher {f.score} af {f.maks}
                   </span>
                 </span>
                 <Knap
                   onClick={() => void kopier(f.tur)}
                   disabled={nye === 0}
-                  style={{ fontSize: '11px', padding: '4px 10px' }}
+                  style={{ fontSize: 'var(--skrift-lille)', padding: '4px 10px' }}
                 >
                   {nye === 0 ? 'Alt er med' : `Kopiér ${nye} stk.`}
                 </Knap>
@@ -2790,7 +2789,7 @@ function Turlog({ noter, tilfoej, saet, fjern }: {
       </div>
 
       {noter.length === 0 ? (
-        <div style={{ fontSize: '13px', color: 'var(--tekst-svag)', lineHeight: 1.5 }}>
+        <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-svag)', lineHeight: 1.5 }}>
           Ingen indgange endnu. Det behøver ikke være meget — "regn fra fire, tarp holdt"
           er nok til at kunne huske turen om et år.
         </div>
@@ -2810,13 +2809,13 @@ function Turlog({ noter, tilfoej, saet, fjern }: {
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '5px' }}>
-                    <span style={{ fontSize: '11px', color: 'var(--tekst-svag)' }}>
+                    <span style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)' }}>
                       {tidstekst(note.tid)}
                     </span>
                     <button
                       onClick={() => fjern(note.id)}
                       aria-label="Slet indgangen"
-                      style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: 'var(--fejl)', cursor: 'pointer', fontSize: '14px', padding: '0 2px' }}
+                      style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: 'var(--fejl)', cursor: 'pointer', fontSize: 'var(--skrift-brod)', padding: '0 2px' }}
                     >
                       ×
                     </button>
@@ -2829,7 +2828,7 @@ function Turlog({ noter, tilfoej, saet, fjern }: {
                     rows={Math.min(8, Math.max(2, note.tekst.split('\n').length))}
                     style={{
                       width: '100%',
-                      fontSize: '13px',
+                      fontSize: 'var(--skrift-knap)',
                       lineHeight: 1.55,
                       border: 'none',
                       background: 'transparent',
@@ -2902,7 +2901,7 @@ function Afgangstjekliste({ tjek, opret, gem }: {
   if (!tjek) {
     return (
       <div>
-        <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginBottom: '12px', lineHeight: 1.5 }}>
+        <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-dæmpet)', marginBottom: '12px', lineHeight: 1.5 }}>
           Nøgler, telefon opladet, besked til den derhjemme. Listen bygges på din skabelon
           fra indstillingerne, og du kan tilføje til den her.
         </div>
@@ -2937,7 +2936,7 @@ function Afgangstjekliste({ tjek, opret, gem }: {
               style={{
                 flex: 1,
                 minWidth: 0,
-                fontSize: '13px',
+                fontSize: 'var(--skrift-knap)',
                 border: 'none',
                 background: 'transparent',
                 padding: '2px 0',
@@ -2956,7 +2955,7 @@ function Afgangstjekliste({ tjek, opret, gem }: {
           onChange={(e) => setNyLinje(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') tilfoej(); }}
           placeholder="Tilføj et punkt"
-          style={{ flex: 1, minWidth: 0, fontSize: '13px' }}
+          style={{ flex: 1, minWidth: 0, fontSize: 'var(--skrift-knap)' }}
         />
         <Knap onClick={tilfoej} disabled={!nyLinje.trim()}>+ Tilføj</Knap>
       </div>
@@ -2984,7 +2983,7 @@ function Turkort({ tur, stednavn, opdater, lav, stop }: {
 
   return (
     <div style={{ display: 'grid', gap: '12px' }}>
-      <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', lineHeight: 1.55 }}>
+      <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)', lineHeight: 1.55 }}>
         Ét link til én person: hvor du er, hvornår du burde være hjemme, og hvad du selv
         skriver. Ikke live-position — modtageren ser det du delte, og at turen er slut når
         du markerer den afsluttet.
@@ -3012,7 +3011,7 @@ function Turkort({ tur, stednavn, opdater, lav, stop }: {
             background: 'var(--bg-forhoejet)',
             border: '1px solid var(--border-svag)',
             borderRadius: '8px',
-            fontSize: '11px',
+            fontSize: 'var(--skrift-lille)',
             wordBreak: 'break-all',
             color: 'var(--tekst-dæmpet)'
           }}>
@@ -3027,7 +3026,7 @@ function Turkort({ tur, stednavn, opdater, lav, stop }: {
             <Knap onClick={() => void lav()}>Opdatér kortet</Knap>
             <Knap variant="fare" onClick={() => void stop()}>Træk tilbage</Knap>
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--tekst-svag)' }}>
+          <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)' }}>
             Viser {stednavn || tur.sted || 'intet sted'} · hjemme {returtekst(tur.turkort_retur)}
           </div>
         </>
@@ -3037,7 +3036,7 @@ function Turkort({ tur, stednavn, opdater, lav, stop }: {
             Lav turkort
           </Knap>
           {!tur.turkort_retur && (
-            <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', marginTop: '6px' }}>
+            <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', marginTop: '6px' }}>
               Sæt et forventet hjemkomsttidspunkt først — det er den ene oplysning kortet
               er til for.
             </div>
@@ -3068,12 +3067,12 @@ function Meldtind({ deltagelser, gearnavne }: {
         {deltagelser.map((d) => <Chip key={d.pb_id ?? d.user}>{visningsnavn(d)}</Chip>)}
       </div>
 
-      <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', marginTop: '8px', lineHeight: 1.55 }}>
+      <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', marginTop: '8px', lineHeight: 1.55 }}>
         Det de tager med, står i pakkelisten sammen med dit eget.
       </div>
 
       {dobbelt.map(([uid, navne]) => (
-        <div key={uid} style={{ fontSize: '12px', color: 'var(--advarsel)', marginTop: '8px' }}>
+        <div key={uid} style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--advarsel)', marginTop: '8px' }}>
           {navne.join(' og ')} har begge meldt sig på {gearnavne.get(uid) ?? 'noget der er taget af listen'}.
         </div>
       ))}
@@ -3091,7 +3090,7 @@ function Linkfejl({ slags }: { slags: 'lokal' | 'preview' }) {
       borderRadius: '8px',
       background: 'var(--advarsel-bg)',
       border: '1px solid var(--advarsel-border)',
-      fontSize: '12px',
+      fontSize: 'var(--skrift-detalje)',
       color: 'var(--advarsel)',
       lineHeight: 1.55
     }}>
@@ -3135,8 +3134,8 @@ function Vaelgerraekke({ titel, detalje, valgt, laast, toggle }: {
     >
       <input type="checkbox" checked={valgt} disabled={laast} onChange={toggle} style={{ width: 'auto' }} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '13px', color: 'var(--tekst)' }}>{titel || 'Uden navn'}</div>
-        <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)' }}>{detalje}</div>
+        <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst)' }}>{titel || 'Uden navn'}</div>
+        <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)' }}>{detalje}</div>
       </div>
     </label>
   );
@@ -3146,7 +3145,7 @@ function Noegletal({ vaerdi, label }: { vaerdi: string; label: string }) {
   return (
     <div>
       <div style={{ fontSize: '18px', fontWeight: 500, fontFamily: "'Fraunces', Georgia, serif" }}>{vaerdi}</div>
-      <div style={{ fontSize: '10px', color: 'var(--tekst-dæmpet)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</div>
+      <div style={{ fontSize: 'var(--skrift-mikro)', color: 'var(--tekst-dæmpet)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</div>
     </div>
   );
 }
@@ -3223,7 +3222,7 @@ function Skumring({ tur }: { tur: Tur }) {
   if (!tider) return null;
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px', fontSize: '11px', color: 'var(--tekst-dæmpet)', marginTop: '4px' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px', fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginTop: '4px' }}>
       <span>{tider.daggry && `Lyst fra ${tider.daggry}`}</span>
       <span>{skumringstekst(tider)}</span>
     </div>
@@ -3243,7 +3242,7 @@ function Baaltjek({ dage }: { dage: VejrDag[] }) {
       marginTop: '10px',
       paddingTop: '10px',
       borderTop: '1px solid var(--border-svag)',
-      fontSize: '11px',
+      fontSize: 'var(--skrift-lille)',
       color: toert ? 'var(--advarsel)' : 'var(--tekst-dæmpet)',
       lineHeight: 1.5
     }}>
@@ -3271,7 +3270,7 @@ function Jagtboks({ tur }: { tur: Tur }) {
       background: 'var(--advarsel-bg)',
       border: '1px solid var(--advarsel-border)',
       borderRadius: '10px',
-      fontSize: '12px',
+      fontSize: 'var(--skrift-detalje)',
       color: 'var(--advarsel)',
       lineHeight: 1.5
     }}>
@@ -3314,7 +3313,7 @@ function Bookingfelter({ booking, gem }: {
 
   return (
     <div style={{ display: 'grid', gap: '12px' }}>
-      <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', cursor: 'pointer' }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: 'var(--skrift-knap)', cursor: 'pointer' }}>
         <input
           type="checkbox"
           checked={nu.booket}
@@ -3338,7 +3337,7 @@ function Bookingfelter({ booking, gem }: {
       />
 
       {nu.link.trim() && (
-        <a href={nu.link} target="_blank" rel="noreferrer" style={{ fontSize: '12px', color: 'var(--accent)' }}>
+        <a href={nu.link} target="_blank" rel="noreferrer" style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--accent)' }}>
           Åbn bookingen
         </a>
       )}

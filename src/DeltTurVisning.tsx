@@ -163,7 +163,7 @@ function DeltTurVisning({
     <div style={{ display: 'grid', gap: '18px' }}>
       <div>
         <h1 style={{ fontSize: '26px', margin: '10px 0 4px' }}>{snapshot.navn || 'Uden navn'}</h1>
-        <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)' }}>
+        <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-dæmpet)' }}>
           {[
             formatterPeriode(snapshot.startdato, snapshot.slutdato),
             snapshot.sted,
@@ -176,7 +176,7 @@ function DeltTurVisning({
             href={`https://www.openstreetmap.org/?mlat=${k.lat}&mlon=${k.lng}#map=14/${k.lat}/${k.lng}`}
             target="_blank"
             rel="noreferrer noopener"
-            style={{ fontSize: '12px', color: 'var(--accent)', display: 'inline-block', marginTop: '7px' }}
+            style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--accent)', display: 'inline-block', marginTop: '7px' }}
           >
             Åbn stedet i kort ↗
           </a>
@@ -209,7 +209,7 @@ function DeltTurVisning({
               borderRadius: '10px',
               background: 'var(--accent-bg)',
               border: '1px solid var(--accent-border)',
-              fontSize: '13px',
+              fontSize: 'var(--skrift-knap)',
               lineHeight: 1.55,
               whiteSpace: 'pre-wrap'
             }}>
@@ -222,13 +222,13 @@ function DeltTurVisning({
 
           {snapshot.vejr && snapshot.vejr.dage.length > 0 && (
             <Infokort label="Vejrudsigt da turen blev delt">
-              <div style={{ display: 'grid', gap: '4px', fontSize: '13px' }}>
+              <div style={{ display: 'grid', gap: '4px', fontSize: 'var(--skrift-knap)' }}>
                 {snapshot.vejr.dage.map((d) => (
                   <div key={d.dato} style={{ display: 'grid', gridTemplateColumns: '54px 22px 1fr auto', gap: '8px', alignItems: 'center' }}>
-                    <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '11px' }}>{kortDag(d.dato)}</span>
+                    <span style={{ color: 'var(--tekst-dæmpet)', fontSize: 'var(--skrift-lille)' }}>{kortDag(d.dato)}</span>
                     <span style={{ fontSize: '15px' }}>{vejrIkonKode(d.vejrkode)}</span>
                     <span>{d.temp_min}–{d.temp_max}°C</span>
-                    <span style={{ fontSize: '11px', color: d.nedboer_mm > 0 ? 'var(--advarsel)' : 'var(--tekst-svag)' }}>
+                    <span style={{ fontSize: 'var(--skrift-lille)', color: d.nedboer_mm > 0 ? 'var(--advarsel)' : 'var(--tekst-svag)' }}>
                       {d.nedboer_mm > 0 ? `${d.nedboer_mm} mm` : '—'}
                     </span>
                   </div>
@@ -245,7 +245,7 @@ function DeltTurVisning({
             <div style={{ fontSize: '22px', fontFamily: "'Fraunces', Georgia, serif" }}>
               {((snapshot.vaegt_i_alt_g + medbragtVaegt) / 1000).toFixed(2)} kg
             </div>
-            <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginTop: '3px' }}>
+            <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginTop: '3px' }}>
               {[
                 `ejerens og deltagernes tilsammen${snapshot.personer > 1 ? `, ${snapshot.personer} af sted` : ''}`,
                 medbragtVaegt > 0 ? `heraf ${(medbragtVaegt / 1000).toFixed(2)} kg fra deltagerne` : null
@@ -257,7 +257,7 @@ function DeltTurVisning({
                 marginTop: '10px',
                 paddingTop: '10px',
                 borderTop: '1px solid var(--accent-border)',
-                fontSize: '13px'
+                fontSize: 'var(--skrift-knap)'
               }}>
                 {minVaegt > 0
                   ? <>Du bærer <strong>{(minVaegt / 1000).toFixed(2)} kg</strong></>
@@ -300,7 +300,7 @@ function DeltTurVisning({
             ) : (
               mineAfsnit.map((a) => (
                 <div key={a.titel} style={{ marginBottom: '14px' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', fontWeight: 600, marginBottom: '5px' }}>
+                  <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', fontWeight: 600, marginBottom: '5px' }}>
                     {gaestetitel(a.titel)}
                   </div>
                   {a.linjer.map((l, n) => {
@@ -313,7 +313,7 @@ function DeltTurVisning({
                       style={{
                         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                         gap: '10px', padding: '6px 0', borderBottom: '1px solid var(--border-svag)',
-                        fontSize: '13px', cursor: 'pointer'
+                        fontSize: 'var(--skrift-knap)', cursor: 'pointer'
                       }}
                     >
                       <span style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
@@ -331,19 +331,19 @@ function DeltTurVisning({
                           {l.navn || 'Uden navn'}
                         </span>
                       </span>
-                      <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                      <span style={{ color: 'var(--tekst-dæmpet)', fontSize: 'var(--skrift-detalje)', whiteSpace: 'nowrap' }}>
                         {/* Alt på listen er ens eget, så bæreren behøver ikke
                             stå ved hver linje. Men fælles grej er noget, andre
                             regner med, at man har med. */}
                         {l.delt && (
-                          <span style={{ fontSize: '10px', marginRight: '6px', color: 'var(--tekst-svag)' }}>fælles</span>
+                          <span style={{ fontSize: 'var(--skrift-mikro)', marginRight: '6px', color: 'var(--tekst-svag)' }}>fælles</span>
                         )}
                         {l.vaegt_g} g
                       </span>
                     </label>
                     );
                   })}
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: '11px', color: 'var(--tekst-svag)', paddingTop: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', paddingTop: '4px' }}>
                     {(samletVaegt(a.linjer) / 1000).toFixed(2)} kg
                   </div>
                 </div>
@@ -372,7 +372,7 @@ function DeltTurVisning({
       {foed}
 
       <div style={{ textAlign: 'center', paddingTop: '6px' }}>
-        <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', lineHeight: 1.6 }}>
+        <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', lineHeight: 1.6 }}>
           {opdater?.besked
             ?? `Et øjebliksbillede fra ${datoTekst(snapshot.delt_den)}. Turen kan være ændret siden.`}
         </div>
@@ -424,11 +424,11 @@ function Gruppen({ linjer, navne }: { linjer: Pakkelinje[]; navne: string[] }) {
           style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
             gap: '10px', padding: '8px 0', borderBottom: '1px solid var(--border-svag)',
-            fontSize: '13px'
+            fontSize: 'var(--skrift-knap)'
           }}
         >
           <span style={{ minWidth: 0 }}>{r.navn}</span>
-          <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '12px', whiteSpace: 'nowrap' }}>
+          <span style={{ color: 'var(--tekst-dæmpet)', fontSize: 'var(--skrift-detalje)', whiteSpace: 'nowrap' }}>
             {r.antal === 0
               ? 'intet endnu'
               : `${r.antal} ${r.antal === 1 ? 'ting' : 'ting'} · ${(r.vaegt / 1000).toFixed(2)} kg`}
@@ -443,7 +443,7 @@ function Gruppen({ linjer, navne }: { linjer: Pakkelinje[]; navne: string[] }) {
 // og de kræver hver sit — så de skal ikke sige det samme.
 function Tomliste({ linjer, kanMelde }: { linjer: number; kanMelde: boolean }) {
   return (
-    <div style={{ fontSize: '13px', color: 'var(--tekst-svag)', lineHeight: 1.6 }}>
+    <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-svag)', lineHeight: 1.6 }}>
       {linjer === 0
         ? 'Der er ikke valgt gear til turen endnu.'
         : kanMelde
@@ -462,7 +462,7 @@ function Helelisten({ afsnit }: { afsnit: Pakkeafsnit[] }) {
       <SektionsTitel>Alt grej på turen</SektionsTitel>
       {afsnit.map((a) => (
         <div key={a.titel} style={{ marginBottom: '14px' }}>
-          <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', fontWeight: 600, marginBottom: '5px' }}>
+          <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', fontWeight: 600, marginBottom: '5px' }}>
             {gaestetitel(a.titel)}
           </div>
           {a.linjer.map((l, n) => (
@@ -471,13 +471,13 @@ function Helelisten({ afsnit }: { afsnit: Pakkeafsnit[] }) {
               style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
                 gap: '10px', padding: '6px 0', borderBottom: '1px solid var(--border-svag)',
-                fontSize: '13px'
+                fontSize: 'var(--skrift-knap)'
               }}
             >
               <span style={{ minWidth: 0 }}>{l.navn || 'Uden navn'}</span>
-              <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '12px', whiteSpace: 'nowrap' }}>
+              <span style={{ color: 'var(--tekst-dæmpet)', fontSize: 'var(--skrift-detalje)', whiteSpace: 'nowrap' }}>
                 {l.delt && !l.baerer && (
-                  <span style={{ fontSize: '10px', marginRight: '6px', color: 'var(--advarsel)' }}>
+                  <span style={{ fontSize: 'var(--skrift-mikro)', marginRight: '6px', color: 'var(--advarsel)' }}>
                     ingen bærer
                   </span>
                 )}
@@ -485,7 +485,7 @@ function Helelisten({ afsnit }: { afsnit: Pakkeafsnit[] }) {
               </span>
             </div>
           ))}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: '11px', color: 'var(--tekst-svag)', paddingTop: '4px' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', paddingTop: '4px' }}>
             {(samletVaegt(a.linjer) / 1000).toFixed(2)} kg
           </div>
         </div>
@@ -580,7 +580,7 @@ function Journal({ dage, skriv }: {
               Tilføj billeder
             </Knap>
             {tilstand === 'fejl' && (
-              <span style={{ fontSize: '12px', color: 'var(--fejl)' }}>
+              <span style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--fejl)' }}>
                 Kunne ikke gemme. Prøv igen, når du har forbindelse.
               </span>
             )}
@@ -588,20 +588,20 @@ function Journal({ dage, skriv }: {
                 `billeder`-feltet mangler i PocketBase — se POCKETBASE.md. Uden
                 den her besked ville de forsvinde uden et ord. */}
             {tilstand === 'kun_tekst' && (
-              <span style={{ fontSize: '12px', color: 'var(--advarsel)' }}>
+              <span style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--advarsel)' }}>
                 Noten er gemt, men billederne kom ikke op. Sig til den, der ejer turen.
               </span>
             )}
           </div>
         </div>
       ) : (
-        <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', lineHeight: 1.6 }}>
+        <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)', lineHeight: 1.6 }}>
           Log ind for at skrive i turens journal.
         </div>
       )}
 
       {dage.length === 0 ? (
-        <div style={{ fontSize: '13px', color: 'var(--tekst-svag)', lineHeight: 1.6 }}>
+        <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-svag)', lineHeight: 1.6 }}>
           Der er ikke skrevet noget endnu. Det, I skriver her, bliver turens historie.
         </div>
       ) : (
@@ -618,10 +618,10 @@ function Journal({ dage, skriv }: {
                   border: `1px solid ${i.min ? 'var(--accent-border)' : 'var(--border-svag)'}`,
                   background: i.min ? 'var(--accent-bg)' : 'var(--bg-forhoejet)'
                 }}>
-                  <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginBottom: '4px' }}>
+                  <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginBottom: '4px' }}>
                     {i.navn}{i.min && ' · dig'} · {klokken(i.tid)}
                   </div>
-                  <div style={{ fontSize: '13px', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
+                  <div style={{ fontSize: 'var(--skrift-knap)', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
                     {i.tekst}
                   </div>
                   {i.billeder.length > 0 && (
@@ -671,7 +671,7 @@ function Ledigt({ items, vaegt, kanMelde }: { items: GaesteItem[]; vaegt: number
       borderRadius: '10px',
       background: 'var(--advarsel-bg)',
       border: '1px solid var(--advarsel)',
-      fontSize: '13px',
+      fontSize: 'var(--skrift-knap)',
       lineHeight: 1.55
     }}>
       <strong>
@@ -686,7 +686,7 @@ function Ledigt({ items, vaegt, kanMelde }: { items: GaesteItem[]; vaegt: number
           </Chip>
         ))}
       </div>
-      <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)' }}>
+      <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)' }}>
         {(vaegt / 1000).toFixed(2)} kg i alt.
         {kanMelde
           ? <> Under <strong>Mit grej</strong> nedenfor kan du melde dig til at bære noget af det.</>
@@ -724,7 +724,7 @@ function Gaestegalleri({ billeder, navn }: { billeder: GaesteBillede[]; navn: st
         }}
       />
       {forside.beskrivelse && (
-        <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', marginTop: '4px' }}>
+        <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)', marginTop: '4px' }}>
           {forside.beskrivelse}
         </div>
       )}

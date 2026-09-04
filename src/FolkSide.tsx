@@ -1,4 +1,4 @@
-import Personer from './Personer';
+import Personer from './Personer.tsx';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
 import { useLiveQuery } from 'dexie-react-hooks';

@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
+import { Ikon } from './Ikon';
 import type { ReactNode, CSSProperties } from 'react';
 import { TILTRONAVN } from './forslag';
 import type { Forslag } from './forslag';
@@ -34,7 +35,8 @@ function useTalvisning(vaerdi: string | number): [string, (v: string) => void] {
 }
 
 // Et bart talfelt, til de steder hvor der ikke er plads til en etiket.
-export function Talinput({ value, onChange, placeholder, style }: {
+export function Talinput({ value, onChange, placeholder, style, id }: {
+  id?: string;
   value: number;
   onChange: (v: string) => void;
   placeholder?: string;
@@ -44,6 +46,7 @@ export function Talinput({ value, onChange, placeholder, style }: {
 
   return (
     <input
+      id={id}
       type="number"
       inputMode="numeric"
       value={tekst}
@@ -74,14 +77,15 @@ const tilfoejelseStil: CSSProperties = {
 };
 
 interface LabelProps {
+  htmlFor?: string;
   children: ReactNode;
   hjaelp?: string;
   fejl?: string;
 }
 
-export function Label({ children, hjaelp, fejl }: LabelProps) {
+export function Label({ children, hjaelp, fejl, htmlFor }: LabelProps) {
   return (
-    <label style={labelStil}>
+    <label htmlFor={htmlFor} style={labelStil}>
       {children}
       {hjaelp && <span style={{ ...tilfoejelseStil, color: 'var(--tekst-svag)' }}>· {hjaelp}</span>}
       {fejl && <span style={{ ...tilfoejelseStil, color: 'var(--fejl)' }}>· {fejl}</span>}
@@ -126,6 +130,7 @@ export function Knap({ children, onClick, variant = 'sekundaer', disabled, style
   return (
     <button
       type={type}
+      className={`ui-button ui-button--${variant}`}
       onClick={onClick}
       disabled={disabled}
       style={{
@@ -162,6 +167,10 @@ interface KortProps {
 export function Kort({ children, onClick, style, fremhaevet }: KortProps) {
   return (
     <div
+      className={onClick ? 'ui-card is-clickable' : 'ui-card'}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onClick(); } } : undefined}
       onClick={onClick}
       style={{
         background: fremhaevet ? 'var(--bg-forhoejet)' : 'transparent',
@@ -188,11 +197,13 @@ interface FeltProps {
 }
 
 export function Felt({ label, value, onChange, type = 'text', placeholder, hjaelp, fejl }: FeltProps) {
+  const id = useId();
   return (
     <div>
-      <Label hjaelp={hjaelp} fejl={fejl}>{label}</Label>
+      <Label htmlFor={id} hjaelp={hjaelp} fejl={fejl}>{label}</Label>
       {type === 'number' ? (
         <Talinput
+          id={id}
           value={Number(value)}
           onChange={onChange}
           placeholder={placeholder}
@@ -200,6 +211,7 @@ export function Felt({ label, value, onChange, type = 'text', placeholder, hjael
         />
       ) : (
         <input
+          id={id}
           type={type}
           value={value}
           placeholder={placeholder}
@@ -220,10 +232,12 @@ interface TekstomraadeProps {
 }
 
 export function Tekstomraade({ label, value, onChange, raekker = 2, placeholder }: TekstomraadeProps) {
+  const id = useId();
   return (
     <div>
-      <Label>{label}</Label>
+      <Label htmlFor={id}>{label}</Label>
       <textarea
+        id={id}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         rows={raekker}
@@ -244,10 +258,12 @@ interface DropdownProps {
 }
 
 export function Dropdown({ label, value, onChange, options, formater }: DropdownProps) {
+  const id = useId();
   return (
     <div>
-      <Label>{label}</Label>
+      <Label htmlFor={id}>{label}</Label>
       <select
+        id={id}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         style={{ width: '100%', textTransform: 'capitalize' }}
@@ -277,6 +293,8 @@ export function Segment<T extends string>({ vaerdier, valgt, vaelg, formater, ko
         return (
           <button
             key={v}
+            aria-pressed={erAktiv}
+            className="ui-segment"
             onClick={() => vaelg(v)}
             style={{
               // Den kompakte er stadig et valg man skal kunne ramme — den
@@ -527,6 +545,10 @@ interface ListeRaekkeProps {
 export function ListeRaekke({ titel, detalje, onClick, foran, children }: ListeRaekkeProps) {
   return (
     <div
+      className={onClick ? 'list-row is-clickable' : 'list-row'}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onClick(); } } : undefined}
       onClick={onClick}
       style={{
         // En række i en liste er det man rammer allermest. Rørehøjden er
@@ -558,10 +580,12 @@ export function ListeRaekke({ titel, detalje, onClick, foran, children }: ListeR
 
 // Vises når en liste er tom — enten fordi der ikke er data, eller fordi
 // søgningen ikke gav noget.
-export function TomListe({ children }: { children: ReactNode }) {
+export function TomListe({ children, handling, onClick }: { children: ReactNode; handling?: string; onClick?: () => void }) {
   return (
-    <div style={{ padding: 'var(--plads-6) var(--plads-5)', textAlign: 'center', color: 'var(--tekst-svag)' }}>
-      {children}
+    <div className="empty-state">
+      <span className="empty-state-icon"><Ikon navn="kompas" size={28} /></span>
+      <div>{children}</div>
+      {handling && onClick && <Knap onClick={onClick}>{handling}</Knap>}
     </div>
   );
 }
@@ -579,6 +603,7 @@ interface FeltkortProps {
 // Et felt vist som kort med etiketten over værdien. Værdien er stadig et
 // input — hverdagsfelter redigeres inline, jf. fundamentets §13.
 export function Feltkort({ label, value, onChange, type = 'text', enhed, placeholder }: FeltkortProps) {
+  const id = useId();
   return (
     <div style={{
       border: '1px solid var(--border-svag)',
@@ -586,10 +611,11 @@ export function Feltkort({ label, value, onChange, type = 'text', enhed, placeho
       padding: '10px var(--plads-3)',
       background: 'var(--bg-forhoejet)'
     }}>
-      <div style={{ ...feltkortEtiket }}>{label}</div>
+      <label htmlFor={id} style={{ ...feltkortEtiket, display: 'block' }}>{label}</label>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px' }}>
         {type === 'number' ? (
           <Talinput
+            id={id}
             value={Number(value)}
             onChange={onChange}
             placeholder={placeholder}
@@ -597,6 +623,7 @@ export function Feltkort({ label, value, onChange, type = 'text', enhed, placeho
           />
         ) : (
           <input
+            id={id}
             type={type}
             value={value}
             placeholder={placeholder}
@@ -834,7 +861,7 @@ export function Hvorfor({ begrundelse }: { begrundelse: string }) {
 }
 
 export function Indlaeser() {
-  return <div style={{ padding: 'var(--plads-5)', color: 'var(--tekst-dæmpet)' }}>Indlæser...</div>;
+  return <div className="loading-state" role="status" aria-label="Indlæser"><span>Finder dit grej frem…</span><div className="skeleton" /><div className="skeleton" /><div className="skeleton" /></div>;
 }
 
 // ─────────────────────────────────────────────
@@ -939,6 +966,7 @@ export function Fanerakke<T extends string>({ blade, valgt, vaelg, tal = {} }: {
   return (
     <div
       role="tablist"
+      className="trip-tabs"
       style={{
         display: 'flex',
         flexWrap: 'wrap',
@@ -957,6 +985,15 @@ export function Fanerakke<T extends string>({ blade, valgt, vaelg, tal = {} }: {
             key={f.id}
             role="tab"
             aria-selected={erAktiv}
+            tabIndex={erAktiv ? 0 : -1}
+            onKeyDown={(e) => {
+              const i = blade.findIndex((b) => b.id === valgt);
+              const next = e.key === 'ArrowRight' ? (i + 1) % blade.length : e.key === 'ArrowLeft' ? (i - 1 + blade.length) % blade.length : e.key === 'Home' ? 0 : e.key === 'End' ? blade.length - 1 : -1;
+              if (next < 0) return;
+              e.preventDefault();
+              vaelg(blade[next].id);
+              (e.currentTarget.parentElement?.children[next] as HTMLElement)?.focus();
+            }}
             onClick={() => vaelg(f.id)}
             style={{
               // Skal kunne rammes med en handske på. Rørehøjden er 44 px på

@@ -1,10 +1,10 @@
 :root {
   color-scheme: light dark;
 
-  --accent: #5d6b3a;
+  --accent: #315c45;
   --accent-tekst: #f9f5eb;
-  --accent-bg: #eef0e0;
-  --accent-border: #b8c690;
+  --accent-bg: #e5eee6;
+  --accent-border: #a8bfad;
 
   --advarsel: #a06000;
   --advarsel-bg: #fff4e0;
@@ -16,14 +16,14 @@
 
   --succes: #4a7040;
 
-  --bg: #f5efe4;
-  --bg-forhoejet: #f9f5eb;
-  --bg-topbar: #ede4d1;
-  --tekst: #3d3527;
-  --tekst-dæmpet: #7a6f5c;
-  --tekst-svag: #a89a80;
-  --border: #d4c9b3;
-  --border-svag: #e4dbc7;
+  --bg: #f6f4ee;
+  --bg-forhoejet: #fffdf8;
+  --bg-topbar: #eeeee5;
+  --tekst: #24362c;
+  --tekst-dæmpet: #536055;
+  --tekst-svag: #646c60;
+  --border: #b9c3b7;
+  --border-svag: #dbe0d5;
   --input-bg: #ffffff;
   --skygge: rgba(60, 45, 20, 0.06);
   --overlay: rgba(0, 0, 0, 0.15);
@@ -51,20 +51,20 @@
 
   /* Runding. Små flader rundes mindre end kort, ellers ser de oppustede ud.
      Pillen er til chips og segmenter, hvor rundingen skal følge højden. */
-  --runding-lille: 8px;
-  --runding: 12px;
+  --runding-lille: 10px;
+  --runding: 16px;
   --runding-pille: 999px;
 
   /* Skriftstørrelser. Navngivet efter hvad de bruges til og ikke efter hvor
      store de er, så en ændring ét sted ikke kræver en omdøbning. */
-  --skrift-mikro: 10px;    /* versal-etiketter over et tal */
-  --skrift-lille: 11px;    /* hjælpetekst, chips */
-  --skrift-detalje: 12px;  /* detaljelinjen under en titel */
-  --skrift-knap: 13px;
-  --skrift-brod: 14px;
-  --skrift-felt: 16px;     /* se nedenfor */
-  --skrift-tal: 22px;      /* fremhævede tal, fx vægten */
-  --skrift-titel: 26px;
+  --skrift-mikro: .75rem;
+  --skrift-lille: .8125rem;
+  --skrift-detalje: .875rem;
+  --skrift-knap: .875rem;
+  --skrift-brod: 1rem;
+  --skrift-felt: 1rem;
+  --skrift-tal: 1.75rem;
+  --skrift-titel: 2rem;
 
   /* Fokusringen. Egen variabel og ikke bare accenten, fordi den skal kunne
      rettes uden at flytte alt det andet grønne med. */
@@ -88,7 +88,7 @@
      hvor sigtet er dårligere end ved et skrivebord, nogle gange med handske
      på. Med mus er 36 px rigeligt, og 44 ville bare gøre alting luftigt
      uden at hjælpe nogen. Derfor to værdier og ikke ét kompromis. */
-  --roerehoejde: 36px;
+  --roerehoejde: 44px;
 }
 
 @media (pointer: coarse) {
@@ -99,10 +99,10 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --accent: #7d8e50;
-    --accent-tekst: #16130f;
-    --accent-bg: #2a2f1e;
-    --accent-border: #3f4a26;
+    --accent: #b6d29f;
+    --accent-tekst: #18291f;
+    --accent-bg: #263b2f;
+    --accent-border: #50694f;
 
     --advarsel: #d99a3c;
     --advarsel-bg: #2a2015;
@@ -114,15 +114,15 @@
 
     --succes: #90a878;
 
-    --bg: #1f1c17;
-    --bg-forhoejet: #221e18;
-    --bg-topbar: #16130f;
-    --tekst: #ede4d1;
-    --tekst-dæmpet: #a3937a;
-    --tekst-svag: #7a6f5c;
-    --border: #3a3529;
-    --border-svag: #2d2822;
-    --input-bg: #16130f;
+    --bg: #15231c;
+    --bg-forhoejet: #1d2e24;
+    --bg-topbar: #101e17;
+    --tekst: #f1f2e8;
+    --tekst-dæmpet: #bfc9b9;
+    --tekst-svag: #a9b5a3;
+    --border: #526351;
+    --border-svag: #344638;
+    --input-bg: #132019;
     --skygge: rgba(0, 0, 0, 0.2);
     --overlay: rgba(0, 0, 0, 0.5);
   }
@@ -138,7 +138,7 @@ body {
   background: var(--bg);
   color: var(--tekst);
   font-family: 'Inter', system-ui, sans-serif;
-  font-size: 14px;
+  font-size: var(--skrift-brod);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -224,6 +224,87 @@ button {
 ::selection {
   background: var(--accent);
   color: var(--accent-tekst);
+}
+
+/* Shared product surfaces. Keep these semantic hooks instead of selecting inline styles. */
+.app-shell { --detail-padding: 0px; }
+.home-grid { min-width: 0; grid-template-columns: minmax(0, 1fr); }
+.home-grid > * { min-width: 0; }
+.trip-grid.is-compact { display: flex; flex-direction: column; gap: 12px; }
+.trip-grid.is-compact .trip-card { flex-direction: row; align-items: center; }
+.trip-grid.is-compact .trip-card-photo { width: 88px !important; height: 100% !important; min-height: 120px; flex-shrink: 0; align-self: stretch; }
+.trip-grid.is-compact .trip-card-title { font-family: inherit; font-size: 1rem; font-weight: 600; }
+.trip-grid.is-compact .trip-card-body { padding: 16px; }
+.trip-card-fallback { height: 80px !important; }
+.trip-tabs { overflow-y: hidden; padding-bottom: 2px; }
+.app-shell h1 { font-size: clamp(1.75rem, 2.5vw, 2.25rem); line-height: 1.2; }
+.app-shell h2, .app-shell h3 { line-height: 1.3; }
+.settings-grid > section { min-width: 0; overflow-wrap: anywhere; }
+.app-shell p, .list-row, .trip-card-title { overflow-wrap: anywhere; }
+.mobile-main { scrollbar-gutter: stable; }
+.nav-item { transition: background 140ms ease, color 140ms ease; }
+.nav-item svg { flex-shrink: 0; }
+.sidebar .nav-item { min-height: 48px !important; margin-bottom: 6px !important; }
+.bottom-nav .nav-item { min-height: 64px !important; }
+.ui-button { line-height: 1.35; }
+.ui-button--primaer { box-shadow: 0 2px 5px var(--skygge); font-weight: 600 !important; }
+button { min-height: var(--roerehoejde); touch-action: manipulation; }
+button:disabled { cursor: not-allowed; }
+.ui-button:active:not(:disabled), .trip-card:active, .nav-item:active { transform: translateY(1px); }
+.list-row { border-radius: 8px; transition: background 140ms ease; }
+.gear-name { padding: 0; text-align: left; font-weight: 600; }
+.gear-table { font-variant-numeric: tabular-nums; }
+.gear-table th { background: var(--bg-forhoejet); }
+.gear-table tbody tr { transition: background 140ms ease; }
+.gear-table td { vertical-align: middle; }
+.gear-table td:nth-child(3), .gear-table td:nth-child(4) { white-space: nowrap; }
+.empty-state { display: grid; justify-items: center; gap: 16px; padding: 36px 24px; margin: 16px 0; border: 1px dashed var(--border); border-radius: var(--runding); color: var(--tekst-dæmpet); background: var(--bg-forhoejet); }
+.empty-state > div { max-width: 42ch; }
+.empty-state-icon { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; color: var(--accent); background: var(--accent-bg); }
+.trip-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 24px; }
+.trip-card { display: flex; flex-direction: column; padding: 0; min-width: 0; overflow: hidden; text-align: left; border: 1px solid var(--border-svag); border-radius: var(--runding); background: var(--bg-forhoejet); box-shadow: 0 4px 12px var(--skygge); transition: box-shadow 160ms ease, border-color 160ms ease; }
+.trip-card-photo { display: block; position: relative; width: 100%; height: 180px; overflow: hidden; }
+.trip-card-fallback { display: grid; place-items: center; background: linear-gradient(135deg, var(--hero-top), var(--hero-bund)); color: var(--paa-billede); }
+.trip-card-body { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 20px; }
+.trip-card-title { font-family: 'Fraunces', Georgia, serif; font-size: 1.5rem; line-height: 1.25; }
+.trip-card-meta { font-size: var(--skrift-detalje); color: var(--tekst-dæmpet); }
+.home-next { display: flex; min-width: 0; border: 1px solid var(--border-svag); border-radius: 20px; background: var(--bg-forhoejet); overflow: hidden; }
+.home-next-content { flex: 1; padding: 16px; min-width: 0; }
+.home-next-content > div { background: transparent !important; border: 0 !important; }
+.home-next-image { position: relative; flex: 0 0 34%; min-height: 240px; }
+.home-care { padding: 16px; background: var(--bg-forhoejet); border: 1px solid var(--border-svag); border-radius: var(--runding); }
+.home-care summary { cursor: pointer; min-height: 44px; font-weight: 600; }
+.home-care summary span { display: inline-block; margin-left: 12px; font-weight: 400; color: var(--tekst-dæmpet); font-size: var(--skrift-detalje); }
+.home-care[open] summary { margin-bottom: 12px; }
+.packing-row { min-height: 56px; border-radius: 6px; padding: 10px 4px !important; column-gap: 10px !important; }
+input[type='checkbox'] { accent-color: var(--accent); width: 22px !important; height: 22px; min-height: 22px; padding: 0; margin: 0 4px 0 0; flex-shrink: 0; cursor: pointer; }
+input[type='checkbox']:checked { animation: check-in 160ms ease-out; }
+label:has(> input[type='checkbox']) { min-height: 48px; }
+.trip-tabs { overflow-x: auto; flex-wrap: nowrap !important; scrollbar-width: thin; padding-top: 4px; }
+.trip-tabs button { flex-shrink: 0; }
+.loading-state { display: grid; gap: 16px; padding: 24px; color: var(--tekst-dæmpet); }
+.skeleton { height: 56px; border-radius: var(--runding-lille); background: var(--border-svag); animation: breathe 1.3s ease-in-out infinite alternate; }
+@keyframes check-in { from { transform: scale(.85); } to { transform: scale(1); } }
+@keyframes breathe { from { opacity: .45; } to { opacity: .9; } }
+@media (hover: hover) {
+  .is-clickable:hover, .gear-table tbody tr:hover, .nav-item:hover { background: var(--accent-bg) !important; }
+  .ui-button:hover:not(:disabled) { filter: brightness(1.08); }
+  .trip-card:hover { border-color: var(--accent-border); box-shadow: 0 8px 24px var(--skygge); }
+}
+@media (max-width: 767px) {
+  .home-next { flex-direction: column; }
+  .home-next-image { flex: auto; min-height: 136px; max-height: 136px; }
+  .home-next-content { padding: 8px; }
+  .home-care summary span { display: block; margin: 4px 0 0; }
+  .trip-grid { gap: 16px; }
+  .trip-card-photo { height: 160px !important; }
+  .trip-card-fallback { height: 80px !important; }
+  .packing-row { flex-wrap: wrap; }
+  .packing-row > span:nth-child(2) { flex-basis: calc(100% - 42px) !important; }
+  .packing-row > span:last-child { margin-left: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
 
 /* Nedtællingen på fortryd-beskeden. Striben løber ud i takt med vinduet, så

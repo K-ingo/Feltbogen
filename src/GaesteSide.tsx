@@ -164,12 +164,12 @@ function Login({ token, tilLogin }: { token: string; tilLogin: () => void }) {
         <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '22px', marginBottom: '10px' }}>
           Du er inviteret med på en tur
         </div>
-        <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', lineHeight: 1.65, marginBottom: '20px' }}>
+        <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-dæmpet)', lineHeight: 1.65, marginBottom: '20px' }}>
           Log ind eller opret en konto for at se turen. Så kan du også skrive
           hvad du selv tager med, og sige hvad du bærer af det fælles grej.
         </div>
         <Knap variant="primaer" onClick={tilLogin}>Log ind eller opret konto</Knap>
-        <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', marginTop: '14px' }}>
+        <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', marginTop: '14px' }}>
           Linket bliver liggende — du lander på turen igen bagefter.
         </div>
         {/* Tokenet bliver stående i adresselinjen, så turen findes igen efter
@@ -192,20 +192,20 @@ function Gemfelt({ gemt, gem, tilAppen }: { gemt: boolean; gem: () => void; tilA
     }}>
       {gemt ? (
         <>
-          <div style={{ fontSize: '13px', marginBottom: '10px' }}>
+          <div style={{ fontSize: 'var(--skrift-knap)', marginBottom: '10px' }}>
             Turen ligger nu under <strong>Ture</strong> i din Feltbog.
           </div>
           <Knap variant="primaer" onClick={tilAppen}>Åbn den i appen</Knap>
         </>
       ) : (
         <>
-          <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginBottom: '10px', lineHeight: 1.55 }}>
+          <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-dæmpet)', marginBottom: '10px', lineHeight: 1.55 }}>
             Gem turen, så du kan finde den igen uden linket — også uden dækning.
           </div>
           <Knap variant="primaer" onClick={gem}>Gem turen hos mig</Knap>
         </>
       )}
-      <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', marginTop: '10px' }}>
+      <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', marginTop: '10px' }}>
         Du kan rette i dit eget grej, men ikke i resten af turen.
       </div>
     </div>
@@ -229,10 +229,10 @@ function Topbar({ tilAppen }: { tilAppen?: () => void }) {
         gap: '12px'
       }}>
         <div>
-          <div style={{ fontSize: '12px', fontWeight: 600, letterSpacing: '1.2px', textTransform: 'uppercase' }}>
+          <div style={{ fontSize: 'var(--skrift-detalje)', fontWeight: 600, letterSpacing: '1.2px', textTransform: 'uppercase' }}>
             Feltbogen
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--tekst-svag)' }}>Delt med dig</div>
+          <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)' }}>Delt med dig</div>
         </div>
         {tilAppen && (
           <button
@@ -240,7 +240,7 @@ function Topbar({ tilAppen }: { tilAppen?: () => void }) {
             style={{
               padding: '7px 13px',
               borderRadius: '8px',
-              fontSize: '12px',
+              fontSize: 'var(--skrift-detalje)',
               fontWeight: 500,
               cursor: 'pointer',
               background: 'transparent',
@@ -260,7 +260,7 @@ function Besked({ titel, tekst }: { titel: string; tekst: string }) {
   return (
     <div style={{ padding: '50px 10px', textAlign: 'center' }}>
       <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '20px', marginBottom: '8px' }}>{titel}</div>
-      <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', lineHeight: 1.6 }}>{tekst}</div>
+      <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-dæmpet)', lineHeight: 1.6 }}>{tekst}</div>
     </div>
   );
 }
