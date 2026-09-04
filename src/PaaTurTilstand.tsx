@@ -71,7 +71,7 @@ function PaaTurTilstand({ tur, vejr, skrivNote, luk }: Props) {
         padding: 'calc(18px + env(safe-area-inset-top)) 20px calc(28px + env(safe-area-inset-bottom))'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '26px' }}>
-          <span style={{ fontSize: '11px', letterSpacing: '1.4px', textTransform: 'uppercase', color: SVAG }}>
+          <span style={{ fontSize: 'var(--skrift-lille)', letterSpacing: '1.4px', textTransform: 'uppercase', color: SVAG }}>
             På tur
           </span>
           <button
@@ -81,7 +81,7 @@ function PaaTurTilstand({ tur, vejr, skrivNote, luk }: Props) {
               border: `1px solid ${SVAG}`,
               borderRadius: '6px',
               color: DAEMPET,
-              fontSize: '12px',
+              fontSize: 'var(--skrift-detalje)',
               padding: '5px 12px',
               cursor: 'pointer'
             }}
@@ -98,7 +98,7 @@ function PaaTurTilstand({ tur, vejr, skrivNote, luk }: Props) {
         }}>
           {tur.navn || 'Uden navn'}
         </h1>
-        <div style={{ fontSize: '13px', color: DAEMPET, marginBottom: '30px' }}>
+        <div style={{ fontSize: 'var(--skrift-knap)', color: DAEMPET, marginBottom: '30px' }}>
           {[tur.sted, tilbage].filter(Boolean).join(' · ')}
         </div>
 
@@ -108,11 +108,11 @@ function PaaTurTilstand({ tur, vejr, skrivNote, luk }: Props) {
               <div style={{ fontSize: '30px', fontFamily: "'Fraunces', Georgia, serif" }}>
                 {vejrIkonKode(dagIdag.vejrkode)} {dagIdag.temp_min}–{dagIdag.temp_max}°C
               </div>
-              <div style={{ fontSize: '13px', color: DAEMPET, marginTop: '4px' }}>
+              <div style={{ fontSize: 'var(--skrift-knap)', color: DAEMPET, marginTop: '4px' }}>
                 {dagIdag.nedboer_mm > 0 ? `${dagIdag.nedboer_mm} mm nedbør` : 'Tørt'} · {dagIdag.vind_ms} m/s
               </div>
               {(dagIdag.sol_op || dagIdag.sol_ned) && (
-                <div style={{ fontSize: '13px', color: DAEMPET, marginTop: '10px' }}>
+                <div style={{ fontSize: 'var(--skrift-knap)', color: DAEMPET, marginTop: '10px' }}>
                   Sol op {dagIdag.sol_op || '—'} · sol ned {dagIdag.sol_ned || '—'}
                 </div>
               )}
@@ -132,7 +132,7 @@ function PaaTurTilstand({ tur, vejr, skrivNote, luk }: Props) {
                 punkter ikke længere noget man skal se på. */}
             <div style={{ display: 'grid', gap: '5px' }}>
               {mangler.map((l) => (
-                <div key={l.id} style={{ fontSize: '14px', color: ACCENT }}>
+                <div key={l.id} style={{ fontSize: 'var(--skrift-brod)', color: ACCENT }}>
                   ○ {l.tekst}
                 </div>
               ))}
@@ -170,7 +170,7 @@ function PaaTurTilstand({ tur, vejr, skrivNote, luk }: Props) {
               border: 'none',
               background: udkast.trim() ? ACCENT : '#1e201e',
               color: udkast.trim() ? '#12140f' : SVAG,
-              fontSize: '14px',
+              fontSize: 'var(--skrift-brod)',
               fontWeight: 600,
               cursor: udkast.trim() ? 'pointer' : 'default'
             }}
@@ -178,7 +178,7 @@ function PaaTurTilstand({ tur, vejr, skrivNote, luk }: Props) {
             Skriv i loggen
           </button>
 
-          <div style={{ fontSize: '11px', color: SVAG, marginTop: '6px' }}>
+          <div style={{ fontSize: 'var(--skrift-lille)', color: SVAG, marginTop: '6px' }}>
             Gemmes på turen med det samme — også uden dækning.
           </div>
 
@@ -189,10 +189,10 @@ function PaaTurTilstand({ tur, vejr, skrivNote, luk }: Props) {
                   fingre i mørke. */}
               {noter.map((note: Feltnote) => (
                 <div key={note.id}>
-                  <div style={{ fontSize: '11px', color: SVAG, marginBottom: '2px' }}>
+                  <div style={{ fontSize: 'var(--skrift-lille)', color: SVAG, marginBottom: '2px' }}>
                     {tidstekst(note.tid)}
                   </div>
-                  <div style={{ fontSize: '14px', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                  <div style={{ fontSize: 'var(--skrift-brod)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
                     {note.tekst}
                   </div>
                 </div>
@@ -209,7 +209,7 @@ function Blok({ titel, children }: { titel: string; children: React.ReactNode })
   return (
     <section style={{ marginBottom: '28px' }}>
       <div style={{
-        fontSize: '10px',
+        fontSize: 'var(--skrift-mikro)',
         letterSpacing: '1.2px',
         textTransform: 'uppercase',
         color: SVAG,
@@ -223,7 +223,7 @@ function Blok({ titel, children }: { titel: string; children: React.ReactNode })
 }
 
 function Tom({ children }: { children: React.ReactNode }) {
-  return <div style={{ fontSize: '13px', color: SVAG, lineHeight: 1.5 }}>{children}</div>;
+  return <div style={{ fontSize: 'var(--skrift-knap)', color: SVAG, lineHeight: 1.5 }}>{children}</div>;
 }
 
 // Den første dag forude hvor vejret rykker sig nok til at det betyder noget
@@ -240,7 +240,7 @@ function NaesteVejrskift({ vejr, idag }: { vejr: VejrData | null; idag: Date }) 
       <div style={{ fontSize: '15px' }}>
         {dagsnavn(skift.dag.dato)}: {vejrIkonKode(skift.dag.vejrkode)} {skift.aarsag}
       </div>
-      <div style={{ fontSize: '13px', color: DAEMPET, marginTop: '3px' }}>
+      <div style={{ fontSize: 'var(--skrift-knap)', color: DAEMPET, marginTop: '3px' }}>
         {skift.dag.temp_min}–{skift.dag.temp_max}°C · {skift.dag.nedboer_mm} mm · {skift.dag.vind_ms} m/s
       </div>
     </div>

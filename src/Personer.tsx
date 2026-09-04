@@ -69,14 +69,14 @@ function Personer() {
           onChange={(e) => setNytNavn(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') void opret(nytNavn); }}
           placeholder="Navn"
-          style={{ flex: 1, minWidth: 0, fontSize: '13px' }}
+          style={{ flex: 1, minWidth: 0, fontSize: 'var(--skrift-knap)' }}
         />
         <Knap onClick={() => void opret(nytNavn)} disabled={!nytNavn.trim()}>+ Tilføj</Knap>
       </div>
 
       {foreslaaede.length > 0 && (
         <div style={{ marginBottom: '12px' }}>
-          <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginBottom: '6px' }}>
+          <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginBottom: '6px' }}>
             Navne fra dine ture der ikke er personer endnu
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
@@ -86,7 +86,7 @@ function Personer() {
                 onClick={() => void opret(navn)}
                 style={{
                   padding: '5px 10px',
-                  fontSize: '11px',
+                  fontSize: 'var(--skrift-lille)',
                   background: 'var(--bg-forhoejet)',
                   color: 'var(--accent)',
                   border: '1px solid var(--accent-border)',
@@ -102,7 +102,7 @@ function Personer() {
       )}
 
       {sorteret.length === 0 ? (
-        <div style={{ fontSize: '13px', color: 'var(--tekst-svag)' }}>
+        <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-svag)' }}>
           Ingen endnu. Skriv dem ind, du tager afsted med — så husker Feltbogen,
           hvem der plejer at være med, og hvad de plejer at bære.
         </div>
@@ -152,13 +152,13 @@ function Personraekke({ person, ture, profil, aaben, skiftAaben, opdater, fjern 
           color: 'var(--tekst)'
         }}
       >
-        <span style={{ flex: 1, minWidth: 0, fontSize: '13px' }}>{person.navn || 'Uden navn'}</span>
-        <span style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)' }}>
+        <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--skrift-knap)' }}>{person.navn || 'Uden navn'}</span>
+        <span style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)' }}>
           {/* "sammen" og ikke bare tallet: rækken står under et menneskes navn,
               og det er ikke personens ture, det er dem I har været på. */}
           {ture === 0 ? 'ingen ture endnu' : `${ture} ${ture === 1 ? 'tur' : 'ture'} sammen`}
         </span>
-        <span style={{ color: 'var(--tekst-svag)', fontSize: '13px' }}>{aaben ? '−' : '+'}</span>
+        <span style={{ color: 'var(--tekst-svag)', fontSize: 'var(--skrift-knap)' }}>{aaben ? '−' : '+'}</span>
       </button>
 
       {aaben && (
@@ -173,7 +173,7 @@ function Personraekke({ person, ture, profil, aaben, skiftAaben, opdater, fjern 
           />
 
           <div>
-            <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginBottom: '6px' }}>
+            <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginBottom: '6px' }}>
               Sover typisk i
             </div>
             <Segment

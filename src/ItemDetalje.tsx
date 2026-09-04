@@ -121,7 +121,7 @@ function ItemDetalje({ itemId, tilbage, nyOprettet }: Props) {
           background: 'var(--advarsel-bg)',
           border: '1px solid var(--advarsel-border)',
           borderRadius: '10px',
-          fontSize: '12px',
+          fontSize: 'var(--skrift-detalje)',
           color: 'var(--advarsel)',
           fontWeight: 500
         }}>
@@ -212,7 +212,7 @@ function ItemDetalje({ itemId, tilbage, nyOprettet }: Props) {
               border: 'none',
               textAlign: 'left',
               cursor: 'pointer',
-              fontSize: '13px',
+              fontSize: 'var(--skrift-knap)',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
@@ -222,12 +222,12 @@ function ItemDetalje({ itemId, tilbage, nyOprettet }: Props) {
             <span>
               Garanti
               {item.garanti && item.garanti.laengde_aar > 0 && (
-                <span style={{ color: 'var(--tekst-dæmpet)', fontSize: '11px', marginLeft: '8px' }}>
+                <span style={{ color: 'var(--tekst-dæmpet)', fontSize: 'var(--skrift-lille)', marginLeft: '8px' }}>
                   · {item.garanti.laengde_aar} år
                 </span>
               )}
             </span>
-            <span style={{ color: 'var(--tekst-svag)', fontSize: '14px' }}>{garantiAaben ? '−' : '+'}</span>
+            <span style={{ color: 'var(--tekst-svag)', fontSize: 'var(--skrift-brod)' }}>{garantiAaben ? '−' : '+'}</span>
           </button>
           {garantiAaben && (
             <div style={{ padding: '4px 14px 14px', display: 'grid', gap: '10px' }}>
@@ -258,7 +258,7 @@ function ItemDetalje({ itemId, tilbage, nyOprettet }: Props) {
         <Tekstomraade label="Noter" value={item.noter} onChange={(v) => opdater({ noter: v })} raekker={3} />
       </div>
 
-      <div style={{ marginTop: '30px', fontSize: '11px', color: 'var(--tekst-svag)', textAlign: 'center' }}>
+      <div style={{ marginTop: '30px', fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', textAlign: 'center' }}>
         Oprettet {new Date(item.oprettet).toLocaleDateString('da-DK')} · Ændret {new Date(item.aendret).toLocaleDateString('da-DK')}
       </div>
     </div>
@@ -275,7 +275,7 @@ function DeltKort({ delt, skift }: { delt: boolean; skift: (v: boolean) => void 
       padding: '10px 12px',
       background: 'var(--bg-forhoejet)'
     }}>
-      <div style={{ fontSize: '10px', color: 'var(--tekst-dæmpet)', textTransform: 'uppercase', letterSpacing: '0.6px', fontWeight: 600, marginBottom: '3px' }}>
+      <div style={{ fontSize: 'var(--skrift-mikro)', color: 'var(--tekst-dæmpet)', textTransform: 'uppercase', letterSpacing: '0.6px', fontWeight: 600, marginBottom: '3px' }}>
         Delt?
       </div>
       <button
@@ -337,7 +337,7 @@ function Brugsstatistik({ ture, brug, historik }: {
   return (
     <Infokort label="Brugsstatistik" fremhaevet={ture.length > 0}>
       {ture.length === 0 ? (
-        <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)' }}>
+        <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-dæmpet)' }}>
           Har ikke været med på en tur endnu.
         </div>
       ) : (
@@ -347,7 +347,7 @@ function Brugsstatistik({ ture, brug, historik }: {
             {seneste && ` · senest ${formatterDato(seneste.startdato)}`}
           </div>
           {brug && brug.gjort_op > 0 && (
-            <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', marginTop: '3px' }}>
+            <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)', marginTop: '3px' }}>
               Brugt {brug.brugt} af {brug.gjort_op} gange
               {brug.i_stykker > 0 && ` · gik i stykker ${brug.i_stykker} ${brug.i_stykker === 1 ? 'gang' : 'gange'}`}
             </div>
@@ -429,7 +429,7 @@ function Laanekort({ udlaan, laant, personer, saetUdlaan, saetLaant }: {
   return (
     <Infokort label="Låne-log" fremhaevet={!!udlaan || !!laant}>
       {!udlaan && !laant && (
-        <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginBottom: '10px' }}>
+        <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-dæmpet)', marginBottom: '10px' }}>
           Står hjemme.
         </div>
       )}
@@ -458,7 +458,7 @@ function Laanekort({ udlaan, laant, personer, saetUdlaan, saetLaant }: {
           />
         </Laaneblok>
       ) : (
-        <Knap onClick={startUdlaan} style={{ fontSize: '11px', padding: '4px 10px', marginRight: '6px' }}>
+        <Knap onClick={startUdlaan} style={{ fontSize: 'var(--skrift-lille)', padding: '4px 10px', marginRight: '6px' }}>
           Lån ud
         </Knap>
       )}
@@ -482,7 +482,7 @@ function Laanekort({ udlaan, laant, personer, saetUdlaan, saetLaant }: {
           />
         </div>
       ) : (
-        <Knap onClick={startLaant} style={{ fontSize: '11px', padding: '4px 10px' }}>
+        <Knap onClick={startLaant} style={{ fontSize: 'var(--skrift-lille)', padding: '4px 10px' }}>
           Lånt af en anden
         </Knap>
       )}
@@ -520,15 +520,15 @@ function Laaneblok({
   return (
     <div style={{ display: 'grid', gap: '10px' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-        <span style={{ fontSize: '12px', fontWeight: 600 }}>{titel}</span>
+        <span style={{ fontSize: 'var(--skrift-detalje)', fontWeight: 600 }}>{titel}</span>
         {dage !== null && (
-          <span style={{ fontSize: '11px', color: overskredet ? 'var(--advarsel)' : 'var(--tekst-dæmpet)' }}>
+          <span style={{ fontSize: 'var(--skrift-lille)', color: overskredet ? 'var(--advarsel)' : 'var(--tekst-dæmpet)' }}>
             {laengde(dage)}{overskredet ? ' · over tiden' : ''}
           </span>
         )}
         <button
           onClick={ryd}
-          style={{ marginLeft: 'auto', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '11px', color: 'var(--accent)', textDecoration: 'underline' }}
+          style={{ marginLeft: 'auto', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 'var(--skrift-lille)', color: 'var(--accent)', textDecoration: 'underline' }}
         >
           {rydLabel}
         </button>
@@ -573,7 +573,7 @@ function Personforslag({ personer, navn, vaelg }: {
           onClick={() => vaelg(p)}
           style={{
             padding: '4px 10px',
-            fontSize: '11px',
+            fontSize: 'var(--skrift-lille)',
             background: 'var(--bg-forhoejet)',
             color: 'var(--accent)',
             border: '1px solid var(--accent-border)',
@@ -599,7 +599,7 @@ function Vedligeholdskort({ handlinger, gem }: {
   return (
     <Infokort label="Vedligehold" fremhaevet={forfaldne.length > 0}>
       {handlinger.length === 0 ? (
-        <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginBottom: '10px', lineHeight: 1.5 }}>
+        <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-dæmpet)', marginBottom: '10px', lineHeight: 1.5 }}>
           Imprægnering, slibning, olie. Det er den skjulte grund til at gear går i
           stykker — det bliver ikke passet.
         </div>
@@ -624,7 +624,7 @@ function Vedligeholdskort({ handlinger, gem }: {
             onClick={() => gem([...handlinger, nyHandling(f.navn, f.interval_maaneder)])}
             style={{
               padding: '4px 10px',
-              fontSize: '11px',
+              fontSize: 'var(--skrift-lille)',
               background: 'var(--bg-forhoejet)',
               color: 'var(--accent)',
               border: '1px solid var(--accent-border)',
@@ -639,7 +639,7 @@ function Vedligeholdskort({ handlinger, gem }: {
           onClick={() => gem([...handlinger, nyHandling()])}
           style={{
             padding: '4px 10px',
-            fontSize: '11px',
+            fontSize: 'var(--skrift-lille)',
             background: 'transparent',
             color: 'var(--tekst-dæmpet)',
             border: '1px dashed var(--border)',
@@ -676,7 +676,7 @@ function Vedligeholdsraekke({ handling, saet, fjern }: {
           value={handling.navn}
           onChange={(e) => saet({ navn: e.target.value })}
           placeholder="Hvad skal gøres"
-          style={{ flex: 1, minWidth: 0, fontSize: '13px', border: 'none', background: 'transparent', padding: 0 }}
+          style={{ flex: 1, minWidth: 0, fontSize: 'var(--skrift-knap)', border: 'none', background: 'transparent', padding: 0 }}
         />
         <FjernKnap onClick={fjern} label={`Fjern ${handling.navn}`} />
       </div>
@@ -698,7 +698,7 @@ function Vedligeholdsraekke({ handling, saet, fjern }: {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: '11px', color: forfalden ? 'var(--advarsel)' : 'var(--tekst-dæmpet)' }}>
+        <span style={{ fontSize: 'var(--skrift-lille)', color: forfalden ? 'var(--advarsel)' : 'var(--tekst-dæmpet)' }}>
           {statustekst(handling)}
           {dage !== null && ` · ${forfaldstekst(dage)}`}
         </span>
@@ -706,7 +706,7 @@ function Vedligeholdsraekke({ handling, saet, fjern }: {
             det. Så skal man ikke slå måneden op. */}
         <Knap
           onClick={() => saet({ sidst_udfoert: skrivMaaned(new Date()) })}
-          style={{ marginLeft: 'auto', fontSize: '11px', padding: '3px 9px' }}
+          style={{ marginLeft: 'auto', fontSize: 'var(--skrift-lille)', padding: '3px 9px' }}
         >
           Gjort nu
         </Knap>

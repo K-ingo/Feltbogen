@@ -2,6 +2,10 @@ import type { ReactNode } from 'react';
 import { useErDesktop, useSynligHoejde } from './useMedie';
 import { markerSet, useErSet, FAB_TIP_SET } from './indstillinger';
 import { FortrydToast } from './FortrydToast';
+import { Ikon } from './Ikon';
+import type { IkonNavn } from './Ikon';
+
+const NAVIKON: Record<string, IkonNavn> = { dashboard: 'hjem', ture: 'ture', inventar: 'grej', folk: 'folk', mere: 'mere' };
 
 export type Fane =
   // Hovedfanerne. Fem, og det er loftet: de deler skærmbredden på en telefon.
@@ -113,19 +117,19 @@ export function Skal({ fane, skift, titel, undertitel, handlinger, fab, children
 
   if (erDesktop) {
     return (
-      <div style={{ display: 'flex', minHeight: '100vh' }}>
+      <div className="app-shell" style={{ display: 'flex', minHeight: '100vh' }}>
         <Sidebar fane={fane} skift={skift} />
         {/* Loftet er der for læsbarhedens skyld — en linje der løber tværs
             over en bred skærm er svær at følge. Men 1100 px lod en tredjedel
             af skærmen stå tom på en almindelig PC-skærm. */}
-        <main style={{ flex: 1, minWidth: 0, padding: '28px 32px 60px', maxWidth: '1600px' }}>
+        <main className="desktop-main" style={{ flex: 1, minWidth: 0, padding: '32px 40px 60px', maxWidth: '1360px', margin: '0 auto' }}>
           {titel && (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginBottom: '20px' }}>
               <div>
                 {op && <Tilbagelinje til={op} skift={skift} />}
-                <h2 style={{ margin: 0 }}>{titel}</h2>
+                <h1 style={{ margin: 0 }}>{titel}</h1>
                 {undertitel && (
-                  <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
+                  <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
                     {undertitel}
                   </div>
                 )}
@@ -152,7 +156,7 @@ export function Skal({ fane, skift, titel, undertitel, handlinger, fab, children
   // bag dem. Nu er der ikke noget at måle forkert: navigationen er bunden af
   // kassen, og indholdet kan ikke nå uden om den.
   return (
-    <div style={{
+    <div className="app-shell" style={{
       height: synligHoejde ? `${synligHoejde}px` : '100dvh',
       display: 'flex',
       flexDirection: 'column',
@@ -162,7 +166,7 @@ export function Skal({ fane, skift, titel, undertitel, handlinger, fab, children
     }}>
       {titel && <Topbar titel={titel} tilbage={op && <Tilbagelinje til={op} skift={skift} />} />}
 
-      <div style={{
+      <main className="mobile-main" style={{
         flex: 1,
         // Uden den her kan et flex-barn ikke blive lavere end sit indhold, og
         // så scroller kassen i stedet for indholdet.
@@ -182,13 +186,13 @@ export function Skal({ fane, skift, titel, undertitel, handlinger, fab, children
           paddingBottom: fab ? '140px' : '24px'
         }}>
           {undertitel && (
-            <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginBottom: '14px' }}>
+            <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-dæmpet)', marginBottom: '14px' }}>
               {undertitel}
             </div>
           )}
           {children}
         </div>
-      </div>
+      </main>
 
       {fab && <Fab onClick={fab} />}
       {fab && <FabTip />}
@@ -203,7 +207,7 @@ export function Skal({ fane, skift, titel, undertitel, handlinger, fab, children
 // være en anden dør til det samme rum. Strukturen skal kunne læres ét sted.
 function Topbar({ titel, tilbage }: { titel: string; tilbage?: ReactNode }) {
   return (
-    <div style={{
+    <div className="app-topbar" style={{
       // Ikke længere sticky: topbaren er en række i skallen, og indholdet
       // scroller under den af sig selv.
       flexShrink: 0,
@@ -220,15 +224,15 @@ function Topbar({ titel, tilbage }: { titel: string; tilbage?: ReactNode }) {
         gap: 'var(--plads-3)'
       }}>
         {tilbage}
-        <span style={{
-          fontSize: 'var(--skrift-detalje)',
+        <h1 style={{
+          margin: 0,
+          fontSize: '1.5rem',
           fontWeight: 600,
           letterSpacing: '1.2px',
-          textTransform: 'uppercase',
           color: 'var(--tekst)'
         }}>
           {titel}
-        </span>
+        </h1>
       </div>
     </div>
   );
@@ -236,7 +240,7 @@ function Topbar({ titel, tilbage }: { titel: string; tilbage?: ReactNode }) {
 
 function Sidebar({ fane, skift }: { fane: Fane; skift: (f: Fane) => void }) {
   return (
-    <nav style={{
+    <nav aria-label="Hovednavigation" className="sidebar" style={{
       width: '220px',
       flexShrink: 0,
       borderRight: '1px solid var(--border)',
@@ -249,7 +253,7 @@ function Sidebar({ fane, skift }: { fane: Fane; skift: (f: Fane) => void }) {
     }}>
       <div style={{
         fontFamily: "'Fraunces', Georgia, serif",
-        fontSize: '19px',
+        fontSize: '26px',
         padding: '0 10px var(--plads-5)',
         color: 'var(--tekst)'
       }}>
@@ -261,9 +265,13 @@ function Sidebar({ fane, skift }: { fane: Fane; skift: (f: Fane) => void }) {
         return (
           <button
             key={id}
+            className="nav-item"
+            aria-current={erAktiv ? 'page' : undefined}
             onClick={() => skift(id)}
             style={{
-              display: 'block',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
               width: '100%',
               textAlign: 'left',
               minHeight: 'var(--roerehoejde)',
@@ -278,6 +286,7 @@ function Sidebar({ fane, skift }: { fane: Fane; skift: (f: Fane) => void }) {
               color: erAktiv ? 'var(--accent)' : 'var(--tekst-dæmpet)'
             }}
           >
+            <Ikon navn={NAVIKON[id]} />
             {label}
           </button>
         );
@@ -290,9 +299,13 @@ function Sidebar({ fane, skift }: { fane: Fane; skift: (f: Fane) => void }) {
       }} />
 
       <button
+        className="nav-item"
+        aria-current={hovedfane(fane) === 'mere' ? 'page' : undefined}
         onClick={() => skift('mere')}
         style={{
-          display: 'block',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
           width: '100%',
           textAlign: 'left',
           minHeight: 'var(--roerehoejde)',
@@ -306,6 +319,7 @@ function Sidebar({ fane, skift }: { fane: Fane; skift: (f: Fane) => void }) {
           color: hovedfane(fane) === 'mere' ? 'var(--accent)' : 'var(--tekst-dæmpet)'
         }}
       >
+        <Ikon navn="mere" />
         Mere
       </button>
     </nav>
@@ -314,7 +328,7 @@ function Sidebar({ fane, skift }: { fane: Fane; skift: (f: Fane) => void }) {
 
 function BundNav({ fane, skift }: { fane: Fane; skift: (f: Fane) => void }) {
   return (
-    <div style={{
+    <nav aria-label="Hovednavigation" className="bottom-nav" style={{
       display: 'flex',
       flexShrink: 0,
       background: 'var(--bg-topbar)',
@@ -331,6 +345,8 @@ function BundNav({ fane, skift }: { fane: Fane; skift: (f: Fane) => void }) {
         return (
           <button
             key={id}
+            aria-current={erAktiv ? 'page' : undefined}
+            className="nav-item"
             onClick={() => skift(id)}
             style={{
               flex: 1,
@@ -338,14 +354,18 @@ function BundNav({ fane, skift }: { fane: Fane; skift: (f: Fane) => void }) {
               // Baren er det man rammer flest gange om dagen, og tit med
               // tommelen uden at kigge. Rørehøjden er gulvet under den.
               minHeight: 'var(--roerehoejde)',
-              padding: 'var(--plads-4) 2px var(--plads-3)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px',
+              padding: '8px 2px',
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
               fontSize: 'var(--skrift-mikro)',
               color: erAktiv ? 'var(--accent)' : 'var(--tekst-dæmpet)',
               fontWeight: erAktiv ? 600 : 500,
-              textTransform: 'uppercase',
               // Var 0,5. Med seks faner står "INVENTAR" og "GRUPPER" næsten op
               // ad hinanden på en 360 px skærm, og de her to tiendedele er
               // luften imellem dem.
@@ -358,11 +378,12 @@ function BundNav({ fane, skift }: { fane: Fane; skift: (f: Fane) => void }) {
               transition: 'color 0.15s'
             }}
           >
+            <Ikon navn={NAVIKON[id]} size={21} />
             {kort}
           </button>
         );
       })}
-    </div>
+    </nav>
   );
 }
 
@@ -402,7 +423,7 @@ function FabTip() {
           cursor: 'pointer',
           color: 'inherit',
           opacity: 0.85,
-          fontSize: '12px',
+          fontSize: 'var(--skrift-detalje)',
           textDecoration: 'underline'
         }}
       >

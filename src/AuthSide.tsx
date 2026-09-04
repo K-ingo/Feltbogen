@@ -58,7 +58,7 @@ function AuthSide({ fortryd, startTilstand = 'login' }: Props) {
       {fortryd && (
         <button
           onClick={fortryd}
-          style={{ position: 'absolute', top: 'calc(16px + env(safe-area-inset-top))', left: '20px', background: 'transparent', border: 'none', fontSize: '14px', cursor: 'pointer', color: 'var(--tekst-dæmpet)', padding: '4px' }}
+          style={{ position: 'absolute', top: 'calc(16px + env(safe-area-inset-top))', left: '20px', background: 'transparent', border: 'none', fontSize: 'var(--skrift-brod)', cursor: 'pointer', color: 'var(--tekst-dæmpet)', padding: '4px' }}
         >
           ‹ Tilbage
         </button>
@@ -66,15 +66,16 @@ function AuthSide({ fortryd, startTilstand = 'login' }: Props) {
 
       <div style={{ textAlign: 'center', marginBottom: '40px' }}>
         <h1 style={{ fontSize: '36px', margin: 0 }}>Feltbogen</h1>
-        <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginTop: '4px' }}>
+        <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-dæmpet)', marginTop: '4px' }}>
           {tilstand === 'login' ? 'Log ind for at synkronisere' : 'Opret din konto'}
         </div>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '360px', margin: '0 auto', width: '100%' }}>
         <div>
-          <Label>Email</Label>
+          <Label htmlFor="login-email">Email</Label>
           <input
+            id="login-email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -85,8 +86,9 @@ function AuthSide({ fortryd, startTilstand = 'login' }: Props) {
         </div>
 
         <div>
-          <Label>Password</Label>
+          <Label htmlFor="login-password">Adgangskode</Label>
           <input
+            id="login-password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -104,17 +106,17 @@ function AuthSide({ fortryd, startTilstand = 'login' }: Props) {
             border: '1px solid var(--fejl-border)',
             color: 'var(--fejl)',
             borderRadius: '8px',
-            fontSize: '13px'
+            fontSize: 'var(--skrift-knap)'
           }}>
             {fejl}
           </div>
         )}
 
-        <Knap variant="primaer" onClick={handleSubmit} disabled={indlaeser} style={{ padding: '12px', fontSize: '14px' }}>
+        <Knap variant="primaer" onClick={handleSubmit} disabled={indlaeser} style={{ padding: '12px', fontSize: 'var(--skrift-brod)' }}>
           {indlaeser ? 'Vent...' : tilstand === 'login' ? 'Log ind' : 'Opret konto'}
         </Knap>
 
-        <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', textAlign: 'center', lineHeight: 1.5 }}>
+        <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', textAlign: 'center', lineHeight: 1.5 }}>
           Med en konto kan du synkronisere mellem enheder og gendanne dine data
           hvis din telefon bliver væk. Uden konto bliver alt liggende her.
         </div>
@@ -127,7 +129,7 @@ function AuthSide({ fortryd, startTilstand = 'login' }: Props) {
               border: 'none',
               cursor: 'pointer',
               color: 'var(--tekst-dæmpet)',
-              fontSize: '13px',
+              fontSize: 'var(--skrift-knap)',
               textDecoration: 'underline',
               padding: '4px'
             }}

@@ -43,7 +43,7 @@ const IndstillingerSide = lazy(() => import('./IndstillingerSide'));
 const Rundvisning = lazy(() => import('./Rundvisning'));
 // Første tur-flowet ses én gang, af dem der ikke har en tur endnu. Det har
 // ingen plads i bundtet, alle andre skal hente ned.
-const FoersteTur = lazy(() => import('./FoersteTur'));
+const FoersteTur = lazy(() => import('./FoersteTur.tsx'));
 // Detaljeskærmene fylder især for ture meget, men de er aldrig den første
 // skærm. Del dem fra startbundtet og hent dem først, når en række åbnes.
 const ItemDetalje = lazy(() => import('./ItemDetalje'));

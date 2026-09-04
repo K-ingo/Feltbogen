@@ -177,13 +177,16 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
       titel={hilsen(bruger?.name ?? '')}
       handlinger={
         <>
-          <Knap onClick={nytItem}>+ Nyt item</Knap>
+          <Knap onClick={nytItem}>+ Tilføj grej</Knap>
           <Knap variant="primaer" onClick={nyTur}>+ Ny tur</Knap>
         </>
       }
       fab={nytItem}
     >
-      <div style={{ display: 'grid', gap: '22px' }}>
+      <div className="home-grid" style={{ display: 'grid', gap: '24px' }}>
+        <section className="home-next">
+        {minder[0] && <div className="home-next-image"><Billedvisning billede={minder[0].billede} /></div>}
+        <div className="home-next-content">
         <Situationskort
           situation={situation}
           items={items}
@@ -193,14 +196,16 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
           foersteTur={foersteTur}
           harKladde={kladde !== null}
         />
+        </div>
+        </section>
 
         {opgoerelse !== null && (
           <Aarskort aar={opgoerelse} aabn={() => aabnAar(opgoerelse)} />
         )}
 
         {alleHandlinger.length > 0 && (
-          <section>
-            <SektionsTitel>Handlinger</SektionsTitel>
+          <details className="home-care" open={alleHandlinger.some(h => h.haster)}>
+            <summary>Pas på dit grej <span>{alleHandlinger.length} opmærksomhedspunkter</span></summary>
             <div style={{
               display: 'grid',
               gridTemplateColumns: erDesktop ? 'repeat(auto-fit, minmax(230px, 1fr))' : '1fr',
@@ -215,11 +220,11 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
               ))}
             </div>
             {alleHandlinger.length > MAKS_HANDLINGER && (
-              <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', marginTop: '8px' }}>
+              <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', marginTop: '8px' }}>
                 + {alleHandlinger.length - MAKS_HANDLINGER} mere
               </div>
             )}
-          </section>
+          </details>
         )}
 
         {forslag.length > 0 && (
@@ -363,16 +368,17 @@ function Situationskort({ situation, items, grupper, aabn, opret, foersteTur, ha
   if (!tur) {
     return (
       <Infokort label={situation.overskrift}>
-        <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginBottom: '12px' }}>
+        <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2rem)', margin: '12px 0' }}>Hvor går din næste tur hen?</h2>
+        <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-dæmpet)', marginBottom: '12px' }}>
           {harKladde
             ? 'Du er begyndt på en tur. Den ligger her på enheden og venter.'
-            : 'Ingen ture planlagt. Feltbogen kan spørge dig frem til den første — eller du kan skrive den ind selv.'}
+            : 'En nat i skoven eller en weekend ved vandet. Find en dato, og lad pakningen begynde.'}
         </div>
         <div style={{ display: 'flex', gap: 'var(--plads-2)', flexWrap: 'wrap' }}>
           <Knap variant="primaer" onClick={foersteTur}>
             {harKladde ? 'Fortsæt hvor du slap' : situation.handling}
           </Knap>
-          <Knap onClick={opret}>+ Tom tur</Knap>
+          <Knap onClick={opret}>Planlæg selv</Knap>
         </div>
       </Infokort>
     );
@@ -527,13 +533,13 @@ function HandlingsKort({ handling, aabn }: { handling: Handling; aabn: () => voi
         }}
       >
         <div style={{
-          fontSize: '13px',
+          fontSize: 'var(--skrift-knap)',
           fontWeight: 600,
           color: haster ? 'var(--advarsel)' : 'var(--tekst)'
         }}>
           {handling.titel}
         </div>
-        <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
+        <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
           {handling.detalje}
         </div>
       </button>
@@ -571,8 +577,8 @@ function Mindestribe({ minder, aabn }: { minder: Minde[]; aabn: (m: Minde) => vo
           style={{
             position: 'relative',
             flexShrink: 0,
-            width: '104px',
-            height: '104px',
+            width: '156px',
+            height: '132px',
             padding: 0,
             border: '1px solid var(--border-svag)',
             borderRadius: 'var(--runding-lille)',
@@ -677,7 +683,7 @@ function Aarskort({ aar, aabn }: { aar: number; aabn: () => void }) {
         <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '18px' }}>
           Sådan gik {aar}
         </span>
-        <span style={{ display: 'block', fontSize: '12px', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
+        <span style={{ display: 'block', fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
           Årsopgørelsen er klar
         </span>
       </span>

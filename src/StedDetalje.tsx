@@ -159,9 +159,9 @@ function StedDetalje({ stedId, tilbage, aabnTur, opretTurHer, nyOprettet }: Prop
 
       <div style={{ display: 'grid', gap: '14px', marginBottom: '24px' }}>
         <Kort fremhaevet>
-          <div style={{ fontSize: '14px', fontWeight: 500 }}>{besoegstekst(besoegte.length)}</div>
+          <div style={{ fontSize: 'var(--skrift-brod)', fontWeight: 500 }}>{besoegstekst(besoegte.length)}</div>
           {besoegte[0]?.startdato && (
-            <div style={{ fontSize: '12px', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
+            <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
               {/* Datoen er svaret på hvornår; "for tre måneder siden" er
                   svaret på det man faktisk spørger om, når man står og
                   overvejer at tage tilbage. Begge dele står der — den ene er
@@ -197,7 +197,7 @@ function StedDetalje({ stedId, tilbage, aabnTur, opretTurHer, nyOprettet }: Prop
               {soeger ? 'Søger...' : 'Find'}
             </Knap>
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--tekst-svag)', marginTop: '4px' }}>
+          <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', marginTop: '4px' }}>
             Find slår adressen op — eller navnet, hvis der ikke står en adresse.
           </div>
 
@@ -219,8 +219,8 @@ function StedDetalje({ stedId, tilbage, aabnTur, opretTurHer, nyOprettet }: Prop
                     color: 'var(--tekst)'
                   }}
                 >
-                  <div style={{ fontSize: '13px', fontWeight: 500 }}>{f.navn}</div>
-                  {f.detalje && <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)' }}>{f.detalje}</div>}
+                  <div style={{ fontSize: 'var(--skrift-knap)', fontWeight: 500 }}>{f.navn}</div>
+                  {f.detalje && <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)' }}>{f.detalje}</div>}
                 </button>
               ))}
             </div>
@@ -262,7 +262,7 @@ function StedDetalje({ stedId, tilbage, aabnTur, opretTurHer, nyOprettet }: Prop
 
       <SektionsTitel>Ture hertil</SektionsTitel>
       {besoegte.length === 0 ? (
-        <div style={{ fontSize: '13px', color: 'var(--tekst-svag)', padding: '4px 0' }}>
+        <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-svag)', padding: '4px 0' }}>
           Ingen ture er knyttet til stedet endnu. Vælg det under "Sted" på en tur.
         </div>
       ) : (

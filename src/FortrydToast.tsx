@@ -57,7 +57,7 @@ export function FortrydToast({ bund }: Props) {
       }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
-            fontSize: '13px',
+            fontSize: 'var(--skrift-knap)',
             lineHeight: 1.4,
             // Et langt gearnavn må ikke skubbe knapperne ud af skærmen.
             overflow: 'hidden',
@@ -67,7 +67,7 @@ export function FortrydToast({ bund }: Props) {
             {fortrydBesked(fortrydelse)}
           </div>
           {fortrydelse.detalje && (
-            <div style={{ fontSize: '11px', lineHeight: 1.4, opacity: 0.75, marginTop: '1px' }}>
+            <div style={{ fontSize: 'var(--skrift-lille)', lineHeight: 1.4, opacity: 0.75, marginTop: '1px' }}>
               {fortrydelse.detalje}
             </div>
           )}
@@ -82,7 +82,7 @@ export function FortrydToast({ bund }: Props) {
             padding: '6px 8px',
             cursor: 'pointer',
             color: 'inherit',
-            fontSize: '13px',
+            fontSize: 'var(--skrift-knap)',
             fontWeight: 600,
             textDecoration: 'underline'
           }}

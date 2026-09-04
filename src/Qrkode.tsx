@@ -43,7 +43,7 @@ export function Qrkode({ vaerdi, storrelse = 180 }: Props) {
 
   if (fejl) {
     return (
-      <div style={{ fontSize: '11px', color: 'var(--tekst-svag)' }}>
+      <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)' }}>
         Kunne ikke tegne QR-koden. Linket virker stadig.
       </div>
     );
@@ -98,7 +98,7 @@ export function Qrfuldskaerm({ vaerdi, luk }: { vaerdi: string; luk: () => void 
       }}
     >
       <Qrkode vaerdi={vaerdi} storrelse={280} />
-      <div style={{ fontSize: '13px', color: '#555' }}>Tryk for at lukke</div>
+      <div style={{ fontSize: 'var(--skrift-knap)', color: '#555' }}>Tryk for at lukke</div>
     </div>
   );
 }

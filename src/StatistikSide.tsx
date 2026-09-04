@@ -71,7 +71,7 @@ function StatistikSide({ fane, skift, aabnItem, aabnAar }: Props) {
   if (items.length === 0 && alleTure.length === 0) {
     return (
       <Skal fane={fane} skift={skift} titel="Statistik">
-        <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--tekst-svag)', fontSize: '13px' }}>
+        <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--tekst-svag)', fontSize: 'var(--skrift-knap)' }}>
           Ingen tal endnu. Tilføj gear under Inventar, så begynder det at fylde her.
         </div>
       </Skal>
@@ -176,10 +176,10 @@ function StatistikSide({ fane, skift, aabnItem, aabnAar }: Props) {
                   }}
                 >
                   <span style={{ display: 'flex', gap: '10px', alignItems: 'baseline', minWidth: 0 }}>
-                    <span style={{ fontSize: '11px', color: 'var(--tekst-svag)' }}>{i + 1}.</span>
-                    <span style={{ fontSize: '13px', color: 'var(--tekst)' }}>{x.item.navn || 'Uden navn'}</span>
+                    <span style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)' }}>{i + 1}.</span>
+                    <span style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst)' }}>{x.item.navn || 'Uden navn'}</span>
                   </span>
-                  <span style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>
                     {x.antalTure} {x.antalTure === 1 ? 'tur' : 'ture'}
                   </span>
                 </button>
@@ -212,7 +212,7 @@ function Widget({ titel, children, bred, advarsel }: {
       background: advarsel ? 'var(--advarsel-bg)' : 'var(--bg-forhoejet)'
     }}>
       <div style={{
-        fontSize: '10px',
+        fontSize: 'var(--skrift-mikro)',
         color: advarsel ? 'var(--advarsel)' : 'var(--tekst-dæmpet)',
         textTransform: 'uppercase',
         letterSpacing: '0.6px',
@@ -235,14 +235,14 @@ function Tal({ vaerdi, enhed, advarsel }: { vaerdi: string; enhed?: string; adva
       color: advarsel ? 'var(--advarsel)' : 'var(--tekst)'
     }}>
       {vaerdi}
-      {enhed && <span style={{ fontSize: '14px', color: 'var(--tekst-dæmpet)' }}> {enhed}</span>}
+      {enhed && <span style={{ fontSize: 'var(--skrift-brod)', color: 'var(--tekst-dæmpet)' }}> {enhed}</span>}
     </div>
   );
 }
 
 function Undertekst({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginTop: '4px' }}>{children}</div>
+    <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginTop: '4px' }}>{children}</div>
   );
 }
 
@@ -255,7 +255,7 @@ function Maanedsgraf({ maaneder, fremtidFra, antal }: {
 
   return (
     <div>
-      <div style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)', marginBottom: '10px' }}>
+      <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-dæmpet)', marginBottom: '10px' }}>
         {antal} {antal === 1 ? 'tur' : 'ture'}
       </div>
 
@@ -315,9 +315,9 @@ function Fordeling({ fordeling }: { fordeling: { navn: string; vaegt: number; pr
           <div key={g.navn} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '10px' }}>
             <span style={{ display: 'flex', gap: '8px', alignItems: 'center', minWidth: 0 }}>
               <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: 'var(--accent)', opacity: 1 - i * 0.15, flexShrink: 0 }} />
-              <span style={{ fontSize: '13px', color: 'var(--tekst)' }}>{g.navn}</span>
+              <span style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst)' }}>{g.navn}</span>
             </span>
-            <span style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>
               {(g.vaegt / 1000).toFixed(1)} kg · {g.procent.toFixed(0)}%
             </span>
           </div>
@@ -327,9 +327,9 @@ function Fordeling({ fordeling }: { fordeling: { navn: string; vaegt: number; pr
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '10px' }}>
             <span style={{ display: 'flex', gap: '8px', alignItems: 'center', minWidth: 0 }}>
               <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: 'var(--border-svag)', flexShrink: 0 }} />
-              <span style={{ fontSize: '13px', color: 'var(--tekst-dæmpet)' }}>Uden for grupperne</span>
+              <span style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-dæmpet)' }}>Uden for grupperne</span>
             </span>
-            <span style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>
               {rest.toFixed(0)}%
             </span>
           </div>
@@ -353,7 +353,7 @@ function Udfoldelig({ items, aabn }: { items: Item[]; aabn: (id: number) => void
           border: 'none',
           padding: 0,
           cursor: 'pointer',
-          fontSize: '12px',
+          fontSize: 'var(--skrift-detalje)',
           fontWeight: 500,
           color: 'var(--advarsel)'
         }}
@@ -376,7 +376,7 @@ function Udfoldelig({ items, aabn }: { items: Item[]; aabn: (id: number) => void
                 padding: 0,
                 cursor: 'pointer',
                 textAlign: 'left',
-                fontSize: '12px',
+                fontSize: 'var(--skrift-detalje)',
                 color: 'var(--tekst)'
               }}
             >
@@ -437,7 +437,7 @@ function Aarsknap({ aar, aabn }: { aar: number; aabn: () => void }) {
         <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '17px' }}>
           Årsopgørelse {aar}
         </span>
-        <span style={{ display: 'block', fontSize: '12px', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
+        <span style={{ display: 'block', fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
           Året talt op — nætter, steder, selskab og grej
         </span>
       </span>

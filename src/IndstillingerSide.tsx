@@ -176,7 +176,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
 
   return (
     <Skal fane={fane} skift={skift} titel="Indstillinger">
-      <div style={{ display: 'grid', gap: '22px' }}>
+      <div className="settings-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '24px', maxWidth: '720px', margin: '0 auto' }}>
 
         <section ref={sigte('konto')}>
           <SektionsTitel>Konto</SektionsTitel>
@@ -206,7 +206,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
               </>
             ) : (
               <>
-                <div style={{ fontSize: '13px', color: 'var(--tekst)', lineHeight: 1.5 }}>
+                <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst)', lineHeight: 1.5 }}>
                   Ikke logget ind — alt gemmes kun lokalt på denne enhed.
                 </div>
                 <div style={{ marginTop: '12px' }}>
@@ -303,7 +303,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
         <section>
           <SektionsTitel>Kroppen</SektionsTitel>
           <Kort>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
               <Felt
                 label="Din vægt"
                 type="number"
@@ -321,7 +321,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
             </div>
 
             <div style={{ marginTop: '12px' }}>
-              <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginBottom: '8px' }}>
+              <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginBottom: '8px' }}>
                 Aktivitetsniveau
               </div>
               <Segment
@@ -361,7 +361,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
         <section>
           <SektionsTitel>Pak-af-tjek</SektionsTitel>
           <Kort>
-            <div style={{ fontSize: '11px', color: 'var(--tekst-dæmpet)', marginBottom: '8px' }}>
+            <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginBottom: '8px' }}>
               Niveau på nye tjek
             </div>
             <Segment
@@ -495,7 +495,7 @@ function Skabelon({ linjer, gem, nulstil }: {
     <div>
       <div style={{ display: 'grid', gap: '2px', marginBottom: '12px' }}>
         {linjer.length === 0 && (
-          <div style={{ fontSize: '13px', color: 'var(--tekst-svag)' }}>
+          <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-svag)' }}>
             Skabelonen er tom. Tilføj de punkter du altid skal huske.
           </div>
         )}
@@ -504,7 +504,7 @@ function Skabelon({ linjer, gem, nulstil }: {
             <input
               value={linje}
               onChange={(e) => gem(linjer.map((l, i) => (i === n ? e.target.value : l)))}
-              style={{ flex: 1, minWidth: 0, fontSize: '13px', border: 'none', background: 'transparent', padding: '2px 0' }}
+              style={{ flex: 1, minWidth: 0, fontSize: 'var(--skrift-knap)', border: 'none', background: 'transparent', padding: '2px 0' }}
             />
             <FjernKnap onClick={() => gem(linjer.filter((_, i) => i !== n))} label={`Fjern ${linje}`} />
           </div>
@@ -517,7 +517,7 @@ function Skabelon({ linjer, gem, nulstil }: {
           onChange={(e) => setNy(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') tilfoej(); }}
           placeholder="Nyt punkt"
-          style={{ flex: 1, minWidth: 0, fontSize: '13px' }}
+          style={{ flex: 1, minWidth: 0, fontSize: 'var(--skrift-knap)' }}
         />
         <Knap onClick={tilfoej} disabled={!ny.trim()}>+ Tilføj</Knap>
       </div>
@@ -552,10 +552,10 @@ function Raekke({ label, vaerdi, fremhaev }: { label: string; vaerdi: string; fr
       alignItems: 'baseline',
       gap: '12px',
       padding: '5px 0',
-      fontSize: '13px'
+      fontSize: 'var(--skrift-knap)'
     }}>
-      <span style={{ color: 'var(--tekst-dæmpet)' }}>{label}</span>
-      <span style={{ color: fremhaev ? 'var(--advarsel)' : 'var(--tekst)', fontWeight: fremhaev ? 600 : 400, textAlign: 'right' }}>
+      <span style={{ flex: '0 0 40%', color: 'var(--tekst-dæmpet)' }}>{label}</span>
+      <span style={{ minWidth: 0, overflowWrap: 'anywhere', color: fremhaev ? 'var(--advarsel)' : 'var(--tekst)', fontWeight: fremhaev ? 600 : 400, textAlign: 'right' }}>
         {vaerdi}
       </span>
     </div>
@@ -565,7 +565,7 @@ function Raekke({ label, vaerdi, fremhaev }: { label: string; vaerdi: string; fr
 function Hjaelp({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
-      fontSize: '11px',
+      fontSize: 'var(--skrift-lille)',
       color: 'var(--tekst-svag)',
       marginTop: '12px',
       paddingTop: '10px',
@@ -582,7 +582,7 @@ function Kvittering({ besked }: { besked: Besked }) {
 
   return (
     <div style={{
-      fontSize: '12px',
+      fontSize: 'var(--skrift-detalje)',
       marginTop: '10px',
       color: besked.slags === 'ok' ? 'var(--succes)' : 'var(--fejl)'
     }}>
@@ -599,7 +599,7 @@ function Advarsel({ children }: { children: React.ReactNode }) {
       borderRadius: '8px',
       background: 'var(--advarsel-bg)',
       border: '1px solid var(--advarsel-border)',
-      fontSize: '12px',
+      fontSize: 'var(--skrift-detalje)',
       color: 'var(--advarsel)',
       lineHeight: 1.5
     }}>

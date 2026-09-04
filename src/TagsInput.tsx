@@ -95,7 +95,7 @@ function TagsInput({ tags, onChange, label, hjaelpetekst, farve = 'default' }: P
             flex: 1,
             minWidth: '120px',
             padding: '4px',
-            fontSize: '13px',
+            fontSize: 'var(--skrift-knap)',
             border: 'none',
             outline: 'none',
             background: 'transparent'
@@ -120,7 +120,7 @@ function TagsInput({ tags, onChange, label, hjaelpetekst, farve = 'default' }: P
               style={{
                 padding: '8px 12px',
                 cursor: 'pointer',
-                fontSize: '13px',
+                fontSize: 'var(--skrift-knap)',
                 borderBottom: '1px solid var(--border-svag)'
               }}
             >
