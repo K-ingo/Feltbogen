@@ -4,6 +4,7 @@ import type { GaesteBillede, GaesteItem, Gaestesnapshot } from './gaest';
 import { ledigtFaelles, gaestetitel } from './gaest';
 import type { Deltagelse } from './deltagelse';
 import { baererePrGear, samletMedbragtVaegt, visningsnavn } from './deltagelse';
+import { kilo } from './talformat';
 import { vejrIkonKode, linjerEfterPerson, samletVaegt, linjeAfMedbragt } from './smartMotor';
 import type { Pakkelinje, Pakkeafsnit } from './smartMotor';
 import { formatterPeriode, kortDag, datoTekst } from './datotekst';
@@ -243,12 +244,12 @@ function DeltTurVisning({
               står hendes eget tal ved siden af; det er dét, hun spurgte om. */}
           <Infokort label="Alt grej på turen" fremhaevet>
             <div style={{ fontSize: '22px', fontFamily: "'Fraunces', Georgia, serif" }}>
-              {((snapshot.vaegt_i_alt_g + medbragtVaegt) / 1000).toFixed(2)} kg
+              {kilo(snapshot.vaegt_i_alt_g + medbragtVaegt)} kg
             </div>
             <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginTop: '3px' }}>
               {[
                 `ejerens og deltagernes tilsammen${snapshot.personer > 1 ? `, ${snapshot.personer} af sted` : ''}`,
-                medbragtVaegt > 0 ? `heraf ${(medbragtVaegt / 1000).toFixed(2)} kg fra deltagerne` : null
+                medbragtVaegt > 0 ? `heraf ${kilo(medbragtVaegt)} kg fra deltagerne` : null
               ].filter(Boolean).join(' · ')}
             </div>
 
@@ -260,7 +261,7 @@ function DeltTurVisning({
                 fontSize: 'var(--skrift-knap)'
               }}>
                 {minVaegt > 0
-                  ? <>Du bærer <strong>{(minVaegt / 1000).toFixed(2)} kg</strong></>
+                  ? <>Du bærer <strong>{kilo(minVaegt)} kg</strong></>
                   : 'Du har ikke skrevet noget på endnu'}
               </div>
             )}
@@ -344,7 +345,7 @@ function DeltTurVisning({
                     );
                   })}
                   <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', paddingTop: '4px' }}>
-                    {(samletVaegt(a.linjer) / 1000).toFixed(2)} kg
+                    {kilo(samletVaegt(a.linjer))} kg
                   </div>
                 </div>
               ))
@@ -431,7 +432,7 @@ function Gruppen({ linjer, navne }: { linjer: Pakkelinje[]; navne: string[] }) {
           <span style={{ color: 'var(--tekst-dæmpet)', fontSize: 'var(--skrift-detalje)', whiteSpace: 'nowrap' }}>
             {r.antal === 0
               ? 'intet endnu'
-              : `${r.antal} ${r.antal === 1 ? 'ting' : 'ting'} · ${(r.vaegt / 1000).toFixed(2)} kg`}
+              : `${r.antal} ${r.antal === 1 ? 'ting' : 'ting'} · ${kilo(r.vaegt)} kg`}
           </span>
         </div>
       ))}
@@ -445,7 +446,7 @@ function Tomliste({ linjer, kanMelde }: { linjer: number; kanMelde: boolean }) {
   return (
     <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-svag)', lineHeight: 1.6 }}>
       {linjer === 0
-        ? 'Der er ikke valgt gear til turen endnu.'
+        ? 'Der er ikke valgt grej til turen endnu.'
         : kanMelde
           ? 'Du har ikke fået noget at bære endnu. Under Deltagere kan du se, hvad de andre tager — og under Mit grej kan du melde dig til noget af det fælles.'
           : 'Du har ikke fået noget at bære endnu. Under Deltagere kan du se, hvad de andre tager med.'}
@@ -486,7 +487,7 @@ function Helelisten({ afsnit }: { afsnit: Pakkeafsnit[] }) {
             </div>
           ))}
           <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', paddingTop: '4px' }}>
-            {(samletVaegt(a.linjer) / 1000).toFixed(2)} kg
+            {kilo(samletVaegt(a.linjer))} kg
           </div>
         </div>
       ))}
@@ -687,7 +688,7 @@ function Ledigt({ items, vaegt, kanMelde }: { items: GaesteItem[]; vaegt: number
         ))}
       </div>
       <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)' }}>
-        {(vaegt / 1000).toFixed(2)} kg i alt.
+        {kilo(vaegt)} kg i alt.
         {kanMelde
           ? <> Under <strong>Mit grej</strong> nedenfor kan du melde dig til at bære noget af det.</>
           : ' Sig til den, der har delt turen, hvis du kan tage noget af det.'}

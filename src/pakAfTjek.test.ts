@@ -197,7 +197,7 @@ describe('opsummering og resumé', () => {
   });
 
   it('siger det ligeud når der intet var på listen', () => {
-    expect(resumetekst(nytPakAfTjek([], 'let', NU))).toBe('Intet gear på listen');
+    expect(resumetekst(nytPakAfTjek([], 'let', NU))).toBe('Intet grej på listen');
   });
 });
 
