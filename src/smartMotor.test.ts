@@ -109,6 +109,15 @@ describe('beregnForbrug', () => {
     expect(b.gas_g).toBeGreaterThan(0);
   });
 
+  it('giver endelige tal ved ødelagte importerede antal og nætter', () => {
+    const tur = lavTur({ naetter: Number.NaN, personer: Number.NaN, startdato: '2026-07-10' });
+    const b = beregnForbrug(tur);
+
+    expect(b.vand_liter).toBe(3.8);
+    expect(b.mad_kg).toBe(0.6);
+    expect(b.gas_g).toBe(25);
+  });
+
   describe('kropsdata', () => {
     const tur = lavTur({ naetter: 1, personer: 1, startdato: '2026-07-10' });
     const uden = beregnForbrug(tur);

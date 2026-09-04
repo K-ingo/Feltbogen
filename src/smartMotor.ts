@@ -189,8 +189,9 @@ export function saesonfaktor(dato: string): number {
 }
 
 export function beregnForbrug(tur: Tur, krop: Kropsdata = {}): Beregninger {
-  const dage = Math.max(1, tur.naetter + 1);
-  const personer = Math.max(1, tur.personer || 1);
+  const naetter = Number.isFinite(tur.naetter) ? Math.max(0, Math.round(tur.naetter)) : 0;
+  const personer = Number.isFinite(tur.personer) ? Math.max(1, Math.round(tur.personer)) : 1;
+  const dage = naetter + 1;
   const faktor = saesonfaktor(tur.startdato);
 
   const vaegtfaktor = beregnVaegtfaktor(krop.kropsvaegt_kg);
@@ -359,9 +360,10 @@ export function advarslerPrItem(advarsler: Advarsel[]): Map<Reference, Advarsel[
 // Bruges både til pakkelisten og til statistikken over hvad der faktisk er brugt.
 export function itemUidsPaaTur(tur: Tur, grupper: Gruppe[]): Set<Reference> {
   const uids = new Set<Reference>(tur.loese_item_ids);
+  const grupperPrUid = new Map(grupper.map((gruppe) => [gruppe.uid, gruppe]));
 
   tur.gruppe_ids.forEach((gruppeUid) => {
-    const gruppe = grupper.find((g) => g.uid === gruppeUid);
+    const gruppe = grupperPrUid.get(gruppeUid);
     gruppe?.item_ids.forEach((uid) => uids.add(uid));
   });
 

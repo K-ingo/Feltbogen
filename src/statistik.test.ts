@@ -85,6 +85,13 @@ describe('tureFordeltPrMaaned', () => {
   it('ignorerer ture uden startdato', () => {
     expect(tureFordeltPrMaaned([lavTur({ startdato: '' })]).every((n) => n === 0)).toBe(true);
   });
+
+  it('ignorerer en ugyldig startdato uden at oprette en skjult NaN-værdi', () => {
+    const fordeling = tureFordeltPrMaaned([lavTur({ startdato: 'ikke-en-dato' })]);
+    expect(fordeling).toHaveLength(12);
+    expect(fordeling.every((n) => n === 0)).toBe(true);
+    expect(Object.hasOwn(fordeling, 'NaN')).toBe(false);
+  });
 });
 
 describe('mestBrugte', () => {

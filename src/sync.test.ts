@@ -203,6 +203,28 @@ describe('uafsendte ændringer prøves igen', () => {
     expect(pbMock.records.get('items')?.get('pb1')?.navn).toBe('Anden');
     expect((await db.items.get(id))?.usendt_aendring).toBe(false);
   });
+
+  it('sender to overlappende ændringer i rækkefølge', async () => {
+    const id = await opretItem(lavItem({ navn: 'Start' }));
+    await opdaterItem(id, { navn: 'Første' });
+
+    const { naaet, slip } = blokerNaesteUpdate();
+    const foerste = sendAfventende();
+    await naaet;
+
+    // Den næste timer må gerne forsøge at sende, mens den første request er
+    // i luften. Sync-laget skal holde den tilbage pr. post, så et sent svar
+    // med "Første" ikke kan overskrive "Anden" på serveren.
+    await opdaterItem(id, { navn: 'Anden' });
+    const anden = sendAfventende();
+
+    slip();
+    await Promise.all([foerste, anden]);
+
+    expect(pbMock.records.get('items')?.get('pb1')?.navn).toBe('Anden');
+    expect((await db.items.get(id))?.navn).toBe('Anden');
+    expect((await db.items.get(id))?.usendt_aendring).toBe(false);
+  });
 });
 
 describe('slet', () => {

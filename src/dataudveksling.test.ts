@@ -87,6 +87,11 @@ describe('laesSikkerhedskopi afviser det den ikke kan bruge', () => {
     expect(() => laesSikkerhedskopi(nyere)).toThrow(/nyere version/);
   });
 
+  it.each([0, -1, 1.5])('siger fra ved ugyldig kopiversion %s', (version) => {
+    const ugyldig = JSON.stringify({ version, items: [], grupper: [], ture: [] });
+    expect(() => laesSikkerhedskopi(ugyldig)).toThrow(/ugyldig/);
+  });
+
   it('springer poster over der mangler uid, i stedet for at vælte importen', () => {
     const blandet = JSON.stringify({
       version: KOPI_VERSION,

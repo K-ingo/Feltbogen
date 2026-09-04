@@ -206,6 +206,11 @@ export function Billedvisning({ billede, tilpas = 'cover' }: {
     let gaeldende = true;
     let objektUrl = '';
 
+    // Komponenten genbruges blandt andet i billedpanelet. Skifter den fra et
+    // billede med en kilde til et, der endnu hverken har blob eller URL, må den
+    // gamle kilde ikke blive stående og ligne det nye billede.
+    setKilde('');
+
     const vis = (blob: Blob) => {
       objektUrl = URL.createObjectURL(blob);
       if (gaeldende) setKilde(objektUrl);

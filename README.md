@@ -79,7 +79,7 @@ appen starter.
 | Ligesom sidst | `src/ligesomSidst.ts` | Tidligere ture der lignede, som grej kan kopieres fra |
 | Fortryd sletning | `src/fortryd.ts` | Vinduet på 25 sekunder efter en sletning |
 | Enhedens valg | `src/indstillinger.ts` | Det der hører til telefonen og ikke til dataene, og derfor ikke synkroniseres |
-| Sikkerhedskopi | `src/dataudveksling.ts` | Hele basen ud og ind som én JSON-fil |
+| Sikkerhedskopi | `src/dataudveksling.ts` | Gear, grupper, ture, steder og personer ud og ind som én JSON-fil; billedfiler er ikke med |
 | Nye poster | `src/opret.ts` | Tomme poster med de samme standardværdier, uanset hvor man startede dem |
 | Datoer | `src/datotekst.ts` | Perioder og dage skrevet ud på dansk |
 | Statistik | `src/statistik.ts` | Aggregeringer over inventar og ture |
