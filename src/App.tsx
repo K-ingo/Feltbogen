@@ -2,6 +2,8 @@ import { lazy, useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 import AuthSide from './AuthSide';
 import { useAuth } from './useAuth';
+import { useKontostatus } from './konto';
+import KontoskiftSide from './KontoskiftSide';
 import { fornyLogin } from './pb';
 import { afstemMedServer, sendAfventende, sletItem, sletGruppe, sletTur, sletSted, opdaterTur } from './sync';
 import type { Sted } from './db';
@@ -61,7 +63,8 @@ import type { Fane } from './Skal';
 // appen ingenting frem for at blinke velkomstskærmen forbi. Uden strengt
 // nul-tjek i oversætteren fanges den slags ikke af sig selv.
 function App(): ReactElement | null {
-  const { erLoggetInd } = useAuth();
+  const { bruger, erLoggetInd } = useAuth();
+  const kontostatus = useKontostatus(bruger?.id ?? null);
   // Et gæstelink afgøres af adresselinjen og læses én gang. Går gæsten videre
   // ind i appen, ryddes den, så et genbesøg ikke lander på turen igen.
   const [gaesteToken, setGaesteToken] = useState(() => tokenFraAdresse());
@@ -186,6 +189,10 @@ function App(): ReactElement | null {
   // dødt token og blive afvist tavst.
   useEffect(() => {
     if (!erLoggetInd) return;
+    // Basen tilhører en anden konto. Sync har sin egen spærre, men der er ingen
+    // grund til at banke på — og `undefined` betyder, at basen ikke er læst
+    // endnu.
+    if (kontostatus !== 'egen' && kontostatus !== 'umaerket') return;
 
     const afstem = async () => {
       await fornyLogin();
@@ -196,7 +203,7 @@ function App(): ReactElement | null {
     const naarOnline = () => void afstem();
     window.addEventListener('online', naarOnline);
     return () => window.removeEventListener('online', naarOnline);
-  }, [erLoggetInd]);
+  }, [erLoggetInd, kontostatus]);
 
   // Redigeringer samles i en kort kø før de sendes. Skjules appen, sendes køen
   // med det samme, så en ændring ikke først går op ved næste opstart.
@@ -233,6 +240,13 @@ function App(): ReactElement | null {
 
   if (viserLogin) {
     return <AuthSide fortryd={() => setViserLogin(false)} />;
+  }
+
+  // Enheden hører til en anden konto. Skærmen står foran alt, der læser eller
+  // rører den lokale base — men efter turkortet og gæsteruten ovenfor, som
+  // aldrig gør nogen af delene.
+  if (bruger && kontostatus === 'fremmed') {
+    return <KontoskiftSide brugerId={bruger.id} />;
   }
 
   // Onboardingen er ikke afgjort endnu — vis ingenting frem for at blinke den

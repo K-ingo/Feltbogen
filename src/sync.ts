@@ -17,6 +17,7 @@ import { fejlDetaljer } from './pbFejl';
 import { noterFejl, rydFejl } from './syncfejl';
 import { gyldig as gyldigVurdering } from './vurdering';
 import { rydAfvisninger } from './afviste';
+import { kontostatus, adopterBase } from './konto';
 import type {
   Billede,
   Gravsten,
@@ -46,6 +47,25 @@ import type {
 // Offline-first: alt skrives til IndexedDB først og sendes derefter til
 // PocketBase. Fejler netværket, bliver posten liggende uden pb_id og forsøges
 // igen ved næste appstart via sendAltUsendt().
+
+// ─────────────────────────────────────────────
+// Porten: hører basen til den, der er logget ind?
+//
+// Ét enkelt kald under den forkerte konto er nok til at kopiere data derover —
+// `tilPb` sætter den nuværende brugers id på alt, hvad den sender. Derfor
+// ligger spærren her og ikke i en skærm: der er allerede to steder, der starter
+// en synkronisering, og et tredje ville før eller siden glemme den.
+//
+// Porten adopterer samtidig en umærket base. Data lavet uden konto er ens egne,
+// og et første login skal ikke spørge om noget.
+// ─────────────────────────────────────────────
+
+async function kontoKlar(brugerId: string): Promise<boolean> {
+  const status = await kontostatus(brugerId);
+  if (status === 'fremmed') return false;
+  if (status === 'umaerket') await adopterBase(brugerId);
+  return true;
+}
 
 // ─────────────────────────────────────────────
 // Læsning af PocketBase-records
@@ -768,6 +788,7 @@ function synkroniser<T extends Post>(samling: Samling<T>, id: number): Promise<b
 async function synkroniserNu<T extends Post>(samling: Samling<T>, id: number): Promise<boolean> {
   const bruger = nuvaerendeBruger();
   if (!bruger) return false;
+  if (!await kontoKlar(bruger.id)) return false;
 
   const post = await samling.tabel.get(id);
   if (!post) return false;
@@ -1015,6 +1036,7 @@ async function slet<T extends Post>(samling: Samling<T>, id: number): Promise<Ge
 async function fuldfoerSletning(spor: Slettet): Promise<boolean> {
   const bruger = nuvaerendeBruger();
   if (!bruger) return false;
+  if (!await kontoKlar(bruger.id)) return false;
 
   const uid = spor.uid ?? '';
 
@@ -1455,7 +1477,9 @@ export function sendAltUsendt(): Promise<{ antal: number; fejl: number }> {
 }
 
 async function sendAltUsendtNu(): Promise<{ antal: number; fejl: number }> {
-  if (!nuvaerendeBruger()) return { antal: 0, fejl: 0 };
+  const bruger = nuvaerendeBruger();
+  if (!bruger) return { antal: 0, fejl: 0 };
+  if (!await kontoKlar(bruger.id)) return { antal: 0, fejl: 0 };
 
   // Tøm køen først, så en igangværende redigering ikke tælles som usendt.
   await sendAfventende();
@@ -1485,6 +1509,7 @@ export function hentFraPocketBase(): Promise<void> {
 async function hentFraPocketBaseNu(): Promise<void> {
   const bruger = nuvaerendeBruger();
   if (!bruger) return;
+  if (!await kontoKlar(bruger.id)) return;
 
   try {
     // Gravstenene hentes én gang for alle samlinger. Seks hentninger af den

@@ -80,6 +80,7 @@ appen starter.
 | Ligesom sidst | `src/ligesomSidst.ts` | Tidligere ture der lignede, som grej kan kopieres fra |
 | Fortryd sletning | `src/fortryd.ts` | Vinduet på 25 sekunder efter en sletning |
 | Gravsten | `src/sync.ts` | Serverens påstand om, at noget er slettet med vilje — og reglen om at kun den kan slette lokalt |
+| Hvem basen tilhører | `src/konto.ts` | Ejermærket på enheden, og de tre overgange mellem konti |
 | Enhedens valg | `src/indstillinger.ts` | Det der hører til telefonen og ikke til dataene, og derfor ikke synkroniseres |
 | Sikkerhedskopi | `src/dataudveksling.ts` | Gear, grupper, ture, steder og personer ud og ind som én JSON-fil; billedfiler er ikke med |
 | Nye poster | `src/opret.ts` | Tomme poster med de samme standardværdier, uanset hvor man startede dem |
@@ -492,6 +493,52 @@ kan gøre ved. Se `POCKETBASE.md` trin 7.
 
 En fortrydelse tager gravstenen af igen. Uden det ville den blive stående over
 et uid, der er tilbage, og slå posten ihjel på næste enhed i stedet.
+
+### Hvem den lokale base tilhører
+
+`logUd()` rydder kun sessionen. IndexedDB bliver liggende, og for den samme
+person er det rigtigt — man skal ikke miste sit skab, fordi man logger ud.
+Brugerfladen lover det direkte.
+
+Logger en *anden* person ind i samme browser, var der før ingenting, der sagde
+fra. Sync kørte som altid, og `tilPb(post, bruger.id)` sætter den nuværende
+brugers id på alt, hvad den sender: den forriges grej ville blive oprettet under
+den nye konto, mens hentningen lagde den nyes ting ned i de samme tabeller.
+
+Det, der manglede, var ikke en spærre men en oplysning: hvem tilhører de her
+data? `konto.ts` holder svaret som et ejermærke i `indstillinger` — den tabel er
+enhedens egen og synkroniseres aldrig. Mærket overlever et log ud; det er hele
+pointen. Det siger, hvem dataene tilhører, ikke hvem der er logget ind.
+
+Kun brugerens id gemmes, ikke e-mailen. Id'et er nok til at sammenligne, og står
+en anden med telefonen, skal appen ikke fortælle hende, hvem den forrige ejer
+var.
+
+Tre overgange, og de må ikke forveksles:
+
+| Fra | Til | Hvad der sker |
+|---|---|---|
+| Ingen konto | Konto X | **Adopteres.** Data lavet uden konto er ens egne — det er den dokumenterede måde at komme i gang på |
+| Konto X | Konto X | **Ingenting.** Log ud og ind igen koster aldrig data |
+| Konto X | Konto Y | **Stop.** `KontoskiftSide` spørger, og synkroniseringen står stille imens |
+
+Porten sidder i `sync.ts` og ikke i en skærm. Der er allerede to steder, der
+starter en synkronisering, og hver redigering planlægger sin egen — et tredje
+sted ville før eller siden glemme den. Den samme regel som `HOERER_TIL` i
+`Skal.tsx`: udled ét sted, så det ikke kan blive glemt.
+
+Ved et kontoskift er der to veje ud, og ingen af dem sker af sig selv: log ud
+igen, hvorved intet er rørt, eller ryd enheden og overtag den. Rydningen tager
+alt med — også billeder, gæstens delte ture og enhedens indstillinger, for
+kropsvægt og skabeloner er den forrige ejers persondata. Skærmen siger, hvor
+meget der ikke er nået op på serveren, og tilbyder en sikkerhedskopi først.
+**Billederne er ikke med i den kopi**, og det står på knappen.
+
+To ting løser det ikke. **To personer kan ikke have hver sin base i samme
+browser** — det ville kræve en base pr. konto, og `db` er en modul-singleton.
+Og det **beskytter ikke mod at nogen kigger på skærmen**: appen virker uden
+konto, så indholdet var synligt i forvejen. Det, der forhindres, er at data
+bliver kopieret til den forkerte konto.
 
 `afstemMedServer()` samler de to retninger — send det usendte op, hent det vi
 mangler ned — og kaldes ved opstart og på browserens `online`-event, så en tur

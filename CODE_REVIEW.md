@@ -97,9 +97,12 @@ eller ændringer i datamodellen:
    `samling` for hver post, der er slettet med vilje. Kun en gravsten kan
    udløse en lokal sletning; et fravær kan ikke, uanset hvor meget det ligner.
    Findes samlingen ikke, opfører appen sig som før. Se `POCKETBASE.md` trin 7.
-3. **Den lokale database er ikke opdelt pr. PocketBase-konto.** Kontoskift på
-   samme browser bør have en eksplicit politik for lokal rydning, migration
-   eller konto-ejede data, så data ikke utilsigtet blandes mellem brugere.
+3. ~~**Den lokale database er ikke opdelt pr. PocketBase-konto.**~~ ✅ Delvist
+   løst. Basen bærer nu et ejermærke, og et login med en anden konto stopper
+   synkroniseringen og spørger frem for at blande — se `src/konto.ts`. Det, der
+   står tilbage, er en base *pr. konto*, så to personer kan bruge samme browser
+   hver for sig. Det kræver en Dexie-base pr. konto eller en ejer-kolonne på
+   hver tabel, og ingen har haft brug for det endnu.
 4. **Konflikter bruger last-write-wins.** Det er enkelt og deterministisk, men
    samtidige offline-redigeringer af forskellige felter flettes ikke. Hvis
    kollaborativ redigering bliver et krav, bør revisioner eller feltvis
