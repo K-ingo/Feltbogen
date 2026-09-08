@@ -23,6 +23,7 @@ import {
 import { sletTur } from './sync';
 import { lavItem, lavGruppe, lavTur, lavBillede, lavSted } from './test/data';
 import { laesSeneste, rydFejl } from './syncfejl';
+import { adopterBase, kontostatus } from './konto';
 
 // Opdateringer samles i 800 ms før de sendes.
 const FORSINKELSE = 800;
@@ -35,6 +36,7 @@ beforeEach(async () => {
   await db.personer.clear();
   await db.billeder.clear();
   await db.slettede.clear();
+  await db.indstillinger.clear();
   pbMock.reset();
   await rydFejl();
   vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -975,5 +977,107 @@ describe('gravsten', () => {
 
       expect(await db.items.get(id)).toBeDefined();
     });
+  });
+});
+
+
+// ─────────────────────────────────────────────
+// Porten: hører basen til den, der er logget ind?
+//
+// `logUd()` rydder kun sessionen — data bliver liggende, og det er meningen for
+// den samme person. Logger en anden ind i samme browser, er ét sync-kald nok
+// til at kopiere den forriges grej over i hendes konto: `tilPb` sætter den
+// nuværende brugers id på alt, hvad den sender.
+//
+// Testbrugeren hedder altid `bruger1`. En base mærket med noget andet er derfor
+// en base, der tilhører en anden.
+// ─────────────────────────────────────────────
+
+describe('konto og base hører ikke sammen', () => {
+  const maerkTilEnAnden = () => adopterBase('en-anden-konto');
+
+  it('sender ikke en redigering op', async () => {
+    const id = await opretItem(lavItem({ navn: 'Emils økse' }));
+    await maerkTilEnAnden();
+
+    await opdaterItem(id, { vaegt_g: 900 });
+    await sendAfventende();
+
+    expect(pbMock.records.get('items')?.get('pb1')?.vaegt_g).not.toBe(900);
+  });
+
+  it('opretter ikke en ny post under den forkerte konto', async () => {
+    await maerkTilEnAnden();
+
+    await opretItem(lavItem({ navn: 'Bliver her' }));
+    await sendAfventende();
+
+    expect(pbMock.ids('items')).toEqual([]);
+    expect(await db.items.count()).toBe(1);
+  });
+
+  it('sender ingenting med sendAltUsendt', async () => {
+    await opretItem(lavItem({ navn: 'Usendt' }));
+    pbMock.records.get('items')?.clear();
+    await db.items.toCollection().modify({ pb_id: undefined, usendt_aendring: true });
+    await maerkTilEnAnden();
+
+    const { antal } = await sendAltUsendt();
+
+    expect(antal).toBe(0);
+    expect(pbMock.ids('items')).toEqual([]);
+  });
+
+  it('henter ingenting ned', async () => {
+    pbMock.seed('items', 'pb9', { uid: 'majas-uid', navn: 'Majas telt' });
+    await maerkTilEnAnden();
+
+    await hentFraPocketBase();
+
+    expect(await db.items.count()).toBe(0);
+  });
+
+  it('sender ikke en sletning op', async () => {
+    const id = await opretItem(lavItem({ navn: 'Bliver deroppe' }));
+    await maerkTilEnAnden();
+
+    await sletItem(id);
+
+    // Lokalt er den væk, men serveren må ikke røres på en fremmed konto.
+    expect(pbMock.ids('items')).toEqual(['pb1']);
+    expect(await db.slettede.count()).toBe(1);
+  });
+
+  it('rører ikke noget, når afstemningen kaldes', async () => {
+    const id = await opretItem(lavItem({ navn: 'Urørt' }));
+    pbMock.seed('items', 'pb9', { uid: 'majas-uid', navn: 'Majas telt' });
+    await maerkTilEnAnden();
+
+    await afstemMedServer();
+
+    expect(await db.items.count()).toBe(1);
+    expect((await db.items.get(id))?.navn).toBe('Urørt');
+  });
+});
+
+describe('porten slipper igennem, når den skal', () => {
+  it('adopterer en umærket base ved første synkronisering', async () => {
+    expect(await kontostatus('bruger1')).toBe('umaerket');
+
+    await opretItem(lavItem({ navn: 'Første' }));
+    await sendAfventende();
+
+    expect(await kontostatus('bruger1')).toBe('egen');
+    expect(pbMock.ids('items')).toHaveLength(1);
+  });
+
+  it('lader alt køre, når mærket passer', async () => {
+    await adopterBase('bruger1');
+
+    const id = await opretItem(lavItem({ navn: 'Min egen' }));
+    await opdaterItem(id, { vaegt_g: 700 });
+    await sendAfventende();
+
+    expect(pbMock.records.get('items')?.get('pb1')?.vaegt_g).toBe(700);
   });
 });

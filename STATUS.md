@@ -1,6 +1,6 @@
 # STATUS
 
-*Sidst opdateret: 8. september 2026. Udgangspunkt: `main` @ `df158f8`.*
+*Sidst opdateret: 8. september 2026. Udgangspunkt: `main` @ `c3c214f`.*
 
 Kort svar på "hvor står vi nu?". Den skal kunne læses på to minutter og
 opdateres, hver gang noget bliver færdigt eller blokeret.
@@ -25,13 +25,13 @@ tilbage, er arbejde vi selv vælger — ikke noget, der spærrer.
 
 ## Grønt lys
 
-Kørt på `main` @ `df158f8` den 8. september 2026:
+Kørt på grenen `claude/kontoadskillelse` den 8. september 2026:
 
 | Kommando | Resultat |
 |---|---|
 | `npm run lint` | Bestået, ingen fejl |
-| `npm test` | 51 testfiler, 1.137 tests, alle grønne |
-| `npm run build` | Bestået. Startchunk 453,91 kB / 144,00 kB gzip |
+| `npm test` | 52 testfiler, 1.158 tests, alle grønne |
+| `npm run build` | Bestået. Startchunk 459,79 kB / 145,49 kB gzip |
 
 CI kører de samme tre på alle pull requests, plus et tjek for at et privat
 Railway-domæne ikke er havnet i bundlen.
@@ -70,9 +70,11 @@ I den rækkefølge, de sandsynligvis er værd at tage.
 
 ### Arkitektur og data — kræver en beslutning først
 
-1. **Den lokale base er ikke opdelt pr. konto.** Skifter to brugere konto i
-   samme browser, kan data blandes. Der mangler en politik for lokal rydning
-   eller konto-ejede data. (`CODE_REVIEW.md` §3)
+1. **En base pr. konto.** Basen bærer nu et ejermærke, og et kontoskift stopper
+   og spørger frem for at blande — men to personer kan stadig ikke bruge samme
+   browser hver for sig. Det kræver en Dexie-base pr. konto eller en
+   ejer-kolonne på hver tabel. Ingen har haft brug for det endnu.
+   (`CODE_REVIEW.md` §3)
 2. **Konflikter er last-write-wins.** Enkelt og forudsigeligt, men to enheder,
    der offline redigerer hver sit felt på samme post, flettes ikke.
    (`CODE_REVIEW.md` §4)
