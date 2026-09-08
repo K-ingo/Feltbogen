@@ -18,9 +18,12 @@ appen bliver klogere af det. Delingen er blevet til rigtigt samarbejde, hvor
 en deltager har sine egne faner, sin egen pakkeliste og kan bidrage til den
 fælles journal.
 
-Serveren er nu sat helt op: de tre felter, der manglede i PocketBase, er
-oprettet, og dermed er der ingen kendt blokering tilbage. Det næste er at
-køre den vej igennem med rigtige data — den har aldrig været åben før.
+De tre felter, der manglede i PocketBase, er oprettet. Der er kommet én ny
+opgave i admin-fladen — samlingen `slettede` til gravstenene — men den blokerer
+ikke: springes den over, virker appen som før.
+
+Det næste er at køre begge veje igennem med rigtige data. Hverken deltagernes
+journal eller sletninger på tværs af enheder har været åbne før.
 
 ---
 
@@ -62,60 +65,66 @@ og se at det står der efter en genindlæsning. Det er første gang, den vej er
 samlingerne ikke er åbne for fremmede. Den skriver ingenting — den henter
 kun og kigger på svaret.
 
+## Venter på PocketBase
+
+Der er kommet én ting mere, som kun kan gøres i admin-fladen: **samlingen
+`slettede`** — gravstenene, der får en sletning til at slå igennem på tværs af
+enheder. Se `POCKETBASE.md` trin 7.
+
+Springes den over, virker appen som før: sletninger bliver på den enhed, de
+skete på, og en redigering af en post, der er slettet et andet sted, opretter
+den på ny. Der kommer ingen fejl på skærmen — det er en funktion, der ikke er
+slået til, ikke en fejl brugeren kan gøre noget ved.
+
 ## Åbne arbejdsområder
 
 I den rækkefølge, de sandsynligvis er værd at tage.
 
 ### Arkitektur og data — kræver en beslutning først
 
-1. **Tombstones ved sletning.** En post, der findes lokalt men mangler på
-   serveren, kan i dag ikke skelnes fra en midlertidigt utilgængelig eller
-   fejlkonfigureret samling. Fjernsletninger bør derfor ikke slå igennem
-   lokalt, før serveren kan sige "den er slettet" frem for bare at tie.
-   (`CODE_REVIEW.md` §2)
-2. **Den lokale base er ikke opdelt pr. konto.** Skifter to brugere konto i
+1. **Den lokale base er ikke opdelt pr. konto.** Skifter to brugere konto i
    samme browser, kan data blandes. Der mangler en politik for lokal rydning
    eller konto-ejede data. (`CODE_REVIEW.md` §3)
-3. **Konflikter er last-write-wins.** Enkelt og forudsigeligt, men to enheder,
+2. **Konflikter er last-write-wins.** Enkelt og forudsigeligt, men to enheder,
    der offline redigerer hver sit felt på samme post, flettes ikke.
    (`CODE_REVIEW.md` §4)
-4. **Billeder er ikke med i JSON-sikkerhedskopien.** En komplet backup kræver
+3. **Billeder er ikke med i JSON-sikkerhedskopien.** En komplet backup kræver
    et arkivformat med binære filer. (`CODE_REVIEW.md` §1)
 
 ### Kvalitet
 
-5. **UI har ingen direkte testdækning.** Datalag og domænelogik er stærkt
+4. **UI har ingen direkte testdækning.** Datalag og domænelogik er stærkt
    dækket; komponentadfærd er kun dækket indirekte. En UI-regression kan
    slippe forbi CI. En lille browserbaseret suite for navigation, billeder og
    offline-flows ville lukke hullet. (`CODE_REVIEW.md` §6)
-6. **Tilgængelighedspas på dialoger.** Modaler, delings-/QR-flow og
+5. **Tilgængelighedspas på dialoger.** Modaler, delings-/QR-flow og
    fejltilstande er ikke gennemgået for fokusfælde, retur-fokus, Escape og
    labels. (`UI_REVIEW.md` P1)
-7. **Fysisk feltprøve.** Lys/mørk tilstand udendørs, stor systemtekst, 200 %
+6. **Fysisk feltprøve.** Lys/mørk tilstand udendørs, stor systemtekst, 200 %
    zoom, én hånd, handsker. Alt er hidtil afprøvet i en desktopbrowser med
    ændret viewport. (`UI_REVIEW.md` P1)
-8. **Eksterne fetch-kald mangler fælles timeout.** En langsom vejr- eller
+7. **Eksterne fetch-kald mangler fælles timeout.** En langsom vejr- eller
    adresseudbyder kan holde en UI-handling åben længe. (`CODE_REVIEW.md` §5)
 
 ### Funktioner, der venter
 
-9. **Læringssløjfen og de sidste statistikker** — nætter, besøgte steder,
+8. **Læringssløjfen og de sidste statistikker** — nætter, besøgte steder,
    turtyper, gennemsnitsvægt, bedste og dårligste grej efter egne stjerner.
    Kun det, der kan forklares ud fra data, der findes. (`PLAN.md` §9 trin 5)
-10. **Rute som eget domæne, derefter `dage: TurDag[]`.** Datamodel, migration
+9. **Rute som eget domæne, derefter `dage: TurDag[]`.** Datamodel, migration
     og tests før noget UI. Rute først, fordi dagen skal kunne pege på en.
     Åbner for kilometer, højdemeter og kortfanen på delte ture.
     (`PLAN.md` §9 trin 6)
-11. **Badges og notifikationer.** I fundamentet §9, ikke bygget.
-12. **Tidevand ved kystture.** Kræver en DMI-nøgle. (`IDEER.md` §5.4)
-13. **Onboarding og adaptiv hjælpegrad.** Bevidst udskudt — vi bygger til
+10. **Badges og notifikationer.** I fundamentet §9, ikke bygget.
+11. **Tidevand ved kystture.** Kræver en DMI-nøgle. (`IDEER.md` §5.4)
+12. **Onboarding og adaptiv hjælpegrad.** Bevidst udskudt — vi bygger til
     ejeren først. Bliver relevant, hvis appen skal ud til andre.
-14. **Virtualisering af lange gearlister.** Først værd at bygge, når en liste
+13. **Virtualisering af lange gearlister.** Først værd at bygge, når en liste
     er lang nok til at hakke. Afhænger af et rigtigt inventar.
 
 ### Kalibrering
 
-15. **Motorens tærskler er sat efter mavefornemmelse.** Hvornår vægten er
+14. **Motorens tærskler er sat efter mavefornemmelse.** Hvornår vægten er
     værd at nævne, hvor godt et grejsæt skal matche, hvor mange ture der skal
     til, før noget regnes som ubrugt. De er nemme at justere — men kun
     meningsfuldt, når de har været brugt på rigtige data over en sæson.

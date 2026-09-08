@@ -92,10 +92,11 @@ eller ændringer i datamodellen:
 1. **Billeder indgår ikke i JSON-sikkerhedskopien.** En komplet eksport kræver
    et nyt, sandsynligvis komprimeret arkivformat med binære filer, fremdrift og
    pladsfejlshåndtering.
-2. **Sletninger fra en anden enhed har ingen sikker tombstone-protokol.** En
-   lokal post, der mangler på serveren, kan ikke skelnes fra en midlertidigt
-   utilgængelig eller fejlkonfigureret samling. Serverstyrede tombstones bør
-   indføres før fjernsletninger anvendes lokalt.
+2. ~~**Sletninger fra en anden enhed har ingen sikker tombstone-protokol.**~~
+   ✅ Løst. Serveren har nu en samling `slettede` med gravsten — `uid` og
+   `samling` for hver post, der er slettet med vilje. Kun en gravsten kan
+   udløse en lokal sletning; et fravær kan ikke, uanset hvor meget det ligner.
+   Findes samlingen ikke, opfører appen sig som før. Se `POCKETBASE.md` trin 7.
 3. **Den lokale database er ikke opdelt pr. PocketBase-konto.** Kontoskift på
    samme browser bør have en eksplicit politik for lokal rydning, migration
    eller konto-ejede data, så data ikke utilsigtet blandes mellem brugere.

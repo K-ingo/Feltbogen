@@ -79,6 +79,7 @@ appen starter.
 | Hvor et forslag lander | `src/turmaal.ts`, `src/indstillingsmaal.ts` | Fanen *og* sektionen man skal stå i, når man trykker på noget appen selv har bragt på bane |
 | Ligesom sidst | `src/ligesomSidst.ts` | Tidligere ture der lignede, som grej kan kopieres fra |
 | Fortryd sletning | `src/fortryd.ts` | Vinduet på 25 sekunder efter en sletning |
+| Gravsten | `src/sync.ts` | Serverens påstand om, at noget er slettet med vilje — og reglen om at kun den kan slette lokalt |
 | Enhedens valg | `src/indstillinger.ts` | Det der hører til telefonen og ikke til dataene, og derfor ikke synkroniseres |
 | Sikkerhedskopi | `src/dataudveksling.ts` | Gear, grupper, ture, steder og personer ud og ind som én JSON-fil; billedfiler er ikke med |
 | Nye poster | `src/opret.ts` | Tomme poster med de samme standardværdier, uanset hvor man startede dem |
@@ -455,11 +456,42 @@ eneste, der er tilbage af posten. Arten hedder `findes_ikke` og ikke `afvist`:
 rådet om at kigge i skemaet passer ikke på en 404, hvor det enten er posten
 eller hele samlingen, der ikke findes.
 
+Med én undtagelse, og den er hele grunden til at gravstenene findes: er posten
+slettet med vilje et andet sted, oprettes den ikke på ny. Ellers ville en helt
+almindelig redigering — man retter vægten på en sovepose, man ikke vidste var
+slettet fra iPad'en — gøre sletningen om for alle.
+
 Sletninger bruger tabellen `slettede` som spor. Kan PocketBase ikke nås når man
 sletter, bliver postens `pb_id` liggende der, indtil serveren har bekræftet
 sletningen. Sporet gør to ting: det holder posten ude af `hentFraPocketBase()`,
 så den ikke bliver hentet tilbage, og det får `sendAltUsendt()` til at prøve
 sletningen igen.
+
+### Gravsten
+
+Serveren har en samling, der kun indeholder gravsten: `uid` og `samling` for
+hver post, der er slettet med vilje. En sletning er derfor to handlinger — læg
+gravstenen, slet så posten — i den rækkefølge, så en sletning ikke kan gå tabt,
+hvis appen lukkes midt i.
+
+De findes, fordi **fravær ikke er et svar**. En post, der ikke er i serverens
+liste, kan være slettet på en anden enhed — men den kan lige så godt mangle,
+fordi samlingen er ryddet i admin, fordi en API-regel er rettet, eller fordi
+hentningen fejlede halvvejs. Fire ud af fem gange ville "slet den så lokalt"
+være forkert, og der er ingen vej tilbage. Reglen er derfor, at **kun en
+gravsten kan udløse en lokal sletning** — aldrig et fravær, uanset hvor meget
+det ligner.
+
+Nøglen er `uid` og ikke `pb_id`: et record-id skifter, hvis posten undervejs er
+blevet oprettet på ny, mens uid er den identitet, alle enheder er enige om.
+
+Findes samlingen ikke i PocketBase, opfører appen sig præcis som før — ingen
+gravsten betyder ingen sletninger, aldrig det modsatte — og der kommer ingen
+fejl på skærmen. Det er en funktion, der ikke er slået til, ikke noget brugeren
+kan gøre ved. Se `POCKETBASE.md` trin 7.
+
+En fortrydelse tager gravstenen af igen. Uden det ville den blive stående over
+et uid, der er tilbage, og slå posten ihjel på næste enhed i stedet.
 
 `afstemMedServer()` samler de to retninger — send det usendte op, hent det vi
 mangler ned — og kaldes ved opstart og på browserens `online`-event, så en tur

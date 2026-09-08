@@ -246,7 +246,62 @@ user = @request.auth.id
 
 ---
 
-## Trin 7 — Tjek at det virker
+## Trin 7 — Opret samlingen `slettede`
+
+Gravstenene. Uden dem slår en sletning på én enhed aldrig igennem på de andre
+— og værre: en helt almindelig redigering kan oprette den slettede post på ny
+og gøre sletningen om for alle.
+
+**New collection** → Name: `slettede` → Type: **Base**.
+
+### Fields
+
+| Navn | Type | Indstillinger |
+|---|---|---|
+| `user` | Relation | Collection: `users` · Max select: **1** · Cascade delete: **til** |
+| `uid` | Plain text | Den slettede posts uid |
+| `samling` | Plain text | `items`, `grupper`, `ture`, `steder`, `personer` eller `billeder` |
+
+Ingen felter er påkrævede.
+
+### API rules
+
+De samme fem som alle andre steder:
+
+```
+user = @request.auth.id
+```
+
+Tryk **Create**.
+
+### Hvorfor en samling og ikke bare fravær
+
+Fordi fravær ikke er et svar. En post, der ikke er i serverens liste, kan være
+slettet på en anden enhed — men den kan lige så godt mangle, fordi samlingen er
+ryddet her i admin, fordi en API-regel er rettet, eller fordi hentningen fejlede
+halvvejs. Fire ud af fem gange ville "slet den så lokalt" være forkert, og der
+er ingen vej tilbage: den lokale kopi er det eneste, der er tilbage af posten.
+
+Derfor siger serveren det positivt i stedet, og reglen i appen er, at **kun en
+gravsten kan udløse en lokal sletning**.
+
+### Hvis du springer trinnet over
+
+Appen virker. Den opfører sig præcis, som den gjorde før gravstenene fandtes:
+sletninger slår ikke igennem på tværs af enheder, og en redigering af en post,
+der er slettet et andet sted, opretter den på ny. Der kommer ingen fejl på
+skærmen — kun en linje i browserens konsol. Det er med vilje: en manglende
+gravsten må aldrig kunne koste data, kun lade være med at spare dem.
+
+### De vokser, og det er meningen
+
+En gravsten er cirka 60 bytes og bliver liggende. Tusind sletninger fylder 60 kB.
+Til gengæld lærer en enhed, der har været slukket i et år, stadig om sletningen,
+når den kommer tilbage. En udløbsdato ville bytte det væk for ingenting.
+
+---
+
+## Trin 8 — Tjek at det virker
 
 ### Tag en kopi først
 
@@ -428,6 +483,14 @@ står herunder.
 ### `personer`
 
 `navn` text · `email` text · `standard_overnatning` text · `noter` text
+
+### `slettede`
+
+`user` relation · `uid` text · `samling` text
+
+> **Ny samling.** Gravstenene — serverens påstand om, at en post er slettet med
+> vilje. Uden dem slår en sletning ikke igennem på tværs af enheder, og en
+> redigering kan oprette den slettede post på ny. Se trin 7.
 
 ### `turdeltagelse`
 

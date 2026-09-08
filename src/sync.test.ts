@@ -20,7 +20,8 @@ import {
   afstemMedServer,
   usendtAntal
 } from './sync';
-import { lavItem, lavGruppe, lavTur } from './test/data';
+import { sletTur } from './sync';
+import { lavItem, lavGruppe, lavTur, lavBillede, lavSted } from './test/data';
 import { laesSeneste, rydFejl } from './syncfejl';
 
 // Opdateringer samles i 800 ms før de sendes.
@@ -305,15 +306,20 @@ describe('fortryd sletning', () => {
 
   it('opretter posten på ny i PocketBase', async () => {
     const id = await opretItem(lavItem({ navn: 'Op igen' }));
+    const foerste = (await db.items.get(id))!.pb_id;
 
     const genskab = await sletItem(id);
     expect(pbMock.ids('items')).toEqual([]);
 
     await genskab?.();
 
-    expect(pbMock.ids('items')).toHaveLength(1);
     // Den gamle post deroppe er væk, så den genskabte skal have sit eget id.
-    expect(await db.items.get(id)).toMatchObject({ pb_id: 'pb2' });
+    // Hvilket tal det er, er serverens sag — kun at det er et andet, betyder
+    // noget.
+    const igen = await db.items.get(id);
+    expect(pbMock.ids('items')).toEqual([igen?.pb_id]);
+    expect(igen?.pb_id).toBeTruthy();
+    expect(igen?.pb_id).not.toBe(foerste);
   });
 
   // Sletningen står ved magt indtil den fortrydes. Sker det aldrig, må
@@ -720,5 +726,254 @@ describe('en post, der ikke findes i PocketBase længere', () => {
 
     expect(await laesSeneste()).toBeNull();
     expect(await usendtAntal()).toBe(0);
+  });
+});
+
+
+// ─────────────────────────────────────────────
+// Gravsten
+//
+// Uden dem kan appen ikke se forskel på "den er slettet" og "jeg kan ikke få
+// fat i den". Det er ikke en teoretisk skelnen: den ene skal fjerne noget
+// lokalt, den anden må aldrig gøre det.
+// ─────────────────────────────────────────────
+
+describe('gravsten', () => {
+  // Lægger en gravsten, som en anden enhed ville have gjort det.
+  const gravlaeg = (samling: string, uid: string) =>
+    pbMock.seed('slettede', `grav-${uid}`, { samling, uid });
+
+  const gravsten = () => [...(pbMock.records.get('slettede')?.values() ?? [])];
+
+  describe('når man selv sletter', () => {
+    it('lægger en gravsten før posten fjernes', async () => {
+      const id = await opretItem(lavItem({ navn: 'Sovepose' }));
+      const uid = (await db.items.get(id))!.uid;
+
+      await sletItem(id);
+
+      expect(gravsten()).toEqual([
+        expect.objectContaining({ samling: 'items', uid, user: 'bruger1' })
+      ]);
+      expect(pbMock.ids('items')).toEqual([]);
+    });
+
+    it('lægger den også for turens billeder, ikke kun turen', async () => {
+      const turId = await opretTur(lavTur({ navn: 'Møn' }));
+      const tur = (await db.ture.get(turId))!;
+      await opretBillede(lavBillede({ tur_uid: tur.uid }));
+      const billede = (await db.billeder.toArray())[0];
+
+      await sletTur(turId);
+
+      expect(gravsten()).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ samling: 'ture', uid: tur.uid }),
+          expect.objectContaining({ samling: 'billeder', uid: billede.uid })
+        ])
+      );
+    });
+
+    it('sender både gravsten og sletning, når forbindelsen kommer tilbage', async () => {
+      const id = await opretItem(lavItem({ navn: 'Økse' }));
+      const uid = (await db.items.get(id))!.uid;
+
+      pbMock.offline = true;
+      await sletItem(id);
+      expect(gravsten()).toEqual([]);
+      expect(await db.slettede.count()).toBe(1);
+
+      pbMock.offline = false;
+      await sendAltUsendt();
+
+      expect(gravsten()).toEqual([expect.objectContaining({ samling: 'items', uid })]);
+      expect(pbMock.ids('items')).toEqual([]);
+      expect(await db.slettede.count()).toBe(0);
+    });
+
+    it('lægger ikke to gravsten, når sletningen skal prøves igen', async () => {
+      const id = await opretItem(lavItem({ navn: 'Pandelampe' }));
+
+      // Gravstenen når op, men selve sletningen fejler. Sporet bliver derfor
+      // liggende og prøves igen — uden at lægge endnu en gravsten.
+      pbMock.records.get('items')?.delete('pb1');
+      await sletItem(id);
+      expect(gravsten()).toHaveLength(1);
+
+      await sendAltUsendt();
+      expect(gravsten()).toHaveLength(1);
+    });
+  });
+
+  describe('når en anden enhed har slettet', () => {
+    it('fjerner posten her ved næste hentning', async () => {
+      const id = await opretItem(lavItem({ navn: 'Tarp' }));
+      const uid = (await db.items.get(id))!.uid;
+
+      pbMock.records.get('items')?.delete('pb1');
+      gravlaeg('items', uid);
+
+      await hentFraPocketBase();
+
+      expect(await db.items.get(id)).toBeUndefined();
+    });
+
+    it('genopliver den ikke, når man retter i den her', async () => {
+      const id = await opretItem(lavItem({ navn: 'Kogegrej' }));
+      const uid = (await db.items.get(id))!.uid;
+
+      pbMock.records.get('items')?.delete('pb1');
+      gravlaeg('items', uid);
+
+      // Netop den her handling gjorde sletningen om for alle før: en 404 på en
+      // opdatering fik posten oprettet på ny.
+      await opdaterItem(id, { vaegt_g: 480 });
+      await sendAfventende();
+
+      expect(await db.items.get(id)).toBeUndefined();
+      expect(pbMock.ids('items')).toEqual([]);
+      expect(await laesSeneste()).toBeNull();
+    });
+
+    it('henter den ikke ned, hvis den stadig ligger deroppe', async () => {
+      // Gravstenen nåede op, men sletningen af selve posten gjorde ikke.
+      pbMock.seed('items', 'pb9', { uid: 'uid-9', navn: 'På vej væk' });
+      gravlaeg('items', 'uid-9');
+
+      await hentFraPocketBase();
+
+      expect(await db.items.count()).toBe(0);
+    });
+
+    it('rører kun den samling, gravstenen gælder', async () => {
+      const itemId = await opretItem(lavItem({ navn: 'Kniv' }));
+      const uid = (await db.items.get(itemId))!.uid;
+      const stedId = await opretSted(lavSted({ navn: 'Hareskoven' }));
+      await db.steder.update(stedId, { uid });
+
+      pbMock.records.get('items')?.delete('pb1');
+      gravlaeg('items', uid);
+
+      await hentFraPocketBase();
+
+      expect(await db.items.get(itemId)).toBeUndefined();
+      expect(await db.steder.get(stedId)).toBeDefined();
+    });
+  });
+
+  describe('fravær er ikke et svar', () => {
+    it('lader posten stå, når den blot mangler på serveren', async () => {
+      const id = await opretItem(lavItem({ navn: 'Hængekøje' }));
+
+      // Samlingen ryddet i admin, en API-regel rettet, en halv hentning. Der
+      // er ingen gravsten, og så må appen ikke gætte.
+      pbMock.records.get('items')?.delete('pb1');
+
+      await hentFraPocketBase();
+
+      expect(await db.items.get(id)).toBeDefined();
+    });
+
+    it('opretter den stadig på ny, når man retter i den', async () => {
+      const id = await opretItem(lavItem({ navn: 'Bålpande' }));
+      pbMock.records.get('items')?.delete('pb1');
+
+      await opdaterItem(id, { vaegt_g: 2400 });
+      await sendAfventende();
+
+      expect(await db.items.get(id)).toBeDefined();
+      expect(pbMock.ids('items')).toHaveLength(1);
+    });
+  });
+
+  describe('fortryd', () => {
+    it('tager gravstenen af igen', async () => {
+      const id = await opretItem(lavItem({ navn: 'Fortrudt' }));
+
+      const genskab = await sletItem(id);
+      expect(gravsten()).toHaveLength(1);
+
+      await genskab?.();
+
+      expect(gravsten()).toEqual([]);
+    });
+
+    it('lader den genskabte post overleve en hentning', async () => {
+      const id = await opretItem(lavItem({ navn: 'Retur' }));
+      const uid = (await db.items.get(id))!.uid;
+
+      const genskab = await sletItem(id);
+      await genskab?.();
+      await hentFraPocketBase();
+
+      const igen = (await db.items.toArray())[0];
+      expect(igen?.uid).toBe(uid);
+    });
+
+    it('overlever, at fortrydelsen skete uden forbindelse', async () => {
+      const id = await opretItem(lavItem({ navn: 'Uden dækning' }));
+      const uid = (await db.items.get(id))!.uid;
+
+      pbMock.offline = true;
+      const genskab = await sletItem(id);
+      await genskab?.();
+      pbMock.offline = false;
+
+      // Gravstenen nåede aldrig op, og må heller ikke gøre det nu.
+      await sendAltUsendt();
+
+      expect(gravsten()).toEqual([]);
+      expect(await db.items.count()).toBe(1);
+      expect((await db.items.toArray())[0].uid).toBe(uid);
+    });
+
+    it('sletter ikke en genskabt post, en gravsten stadig peger på', async () => {
+      const id = await opretItem(lavItem({ navn: 'Lige tilbage' }));
+      const uid = (await db.items.get(id))!.uid;
+
+      // Fortrudt uden forbindelse: den genskabte post er endnu ikke oppe, og
+      // gravstenen fra en anden enhed nåede frem i mellemtiden.
+      pbMock.offline = true;
+      const genskab = await sletItem(id);
+      await genskab?.();
+      pbMock.offline = false;
+      gravlaeg('items', uid);
+
+      await hentFraPocketBase();
+
+      expect(await db.items.count()).toBe(1);
+    });
+  });
+
+  describe('når samlingen ikke findes i PocketBase', () => {
+    beforeEach(() => { pbMock.udenGravsten = true; });
+
+    it('sletter stadig posten deroppe', async () => {
+      const id = await opretItem(lavItem({ navn: 'Uden gravsten' }));
+
+      await sletItem(id);
+
+      expect(pbMock.ids('items')).toEqual([]);
+      expect(await db.slettede.count()).toBe(0);
+    });
+
+    it('viser ingen fejl — det er en funktion, der ikke er slået til', async () => {
+      const id = await opretItem(lavItem({ navn: 'Ingen larm' }));
+
+      await sletItem(id);
+      await hentFraPocketBase();
+
+      expect(await laesSeneste()).toBeNull();
+      expect(await usendtAntal()).toBe(0);
+    });
+
+    it('sletter ingenting lokalt', async () => {
+      const id = await opretItem(lavItem({ navn: 'Bliver stående' }));
+      pbMock.records.get('items')?.delete('pb1');
+
+      await hentFraPocketBase();
+
+      expect(await db.items.get(id)).toBeDefined();
+    });
   });
 });
