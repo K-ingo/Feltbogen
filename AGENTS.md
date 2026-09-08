@@ -143,6 +143,7 @@ skriv det i pull requesten frem for at lade det stå uprøvet.
 | Fil | Hvad der står i den |
 |---|---|
 | [`README.md`](./README.md) | Kom i gang, arkitektur modul for modul, PWA, udrulning og status |
+| [`STATUS.md`](./STATUS.md) | Hvor projektet står nu: hvad der virker, hvad der blokerer, og hvad der er åbent. **Start her** |
 | [`feltbogen_fundament`](./feltbogen_fundament) | Den fulde specifikation: datamodel, skærme, kerne-koncepter og beslutningerne bag |
 | [`PLAN.md`](./PLAN.md) | Broen fra 2.0-specifikationen til koden: hvad der findes, hvad der mangler, og i hvilken rækkefølge |
 | [`POCKETBASE.md`](./POCKETBASE.md) | Samlinger, felter og API-regler, trin for trin. Skal følges præcist |
