@@ -243,4 +243,6 @@ export const fornyLogin = async () => {};
 
 export const mitNavn = () => testNavn.trim();
 export const gemNavn = async (navn: string) => { testNavn = navn.trim(); };
-export const logUd = () => { testNavn = ''; };
+// vi.fn frem for en almindelig funktion, så en skærmtest kan efterprøve, at
+// knappen faktisk logger ud. Den gør stadig det samme.
+export const logUd = vi.fn(() => { testNavn = ''; });

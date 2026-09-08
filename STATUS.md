@@ -1,6 +1,6 @@
 # STATUS
 
-*Sidst opdateret: 8. september 2026. Udgangspunkt: `main` @ `545a356`.*
+*Sidst opdateret: 8. september 2026. Udgangspunkt: `main` @ `7d466a8`.*
 
 Kort svar på "hvor står vi nu?". Den skal kunne læses på to minutter og
 opdateres, hver gang noget bliver færdigt eller blokeret.
@@ -27,13 +27,13 @@ står tilbage, er arbejde vi selv vælger — ikke noget, der spærrer.
 
 ## Grønt lys
 
-Kørt på `main` @ `545a356` den 8. september 2026:
+Kørt på grenen `claude/ui-tests` den 8. september 2026:
 
 | Kommando | Resultat |
 |---|---|
 | `npm run lint` | Bestået, ingen fejl |
-| `npm test` | 52 testfiler, 1.158 tests, alle grønne |
-| `npm run build` | Bestået. Startchunk 459,79 kB / 145,50 kB gzip |
+| `npm test` | 54 testfiler, 1.186 tests, alle grønne |
+| `npm run build` | Bestået. Startchunk 459,79 kB / 145,49 kB gzip — uændret |
 
 CI kører de samme tre på alle pull requests, plus et tjek for at et privat
 Railway-domæne ikke er havnet i bundlen.
@@ -85,15 +85,15 @@ I den rækkefølge, de sandsynligvis er værd at tage.
 
 ### Kvalitet
 
-4. **UI har ingen direkte testdækning.** Datalag og domænelogik er stærkt
-   dækket; komponentadfærd er kun dækket indirekte. En UI-regression kan
-   slippe forbi CI. En lille browserbaseret suite for navigation, billeder og
-   offline-flows ville lukke hullet. (`CODE_REVIEW.md` §6)
-5. **Kontoskift-skærmen er ikke set i en browser.** `KontoskiftSide` er
-   typechecket og bygget på de eksisterende tokens, men tilstanden er aldrig
-   fremkaldt i drift. Spærren bag den er testet fra alle fire indgange i sync;
-   det uafprøvede er, om skærmen er til at forstå, når man møder den uventet.
-   Prøv den med to konti på localhost — den base er adskilt fra produktionens.
+4. **UI-testdækningen er begyndt, ikke færdig.** Der er nu skærmtests i jsdom
+   for navigationen og kontoskift-skærmen — de to steder, hvor en regression
+   ellers var usynlig. Billeder, delingsflowet, pakkelisten og
+   offline-tilstandene har stadig ingen skærmdækning. (`CODE_REVIEW.md` §6)
+5. **Kontoskift-skærmen er stadig ikke set af et menneske.** Dens opførsel er
+   nu dækket af tests — knapperne, rækkefølgen, at rydningen kun sker ved et
+   klik — men en test kan ikke sige, om skærmen er *til at forstå*, når man
+   møder den uventet. Prøv den med to konti på localhost; den base er adskilt
+   fra produktionens.
 6. **Tilgængelighedspas på dialoger.** Modaler, delings-/QR-flow og
    fejltilstande er ikke gennemgået for fokusfælde, retur-fokus, Escape og
    labels. (`UI_REVIEW.md` P1)
