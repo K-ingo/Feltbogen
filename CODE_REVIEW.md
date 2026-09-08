@@ -109,9 +109,11 @@ eller ændringer i datamodellen:
    konfliktløsning designes centralt.
 5. **Eksterne fetch-kald mangler fælles timeout/annullering.** En langsom
    vejr- eller adresseudbyder kan derfor holde en UI-handling åben længe.
-6. **Komponentadfærd testes primært indirekte.** Datalag og domænelogik har
-   stærk dækning, men en lille browserbaseret suite for navigation, billeder
-   og offline-flows vil fange UI-regressioner, som Node-testene ikke kan se.
+6. **Komponentadfærd testes primært indirekte.** ⏳ Delvist løst. Der findes
+   nu skærmtests i jsdom, og de dækker navigationen (`Skal.test.tsx`) og
+   kontoskift-skærmen (`KontoskiftSide.test.tsx`) — de to steder, hvor en
+   regression ellers ville være usynlig. Billeder, delingsflowet og
+   offline-tilstandene har stadig ingen skærmdækning.
 
 ## Verifikation efter ændringer
 

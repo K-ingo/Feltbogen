@@ -553,6 +553,23 @@ samme post to gange.
 hukommelsesbaseret udgave, der kan sættes `offline` for at teste at data
 overlever manglende forbindelse.
 
+Der er to slags. **Domænetestene** ligger i `.test.ts` og kører i Node — det er
+langt de fleste, og de skal blive ved med at være hurtige. **Skærmtestene**
+ligger i `.test.tsx` og beder selv om et DOM med en `// @vitest-environment
+jsdom`-linje øverst i filen. Den står pr. fil frem for i konfigurationen, så
+den står dér hvor den gælder, og så en ny domænetest ikke betaler for et DOM,
+den ikke bruger.
+
+`src/test/skaerm.tsx` har det, en skærmtest skal bruge: `tegn()` sætter en
+skærmbredde og tegner komponenten, `MOBIL` og `DESKTOP` er de to bredder, det
+giver mening at prøve, og Testing Librarys oprydning meldes til dér. jsdom har
+ingen `matchMedia`, og `useMedie.ts` bruger den til at afgøre, om der er plads
+til en sidebar — uden en stub falder hver eneste skærm på montering.
+
+Bredden sættes eksplicit i hver test og arves ikke fra jsdoms standard: en
+skærm ser forskellig ud på en telefon og en PC, og hvilken af dem man tester,
+skal stå i testen.
+
 ## PWA
 
 Appen er installerbar og kan startes uden netværk. `vite-plugin-pwa` genererer

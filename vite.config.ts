@@ -119,10 +119,16 @@ export default defineConfig({
     })
   ],
   test: {
-    // Testene kører i Node; fake-indexeddb (indlæst i opsætningen) giver Dexie
-    // et IndexedDB at arbejde mod, så datalaget kan testes uden en browser.
+    // Domænetestene kører i Node; fake-indexeddb (indlæst i opsætningen) giver
+    // Dexie et IndexedDB at arbejde mod, så datalaget kan testes uden browser.
+    // Det er langt de fleste af dem, og de skal blive ved med at være hurtige.
+    //
+    // Skærmtestene ligger i `.test.tsx` og beder selv om jsdom med en
+    // `@vitest-environment`-linje øverst i filen. Sat pr. fil frem for i
+    // konfigurationen, så det står dér hvor det gælder — og så en ny
+    // domænetest ikke kommer til at betale for et DOM, den ikke bruger.
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.{ts,tsx}'],
     setupFiles: ['src/test/opsaetning.ts'],
   },
 })
