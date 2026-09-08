@@ -449,6 +449,43 @@ export interface AfvistForslag {
 // Den ligger ikke i `ture`: den er ikke ens egen, den kan ikke redigeres, og
 // den skal aldrig sendes op i ens egen PocketBase-konto. Snapshottet er alt
 // hvad ejeren delte — der er ingen forbindelse til hendes inventar.
+// Én planlagt dag på en flerdagestur.
+//
+// Turen har ét svar på overnatning, aktivitet og sted for hele forløbet, og
+// til en weekend i en shelter er det rigtigt. En dag her er det, turen ikke
+// selv kan sige: at man vandrer den første dag og padler den anden, og sover
+// i shelter den ene nat og telt den næste.
+//
+// **Dagene er valgfrie.** En tur uden dage opfører sig præcis som før, og
+// turens egne felter er stadig svaret for helheden — og standarden, en ny dag
+// arver. De fleste ture er ét sted i to dage og skal ikke føre dagbog over sig
+// selv.
+//
+// **Datoen står her ikke.** Den udledes af turens startdato og `dag_nr` — se
+// `datoFor` i turdag.ts. Gemt ville den kunne komme ud af trit med turen, hver
+// gang datoerne blev flyttet, og så skulle to sandheder holdes i sync for
+// ingenting. Journalen regner allerede den anden vej med `dagnummer()`.
+//
+// **Ruten står her heller ikke.** Et `rute_distance_km` ville være et tal, der
+// påstod at kende en rute, appen ikke har. Når rutedomænet kommer, får dagen
+// et `rute_uid` — additivt, uden migration.
+export interface TurDag extends Synkroniserbar {
+  id?: number;
+  tur_uid: Reference;
+  // 1, 2, 3 … Talt fra turens første dag, ikke fra en dato.
+  dag_nr: number;
+  aktivitet: Aktivitet;
+  overnatning: Overnatning;
+  // Fritekst, som `Tur.sted` altid har været — man skal kunne skrive
+  // "et sted ved åen" uden først at føre kartotek.
+  destination: string;
+  // Valgfri kobling til stedkartoteket. Tom som standard.
+  destination_sted_uid: Reference;
+  noter: string;
+  oprettet: Date;
+  aendret: Date;
+}
+
 export interface DeltTur {
   id?: number;
   // Linkets token. Åbner man samme link igen, opdateres den gemte i stedet
@@ -471,6 +508,7 @@ export class FeltbogenDB extends Dexie {
   items!: Table<Item, number>;
   grupper!: Table<Gruppe, number>;
   ture!: Table<Tur, number>;
+  tur_dage!: Table<TurDag, number>;
   slettede!: Table<Slettet, number>;
   indstillinger!: Table<Indstilling, string>;
   delte_ture!: Table<DeltTur, number>;
@@ -604,6 +642,27 @@ export class FeltbogenDB extends Dexie {
       items: '++id, &uid, navn, status, oprettet',
       grupper: '++id, &uid, navn, oprettet',
       ture: '++id, &uid, navn, startdato, status, oprettet, dele_token',
+      slettede: '++id, samling, pb_id, uid, [samling+pb_id]',
+      indstillinger: '&noegle',
+      delte_ture: '++id, &token, gemt',
+      steder: '++id, &uid, navn, oprettet',
+      personer: '++id, &uid, navn, oprettet',
+      billeder: '++id, &uid, tur_uid, tid, oprettet',
+      afviste_forslag: '[tur_uid+forslag_id], tur_uid'
+    });
+
+    // Dagene på en flerdagestur. Rent additivt: ingen eksisterende tabel er
+    // rørt, og en tur uden dage opfører sig som før.
+    //
+    // `tur_uid` er indekseret, fordi dagene altid slås op for én tur ad
+    // gangen. `dag_nr` er det ikke: en tur har en håndfuld dage, og de
+    // sorteres i hukommelsen — et indeks på tværs af alle ture ville skulle
+    // vedligeholdes for at spare en sortering af fem elementer.
+    this.version(13).stores({
+      items: '++id, &uid, navn, status, oprettet',
+      grupper: '++id, &uid, navn, oprettet',
+      ture: '++id, &uid, navn, startdato, status, oprettet, dele_token',
+      tur_dage: '++id, &uid, tur_uid, oprettet',
       slettede: '++id, samling, pb_id, uid, [samling+pb_id]',
       indstillinger: '&noegle',
       delte_ture: '++id, &token, gemt',

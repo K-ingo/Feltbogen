@@ -1,4 +1,4 @@
-import type { Billede, Item, Gruppe, Tur, Sted, Person } from '../db';
+import type { Billede, Item, Gruppe, Tur, TurDag, Sted, Person } from '../db';
 
 // Fabrikker til testdata. Kun det en test bryder sig om angives; resten får
 // harmløse standardværdier. Hver post får et uid, ligesom opret() ville give
@@ -137,6 +137,23 @@ export function lavTur(felter: Partial<Tur> = {}): Tur {
     turkort_snapshot: '',
     hero_billede: '',
     booking: null,
+    oprettet: nu,
+    aendret: nu,
+    ...felter
+  };
+}
+
+export function lavTurDag(felter: Partial<TurDag> = {}): TurDag {
+  const nu = new Date('2026-07-01T12:00:00Z');
+  return {
+    uid: crypto.randomUUID(),
+    tur_uid: 'tur-1',
+    dag_nr: 1,
+    aktivitet: 'vandretur',
+    overnatning: 'shelter',
+    destination: '',
+    destination_sted_uid: '',
+    noter: '',
     oprettet: nu,
     aendret: nu,
     ...felter

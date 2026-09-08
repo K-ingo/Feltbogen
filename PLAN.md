@@ -595,9 +595,22 @@ afhængighed den anden vej.
 5. **Læringssløjfen og de sidste statistikker.** Nætter, besøgte steder,
    turtyper, gennemsnitsvægt, bedste og dårligste grej efter egne stjerner.
    Kun det, der kan forklares ud fra data, der findes.
-6. **Rute som eget domæne, og så `dage: TurDag[]`.** Datamodel, migration og
-   tests før noget UI, som dokumentets §8.4 siger. Rute først, fordi dagen
-   skal kunne pege på en. Der findes en skitse til dagen — se nedenfor.
+6. **~~Rute som eget domæne, og så `dage: TurDag[]`.~~ Rækkefølgen er byttet
+   om: dagen først, ruten bagefter.** ✅ Fundamentet er bygget.
+
+   Begrundelsen for "rute først" var, at dagen skulle kunne pege på en. Den
+   holdt, så længe dagen bar et `rute_distance_km` — så *skulle* den have en
+   rute at pege på for ikke at lyve. Uden det felt er afhængigheden væk: en dag
+   med aktivitet, overnatning og destination er hel og sand uden nogen rute.
+
+   Og ruten er det dyre stykke — GPX, koordinatlister, højdedata og et
+   kortbibliotek i en app, der ikke har ét. Dagen er dage og leverer værdi for
+   sig selv. Kommer ruten, får dagen et `rute_uid`, og det er additivt.
+
+   `src/turdag.ts` holder reglerne, `tur_dage` er tabellen, og datoen gemmes
+   ikke — den udledes af turens start plus nummeret, så alle dage følger med,
+   når turen flyttes. Skitsen nedenfor står som den blev læst; det byggede
+   afviger fra den, hvor teksten siger det.
 
 #### Skitse til `TurDag`
 

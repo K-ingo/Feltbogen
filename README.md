@@ -67,6 +67,7 @@ appen starter.
 | Gæstens pakkeliste | `src/gaestepakning.ts` | Hendes egen bunke, krydset af lokalt på hendes egen telefon |
 | Øjebliksbilleder | `src/delesnapshot.ts` | Ombygningen af gæste- og turkort-snapshot efter hver skrivning |
 | Turfase | `src/turfase.ts` | Hvor turen er i sit forløb, og hvad næste skridt er |
+| Dagene på turen | `src/turdag.ts` | Flerdagesturens dage: nummer, aktivitet, overnatning og destination — datoen udledes |
 | Pakning | `src/pakning.ts` | Hvad der er lagt i tasken, og hvor langt man er |
 | Vurdering | `src/vurdering.ts` | Stjerner på grej og ture, og hvad motoren gør ved dem |
 | Turlog | `src/feltnoter.ts` | Dagbogen fra turen, samlet pr. dag |
