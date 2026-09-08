@@ -10,6 +10,7 @@ import { useErDesktop } from './useMedie';
 import { Knap, TagChips, ListeRaekke, TomListe } from './ui';
 import { udlaanteItems, laanteItems } from './udlaan';
 import { forfaldne } from './vedligehold';
+import { gram } from './talformat';
 
 interface Props {
   fane: Fane;
@@ -78,6 +79,7 @@ function InventarSide({ fane, skift, aabnItem }: Props) {
   const [soegning, setSoegning] = useState('');
   const [valgtTag, setValgtTag] = useState<string | null>(null);
   const [alleTagsVist, setAlleTagsVist] = useState(false);
+  const [mobileFiltreAabne, setMobileFiltreAabne] = useState(false);
 
   const items = useLiveQuery(() => db.items.toArray()) ?? [];
   const grupper = useLiveQuery(() => db.grupper.toArray()) ?? [];
@@ -109,6 +111,7 @@ function InventarSide({ fane, skift, aabnItem }: Props) {
   const nulstilFiltre = () => {
     setSoegning('');
     setValgtTag(null);
+    setAlleTagsVist(false);
   };
 
   // Den nye post lander i den fane man står på, så den ikke forsvinder ud af
@@ -142,7 +145,7 @@ function InventarSide({ fane, skift, aabnItem }: Props) {
         onClick={() => skift('grupper')}
       />
 
-      <div style={{ display: 'flex', gap: '6px', margin: 'var(--plads-4) 0 var(--plads-3)', flexWrap: 'wrap' }}>
+      <div className="gear-status-tabs" style={{ display: 'flex', gap: '6px', margin: 'var(--plads-4) 0 var(--plads-3)', flexWrap: 'wrap' }}>
         {FANEBLADE.map(({ udsnit, label }) => (
           <button
             key={udsnit}
@@ -173,7 +176,18 @@ function InventarSide({ fane, skift, aabnItem }: Props) {
         style={{ width: '100%', marginBottom: '12px' }}
       />
 
-      {tags.length > 0 && (
+      {!erDesktop && tags.length > 0 && (
+        <div className="gear-filter-toggle">
+          <Knap
+            onClick={() => setMobileFiltreAabne(!mobileFiltreAabne)}
+            ariaExpanded={mobileFiltreAabne}
+          >
+            {mobileFiltreAabne ? 'Skjul filtre' : `Filtre${valgtTag ? ' (1)' : ''}`}
+          </Knap>
+        </div>
+      )}
+
+      {tags.length > 0 && (erDesktop || mobileFiltreAabne) && (
         <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', flexWrap: 'wrap' }}>
           <FilterChip aktiv={valgtTag === null} vaelg={() => setValgtTag(null)}>Alle</FilterChip>
           {synligeTags.map((tag) => (
@@ -251,7 +265,7 @@ function Mobilliste({ items, ture, grupper, aabn }: {
           detalje={
             <>
               <div>
-                {item.vaegt_g} g · {item.delt ? 'delt' : `${item.pris_kr.toLocaleString('da-DK')} kr`}
+                {gram(item.vaegt_g)} g · {item.delt ? 'delt' : `${item.pris_kr.toLocaleString('da-DK')} kr`}
                 {item.antal > 1 && ` · ${item.antal} stk`}
               </div>
               <Brugslinje ture={brugt.get(item.uid) ?? []} />
@@ -386,7 +400,7 @@ function ItemTabel({ items, sidstBrugt, grupperFor, aabn }: {
                 <td style={{ ...celle, color: 'var(--tekst-dæmpet)' }}>
                   {(grupperFor.get(item.uid) ?? []).join(', ') || '—'}
                 </td>
-                <td style={celle}>{item.vaegt_g} g</td>
+                <td style={celle}>{gram(item.vaegt_g)} g</td>
                 <td style={celle}>{item.delt ? 'delt' : `${item.pris_kr.toLocaleString('da-DK')} kr`}</td>
                 <td style={{ ...celle, color: brugt ? 'var(--tekst)' : 'var(--tekst-svag)', fontStyle: brugt ? 'normal' : 'italic' }}>
                   {brugt ? formatterDato(brugt) : 'aldrig'}

@@ -6,6 +6,7 @@ import { Segment } from './ui';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
 import { useErDesktop } from './useMedie';
+import { kilo } from './talformat';
 import {
   filtrererTure,
   samletInventarvaerdi,
@@ -72,7 +73,7 @@ function StatistikSide({ fane, skift, aabnItem, aabnAar }: Props) {
     return (
       <Skal fane={fane} skift={skift} titel="Statistik">
         <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--tekst-svag)', fontSize: 'var(--skrift-knap)' }}>
-          Ingen tal endnu. Tilføj gear under Inventar, så begynder det at fylde her.
+          Ingen tal endnu. Tilføj grej under Grej, så begynder det at fylde her.
         </div>
       </Skal>
     );
@@ -144,7 +145,7 @@ function StatistikSide({ fane, skift, aabnItem, aabnAar }: Props) {
           <Widget titel="Ubrugte items" advarsel>
             <Tal vaerdi={`${ubrugt.antal}`} enhed={ubrugt.antal === 1 ? 'item' : 'items'} advarsel />
             <Undertekst>
-              {(ubrugt.vaegt / 1000).toFixed(1)} kg · {kroner(ubrugt.vaerdi)} kr · ikke med det seneste år
+              {kilo(ubrugt.vaegt, 1)} kg · {kroner(ubrugt.vaerdi)} kr · ikke med det seneste år
             </Undertekst>
             <Udfoldelig items={ubrugt.items} aabn={aabnItem} />
           </Widget>
@@ -157,7 +158,7 @@ function StatistikSide({ fane, skift, aabnItem, aabnAar }: Props) {
         )}
 
         {topBrugt.length > 0 && (
-          <Widget titel="Mest brugte gear">
+          <Widget titel="Mest brugte grej">
             <div style={{ display: 'grid', gap: '7px' }}>
               {topBrugt.map((x, i) => (
                 <button
@@ -318,7 +319,7 @@ function Fordeling({ fordeling }: { fordeling: { navn: string; vaegt: number; pr
               <span style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst)' }}>{g.navn}</span>
             </span>
             <span style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>
-              {(g.vaegt / 1000).toFixed(1)} kg · {g.procent.toFixed(0)}%
+              {kilo(g.vaegt, 1)} kg · {g.procent.toFixed(0)}%
             </span>
           </div>
         ))}
@@ -399,7 +400,7 @@ function Udfoldelig({ items, aabn }: { items: Item[]; aabn: (id: number) => void
 // Linjen under inventarværdien: hvor meget der kom til i perioden. Under
 // "alt" er der ingen periode at måle tilvæksten i, og så siger vægten mere.
 function tilvaekstTekst(tilvaekst: number | null, periode: Periode, vaegt: number): string {
-  if (tilvaekst === null) return `${(vaegt / 1000).toFixed(1)} kg i alt`;
+  if (tilvaekst === null) return `${kilo(vaegt, 1)} kg i alt`;
 
   const label = periode === 'sidste_aar' ? 'vs. året før' : 'vs. sidste år';
   // Uden en købsdato kan et stykke gear ikke placeres i et år. Er der ingen

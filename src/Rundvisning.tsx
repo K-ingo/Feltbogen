@@ -160,7 +160,7 @@ const TRIN: Trin[] = [
     titel: 'Velkommen til Feltbogen',
     tekst: (
       <>
-        Feltbogen holder styr på dit friluftsgear og hjælper dig med at pakke
+        Feltbogen holder styr på dit friluftsgrej og hjælper dig med at pakke
         til en tur uden at glemme noget. <strong>Alt gemmes på din enhed</strong> og
         virker uden dækning — også midt i skoven.
         <br /><br />
@@ -170,14 +170,14 @@ const TRIN: Trin[] = [
   },
   {
     ikon: '🧭',
-    titel: 'Alt dit gear ét sted',
+    titel: 'Alt dit grej ét sted',
     tekst: (
       <>
         Under <strong>Inventar</strong> ligger hver ting du ejer, med vægt og pris.
         Det er grundlaget for alt det andet — vægten på en tur, hvad du har
         brugt penge på, og hvad du mangler.
         <br /><br />
-        Gear kan også stå som <em>overvejer</em>, hvis det er noget du kigger på,
+        Grej kan også stå som <em>overvejer</em>, hvis det er noget du kigger på,
         eller <em>solgt</em>, når det er ude af huset.
       </>
     ),
@@ -217,7 +217,7 @@ const TRIN: Trin[] = [
     titel: 'Kræver og komplementerer',
     tekst: (
       <>
-        Her bliver tags til noget der passer på dig. På et stykke gear kan du
+        Her bliver tags til noget der passer på dig. På et stykke grej kan du
         skrive hvad det <strong>kræver</strong> for at virke — en brænder kræver
         gas — og hvad der <strong>komplementerer</strong> det, altså er rart at
         have med.
@@ -379,7 +379,7 @@ function Komigang({ nytItem, nyTur, tilLogin, faerdig, kunOpslag, tilbage }: {
     <div style={{ marginTop: '24px' }}>
       <div style={{ display: 'grid', gap: '10px' }}>
         <Knap variant="primaer" onClick={nytItem} style={{ padding: '12px', fontSize: 'var(--skrift-brod)' }}>
-          Tilføj mit første gear
+          Tilføj mit første grej
         </Knap>
         <Knap onClick={nyTur} style={{ padding: '12px', fontSize: 'var(--skrift-brod)' }}>
           Opret min første tur

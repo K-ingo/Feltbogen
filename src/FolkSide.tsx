@@ -3,7 +3,8 @@ import { Skal } from './Skal';
 import type { Fane } from './Skal';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
-import { Kort, SektionsTitel } from './ui';
+import { SektionsTitel } from './ui';
+import { Ikon } from './Ikon';
 
 interface Props {
   fane: Fane;
@@ -30,11 +31,19 @@ function FolkSide({ fane, skift }: Props) {
       titel="Folk"
       undertitel={`${personer.length} ${personer.length === 1 ? 'person' : 'personer'}`}
     >
+      <section className="people-intro">
+        <div className="people-intro-icon"><Ikon navn="folk" size={28} /></div>
+        <div>
+          <h2 style={{ margin: 0, fontSize: '1.25rem' }}>Dit turhold</h2>
+          <div style={{ marginTop: '3px', color: 'var(--tekst-dæmpet)', fontSize: 'var(--skrift-detalje)', lineHeight: 1.5 }}>
+            Se hvem du oftest tager afsted med, og hvad I plejer at have med.
+          </div>
+        </div>
+      </section>
+
       <section>
         <SektionsTitel>Personer</SektionsTitel>
-        <Kort fremhaevet>
-          <Personer />
-        </Kort>
+        <Personer />
       </section>
 
       <div style={{
@@ -46,13 +55,8 @@ function FolkSide({ fane, skift }: Props) {
         // vejen ud, er svær at følge tilbage til næste linjes begyndelse.
         maxWidth: '68ch'
       }}>
-        De du tager afsted med. Bliver en deltager knyttet til en person, tælles turene
-        sammen på tværs, og standardovernatningen udfyldes af sig selv. Du kan stadig
-        skrive et navn direkte på en tur uden at oprette nogen her.
-        <br /><br />
-        Der gemmes kun navn, en valgfri e-mail og dine egne noter. Det bliver på enheden
-        og i din egen konto — intet deles med tredjepart, og gæster på en tur ser kun
-        navnet.
+        Du kan stadig skrive et navn direkte på en tur uden at oprette personen her.
+        Kun navn, en valgfri e-mail og dine egne noter gemmes; gæster ser kun navnet.
       </div>
     </Skal>
   );

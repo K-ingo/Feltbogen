@@ -79,7 +79,7 @@ export function fremdrift(pakkede: Set<string>, linjer: Pakkelinje[]): Gaestefre
 }
 
 export function fremdriftstekst(f: Gaestefremdrift): string {
-  if (f.ialt === 0) return 'Der er ikke valgt gear endnu';
+  if (f.ialt === 0) return 'Der er ikke valgt grej endnu';
   if (f.faerdig) return 'Alt er pakket';
   return `${f.pakket} af ${f.ialt} pakket`;
 }

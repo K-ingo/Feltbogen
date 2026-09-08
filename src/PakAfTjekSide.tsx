@@ -177,7 +177,7 @@ function PakAfTjekSide({ tur, tjek, pakItems, grupper, gem, tilbage }: Props) {
   );
 
   const tomt = pakItems.length === 0 && (
-    <TomListe>Der var intet gear på turen at gøre op.</TomListe>
+    <TomListe>Der var intet grej på turen at gøre op.</TomListe>
   );
 
   const header = (

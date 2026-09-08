@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
 import { Ikon } from './Ikon';
 import { matcherTur } from './turSoegning';
-import { db } from './db';
+import { db, etiket } from './db';
 import type { Billede, Tur } from './db';
 import { formatterPeriode } from './datotekst';
 import { Skal } from './Skal';
@@ -120,7 +120,12 @@ function undertitel(egne: number, delte: number): string {
 // der ingenting — en tom pladsholder ville give listen en spalte af huller.
 function Forsidebillede({ tur, billeder }: { tur: Tur; billeder: Billede[] }) {
   const forside = hero(billeder, tur);
-  if (!forside) return <span className="trip-card-photo trip-card-fallback"><Ikon navn="kompas" size={42} /></span>;
+  if (!forside) return (
+    <span className={`trip-card-photo trip-card-fallback trip-card-fallback--${tur.terraen}`}>
+      <Ikon navn="kompas" size={38} />
+      <small>{etiket(tur.aktivitet)} · {etiket(tur.terraen)}</small>
+    </span>
+  );
 
   return (
     <div className="trip-card-photo" style={{

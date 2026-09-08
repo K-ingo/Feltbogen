@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import type { Item, Gruppe } from './db';
@@ -35,6 +36,8 @@ import { Billedvisning } from './BilledSektion';
 import { useTekst } from './indstillinger';
 import { useSyncfejl } from './syncfejl';
 import { laesKladde, KLADDE_NOEGLE } from './foersteTur';
+import { beloeb, gram, kilo } from './talformat';
+import { Ikon } from './Ikon';
 
 interface Props {
   fane: Fane;
@@ -53,7 +56,7 @@ interface Props {
 
 // Så mange handlinger vises ad gangen. Resten tælles op — en liste på tredive
 // er ikke en startskærm, den er en opgaveliste man lukker.
-const MAKS_HANDLINGER = 4;
+const MAKS_HANDLINGER = 2;
 const MAKS_SIDST_TILFOEJET = 5;
 // Så mange billeder i stribens ene række. Seks er hvad der kan stå uden at
 // gøre startskærmen til et galleri — og et galleri er der allerede et af,
@@ -74,6 +77,7 @@ const MAKS_MINDER = 6;
 // en opgaveliste, og en opgaveliste lukker man.
 function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur, foersteTur, tilLogin }: Props) {
   const erDesktop = useErDesktop();
+  const [visAlleHandlinger, setVisAlleHandlinger] = useState(false);
 
   const { bruger, erLoggetInd } = useAuth();
   const online = useErOnline();
@@ -184,8 +188,10 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
       fab={nytItem}
     >
       <div className="home-grid" style={{ display: 'grid', gap: '24px' }}>
-        <section className="home-next">
-        {minder[0] && <div className="home-next-image"><Billedvisning billede={minder[0].billede} /></div>}
+        <section className={`home-next${minder[0] ? ' has-image' : ' without-image'}`}>
+        {minder[0]
+          ? <div className="home-next-image"><Billedvisning billede={minder[0].billede} /></div>
+          : <div className="home-next-placeholder" aria-hidden="true"><Ikon navn="kompas" size={52} /><span>Næste eventyr</span></div>}
         <div className="home-next-content">
         <Situationskort
           situation={situation}
@@ -211,7 +217,7 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
               gridTemplateColumns: erDesktop ? 'repeat(auto-fit, minmax(230px, 1fr))' : '1fr',
               gap: '8px'
             }}>
-              {alleHandlinger.slice(0, MAKS_HANDLINGER).map((h) => (
+              {alleHandlinger.slice(0, visAlleHandlinger ? undefined : MAKS_HANDLINGER).map((h) => (
                 <HandlingsKort
                   key={`${h.type}-${h.maal.slags}-${h.maal.uid}`}
                   handling={h}
@@ -220,9 +226,13 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
               ))}
             </div>
             {alleHandlinger.length > MAKS_HANDLINGER && (
-              <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', marginTop: '8px' }}>
-                + {alleHandlinger.length - MAKS_HANDLINGER} mere
-              </div>
+              <button
+                className="home-care-more"
+                onClick={() => setVisAlleHandlinger(!visAlleHandlinger)}
+                aria-expanded={visAlleHandlinger}
+              >
+                {visAlleHandlinger ? 'Vis kun de vigtigste' : `Se alle ${alleHandlinger.length}`}
+              </button>
             )}
           </details>
         )}
@@ -305,8 +315,8 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
               ejet.length === 0
                 ? 'Skriv det ind, du har — så kan appen regne på det'
                 : [
-                    `${(samletVaegt(items) / 1000).toFixed(1)} kg`,
-                    `${kroner(samletInventarvaerdi(items))} kr`,
+                    `${kilo(samletVaegt(items), 1)} kg`,
+                    `${beloeb(samletInventarvaerdi(items))} kr`,
                     skalPasses === 0
                       ? 'alt er passet'
                       : `${skalPasses} ${skalPasses === 1 ? 'ting skal passes' : 'ting skal passes'}`
@@ -319,14 +329,14 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
         <section>
           <SektionsTitel>Sidst tilføjet</SektionsTitel>
           {nyeste.length === 0 ? (
-            <TomListe>Intet gear endnu. Skriv den første ting ind.</TomListe>
+            <TomListe>Intet grej endnu. Skriv den første ting ind.</TomListe>
           ) : (
             nyeste.map((item) => (
               <ListeRaekke
                 key={item.uid}
                 onClick={() => item.id !== undefined && aabnItem(item.id)}
                 titel={item.navn || 'Uden navn'}
-                detalje={`${item.vaegt_g} g${item.pris_kr > 0 ? ` · ${kroner(item.pris_kr)} kr` : ''}`}
+                detalje={`${gram(item.vaegt_g)} g${item.pris_kr > 0 ? ` · ${beloeb(item.pris_kr)} kr` : ''}`}
               />
             ))
           )}
@@ -408,7 +418,7 @@ function Situationskort({ situation, items, grupper, aabn, opret, foersteTur, ha
         {[
           `${tur.naetter} ${tur.naetter === 1 ? 'nat' : 'nætter'}`,
           `${tur.personer} ${tur.personer === 1 ? 'person' : 'personer'}`,
-          `${(prPerson / 1000).toFixed(2)} kg`
+          `${kilo(prPerson)} kg`
         ].join(' · ')}
       </div>
 
@@ -650,11 +660,6 @@ function hilsen(navn: string): string {
 
   const rent = navn.trim();
   return rent ? `${tid}, ${rent}` : tid;
-}
-
-// 21400 → "21.400", som tal skrives på dansk.
-function kroner(beloeb: number): string {
-  return Math.round(beloeb).toLocaleString('da-DK');
 }
 
 // Tilbageblikket i januar. Det er ikke en handling og hører derfor ikke til

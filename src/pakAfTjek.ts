@@ -168,7 +168,7 @@ export function resumetekst(tjek: PakAfTjek): string {
     tal.i_stykker > 0 ? `${tal.i_stykker} i stykker` : null
   ]
     .filter(Boolean)
-    .join(' · ') || 'Intet gear på listen';
+    .join(' · ') || 'Intet grej på listen';
 }
 
 // ─────────────────────────────────────────────

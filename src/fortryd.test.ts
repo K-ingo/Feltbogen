@@ -62,10 +62,10 @@ describe('fortrydBesked med gjort', () => {
   it('siger hvad der faktisk skete', () => {
     expect(fortrydBesked({
       slags: 'Forslaget',
-      navn: 'Lettere gear i skabet',
+      navn: 'Lettere grej i skabet',
       gjort: 'afvist',
       genskab: intet
-    })).toBe('Forslaget "Lettere gear i skabet" er afvist');
+    })).toBe('Forslaget "Lettere grej i skabet" er afvist');
   });
 });
 

@@ -89,7 +89,7 @@ function ItemDetalje({ itemId, tilbage, nyOprettet }: Props) {
   const slet = async () => {
     if (item?.id === undefined) return;
     const genskab = await sletItem(item.id);
-    if (genskab) meldFortrydelse({ slags: 'Gearet', navn: item.navn, genskab });
+    if (genskab) meldFortrydelse({ slags: 'Grejet', navn: item.navn, genskab });
     tilbage();
   };
 
@@ -106,7 +106,7 @@ function ItemDetalje({ itemId, tilbage, nyOprettet }: Props) {
       <TitelInput
         value={item.navn}
         onChange={(v) => opdater({ navn: v })}
-        placeholder="Navn på gear"
+        placeholder="Navn på grej"
         autoFokus={nyOprettet}
       />
 
@@ -280,7 +280,7 @@ function DeltKort({ delt, skift }: { delt: boolean; skift: (v: boolean) => void 
       </div>
       <button
         onClick={() => skift(!delt)}
-        title="Delt gear bæres af én, men bruges af flere"
+        title="Delt grej bæres af én, men bruges af flere"
         style={{
           border: 'none',
           background: 'transparent',
@@ -600,7 +600,7 @@ function Vedligeholdskort({ handlinger, gem }: {
     <Infokort label="Vedligehold" fremhaevet={forfaldne.length > 0}>
       {handlinger.length === 0 ? (
         <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-dæmpet)', marginBottom: '10px', lineHeight: 1.5 }}>
-          Imprægnering, slibning, olie. Det er den skjulte grund til at gear går i
+          Imprægnering, slibning, olie. Det er den skjulte grund til at grej går i
           stykker — det bliver ikke passet.
         </div>
       ) : (

@@ -187,7 +187,7 @@ function AarsopgoerelseSide({ aar, vaelgAar, aabnFeltbog, tilbage, aabnTur, aabn
 
           <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', lineHeight: 1.6, marginTop: '26px' }}>
             Talt op over de {tal.ture} {tal.ture === 1 ? 'tur' : 'ture'} der står på {aar}.
-            Kladder tælles ikke med. Nyt grej regnes efter købsdatoen, så gear
+            Kladder tælles ikke med. Nyt grej regnes efter købsdatoen, så grej
             uden dato lander ikke i det år det tilfældigvis blev skrevet ind.
           </div>
         </>

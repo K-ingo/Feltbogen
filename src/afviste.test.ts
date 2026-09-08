@@ -19,7 +19,7 @@ function etForslag(overskriv: Partial<Forslag> = {}): Forslag {
   return {
     id: 'vaegt:telt',
     type: 'vaegt',
-    titel: 'Lettere gear i skabet',
+    titel: 'Lettere grej i skabet',
     detalje: '1.2 kg at hente på 2 ting',
     begrundelse: 'Fordi.',
     virkning: { vaegt_g: -1200, antal: 2 },

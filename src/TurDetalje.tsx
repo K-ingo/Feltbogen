@@ -117,6 +117,7 @@ import { nytDeletoken, lavSnapshot, deleLink, linkadvarsel, linkvaert } from './
 import { hentDeltagelser, baererePrGear, visningsnavn, deltagerbilleder } from './deltagelse';
 import type { Deltagelse } from './deltagelse';
 import { layout } from './layout';
+import { kilo } from './talformat';
 import { useErDesktop, useErBredskaerm } from './useMedie';
 import { sletTur, opdaterTur } from './sync';
 import { meldFortrydelse } from './fortryd';
@@ -950,7 +951,9 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
         gap: 'var(--plads-4)',
         flexWrap: 'wrap'
       }}>
-        <Segment vaerdier={TUR_STATUS} valgt={tur.status} vaelg={(s) => opdater({ status: s })} kompakt />
+        <div className="trip-status">
+          <Segment vaerdier={TUR_STATUS} valgt={tur.status} vaelg={(s) => opdater({ status: s })} kompakt />
+        </div>
         {erDesktop && (
           <div style={{ display: 'flex', gap: 'var(--plads-2)' }}>
             {tur.status === 'aktiv' && <Knap onClick={() => void gaaPaaTur()}>På tur</Knap>}
@@ -1066,7 +1069,7 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
 
     // Arbejdsfladen: her vælges grejet, og vægten svarer igen med det samme.
     pakning: spalter(
-      sigte('pakning', <Infokort label="Vælg gear">{valgAfIndhold}</Infokort>),
+      sigte('pakning', <Infokort label="Vælg grej">{valgAfIndhold}</Infokort>),
       <>
         <Pakkekort pakning={pakning} tilListen={() => setFane('pakkeliste')} />
         {vaegt}
@@ -1100,7 +1103,7 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
         )}
         {tur.deltagere.length > 0 && pakItems.length > 0 && sigte('fordeling',
           <Foldbar
-            titel="Fordel gear"
+            titel="Fordel grej"
             resume={fordelingsResume(tur, pakItems, fordelingsforslag)}
             aabenFra={sigtet === 'fordeling'}
           >
@@ -1703,7 +1706,7 @@ function Pakkeliste({
   if (antal === 0) {
     return (
       <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-svag)', padding: '10px 0' }}>
-        Ingen gear valgt endnu. Vælg en gruppe eller enkelte items under "Vælg gear".
+        Intet grej valgt endnu. Vælg et grejsæt eller enkelte ting under "Vælg grej".
       </div>
     );
   }
@@ -2320,7 +2323,7 @@ function Fordeling({ deltagere, pakItems, baerer, vaegte, toggle, forslag, navn,
 
       {aktiv && (
         <div>
-          <SektionsTitel>Gear på turen</SektionsTitel>
+          <SektionsTitel>Grej på turen</SektionsTitel>
           {pakItems.map((item) => {
             const hos = baerer.get(item.uid);
             // Gear en anden allerede har taget, kan ikke også være dit — men
@@ -2615,7 +2618,7 @@ function Vaegtbrydere({ resultat, byt: tagImod }: {
     <div style={{ display: 'grid', gap: 'var(--plads-3)' }}>
       <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)', lineHeight: 1.55 }}>
         Pakken vejer {kg(resultat.nuvaerende_g)} kg. Der er {kg(resultat.potentiel_besparelse_g)} kg
-        at hente på lettere gear, du allerede ejer. Om de kan det samme, er dit valg —
+        at hente på lettere grej, du allerede ejer. Om det kan det samme, er dit valg —
         motoren kender kun tags, gram og dine stjerner.
       </div>
 
@@ -3165,7 +3168,7 @@ const VISNING_LABEL: Record<Visning, string> = {
 };
 
 function kg(gram: number): string {
-  return (gram / 1000).toFixed(2);
+  return kilo(gram);
 }
 
 function beregnNaetter(start: string, slut: string): number {
@@ -3264,7 +3267,7 @@ function Jagtboks({ tur }: { tur: Tur }) {
   if (!varsel) return null;
 
   return (
-    <div style={{
+    <details className="hunting-notice" style={{
       padding: '10px 12px',
       marginBottom: '14px',
       background: 'var(--advarsel-bg)',
@@ -3274,24 +3277,27 @@ function Jagtboks({ tur }: { tur: Tur }) {
       color: 'var(--advarsel)',
       lineHeight: 1.5
     }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+      <summary style={{ display: 'flex', alignItems: 'baseline', gap: '6px', cursor: 'pointer', minHeight: 'var(--roerehoejde)' }}>
         <span style={{ flex: 1, fontWeight: 500 }}>
-          Turen ligger i {varsel.saesoner.map((s) => s.navn.toLowerCase()).join(' og ')}
+          ⚠ Turen ligger i {varsel.saesoner.map((s) => s.navn.toLowerCase()).join(' og ')}
         </span>
-        <Hvorfor begrundelse={varsel.begrundelse} />
+        <span aria-hidden="true" style={{ color: 'var(--tekst-svag)' }}>Detaljer</span>
+      </summary>
+      <div style={{ paddingTop: '4px', borderTop: '1px solid var(--advarsel-border)' }}>
+        {varsel.saesoner.map((s) => (
+          <div key={s.navn} style={{ marginTop: '4px', opacity: 0.9 }}>{s.betydning}</div>
+        ))}
+        <div style={{ marginTop: '6px' }}><Hvorfor begrundelse={varsel.begrundelse} /></div>
+        <div style={{ marginTop: '6px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <a href={JAGTDAGE_LINK} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>
+            Jagtdage i statsskovene
+          </a>
+          <a href={JAGTTIDER_LINK} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>
+            Jagttider
+          </a>
+        </div>
       </div>
-      {varsel.saesoner.map((s) => (
-        <div key={s.navn} style={{ marginTop: '4px', opacity: 0.9 }}>{s.betydning}</div>
-      ))}
-      <div style={{ marginTop: '6px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-        <a href={JAGTDAGE_LINK} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>
-          Jagtdage i statsskovene
-        </a>
-        <a href={JAGTTIDER_LINK} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>
-          Jagttider
-        </a>
-      </div>
-    </div>
+    </details>
   );
 }
 

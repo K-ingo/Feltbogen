@@ -348,7 +348,7 @@ function langeUdlaan(ejet: Item[], nu: Date): Handling[] {
 
       return {
         type: 'udlaan_laenge' as const,
-        titel: 'Udlånt gear',
+        titel: 'Udlånt grej',
         detalje: `${item.navn} · hos ${hos} i ${laengde(dage)}`,
         maal: { slags: 'item' as const, uid: item.uid },
         begrundelse: overskredet
@@ -408,7 +408,7 @@ function ubrugteEfterSidsteTure(
     .filter((i) => !brugt.has(i.uid))
     .map((i) => ({
       type: 'ubrugt' as const,
-      titel: 'Ubrugt gear',
+      titel: 'Ubrugt grej',
       detalje: `${i.navn} · ${forgangne.length} ture`,
       maal: { slags: 'item', uid: i.uid },
       begrundelse: `${i.navn} var ikke med på nogen af de seneste ${forgangne.length} ture — hverken løst eller via en gruppe. Der måles i ture og ikke i måneder, fordi det er turene der siger noget om brug.`,

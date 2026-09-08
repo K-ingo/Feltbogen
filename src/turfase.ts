@@ -90,7 +90,7 @@ export function turfase(tur: Tur, grupper: Gruppe[]): Turfase {
         navn: FASENAVN.klar,
         naeste: { slags: 'status', til: 'aktiv', label: 'Start tur' },
         begrundelse:
-          'Turen er lagt. Når du starter den, skifter appen til på-tur-skærmen: store knapper, vejret, dagens noter — og ikke redigering af gear og indstillinger.',
+          'Turen er lagt. Når du starter den, skifter appen til på-tur-skærmen: store knapper, vejret, dagens noter — og ikke redigering af grej og indstillinger.',
         mangler: klarmangler(tur, grupper)
       };
 

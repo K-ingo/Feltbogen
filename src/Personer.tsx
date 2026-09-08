@@ -8,6 +8,7 @@ import { opretTomPerson } from './opret';
 import { opdaterPerson, sletPerson } from './sync';
 import { meldFortrydelse } from './fortryd';
 import { Knap, Felt, Segment, Tekstomraade } from './ui';
+import { kilo } from './talformat';
 
 // Rejseselskabet. Selve listen — skærmen omkring den er FolkSide.
 //
@@ -107,7 +108,7 @@ function Personer() {
           hvem der plejer at være med, og hvad de plejer at bære.
         </div>
       ) : (
-        <div style={{ display: 'grid', gap: '2px' }}>
+        <div className="person-list">
           {sorteret.map((person) => (
             <Personraekke
               key={person.uid}
@@ -136,9 +137,10 @@ function Personraekke({ person, ture, profil, aaben, skiftAaben, opdater, fjern 
   fjern: () => void;
 }) {
   return (
-    <div style={{ borderBottom: '1px solid var(--border-svag)' }}>
+    <div className="person-card">
       <button
         onClick={skiftAaben}
+        aria-expanded={aaben}
         style={{
           display: 'flex',
           width: '100%',
@@ -152,13 +154,16 @@ function Personraekke({ person, ture, profil, aaben, skiftAaben, opdater, fjern 
           color: 'var(--tekst)'
         }}
       >
+        <span className="person-avatar" aria-hidden="true">
+          {(person.navn.trim()[0] ?? '?').toLocaleUpperCase('da-DK')}
+        </span>
         <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--skrift-knap)' }}>{person.navn || 'Uden navn'}</span>
         <span style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)' }}>
           {/* "sammen" og ikke bare tallet: rækken står under et menneskes navn,
               og det er ikke personens ture, det er dem I har været på. */}
           {ture === 0 ? 'ingen ture endnu' : `${ture} ${ture === 1 ? 'tur' : 'ture'} sammen`}
         </span>
-        <span style={{ color: 'var(--tekst-svag)', fontSize: 'var(--skrift-knap)' }}>{aaben ? '−' : '+'}</span>
+        <span style={{ color: 'var(--tekst-svag)', fontSize: 'var(--skrift-knap)' }}>{aaben ? '−' : '›'}</span>
       </button>
 
       {aaben && (
@@ -232,7 +237,7 @@ function Profil({ profil }: { profil: Personprofil }) {
         <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)' }}>
           Bærer typisk{' '}
           <span style={{ color: 'var(--tekst)' }}>
-            {(profil.baerer.snit_g / 1000).toFixed(1).replace('.', ',')} kg
+            {kilo(profil.baerer.snit_g, 1)} kg
           </span>
           {' '}— snit over {profil.baerer.ture}{' '}
           {profil.baerer.ture === 1 ? 'tur hvor grejet var fordelt' : 'ture hvor grejet var fordelt'}
