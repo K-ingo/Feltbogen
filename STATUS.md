@@ -18,8 +18,9 @@ appen bliver klogere af det. Delingen er blevet til rigtigt samarbejde, hvor
 en deltager har sine egne faner, sin egen pakkeliste og kan bidrage til den
 fælles journal.
 
-Det, der står i vejen lige nu, er **ikke kode**. Det er tre felter, der
-mangler i PocketBase, og som gør at data forsvinder lydløst på vej op.
+Serveren er nu sat helt op: de tre felter, der manglede i PocketBase, er
+oprettet, og dermed er der ingen kendt blokering tilbage. Det næste er at
+køre den vej igennem med rigtige data — den har aldrig været åben før.
 
 ---
 
@@ -38,21 +39,28 @@ Railway-domæne ikke er havnet i bundlen.
 
 ---
 
-## Blokerer nu — kræver handling i PocketBase-admin
+## Ikke længere blokeret
 
-Kan ikke løses fra repoet. Tre felter mangler på serveren, og indtil de er
-oprettet, skriver appen data, som aldrig kommer op:
+De tre felter, der manglede i PocketBase, **er oprettet** (8. september 2026):
 
-| Samling | Felt | Type | Hvad der sker uden det |
-|---|---|---|---|
-| `ture` | `pakkede_item_uids` | JSON | Afkrydsningen bliver på den enhed, man står med. Ingen fejl vises |
-| `turdeltagelse` | `journal` | JSON | Deltagerens journalindgang forsvinder helt. Appen kan ikke se forskel på det og "ingen indgange" |
-| `turdeltagelse` | `billeder` | File (multiple, max 20, 5 MB, jpeg/png/webp) | Noten gemmes, men billederne kommer ikke op. Appen siger selv til |
+| Samling | Felt | Type |
+|---|---|---|
+| `ture` | `pakkede_item_uids` | JSON |
+| `turdeltagelse` | `journal` | JSON |
+| `turdeltagelse` | `billeder` | File (multiple) |
 
-Fremgangsmåden står i [`POCKETBASE.md`](./POCKETBASE.md) — trin 4 for det
-første, afsnittet om `turdeltagelse` i bilaget for de to sidste.
+Indtil de fandtes, skrev appen data, som aldrig kom op på serveren — for
+journalens vedkommende uden at nogen fik besked.
 
----
+**Bekræftet i PocketBase-admin, ikke afprøvet fra appen endnu.** Det, der
+mangler, er en gennemkørsel med rigtige data: kryds noget af på en
+pakkeliste, skriv en journalindgang som deltager med et billede, synkronisér,
+og se at det står der efter en genindlæsning. Det er første gang, den vej er
+åben hele vejen igennem.
+
+`./scripts/tjek-pocketbase.sh <appens adresse>` efterprøver samtidig, at
+samlingerne ikke er åbne for fremmede. Den skriver ingenting — den henter
+kun og kigger på svaret.
 
 ## Åbne arbejdsområder
 
