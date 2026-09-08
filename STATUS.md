@@ -1,6 +1,6 @@
 # STATUS
 
-*Sidst opdateret: 8. september 2026. Udgangspunkt: `main` @ `2b04758`.*
+*Sidst opdateret: 8. september 2026. Udgangspunkt: `main` @ `a86505c`.*
 
 Kort svar på "hvor står vi nu?". Den skal kunne læses på to minutter og
 opdateres, hver gang noget bliver færdigt eller blokeret.
@@ -27,13 +27,13 @@ står tilbage, er arbejde vi selv vælger — ikke noget, der spærrer.
 
 ## Grønt lys
 
-Kørt på grenen `claude/flerdagesture-fundament` den 8. september 2026:
+Kørt på grenen `claude/flerdagesture-skaerm` den 8. september 2026:
 
 | Kommando | Resultat |
 |---|---|
 | `npm run lint` | Bestået, ingen fejl |
-| `npm test` | 55 testfiler, 1.225 tests, alle grønne |
-| `npm run build` | Bestået. Startchunk 461,21 kB / 145,68 kB gzip |
+| `npm test` | 56 testfiler, 1.242 tests, alle grønne |
+| `npm run build` | Bestået. Startchunk 461,32 kB / 145,70 kB gzip |
 
 CI kører de samme tre på alle pull requests, plus et tjek for at et privat
 Railway-domæne ikke er havnet i bundlen.
@@ -112,11 +112,10 @@ I den rækkefølge, de sandsynligvis er værd at tage.
 9. **Læringssløjfen og de sidste statistikker** — nætter, besøgte steder,
    turtyper, gennemsnitsvægt, bedste og dårligste grej efter egne stjerner.
    Kun det, der kan forklares ud fra data, der findes. (`PLAN.md` §9 trin 5)
-10. **Flerdagesture: skærmen og delingen.** Fundamentet står — `turdag.ts`,
-    tabellen, sync og gravsten — men der er ingen brugerflade endnu, så dagene
-    kan kun oprettes fra kode. Næste skridt er dagene på turen (opret,
-    omarrangér, slet), og derefter dagsplanen i gæstesnapshottet, hvor den for
-    alvor er værd at have: *"hvor sover vi tirsdag?"*
+10. **Flerdagesture: delingen.** Fundamentet og skærmen står — dagene kan
+    oprettes, rettes, flyttes og slettes under turens Overblik. Det, der
+    mangler, er dagsplanen i gæstesnapshottet, hvor den for alvor er værd at
+    have: *"hvor sover vi tirsdag?"* Det er PR 3.
 11. **Rute som eget domæne.** Nu efter dagen og ikke før — rækkefølgen er
     byttet om, se `PLAN.md` §9 trin 6. Åbner for kilometer, højdemeter og
     kortfanen på delte ture. Dagen får et `rute_uid`, og det er additivt.

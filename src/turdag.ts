@@ -1,3 +1,4 @@
+import { etiket } from './db';
 import type { Tur, TurDag, Reference } from './db';
 
 // ─────────────────────────────────────────────
@@ -128,4 +129,26 @@ export function varierer(dage: TurDag[], turUid: Reference): boolean {
 
   return new Set(mine.map((d) => d.aktivitet)).size > 1
     || new Set(mine.map((d) => d.overnatning)).size > 1;
+}
+
+// Har turen overhovedet brug for dage?
+//
+// En dagstur har én dag, og en dagsplan for den ene dag er en liste med ét
+// punkt, der ikke siger noget, turen ikke allerede siger.
+export function harBrugForDage(tur: Tur): boolean {
+  return tur.naetter >= 1;
+}
+
+// Linjen under overskriften, når sektionen er foldet sammen. Den skal kunne
+// læses uden at folde ud: hvor langt man er, og om turen skifter slags.
+export function dagsplanResume(tur: Tur, dage: TurDag[]): string {
+  const mine = dageFor(dage, tur.uid);
+  if (mine.length === 0) return `${antalDage(tur)} dage · ikke planlagt`;
+
+  const slags = [...new Set(mine.map((d) => etiket(d.aktivitet)))];
+  const mangler = manglendeDage(tur, mine);
+
+  const dele = [`${mine.length} af ${antalDage(tur)} dage`, slags.join(', ')];
+  if (mangler > 0) dele.push(`${mangler} mangler`);
+  return dele.join(' · ');
 }

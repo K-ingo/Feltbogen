@@ -30,11 +30,17 @@ export type Turmaal =
   | 'deltagere'
   // Fordelingen af det fælles grej mellem deltagerne.
   | 'fordeling'
+  // Dagene på en flerdagestur.
+  | 'dage'
   // Det sidste tjek inden afgang.
   | 'afgangstjek';
 
 export const MAALETS_FANE: Record<Turmaal, Turfane> = {
   overblik: 'overblik',
+  // Dagene er turens parametre, dag for dag, og ligger derfor under Overblik
+  // og ikke i en fane for sig. Reglen: en ny funktion får ikke automatisk en
+  // fane.
+  dage: 'overblik',
   pakning: 'pakning',
   vaegt: 'pakning',
   pakkeliste: 'pakkeliste',

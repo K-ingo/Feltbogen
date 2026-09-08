@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 
 import {
   antalDage, datoFor, dageFor, nyDag, naesteNummer,
-  omnummerering, flyt, dageUdenForTuren, manglendeDage, varierer
+  omnummerering, flyt, dageUdenForTuren, manglendeDage, varierer,
+  harBrugForDage, dagsplanResume
 } from './turdag';
 import { lavTur, lavTurDag } from './test/data';
 
@@ -193,5 +194,43 @@ describe('skifter turen slags undervejs', () => {
 
   it('nej, når der kun er én dag', () => {
     expect(varierer([dag(1)], 'tur-1')).toBe(false);
+  });
+});
+
+describe('har turen brug for dage', () => {
+  // En dagstur har én dag, og en dagsplan for den ene dag siger ikke noget,
+  // turen ikke allerede siger.
+  it('nej til en dagstur', () => {
+    expect(harBrugForDage(tur({ naetter: 0 }))).toBe(false);
+  });
+
+  it('ja fra første overnatning', () => {
+    expect(harBrugForDage(tur({ naetter: 1 }))).toBe(true);
+  });
+});
+
+describe('linjen under overskriften', () => {
+  it('siger til, når intet er planlagt', () => {
+    expect(dagsplanResume(tur({ naetter: 2 }), [])).toBe('3 dage · ikke planlagt');
+  });
+
+  it('viser hvor langt man er, og hvad turen består af', () => {
+    const dage = [
+      dag(1, { aktivitet: 'vandretur' }),
+      dag(2, { aktivitet: 'kano' }),
+      dag(3, { aktivitet: 'vandretur' })
+    ];
+
+    expect(dagsplanResume(tur({ naetter: 2 }), dage)).toBe('3 af 3 dage · vandretur, kano');
+  });
+
+  it('siger hvor mange der mangler', () => {
+    expect(dagsplanResume(tur({ naetter: 2 }), [dag(1)])).toContain('2 mangler');
+  });
+
+  // Etiketterne er de danske, ikke nøglerne uden æ/ø/å.
+  it('skriver aktiviteten ud på dansk', () => {
+    expect(dagsplanResume(tur({ naetter: 1 }), [dag(1, { aktivitet: 'bushcraft' })]))
+      .toContain('bushcraft');
   });
 });

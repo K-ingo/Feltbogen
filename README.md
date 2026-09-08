@@ -68,6 +68,7 @@ appen starter.
 | Øjebliksbilleder | `src/delesnapshot.ts` | Ombygningen af gæste- og turkort-snapshot efter hver skrivning |
 | Turfase | `src/turfase.ts` | Hvor turen er i sit forløb, og hvad næste skridt er |
 | Dagene på turen | `src/turdag.ts` | Flerdagesturens dage: nummer, aktivitet, overnatning og destination — datoen udledes |
+| Dagsplanen | `src/Dagsplan.tsx` | Dagene som en sektion under turens Overblik: opret, ret, flyt og slet |
 | Pakning | `src/pakning.ts` | Hvad der er lagt i tasken, og hvor langt man er |
 | Vurdering | `src/vurdering.ts` | Stjerner på grej og ture, og hvad motoren gør ved dem |
 | Turlog | `src/feltnoter.ts` | Dagbogen fra turen, samlet pr. dag |
@@ -146,6 +147,11 @@ blive glemt ét sted. En ny skærm skal derfor kun skrives ind i den ene tabel.
 Reglen bagved: en ny funktion får ikke automatisk sin egen fane. Hører den til
 en tur, ligger den under turen; hører den til et stykke grej, under Grej. Kun
 det tværgående hører under Mere.
+
+Dagsplanen er det seneste eksempel. Dagene på en flerdagestur kunne have fået
+en syvende fane på turen; i stedet ligger de som en sektion under Overblik,
+fordi de *er* turens parametre, dag for dag. Sektionen vises kun, når turen har
+mindst én nat — en dagsplan for én dag er en liste med ét punkt.
 
 Målene i brugerfladen står som CSS-variabler i `src/index.css` og skal vælges
 derfra frem for at blive skrevet ind i den enkelte skærm: `--plads-1` til
