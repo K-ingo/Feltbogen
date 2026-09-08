@@ -19,6 +19,8 @@ import { gyldig as gyldigVurdering } from './vurdering';
 import { rydAfvisninger } from './afviste';
 import type {
   Billede,
+  Gravsten,
+  Slettet,
   Item,
   Gruppe,
   Tur,
@@ -706,16 +708,32 @@ function meldOk(): void {
 // Posten oprettes i stedet på ny. `uid` er identiteten og følger med, så
 // grupper og pakkelister stadig peger på det samme grej — og det lokale er det
 // eneste, der er tilbage af posten, så der er ikke noget deroppe at overskrive.
+//
+// Med én undtagelse, og det er hele grunden til at gravstenene findes: er
+// posten slettet med vilje på en anden enhed, må den ikke oprettes på ny. Så
+// ville en helt almindelig redigering — man retter vægten på en sovepose, man
+// ikke vidste var slettet fra iPad'en — gøre sletningen om for alle. Gravstenen
+// er den eneste måde at kende de to 404'ere fra hinanden på.
+//
+// Svaret er `null`, når posten er gravlagt: der er ikke noget record at skrive
+// tilbage fra, og kalderen skal fjerne den lokale kopi i stedet.
 async function opdaterIPb<T extends Post>(
   samling: Samling<T>,
   pbId: string,
   payload: Record<string, unknown>,
   post: T
-): Promise<RecordModel> {
+): Promise<RecordModel | null> {
   try {
     return await pb.collection(samling.pbNavn).update(pbId, payload);
   } catch (e) {
     if (!erIkkeFundet(e)) throw e;
+
+    if (await erGravlagt(samling.pbNavn, post.uid)) {
+      console.warn(
+        `${samling.pbNavn} "${post.navn}" er slettet på en anden enhed. Fjernes også her.`
+      );
+      return null;
+    }
 
     console.warn(
       `${samling.pbNavn} ${pbId} findes ikke i PocketBase længere. "${post.navn}" oprettes på ny.`
@@ -759,7 +777,19 @@ async function synkroniserNu<T extends Post>(samling: Samling<T>, id: number): P
     let svar: RecordModel;
 
     if (post.pb_id) {
-      svar = await opdaterIPb(samling, post.pb_id, payload, post);
+      const opdateret = await opdaterIPb(samling, post.pb_id, payload, post);
+
+      // Gravlagt et andet sted. Den lokale kopi er det sidste, der er tilbage
+      // af posten, og den skal følge med — ellers står den her på enheden og
+      // bliver ved med at forsøge at komme op.
+      if (!opdateret) {
+        await samling.tabel.delete(id);
+        efterSkrivning?.();
+        meldOk();
+        return true;
+      }
+
+      svar = opdateret;
     } else {
       svar = await opretIPb(samling, payload, post.navn);
       advarHvisUidTabt(svar, post.uid, samling.pbNavn);
@@ -908,7 +938,36 @@ async function genopret<T extends Post>(samling: Samling<T>, post: T): Promise<v
     usendt_aendring: true
   } as T);
   efterSkrivning?.();
+
+  // Gravstenen skal af, før den nye post kommer op. Den peger på uid, og uid
+  // følger med en genoprettelse — så uden det her ville næste enhed læse
+  // gravstenen og slette præcis det, man lige har fortrudt at slette.
+  await koersel(() => tagGravstenAf(samling.pbNavn, post.uid));
   await koersel(() => synkroniser(samling, id));
+}
+
+// Fjerner gravstenen efter en fortrydelse, ad begge veje den kan findes.
+//
+// Nåede sletningen aldrig helt op, ligger den stadig som et spor: det markeres
+// fortrudt og køres til ende med det samme. Markeringen bliver liggende i
+// basen, hvis der ikke er forbindelse, så næste sendUsendteSletninger() tager
+// den — fortrydelsen overlever altså, at telefonen ryger i lommen.
+//
+// Nåede sletningen derimod op, findes sporet ikke længere; det ryddes, så snart
+// serveren har kvitteret. Gravstenen ligger der til gengæld stadig, for den er
+// permanent. Derfor skal den også tages af direkte, og ikke kun gennem sporet.
+async function tagGravstenAf(samling: string, uid: Reference): Promise<void> {
+  if (!uid) return;
+
+  const ventende = (await db.slettede.where('samling').equals(samling).toArray())
+    .filter((spor) => spor.uid === uid && spor.id !== undefined);
+
+  for (const spor of ventende) {
+    await db.slettede.update(spor.id!, { genskabt: true });
+    await afslutSpor({ ...spor, genskabt: true });
+  }
+
+  await fjernGravsten(samling, uid);
 }
 
 // Fortryder sletningen. Findes kun så længe nogen holder fast i den.
@@ -934,17 +993,58 @@ async function slet<T extends Post>(samling: Samling<T>, id: number): Promise<Ge
 
   // Sporet lægges før forsøget, så sletningen ikke kan gå tabt hvis appen
   // lukkes midt i kaldet.
-  const sporId = await db.slettede.add({
+  const spor: Slettet = {
     samling: samling.pbNavn,
     pb_id: post.pb_id,
+    uid: post.uid,
     slettet: new Date()
-  });
+  };
+  spor.id = await db.slettede.add(spor);
 
-  if (await koersel(() => sletIPb(samling.pbNavn, post.pb_id!))) {
-    await db.slettede.delete(sporId);
-  }
+  await koersel(() => afslutSpor(spor));
 
   return genskab;
+}
+
+// Fuldfører en sletning deroppe: gravstenen først, posten bagefter.
+//
+// Rækkefølgen er det, der gør sletningen holdbar. Gravstenen er den påstand,
+// de andre enheder skal kunne læse; når den er lagt, kan selve posten roligt
+// forsvinde. Modsat vej ville der være et vindue, hvor posten var væk, uden at
+// nogen kunne se, at det var med vilje.
+async function fuldfoerSletning(spor: Slettet): Promise<boolean> {
+  const bruger = nuvaerendeBruger();
+  if (!bruger) return false;
+
+  const uid = spor.uid ?? '';
+
+  // Fortrudt, mens sletningen stadig hang i køen. Den gamle post skal stadig
+  // væk deroppe — genopretningen har lavet en ny med samme uid — men
+  // gravstenen skal med sikkerhed af igen først. Bliver den stående, slår den
+  // den genskabte post ihjel på næste enhed.
+  if (spor.genskabt) {
+    if (spor.gravsten_sendt) {
+      if (!await fjernGravsten(spor.samling, uid)) return false;
+      spor.gravsten_sendt = false;
+      if (spor.id !== undefined) await db.slettede.update(spor.id, { gravsten_sendt: false });
+    }
+    return sletIPb(spor.samling, spor.pb_id);
+  }
+
+  if (!spor.gravsten_sendt) {
+    if (!await skrivGravsten(spor.samling, uid, bruger.id)) return false;
+    spor.gravsten_sendt = true;
+    if (spor.id !== undefined) await db.slettede.update(spor.id, { gravsten_sendt: true });
+  }
+
+  return sletIPb(spor.samling, spor.pb_id);
+}
+
+// Kører sporet til ende og rydder det, hvis alt nåede op.
+async function afslutSpor(spor: Slettet): Promise<boolean> {
+  if (!await fuldfoerSletning(spor)) return false;
+  if (spor.id !== undefined) await db.slettede.delete(spor.id);
+  return true;
 }
 
 // Returnerer om posten nu er væk i PocketBase. En 404 tæller som succes —
@@ -966,6 +1066,151 @@ function erIkkeFundet(e: unknown): boolean {
     && (e as { status: number }).status === 404;
 }
 
+// ─────────────────────────────────────────────
+// Gravsten
+//
+// Serverens egen påstand om, at en post er slettet med vilje. Den findes,
+// fordi fravær ikke er et svar: en post, der ikke er i serverens liste, kan
+// være slettet på en anden enhed — men den kan lige så godt mangle, fordi
+// samlingen er ryddet i admin, fordi en API-regel er rettet, eller fordi
+// hentningen fejlede halvvejs. "Slet den så lokalt" ville være forkert de
+// fleste gange, og der er ingen vej tilbage: den lokale kopi er den eneste,
+// der er tilbage af posten.
+//
+// Derfor er reglen: **kun en gravsten kan udløse en lokal sletning.** Et
+// fravær kan ikke, uanset hvor meget det ligner.
+//
+// En sletning er dermed to handlinger — skriv gravstenen, slet så posten. Den
+// rækkefølge er den samme, som det lokale spor allerede bruger, og af samme
+// grund: lukkes appen midt i, må sletningen ikke kunne gå tabt.
+//
+// Nøglen er `uid` og ikke `pb_id`. Et record-id skifter, hvis posten undervejs
+// er blevet oprettet på ny — det sker i opdaterIPb nedenfor — mens uid er den
+// identitet, alle enheder er enige om.
+// ─────────────────────────────────────────────
+
+const GRAVSTEN_SAMLING = 'slettede';
+
+// Sat, når serveren har svaret 404 på selve samlingen. Så er gravstenene ikke
+// sat op i PocketBase, og appen skal opføre sig præcis som før de fandtes:
+// ingen gravsten betyder ingen sletninger — aldrig det modsatte.
+//
+// Flaget sparer et forgæves kald pr. post, og — vigtigere — holder den 404 ude
+// af syncfejl.ts. Det er ikke en fejl, brugeren kan gøre noget ved; det er en
+// funktion, der ikke er slået til.
+let gravstenMangler = false;
+
+function noterManglendeGravsten(): void {
+  if (gravstenMangler) return;
+  gravstenMangler = true;
+  console.warn(
+    `Samlingen "${GRAVSTEN_SAMLING}" findes ikke i PocketBase. Sletninger fra andre `
+    + 'enheder slår ikke igennem her. Se POCKETBASE.md.'
+  );
+}
+
+// Prøv igen ved næste afstemning. Bliver samlingen oprettet, skal appen tage
+// den i brug uden at nogen genstarter noget.
+function glemManglendeGravsten(): void {
+  gravstenMangler = false;
+}
+
+// Gravstenene for én bruger, grupperet efter samling.
+//
+// Fejler hentningen, kommer der et tomt svar tilbage og ikke en undtagelse:
+// uden gravsten sletter appen ingenting, og det er den rigtige måde at fejle
+// på. En kastet fejl ville afbryde hele hentningen.
+async function hentGravsten(brugerId: string): Promise<Map<string, Set<Reference>>> {
+  const efterSamling = new Map<string, Set<Reference>>();
+  if (gravstenMangler) return efterSamling;
+
+  try {
+    const records = await pb.collection(GRAVSTEN_SAMLING).getFullList({
+      filter: pb.filter('user = {:bruger}', { bruger: brugerId })
+    });
+
+    for (const r of records) {
+      const gravsten: Gravsten = { uid: tekst(r.uid), samling: tekst(r.samling) };
+      if (!gravsten.uid || !gravsten.samling) continue;
+
+      const uids = efterSamling.get(gravsten.samling) ?? new Set<Reference>();
+      uids.add(gravsten.uid);
+      efterSamling.set(gravsten.samling, uids);
+    }
+  } catch (e) {
+    if (erIkkeFundet(e)) noterManglendeGravsten();
+    else console.error('Kunne ikke hente gravsten fra PocketBase:', fejlDetaljer(e));
+  }
+
+  return efterSamling;
+}
+
+// Alle gravsten for ét uid. Filteret går på uid alene, fordi et uid er
+// entydigt på tværs af samlinger — og fordi API-reglen allerede har afgrænset
+// svaret til ens egne rækker. Samlingen efterprøves her.
+async function gravstenFor(samling: string, uid: string): Promise<RecordModel[]> {
+  if (gravstenMangler || !uid) return [];
+
+  const fundne = await pb.collection(GRAVSTEN_SAMLING).getFullList({
+    filter: pb.filter('uid = {:uid}', { uid })
+  });
+  return fundne.filter((r) => tekst(r.samling) === samling);
+}
+
+// Er posten slettet med vilje et andet sted?
+//
+// I tvivl svares nej. Et forkert nej efterlader en post, der burde være væk —
+// et forkert ja fjerner noget, ingen har bedt om at få fjernet.
+async function erGravlagt(samling: string, uid: string): Promise<boolean> {
+  if (gravstenMangler || !uid) return false;
+
+  try {
+    return (await gravstenFor(samling, uid)).length > 0;
+  } catch (e) {
+    if (erIkkeFundet(e)) noterManglendeGravsten();
+    else console.error(`Kunne ikke slå gravsten op for ${samling} ${uid}:`, fejlDetaljer(e));
+    return false;
+  }
+}
+
+// Lægger gravstenen. Findes samlingen ikke, tæller det som klaret — sletningen
+// må ikke kunne blive hængende, fordi en funktion ikke er slået til.
+async function skrivGravsten(samling: string, uid: string, brugerId: string): Promise<boolean> {
+  if (gravstenMangler || !uid) return true;
+
+  try {
+    await pb.collection(GRAVSTEN_SAMLING).create({ user: brugerId, samling, uid });
+    return true;
+  } catch (e) {
+    if (erIkkeFundet(e)) {
+      noterManglendeGravsten();
+      return true;
+    }
+    console.error(`Kunne ikke lægge gravsten for ${samling} ${uid}:`, fejlDetaljer(e));
+    await meldFejl(e, `${samling} · gravsten`);
+    return false;
+  }
+}
+
+// Tager gravstenen af igen. Bruges når en sletning fortrydes.
+async function fjernGravsten(samling: string, uid: string): Promise<boolean> {
+  if (gravstenMangler || !uid) return true;
+
+  try {
+    for (const r of await gravstenFor(samling, uid)) {
+      await pb.collection(GRAVSTEN_SAMLING).delete(r.id);
+    }
+    return true;
+  } catch (e) {
+    if (erIkkeFundet(e)) {
+      noterManglendeGravsten();
+      return true;
+    }
+    console.error(`Kunne ikke fjerne gravsten for ${samling} ${uid}:`, fejlDetaljer(e));
+    return false;
+  }
+}
+
 // Prøver de sletninger igen, der ikke nåede serveren.
 async function sendUsendteSletninger(): Promise<{ ok: number; fejl: number }> {
   const spor = await db.slettede.toArray();
@@ -973,20 +1218,23 @@ async function sendUsendteSletninger(): Promise<{ ok: number; fejl: number }> {
   let ok = 0;
   let fejl = 0;
   for (const s of spor) {
-    if (await sletIPb(s.samling, s.pb_id)) {
-      if (s.id !== undefined) await db.slettede.delete(s.id);
-      ok++;
-    } else {
-      fejl++;
-    }
+    if (await afslutSpor(s)) ok++;
+    else fejl++;
   }
   return { ok, fejl };
 }
 
-// Henter de records vi ikke har lokalt endnu.
-// Bemærk: poster vi allerede kender springes over, så ændringer lavet på en
-// anden enhed hentes ikke ned. Tovejs-sync mangler stadig.
-async function hent<T extends Post>(samling: Samling<T>, brugerId: string): Promise<void> {
+// Henter de records vi ikke har lokalt endnu — og fjerner dem, serveren har
+// lagt en gravsten over.
+//
+// `gravlagte` er uid'erne for netop denne samling. Kun de uid'er kan udløse en
+// sletning her; en post, der blot mangler i `records`, bliver hvor den er. Se
+// gravsten-afsnittet ovenfor for hvorfor.
+async function hent<T extends Post>(
+  samling: Samling<T>,
+  brugerId: string,
+  gravlagte: Set<Reference>
+): Promise<void> {
   const records = await pb.collection(samling.pbNavn).getFullList({
     filter: pb.filter('user = {:bruger}', { bruger: brugerId })
   });
@@ -1013,6 +1261,10 @@ async function hent<T extends Post>(samling: Samling<T>, brugerId: string): Prom
   for (const r of records) {
     if (slettedePbIds.has(r.id)) continue;
 
+    // Gravlagt, men endnu ikke væk deroppe — sletningen af selve posten nåede
+    // ikke op. Den skal ikke hentes ned i mellemtiden.
+    if (gravlagte.has(uid(r))) continue;
+
     const lokal = efterPbId.get(r.id) ?? efterUid.get(uid(r));
     if (lokal) {
       await fletNed(samling, lokal, r);
@@ -1022,7 +1274,34 @@ async function hent<T extends Post>(samling: Samling<T>, brugerId: string): Prom
   }
 
   if (nye.length > 0) await samling.tabel.bulkAdd(nye);
+  await fjernGravlagte(samling, lokale, gravlagte);
   efterSkrivning?.();
+}
+
+// Fjerner de lokale poster, serveren har en gravsten over.
+//
+// Én undtagelse: en post, der aldrig har været oppe (`pb_id` er tom) og har
+// lokale ændringer, bliver stående. Det er formen på en post, der lige er
+// blevet genskabt efter en fortrudt sletning — den har samme uid som den
+// slettede, og gravstenen kan nå at være der endnu, i det korte stykke tid før
+// den bliver taget af igen. Uden den undtagelse ville en fortrydelse kunne
+// blive gjort om af den næste hentning.
+async function fjernGravlagte<T extends Post>(
+  samling: Samling<T>,
+  lokale: T[],
+  gravlagte: Set<Reference>
+): Promise<void> {
+  if (gravlagte.size === 0) return;
+
+  const doede = lokale
+    .filter((p) => gravlagte.has(p.uid) && !(!p.pb_id && p.usendt_aendring))
+    .map((p) => p.id)
+    .filter((id): id is number => id !== undefined);
+
+  if (doede.length === 0) return;
+
+  console.log(`${samling.pbNavn}: ${doede.length} slettet på en anden enhed.`);
+  await samling.tabel.bulkDelete(doede);
 }
 
 // Afgør hvad der skal ske med en post der findes begge steder.
@@ -1208,13 +1487,19 @@ async function hentFraPocketBaseNu(): Promise<void> {
   if (!bruger) return;
 
   try {
+    // Gravstenene hentes én gang for alle samlinger. Seks hentninger af den
+    // samme lille liste ville være seks kald for det samme svar.
+    const gravsten = await hentGravsten(bruger.id);
+    const ingen: Set<Reference> = new Set();
+    const for_ = (navn: string) => gravsten.get(navn) ?? ingen;
+
     await Promise.all([
-      hent(itemSamling, bruger.id),
-      hent(gruppeSamling, bruger.id),
-      hent(turSamling, bruger.id),
-      hent(stedSamling, bruger.id),
-      hent(personSamling, bruger.id),
-      hent(billedSamling, bruger.id)
+      hent(itemSamling, bruger.id, for_(itemSamling.pbNavn)),
+      hent(gruppeSamling, bruger.id, for_(gruppeSamling.pbNavn)),
+      hent(turSamling, bruger.id, for_(turSamling.pbNavn)),
+      hent(stedSamling, bruger.id, for_(stedSamling.pbNavn)),
+      hent(personSamling, bruger.id, for_(personSamling.pbNavn)),
+      hent(billedSamling, bruger.id, for_(billedSamling.pbNavn))
     ]);
     meldOk();
   } catch (e) {
@@ -1352,6 +1637,9 @@ export function afstemMedServer(): Promise<void> {
   // fejlen, når arbejdet er ovre, og en afstemning, der nåede at begynde
   // imens, ville lægge sig inden i den, der var ved at slutte.
   igangvaerendeAfstemning ??= koersel(async () => {
+    // En samling, der er blevet oprettet siden sidst, skal tages i brug uden
+    // at nogen genstarter appen.
+    glemManglendeGravsten();
     await fjernDubletter();
     await sendAltUsendt();
     await hentFraPocketBase();

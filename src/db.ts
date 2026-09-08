@@ -371,14 +371,44 @@ export interface Tur extends Synkroniserbar {
   aendret: Date;
 }
 
-// En post der er slettet lokalt, men endnu ikke i PocketBase — typisk fordi
-// man var offline. Uden dette spor ville hentFraPocketBase() hente posten
-// tilbage næste gang appen startede.
+// En post der er slettet lokalt, men endnu ikke helt i PocketBase — typisk
+// fordi man var offline. Uden dette spor ville hentFraPocketBase() hente
+// posten tilbage næste gang appen startede.
+//
+// Sporet er enhedens eget og forsvinder, når begge dele er nået op: gravstenen
+// i `slettede`-samlingen, og selve sletningen af posten. Se sync.ts.
 export interface Slettet {
   id?: number;
   samling: string;
   pb_id: string;
+  // Postens identitet på tværs af enheder, og dermed også gravstenens nøgle.
+  // Gamle spor fra før gravstenene har den ikke; så skrives der ingen
+  // gravsten, og sletningen opfører sig som den gjorde før.
+  uid?: string;
+  // Gravstenen er nået op, posten er ikke. Uden det her ville hvert nyt forsøg
+  // lægge endnu en gravsten over den samme post.
+  gravsten_sendt?: boolean;
+  // Sletningen blev fortrudt, mens den stadig hang i køen. Den gamle post skal
+  // stadig væk deroppe — genopretningen laver en ny — men gravstenen skal
+  // fjernes igen, ellers slår den den genskabte post ihjel på næste enhed.
+  genskabt?: boolean;
   slettet: Date;
+}
+
+// En gravsten: serverens egen påstand om, at en post er slettet med vilje.
+//
+// Den findes, fordi fravær ikke er et svar. En post, der ikke er i serverens
+// liste, kan være slettet på en anden enhed — men den kan lige så godt mangle,
+// fordi samlingen er ryddet i admin, fordi en API-regel er rettet, eller fordi
+// hentningen fejlede halvvejs. Fire ud af fem gange ville "slet den lokalt"
+// være forkert, og der er ingen vej tilbage: den lokale kopi er den eneste,
+// der er tilbage.
+//
+// Derfor siger serveren det positivt i stedet. Kun en gravsten kan udløse en
+// lokal sletning — aldrig et fravær.
+export interface Gravsten {
+  uid: string;
+  samling: string;
 }
 
 // Små valg der hører til denne enhed og ikke til dataene — om onboardingen
@@ -556,6 +586,25 @@ export class FeltbogenDB extends Dexie {
       grupper: '++id, &uid, navn, oprettet',
       ture: '++id, &uid, navn, startdato, status, oprettet, dele_token',
       slettede: '++id, samling, pb_id, [samling+pb_id]',
+      indstillinger: '&noegle',
+      delte_ture: '++id, &token, gemt',
+      steder: '++id, &uid, navn, oprettet',
+      personer: '++id, &uid, navn, oprettet',
+      billeder: '++id, &uid, tur_uid, tid, oprettet',
+      afviste_forslag: '[tur_uid+forslag_id], tur_uid'
+    });
+
+    // Sletningssporet får uid med. Gravstenen deroppe kendes på uid og ikke på
+    // pb_id: et record-id skifter, hvis posten undervejs er blevet oprettet på
+    // ny, mens uid er den identitet, alle enheder er enige om.
+    //
+    // Rent additivt. Eksisterende spor beholder deres rækker uden uid — de
+    // lever kun, indtil sletningen er nået op, og opfører sig som før.
+    this.version(12).stores({
+      items: '++id, &uid, navn, status, oprettet',
+      grupper: '++id, &uid, navn, oprettet',
+      ture: '++id, &uid, navn, startdato, status, oprettet, dele_token',
+      slettede: '++id, samling, pb_id, uid, [samling+pb_id]',
       indstillinger: '&noegle',
       delte_ture: '++id, &token, gemt',
       steder: '++id, &uid, navn, oprettet',

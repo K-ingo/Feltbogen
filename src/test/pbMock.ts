@@ -9,6 +9,9 @@ export interface PbMock {
   // Efterligner en samling uden uid-felt i skemaet: PocketBase dropper
   // lydløst felter den ikke kender.
   udenUidFelt: boolean;
+  // Efterligner en PocketBase, hvor gravsten-samlingen slet ikke er oprettet.
+  // Så svarer serveren 404 på selve samlingen — ikke på en enkelt record.
+  udenGravsten: boolean;
   // Afviser næste create mod den navngivne samling én gang. Bruges til at
   // ramme det tilfælde hvor serveren siger nej til en for stor eller ukendt
   // fil, og appen skal prøve igen med mindre i.
@@ -43,6 +46,7 @@ export const pbMock: PbMock = {
   records: new Map(),
   offline: false,
   udenUidFelt: false,
+  udenGravsten: false,
   afvisNaesteCreate: null,
   kald: [],
 
@@ -50,6 +54,7 @@ export const pbMock: PbMock = {
     this.records = new Map();
     this.offline = false;
     this.udenUidFelt = false;
+    this.udenGravsten = false;
     this.afvisNaesteCreate = null;
     this.kald = [];
     naesteId = 1;
@@ -76,6 +81,13 @@ export const pbMock: PbMock = {
     return [...samlingAf(this, samling).keys()];
   }
 };
+
+// En samling, der ikke er oprettet i PocketBase, svarer 404 på alt — også på
+// en hentning. Det er en anden fejl end "record'et findes ikke", men den ser
+// ens ud udefra, og det er præcis den skelnen appen skal håndtere.
+function kraevSamling(navn: string) {
+  if (navn === 'slettede' && pbMock.udenGravsten) throw ikkeFundet();
+}
 
 function kraevOnline() {
   if (pbMock.offline) {
@@ -116,6 +128,7 @@ export const pb = {
     async getFullList(opts: { filter?: string } = {}) {
       pbMock.kald.push({ metode: 'getFullList', samling: navn });
       kraevOnline();
+      kraevSamling(navn);
       return filtreret([...samlingAf(pbMock, navn).values()], opts.filter);
     },
 
@@ -132,6 +145,7 @@ export const pb = {
     async create(data: Record<string, unknown>) {
       pbMock.kald.push({ metode: 'create', samling: navn });
       kraevOnline();
+      kraevSamling(navn);
 
       if (pbMock.afvisNaesteCreate === navn) {
         pbMock.afvisNaesteCreate = null;
@@ -150,6 +164,7 @@ export const pb = {
     async update(id: string, data: Record<string, unknown>) {
       pbMock.kald.push({ metode: 'update', samling: navn, id });
       kraevOnline();
+      kraevSamling(navn);
 
       if (blokering) {
         const denne = blokering;
@@ -168,6 +183,7 @@ export const pb = {
     async delete(id: string) {
       pbMock.kald.push({ metode: 'delete', samling: navn, id });
       kraevOnline();
+      kraevSamling(navn);
       if (!samlingAf(pbMock, navn).has(id)) throw ikkeFundet();
       samlingAf(pbMock, navn).delete(id);
       return true;
