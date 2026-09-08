@@ -639,26 +639,35 @@ en dag kan pege på et sted, man kender i forvejen, med den kobling der allerede
 findes. Og `dag_nr` *ved siden af* `dato` er rigtigt: nummeret er det, man taler
 om, datoen er det, man regner med.
 
-**Fire ting, der skal gøres om, før den kan bruges.**
+**Det, der skal gøres om, før den kan bruges.**
 
 *Ruten mangler stadig.* `rute_distance_km` er et tal på dagen og ikke en rute.
 Det er præcis den genvej, rækkefølgen ovenfor findes for at undgå — dagen skal
 pege på en rute, ikke bære et tal, der påstår at kende den. Bygges tallet først,
 skal det migreres væk igen.
 
-*Vejr og forbrug er udledte og hører ikke i basen.* `vejrsnapshot`,
-`forbrug_vand_l` og `forbrug_mad_kcal` kan alle regnes af `smartMotor.ts` ud fra
-dato, sted og deltagere. Reglen fra §6 gælder her: udled frem for at gemme, så
-sandheden ikke ligger to steder. `Tur.vejrsnapshot` findes ganske vist allerede
-— men den er et frosset øjebliksbillede til deling, ikke en cache.
+*Forbruget er udledt og hører ikke i basen.* `forbrug_vand_l` og
+`forbrug_mad_kcal` regner `beregnForbrug` i `smartMotor.ts` allerede ud af
+dage, personer, sæson og kropsdata. Gemmes de også på dagen, ligger sandheden to
+steder, og den ene bliver forkert, så snart deltagerantallet ændres.
+
+*Vejret er derimod rigtigt at gemme.* `vejrsnapshot` er ikke en cache, man kan
+hente igen — det er den udsigt, der blev meldt, dengang turen blev planlagt. En
+udsigt hentet et halvt år senere er en anden udsigt, og `aarsopgoerelse.ts`
+bygger direkte på, at den står som den var. `Tur.vejrsnapshot` findes af præcis
+den grund, og en dag med sin egen skal have det samme. Det er ikke en fejl i
+skitsen — det er den ene ting, den har fat i, som en hurtig læsning let kalder
+overflødig.
 
 *Migrationen skal skrives om.* Skitsen lagde `tur_dage` ind som Dexie-version
 11. Det nummer er brugt, og basen står på 12 nu.
 
-*Sync mangler halvdelen.* Grenen havde `opretTurDag`, `opdaterTurDag` og
-`sletTurDag`, men ikke `tilPb`/`fraPb`, ikke gravsten, og ingen samling i
-PocketBase. En ny synkroniserbar tabel koster mere end en tabel: den skal med i
-`hent()`, i `sendAltUsendt()`, i sletningssporet og i `POCKETBASE.md`.
+*Sync er halvt koblet på.* Skitsen har en hel `Samling<TurDag>` med både
+`tilPb` og `fraPb` — det er mere færdigt, end det ser ud. Men samlingen er
+aldrig skrevet ind i `hent()` eller `sendAltUsendt()`, så ingen dag ville komme
+ned igen, og en dag, der ikke nåede op, ville aldrig blive prøvet igen. Dertil
+mangler en `tur_dage`-samling i PocketBase med regler, og gravstenene, der kom
+til i september. En ny synkroniserbar tabel koster mere end en tabel.
 
 **Og et spørgsmål, skitsen ikke svarer på:** hvad sker der med en dag, når
 turens datoer flyttes? Dagene har både `dag_nr` og `dato`, og de kan komme ud af
