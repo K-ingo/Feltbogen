@@ -1,6 +1,6 @@
 # STATUS
 
-*Sidst opdateret: 8. september 2026. Udgangspunkt: `main` @ `7d466a8`.*
+*Sidst opdateret: 8. september 2026. Udgangspunkt: `main` @ `2b04758`.*
 
 Kort svar på "hvor står vi nu?". Den skal kunne læses på to minutter og
 opdateres, hver gang noget bliver færdigt eller blokeret.
@@ -27,13 +27,13 @@ står tilbage, er arbejde vi selv vælger — ikke noget, der spærrer.
 
 ## Grønt lys
 
-Kørt på grenen `claude/ui-tests` den 8. september 2026:
+Kørt på grenen `claude/flerdagesture-fundament` den 8. september 2026:
 
 | Kommando | Resultat |
 |---|---|
 | `npm run lint` | Bestået, ingen fejl |
-| `npm test` | 54 testfiler, 1.186 tests, alle grønne |
-| `npm run build` | Bestået. Startchunk 459,79 kB / 145,49 kB gzip — uændret |
+| `npm test` | 55 testfiler, 1.225 tests, alle grønne |
+| `npm run build` | Bestået. Startchunk 461,21 kB / 145,68 kB gzip |
 
 CI kører de samme tre på alle pull requests, plus et tjek for at et privat
 Railway-domæne ikke er havnet i bundlen.
@@ -61,6 +61,10 @@ redigering opretter en slettet post på ny og gør sletningen om for alle. Se
 `POCKETBASE.md` trin 7 og afsnittet "Gravsten" i `README.md`.
 
 Begge dele er bekræftet af ejeren i drift, ikke kun mod testmocken.
+
+**Samlingen `tur_dage` mangler.** Den kom til med flerdagesturenes fundament —
+se `POCKETBASE.md` trin 8. Springes den over, virker appen, men dagene bliver
+på den enhed, de blev lavet på. Ingen fejl på skærmen.
 
 `./scripts/tjek-pocketbase.sh <appens adresse>` er værd at køre efter en
 opsætningsændring: den kalder som en helt uindlogget fremmed og siger fra, hvis
@@ -108,21 +112,24 @@ I den rækkefølge, de sandsynligvis er værd at tage.
 9. **Læringssløjfen og de sidste statistikker** — nætter, besøgte steder,
    turtyper, gennemsnitsvægt, bedste og dårligste grej efter egne stjerner.
    Kun det, der kan forklares ud fra data, der findes. (`PLAN.md` §9 trin 5)
-10. **Rute som eget domæne, derefter `dage: TurDag[]`.** Datamodel, migration
-    og tests før noget UI. Rute først, fordi dagen skal kunne pege på en.
-    Åbner for kilometer, højdemeter og kortfanen på delte ture. Der ligger en
-    gennemarbejdet feltskitse til dagen i `PLAN.md` §9 trin 6, med det, der
-    skal gøres om, før den kan bruges. (`PLAN.md` §9 trin 6)
-11. **Badges og notifikationer.** I fundamentet §9, ikke bygget.
-12. **Tidevand ved kystture.** Kræver en DMI-nøgle. (`IDEER.md` §5.4)
-13. **Onboarding og adaptiv hjælpegrad.** Bevidst udskudt — vi bygger til
+10. **Flerdagesture: skærmen og delingen.** Fundamentet står — `turdag.ts`,
+    tabellen, sync og gravsten — men der er ingen brugerflade endnu, så dagene
+    kan kun oprettes fra kode. Næste skridt er dagene på turen (opret,
+    omarrangér, slet), og derefter dagsplanen i gæstesnapshottet, hvor den for
+    alvor er værd at have: *"hvor sover vi tirsdag?"*
+11. **Rute som eget domæne.** Nu efter dagen og ikke før — rækkefølgen er
+    byttet om, se `PLAN.md` §9 trin 6. Åbner for kilometer, højdemeter og
+    kortfanen på delte ture. Dagen får et `rute_uid`, og det er additivt.
+12. **Badges og notifikationer.** I fundamentet §9, ikke bygget.
+13. **Tidevand ved kystture.** Kræver en DMI-nøgle. (`IDEER.md` §5.4)
+14. **Onboarding og adaptiv hjælpegrad.** Bevidst udskudt — vi bygger til
     ejeren først. Bliver relevant, hvis appen skal ud til andre.
-14. **Virtualisering af lange gearlister.** Først værd at bygge, når en liste
+15. **Virtualisering af lange gearlister.** Først værd at bygge, når en liste
     er lang nok til at hakke. Afhænger af et rigtigt inventar.
 
 ### Kalibrering
 
-15. **Motorens tærskler er sat efter mavefornemmelse.** Hvornår vægten er
+16. **Motorens tærskler er sat efter mavefornemmelse.** Hvornår vægten er
     værd at nævne, hvor godt et grejsæt skal matche, hvor mange ture der skal
     til, før noget regnes som ubrugt. De er nemme at justere — men kun
     meningsfuldt, når de har været brugt på rigtige data over en sæson.

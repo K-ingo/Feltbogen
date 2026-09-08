@@ -4,13 +4,14 @@ import { db } from './db';
 import type { Gaestesnapshot } from './gaest';
 import { kontostatus, adopterBase, rydEnhed, laesEjer, KONTO_EJER } from './konto';
 import { saet, laes, KROPSVAEGT } from './indstillinger';
-import { lavItem, lavGruppe, lavTur, lavSted, lavPerson, lavBillede } from './test/data';
+import { lavItem, lavGruppe, lavTur, lavSted, lavPerson, lavBillede, lavTurDag } from './test/data';
 
 beforeEach(async () => {
   await Promise.all([
     db.items.clear(),
     db.grupper.clear(),
     db.ture.clear(),
+    db.tur_dage.clear(),
     db.steder.clear(),
     db.personer.clear(),
     db.billeder.clear(),
@@ -84,6 +85,7 @@ describe('rydEnhed', () => {
     await db.items.add(lavItem({ navn: 'Økse' }));
     await db.grupper.add(lavGruppe({ navn: 'Sommer' }));
     await db.ture.add(lavTur({ navn: 'Møn' }));
+    await db.tur_dage.add(lavTurDag({ tur_uid: 'tur-1' }));
     await db.steder.add(lavSted({ navn: 'Hareskoven' }));
     await db.personer.add(lavPerson({ navn: 'Maja' }));
     await db.billeder.add(lavBillede({ tur_uid: 'tur-1' }));
@@ -116,6 +118,7 @@ describe('rydEnhed', () => {
     expect(await db.items.count()).toBe(0);
     expect(await db.grupper.count()).toBe(0);
     expect(await db.ture.count()).toBe(0);
+    expect(await db.tur_dage.count()).toBe(0);
     expect(await db.steder.count()).toBe(0);
     expect(await db.personer.count()).toBe(0);
     expect(await db.billeder.count()).toBe(0);

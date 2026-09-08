@@ -70,6 +70,7 @@ async function rydAlt(): Promise<void> {
     db.items.clear(),
     db.grupper.clear(),
     db.ture.clear(),
+    db.tur_dage.clear(),
     db.steder.clear(),
     db.personer.clear(),
     db.billeder.clear(),

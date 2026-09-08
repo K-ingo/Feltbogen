@@ -301,7 +301,66 @@ når den kommer tilbage. En udløbsdato ville bytte det væk for ingenting.
 
 ---
 
-## Trin 8 — Tjek at det virker
+## Trin 8 — Opret samlingen `tur_dage`
+
+Dagene på en flerdagestur. Turen svarer for helheden — ét sted, én overnatning,
+én aktivitet — og dagene er det, turen ikke selv kan sige: at man vandrer den
+første dag og padler den anden.
+
+**New collection** → Name: `tur_dage` → Type: **Base**.
+
+### Fields
+
+| Navn | Type | Indstillinger |
+|---|---|---|
+| `user` | Relation | Collection: `users` · Max select: **1** · Cascade delete: **til** |
+| `uid` | Plain text | — |
+| `tur_uid` | Plain text | Turens uid, ikke dens record-id |
+| `dag_nr` | Number | 1, 2, 3 … |
+| `aktivitet` | Plain text | `bushcraft`, `vandretur`, `kano` eller `andet` |
+| `overnatning` | Plain text | `haengekoeje`, `telt`, `shelter` eller `blandet` |
+| `destination` | Plain text | — |
+| `destination_sted_uid` | Plain text | Valgfri kobling til `steder` |
+| `noter` | Plain text | — |
+
+Ingen felter er påkrævede. `aktivitet` og `overnatning` er Plain text og ikke
+Select: værdierne er appens, de læses gennem `enumVaerdi()` på vej ind, og en
+Select-liste ville skulle rettes i to systemer, hver gang der kom en mulighed
+til.
+
+### API rules
+
+De samme fem som alle andre steder:
+
+```
+user = @request.auth.id
+```
+
+Tryk **Create**.
+
+### Der er ingen dato
+
+Dagen har et nummer, ikke en dato. Datoen udledes af turens `startdato` plus
+nummeret — se `datoFor()` i `src/turdag.ts`. Gemt ville den kunne komme ud af
+trit med turen, hver gang datoerne blev flyttet, og så skulle to sandheder
+holdes i sync for ingenting.
+
+### Og ingen rute
+
+`rute_distance_km` er med vilje ikke med. Det ville være et tal, der påstod at
+kende en rute, appen ikke har. Kommer rutedomænet, får dagen et `rute_uid`, og
+det er additivt.
+
+### Hvis du springer trinnet over
+
+Dagene bliver på den enhed, de blev lavet på. Appen virker, men en flerdagestur
+planlagt på PC'en har ingen dage på telefonen. Der kommer ingen fejl på
+skærmen — som med gravstenene er et manglende felt aldrig en grund til at tabe
+data, kun til at lade være med at dele dem.
+
+---
+
+## Trin 9 — Tjek at det virker
 
 ### Tag en kopi først
 
@@ -483,6 +542,15 @@ står herunder.
 ### `personer`
 
 `navn` text · `email` text · `standard_overnatning` text · `noter` text
+
+### `tur_dage`
+
+`user` relation · `uid` text · `tur_uid` text · `dag_nr` number ·
+`aktivitet` text · `overnatning` text · `destination` text ·
+`destination_sted_uid` text · `noter` text
+
+> **Ny samling.** Dagene på en flerdagestur. Uden den bliver dagene på den
+> enhed, de blev lavet på. Se trin 8.
 
 ### `slettede`
 

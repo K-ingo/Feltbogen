@@ -41,7 +41,8 @@ import type {
   Feltnote,
   Vedligehold,
   Sted,
-  Person
+  Person,
+  TurDag
 } from './db';
 
 // Offline-first: alt skrives til IndexedDB først og sendes derefter til
@@ -309,7 +310,17 @@ function advarHvisUidTabt(skabt: RecordModel, forventet: string, pbNavn: string)
 // Én beskrivelse pr. posttype af hvordan den oversættes i begge retninger.
 // ─────────────────────────────────────────────
 
-type Post = Synkroniserbar & { id?: number; navn: string; aendret: Date };
+// `navn` er valgfrit, fordi ikke enhver post har et. En dag på en tur hedder
+// "Dag 3" og ikke andet, og det er udledt af nummeret — et gemt felt ville være
+// den samme oplysning to steder, og det ene kunne blive forkert.
+//
+// Feltet bruges kun i fejltekster: en post, der ikke vil op, skal kunne
+// genkendes fra en skærmdump. `postnavn()` finder det bedste, der er.
+type Post = Synkroniserbar & { id?: number; navn?: string; aendret: Date };
+
+function postnavn(post: Post): string {
+  return post.navn?.trim() || 'uden navn';
+}
 
 interface Samling<T extends Post> {
   pbNavn: string;
@@ -485,6 +496,38 @@ const turSamling: Samling<Tur> = {
     turkort_snapshot: tekst(r.turkort_snapshot),
     hero_billede: tekst(r.hero_billede),
     booking: booking(r.booking),
+    oprettet: dato(r.created),
+    aendret: dato(r.updated)
+  })
+};
+
+// Dagene på en flerdagestur. `navn` findes ikke på en dag — den hedder "Dag 3"
+// og ikke andet — men `Post` kræver et, fordi fejlbeskederne nævner posten ved
+// navn. Det udledes derfor af nummeret frem for at blive gemt.
+const turDagSamling: Samling<TurDag> = {
+  pbNavn: 'tur_dage',
+  tabel: db.tur_dage,
+  tilPb: (d, user) => ({
+    user,
+    uid: d.uid,
+    tur_uid: d.tur_uid,
+    dag_nr: d.dag_nr,
+    aktivitet: d.aktivitet,
+    overnatning: d.overnatning,
+    destination: d.destination,
+    destination_sted_uid: d.destination_sted_uid,
+    noter: d.noter
+  }),
+  fraPb: (r) => ({
+    uid: uid(r),
+    pb_id: r.id,
+    tur_uid: tekst(r.tur_uid),
+    dag_nr: tal(r.dag_nr, 1),
+    aktivitet: enumVaerdi(r.aktivitet, AKTIVITET, 'bushcraft'),
+    overnatning: enumVaerdi(r.overnatning, OVERNATNING, 'shelter'),
+    destination: tekst(r.destination),
+    destination_sted_uid: tekst(r.destination_sted_uid),
+    noter: tekst(r.noter),
     oprettet: dato(r.created),
     aendret: dato(r.updated)
   })
@@ -750,15 +793,15 @@ async function opdaterIPb<T extends Post>(
 
     if (await erGravlagt(samling.pbNavn, post.uid)) {
       console.warn(
-        `${samling.pbNavn} "${post.navn}" er slettet på en anden enhed. Fjernes også her.`
+        `${samling.pbNavn} "${postnavn(post)}" er slettet på en anden enhed. Fjernes også her.`
       );
       return null;
     }
 
     console.warn(
-      `${samling.pbNavn} ${pbId} findes ikke i PocketBase længere. "${post.navn}" oprettes på ny.`
+      `${samling.pbNavn} ${pbId} findes ikke i PocketBase længere. "${postnavn(post)}" oprettes på ny.`
     );
-    const svar = await opretIPb(samling, payload, post.navn);
+    const svar = await opretIPb(samling, payload, postnavn(post));
     advarHvisUidTabt(svar, post.uid, samling.pbNavn);
     return svar;
   }
@@ -812,7 +855,7 @@ async function synkroniserNu<T extends Post>(samling: Samling<T>, id: number): P
 
       svar = opdateret;
     } else {
-      svar = await opretIPb(samling, payload, post.navn);
+      svar = await opretIPb(samling, payload, postnavn(post));
       advarHvisUidTabt(svar, post.uid, samling.pbNavn);
     }
 
@@ -837,8 +880,8 @@ async function synkroniserNu<T extends Post>(samling: Samling<T>, id: number): P
     meldOk();
     return true;
   } catch (e) {
-    console.error(`Kunne ikke synkronisere ${samling.pbNavn} "${post.navn}":`, fejlDetaljer(e));
-    await meldFejl(e, `${samling.pbNavn} · ${post.pb_id ? 'opdatering' : 'oprettelse'} af "${post.navn}"`);
+    console.error(`Kunne ikke synkronisere ${samling.pbNavn} "${postnavn(post)}":`, fejlDetaljer(e));
+    await meldFejl(e, `${samling.pbNavn} · ${post.pb_id ? 'opdatering' : 'oprettelse'} af "${postnavn(post)}"`);
     return false;
   }
 }
@@ -1430,12 +1473,24 @@ export async function sletTur(id: number): Promise<Genskab | null> {
   const billeder = tur
     ? await db.billeder.where('tur_uid').equals(tur.uid).toArray()
     : [];
+  // Dagene kan lige så lidt leve uden deres tur som billederne. De følger med
+  // i sletningen og kommer med tilbage, hvis den fortrydes.
+  const dage = tur
+    ? await db.tur_dage.where('tur_uid').equals(tur.uid).toArray()
+    : [];
 
   const genskabBilleder: Genskab[] = [];
   for (const billede of billeder) {
     if (billede.id === undefined) continue;
     const tilbage = await slet(billedSamling, billede.id);
     if (tilbage) genskabBilleder.push(tilbage);
+  }
+
+  const genskabDage: Genskab[] = [];
+  for (const dag of dage) {
+    if (dag.id === undefined) continue;
+    const tilbage = await slet(turDagSamling, dag.id);
+    if (tilbage) genskabDage.push(tilbage);
   }
 
   const genskabTuren = await slet(turSamling, id);
@@ -1449,9 +1504,16 @@ export async function sletTur(id: number): Promise<Genskab | null> {
   return async () => {
     await genskabTuren();
     for (const tilbage of genskabBilleder) await tilbage();
+    for (const tilbage of genskabDage) await tilbage();
     await genskabAfviste?.();
   };
 }
+
+// Dagene på en flerdagestur. `opretTurDag` tager formen fra `nyDag()` i
+// turdag.ts, så en ny dag altid arver turens egne standarder.
+export const opretTurDag = (dag: Omit<TurDag, 'id' | 'uid'>) => opret(turDagSamling, dag);
+export const opdaterTurDag = (id: number, aendringer: Partial<TurDag>) => opdater(turDagSamling, id, aendringer);
+export const sletTurDag = (id: number) => slet(turDagSamling, id);
 
 export const opretSted = (sted: Omit<Sted, 'id' | 'uid'>) => opret(stedSamling, sted);
 export const opdaterSted = (id: number, aendringer: Partial<Sted>) => opdater(stedSamling, id, aendringer);
@@ -1488,6 +1550,7 @@ async function sendAltUsendtNu(): Promise<{ antal: number; fejl: number }> {
     await sendUsendte(itemSamling),
     await sendUsendte(gruppeSamling),
     await sendUsendte(turSamling),
+    await sendUsendte(turDagSamling),
     await sendUsendte(stedSamling),
     await sendUsendte(personSamling),
     await sendUsendte(billedSamling),
@@ -1522,6 +1585,7 @@ async function hentFraPocketBaseNu(): Promise<void> {
       hent(itemSamling, bruger.id, for_(itemSamling.pbNavn)),
       hent(gruppeSamling, bruger.id, for_(gruppeSamling.pbNavn)),
       hent(turSamling, bruger.id, for_(turSamling.pbNavn)),
+      hent(turDagSamling, bruger.id, for_(turDagSamling.pbNavn)),
       hent(stedSamling, bruger.id, for_(stedSamling.pbNavn)),
       hent(personSamling, bruger.id, for_(personSamling.pbNavn)),
       hent(billedSamling, bruger.id, for_(billedSamling.pbNavn))
@@ -1678,15 +1742,16 @@ export function afstemMedServer(): Promise<void> {
 // Hvor meget der venter på at komme op. Bruges af indstillingerne, så man kan
 // se om det er sikkert at lukke appen efter en tur uden dækning.
 export async function usendtAntal(): Promise<number> {
-  const [items, grupper, ture, steder, personer, billeder, sletninger] = await Promise.all([
+  const [items, grupper, ture, turDage, steder, personer, billeder, sletninger] = await Promise.all([
     db.items.filter((p) => !p.pb_id || !!p.usendt_aendring).count(),
     db.grupper.filter((p) => !p.pb_id || !!p.usendt_aendring).count(),
     db.ture.filter((p) => !p.pb_id || !!p.usendt_aendring).count(),
+    db.tur_dage.filter((p) => !p.pb_id || !!p.usendt_aendring).count(),
     db.steder.filter((p) => !p.pb_id || !!p.usendt_aendring).count(),
     db.personer.filter((p) => !p.pb_id || !!p.usendt_aendring).count(),
     db.billeder.filter((p) => !p.pb_id || !!p.usendt_aendring).count(),
     db.slettede.count()
   ]);
 
-  return items + grupper + ture + steder + personer + billeder + sletninger;
+  return items + grupper + ture + turDage + steder + personer + billeder + sletninger;
 }

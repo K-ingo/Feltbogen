@@ -20,8 +20,8 @@ import {
   afstemMedServer,
   usendtAntal
 } from './sync';
-import { sletTur } from './sync';
-import { lavItem, lavGruppe, lavTur, lavBillede, lavSted } from './test/data';
+import { sletTur, opretTurDag, opdaterTurDag, sletTurDag } from './sync';
+import { lavItem, lavGruppe, lavTur, lavBillede, lavSted, lavTurDag } from './test/data';
 import { laesSeneste, rydFejl } from './syncfejl';
 import { adopterBase, kontostatus } from './konto';
 
@@ -35,6 +35,7 @@ beforeEach(async () => {
   await db.steder.clear();
   await db.personer.clear();
   await db.billeder.clear();
+  await db.tur_dage.clear();
   await db.slettede.clear();
   await db.indstillinger.clear();
   pbMock.reset();
@@ -1081,3 +1082,127 @@ describe('porten slipper igennem, når den skal', () => {
     expect(pbMock.records.get('items')?.get('pb1')?.vaegt_g).toBe(700);
   });
 });
+
+
+// ─────────────────────────────────────────────
+// Dagene på en flerdagestur
+//
+// En ny synkroniserbar tabel koster mere end en tabel: den skal op, den skal
+// ned, den skal med i sletningen af turen, og den skal tælles med i det, der
+// venter. Testene her går efter hver af de fire.
+// ─────────────────────────────────────────────
+
+describe('tur_dage synkroniserer', () => {
+  const nyDagPaa = (turUid: string, dag_nr = 1, felter = {}) => {
+    const { uid, id, ...resten } = lavTurDag({ tur_uid: turUid, dag_nr, ...felter });
+    void uid; void id;
+    return opretTurDag(resten);
+  };
+
+  it('sender en ny dag op', async () => {
+    await nyDagPaa('tur-1', 1, { destination: 'Sortesø', aktivitet: 'kano' });
+
+    const oppe = [...(pbMock.records.get('tur_dage')?.values() ?? [])];
+    expect(oppe).toEqual([expect.objectContaining({
+      tur_uid: 'tur-1',
+      dag_nr: 1,
+      destination: 'Sortesø',
+      aktivitet: 'kano',
+      user: 'bruger1'
+    })]);
+  });
+
+  it('sender en rettelse op', async () => {
+    const id = await nyDagPaa('tur-1');
+
+    await opdaterTurDag(id, { noter: 'Regn hele dagen' });
+    await sendAfventende();
+
+    const oppe = [...(pbMock.records.get('tur_dage')?.values() ?? [])][0];
+    expect(oppe.noter).toBe('Regn hele dagen');
+  });
+
+  it('henter en dag ned, som en anden enhed har lavet', async () => {
+    pbMock.seed('tur_dage', 'pb-dag', {
+      uid: 'dag-fra-ipad', tur_uid: 'tur-1', dag_nr: 2,
+      aktivitet: 'vandretur', overnatning: 'telt', destination: 'Møns Klint', noter: ''
+    });
+
+    await hentFraPocketBase();
+
+    const dage = await db.tur_dage.toArray();
+    expect(dage).toHaveLength(1);
+    expect(dage[0].destination).toBe('Møns Klint');
+    expect(dage[0].dag_nr).toBe(2);
+  });
+
+  it('venter med at komme op, når der ikke er forbindelse', async () => {
+    pbMock.offline = true;
+    await nyDagPaa('tur-1');
+    expect(await usendtAntal()).toBe(1);
+
+    pbMock.offline = false;
+    await sendAltUsendt();
+
+    expect(pbMock.ids('tur_dage')).toHaveLength(1);
+    expect(await usendtAntal()).toBe(0);
+  });
+
+  it('sender hvert felt op, så et glemt felt falder med navns nævnelse', async () => {
+    await nyDagPaa('tur-1', 3, {
+      aktivitet: 'kano', overnatning: 'haengekoeje',
+      destination: 'Ved åen', destination_sted_uid: 'sted-7', noter: 'Kort dag'
+    });
+
+    const oppe = [...(pbMock.records.get('tur_dage')?.values() ?? [])][0];
+    for (const felt of ['tur_uid', 'dag_nr', 'aktivitet', 'overnatning', 'destination', 'destination_sted_uid', 'noter']) {
+      expect(oppe).toHaveProperty(felt);
+    }
+  });
+});
+
+describe('dagene følger turen', () => {
+  it('slettes med den', async () => {
+    const turId = await opretTur(lavTur({ navn: 'Møn' }));
+    const tur = (await db.ture.get(turId))!;
+    const { uid, id, ...dag } = lavTurDag({ tur_uid: tur.uid });
+    void uid; void id;
+    await opretTurDag(dag);
+
+    await sletTur(turId);
+
+    expect(await db.tur_dage.count()).toBe(0);
+    expect(pbMock.ids('tur_dage')).toEqual([]);
+  });
+
+  it('kommer med tilbage, hvis sletningen fortrydes', async () => {
+    const turId = await opretTur(lavTur({ navn: 'Fortrudt' }));
+    const tur = (await db.ture.get(turId))!;
+    const { uid, id, ...dag } = lavTurDag({ tur_uid: tur.uid, destination: 'Sortesø' });
+    void uid; void id;
+    await opretTurDag(dag);
+
+    const genskab = await sletTur(turId);
+    await genskab?.();
+
+    const dage = await db.tur_dage.toArray();
+    expect(dage).toHaveLength(1);
+    expect(dage[0].destination).toBe('Sortesø');
+  });
+
+  it('får en gravsten, når en dag slettes for sig', async () => {
+    const id = await nyDagPaaTur('tur-1');
+    const dagUid = (await db.tur_dage.get(id))!.uid;
+
+    await sletTurDag(id);
+
+    const gravsten = [...(pbMock.records.get('slettede')?.values() ?? [])];
+    expect(gravsten).toEqual([expect.objectContaining({ samling: 'tur_dage', uid: dagUid })]);
+  });
+});
+
+async function nyDagPaaTur(turUid: string) {
+  const { uid, id, ...resten } = lavTurDag({ tur_uid: turUid });
+  void uid; void id;
+  return opretTurDag(resten);
+}
