@@ -110,8 +110,9 @@ I den rækkefølge, de sandsynligvis er værd at tage.
    Kun det, der kan forklares ud fra data, der findes. (`PLAN.md` §9 trin 5)
 10. **Rute som eget domæne, derefter `dage: TurDag[]`.** Datamodel, migration
     og tests før noget UI. Rute først, fordi dagen skal kunne pege på en.
-    Åbner for kilometer, højdemeter og kortfanen på delte ture.
-    (`PLAN.md` §9 trin 6)
+    Åbner for kilometer, højdemeter og kortfanen på delte ture. Der ligger en
+    gennemarbejdet feltskitse til dagen i `PLAN.md` §9 trin 6, med det, der
+    skal gøres om, før den kan bruges. (`PLAN.md` §9 trin 6)
 11. **Badges og notifikationer.** I fundamentet §9, ikke bygget.
 12. **Tidevand ved kystture.** Kræver en DMI-nøgle. (`IDEER.md` §5.4)
 13. **Onboarding og adaptiv hjælpegrad.** Bevidst udskudt — vi bygger til
