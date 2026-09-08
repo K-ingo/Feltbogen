@@ -597,7 +597,72 @@ afhængighed den anden vej.
    Kun det, der kan forklares ud fra data, der findes.
 6. **Rute som eget domæne, og så `dage: TurDag[]`.** Datamodel, migration og
    tests før noget UI, som dokumentets §8.4 siger. Rute først, fordi dagen
-   skal kunne pege på en.
+   skal kunne pege på en. Der findes en skitse til dagen — se nedenfor.
+
+#### Skitse til `TurDag`
+
+*Reddet fra grenen `jules-...`, september 2026, før den blev ryddet væk. Den
+var overhalet af andet arbejde og kan ikke bruges som den er, men feltlisten er
+tænkt igennem, og den er værd at have, når dagen skal bygges rigtigt.*
+
+```ts
+export interface TurDag extends Synkroniserbar {
+  id?: number;
+  navn: string;                 // "Dag 1"
+  tur_uid: Reference;
+  dag_nr: number;
+  dato: string;
+  aktivitet: Aktivitet;         // en dag kan være en anden slags end turen
+  destination_navn: string;
+  destination_sted_uid: Reference;
+  destination_koordinater: { lat: number; lng: number } | null;
+  overnatning_type: Overnatning;
+  overnatning_noter: string;
+  rute_distance_km: number;
+  vejrsnapshot: string;
+  forbrug_vand_l: number;
+  forbrug_mad_kcal: number;
+  noter: string;
+  oprettet: Date;
+  aendret: Date;
+}
+```
+
+Egen tabel med `tur_uid` som reference, ikke et JSON-felt på turen. Det er
+rigtigt: en dag skal kunne slås op for sig, og en liste inde i et felt kan ikke
+indekseres. Skitsen indekserer `tur_uid`, `dag_nr` og `dato`.
+
+**Det stærke ved den.** `aktivitet` og `overnatning` pr. dag er den egentlige
+pointe — en tur, hvor man vandrer den første dag og padler den anden, kan
+appen ikke beskrive i dag. `destination_sted_uid` genbruger stedkartoteket, så
+en dag kan pege på et sted, man kender i forvejen, med den kobling der allerede
+findes. Og `dag_nr` *ved siden af* `dato` er rigtigt: nummeret er det, man taler
+om, datoen er det, man regner med.
+
+**Fire ting, der skal gøres om, før den kan bruges.**
+
+*Ruten mangler stadig.* `rute_distance_km` er et tal på dagen og ikke en rute.
+Det er præcis den genvej, rækkefølgen ovenfor findes for at undgå — dagen skal
+pege på en rute, ikke bære et tal, der påstår at kende den. Bygges tallet først,
+skal det migreres væk igen.
+
+*Vejr og forbrug er udledte og hører ikke i basen.* `vejrsnapshot`,
+`forbrug_vand_l` og `forbrug_mad_kcal` kan alle regnes af `smartMotor.ts` ud fra
+dato, sted og deltagere. Reglen fra §6 gælder her: udled frem for at gemme, så
+sandheden ikke ligger to steder. `Tur.vejrsnapshot` findes ganske vist allerede
+— men den er et frosset øjebliksbillede til deling, ikke en cache.
+
+*Migrationen skal skrives om.* Skitsen lagde `tur_dage` ind som Dexie-version
+11. Det nummer er brugt, og basen står på 12 nu.
+
+*Sync mangler halvdelen.* Grenen havde `opretTurDag`, `opdaterTurDag` og
+`sletTurDag`, men ikke `tilPb`/`fraPb`, ikke gravsten, og ingen samling i
+PocketBase. En ny synkroniserbar tabel koster mere end en tabel: den skal med i
+`hent()`, i `sendAltUsendt()`, i sletningssporet og i `POCKETBASE.md`.
+
+**Og et spørgsmål, skitsen ikke svarer på:** hvad sker der med en dag, når
+turens datoer flyttes? Dagene har både `dag_nr` og `dato`, og de kan komme ud af
+trit. Det skal afgøres, før tabellen findes — ikke bagefter.
 
 Adaptiv hjælp og Smart Motor 1.0 til sidst — dokumentet siger det selv, og det
 har ikke ændret sig siden første runde.
