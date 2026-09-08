@@ -1,6 +1,6 @@
 # STATUS
 
-*Sidst opdateret: 8. september 2026. Udgangspunkt: `main` @ `003800d`.*
+*Sidst opdateret: 8. september 2026. Udgangspunkt: `main` @ `df158f8`.*
 
 Kort svar på "hvor står vi nu?". Den skal kunne læses på to minutter og
 opdateres, hver gang noget bliver færdigt eller blokeret.
@@ -18,33 +18,34 @@ appen bliver klogere af det. Delingen er blevet til rigtigt samarbejde, hvor
 en deltager har sine egne faner, sin egen pakkeliste og kan bidrage til den
 fælles journal.
 
-De tre felter, der manglede i PocketBase, er oprettet. Der er kommet én ny
-opgave i admin-fladen — samlingen `slettede` til gravstenene — men den blokerer
-ikke: springes den over, virker appen som før.
-
-Det næste er at køre begge veje igennem med rigtige data. Hverken deltagernes
-journal eller sletninger på tværs af enheder har været åbne før.
+Serveren er sat helt op, og der er ingen kendt blokering. Det, der står
+tilbage, er arbejde vi selv vælger — ikke noget, der spærrer.
 
 ---
 
 ## Grønt lys
 
-Kørt på `main` @ `003800d` den 8. september 2026:
+Kørt på `main` @ `df158f8` den 8. september 2026:
 
 | Kommando | Resultat |
 |---|---|
 | `npm run lint` | Bestået, ingen fejl |
-| `npm test` | 51 testfiler, 1.120 tests, alle grønne |
-| `npm run build` | Bestået. Startchunk 450,72 kB / 143,21 kB gzip |
+| `npm test` | 51 testfiler, 1.137 tests, alle grønne |
+| `npm run build` | Bestået. Startchunk 453,91 kB / 144,00 kB gzip |
 
 CI kører de samme tre på alle pull requests, plus et tjek for at et privat
 Railway-domæne ikke er havnet i bundlen.
 
 ---
 
-## Ikke længere blokeret
+## Serveren er på plads
 
-De tre felter, der manglede i PocketBase, **er oprettet** (8. september 2026):
+PocketBase er sat helt op, og appen er afprøvet i drift. Der er ingen kendt
+blokering tilbage.
+
+**Tre felter, oprettet 8. september 2026.** Indtil de fandtes, skrev appen data,
+som aldrig kom op på serveren — for journalens vedkommende uden at nogen fik
+besked:
 
 | Samling | Felt | Type |
 |---|---|---|
@@ -52,29 +53,16 @@ De tre felter, der manglede i PocketBase, **er oprettet** (8. september 2026):
 | `turdeltagelse` | `journal` | JSON |
 | `turdeltagelse` | `billeder` | File (multiple) |
 
-Indtil de fandtes, skrev appen data, som aldrig kom op på serveren — for
-journalens vedkommende uden at nogen fik besked.
+**Samlingen `slettede`, oprettet samme dag.** Gravstenene, der får en sletning
+til at slå igennem på tværs af enheder — og forhindrer, at en helt almindelig
+redigering opretter en slettet post på ny og gør sletningen om for alle. Se
+`POCKETBASE.md` trin 7 og afsnittet "Gravsten" i `README.md`.
 
-**Bekræftet i PocketBase-admin, ikke afprøvet fra appen endnu.** Det, der
-mangler, er en gennemkørsel med rigtige data: kryds noget af på en
-pakkeliste, skriv en journalindgang som deltager med et billede, synkronisér,
-og se at det står der efter en genindlæsning. Det er første gang, den vej er
-åben hele vejen igennem.
+Begge dele er bekræftet af ejeren i drift, ikke kun mod testmocken.
 
-`./scripts/tjek-pocketbase.sh <appens adresse>` efterprøver samtidig, at
-samlingerne ikke er åbne for fremmede. Den skriver ingenting — den henter
-kun og kigger på svaret.
-
-## Venter på PocketBase
-
-Der er kommet én ting mere, som kun kan gøres i admin-fladen: **samlingen
-`slettede`** — gravstenene, der får en sletning til at slå igennem på tværs af
-enheder. Se `POCKETBASE.md` trin 7.
-
-Springes den over, virker appen som før: sletninger bliver på den enhed, de
-skete på, og en redigering af en post, der er slettet et andet sted, opretter
-den på ny. Der kommer ingen fejl på skærmen — det er en funktion, der ikke er
-slået til, ikke en fejl brugeren kan gøre noget ved.
+`./scripts/tjek-pocketbase.sh <appens adresse>` er værd at køre efter en
+opsætningsændring: den kalder som en helt uindlogget fremmed og siger fra, hvis
+en samling er åben for alle. Den skriver ingenting.
 
 ## Åbne arbejdsområder
 
