@@ -1,5 +1,5 @@
 import { db } from './db';
-import type { Billede, Tur, Gruppe, Item, Sted } from './db';
+import type { Billede, Tur, Gruppe, Item, Sted, TurDag } from './db';
 import { lavSnapshot } from './gaest';
 import type { Gaestesnapshot } from './gaest';
 import { lavTurkort } from './turkort';
@@ -16,7 +16,7 @@ import { opdaterTur, saetEfterSkrivning } from './sync';
 //
 // Derfor bygges det om efter hver skrivning. Det er ikke kun turen der tæller:
 // pakkelisten er sat sammen af items og grupper, så en rettelse dér ændrer
-// også det gæsten skal se.
+// også det gæsten skal se — og det samme gør dagsplanen.
 
 // Skrivninger kommer i klumper — et tastetryk ad gangen mens man skriver et
 // navn. Der ventes lidt, så en hel indtastning giver én ombygning.
@@ -43,16 +43,17 @@ export async function friskDelteSnapshots(nu: Date = new Date()): Promise<number
     .toArray();
   if (delte.length === 0) return 0;
 
-  const [items, grupper, steder, billeder] = await Promise.all([
+  const [items, grupper, steder, billeder, turDage] = await Promise.all([
     db.items.toArray(),
     db.grupper.toArray(),
     db.steder.toArray(),
-    db.billeder.toArray()
+    db.billeder.toArray(),
+    db.tur_dage.toArray()
   ]);
 
   let skrevet = 0;
   for (const tur of delte) {
-    if (await friskEn(tur, grupper, items, steder, billeder, nu)) skrevet++;
+    if (await friskEn(tur, grupper, items, steder, billeder, turDage, nu)) skrevet++;
   }
   return skrevet;
 }
@@ -63,6 +64,7 @@ async function friskEn(
   items: Item[],
   steder: Sted[],
   billeder: Billede[],
+  turDage: TurDag[],
   nu: Date
 ): Promise<boolean> {
   if (tur.id === undefined) return false;
@@ -70,7 +72,7 @@ async function friskEn(
   const aendringer: Partial<Tur> = {};
 
   if (tur.dele_token) {
-    const frisk = lavSnapshot(tur, grupper, itemsPaaTur(tur, grupper, items), nu, billeder);
+    const frisk = lavSnapshot(tur, grupper, itemsPaaTur(tur, grupper, items), nu, billeder, turDage);
     if (!uaendret(tur.dele_snapshot, frisk)) aendringer.dele_snapshot = JSON.stringify(frisk);
   }
 

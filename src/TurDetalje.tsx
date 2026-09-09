@@ -581,7 +581,7 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
   const del = async () => {
     await opdater({
       dele_token: tur.dele_token || nytDeletoken(),
-      dele_snapshot: JSON.stringify(lavSnapshot(tur, grupper ?? [], pakItems, new Date(), alleBilleder))
+      dele_snapshot: JSON.stringify(lavSnapshot(tur, grupper ?? [], pakItems, new Date(), alleBilleder, turDage))
     });
   };
 

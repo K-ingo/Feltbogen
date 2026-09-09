@@ -69,6 +69,7 @@ appen starter.
 | Turfase | `src/turfase.ts` | Hvor turen er i sit forløb, og hvad næste skridt er |
 | Dagene på turen | `src/turdag.ts` | Flerdagesturens dage: nummer, aktivitet, overnatning og destination — datoen udledes |
 | Dagsplanen | `src/Dagsplan.tsx` | Dagene som en sektion under turens Overblik: opret, ret, flyt og slet |
+| Dagsplanen hos gæsten | `src/DeltTurVisning.tsx` | Ejerens dagsplan, frosset ned i snapshottet — "hvor sover vi tirsdag?" |
 | Pakning | `src/pakning.ts` | Hvad der er lagt i tasken, og hvor langt man er |
 | Vurdering | `src/vurdering.ts` | Stjerner på grej og ture, og hvad motoren gør ved dem |
 | Turlog | `src/feltnoter.ts` | Dagbogen fra turen, samlet pr. dag |
@@ -248,10 +249,18 @@ tager Emil" og "det tager ingen" skal kunne ses. "Uden tag" er tilsvarende
 oversat ved visningen og ikke i snapshottet — en gæst ved ikke, hvad et tag er,
 og oversættelsen skal også gælde de links, der allerede er sendt ud.
 
-Snapshottet er versioneret (`SNAPSHOT_VERSION`, nu 5). Ældre udgaver læses
+Snapshottet er versioneret (`SNAPSHOT_VERSION`, nu 6). Ældre udgaver læses
 stadig — de mangler bare det, de aldrig havde, og så kan deres grej for
-eksempel ikke fordeles. Et snapshot fra en *nyere* udgave end appens afvises i
-stedet for at blive gættet på.
+eksempel ikke fordeles, og et link delt før version 6 har ingen dagsplan. Et
+snapshot fra en *nyere* udgave end appens afvises i stedet for at blive gættet
+på.
+
+Dagsplanen er med fra version 6. Datoerne bages ind ved delingen frem for at
+blive regnet af `startdato` på gæstesiden: snapshottet er frosset i forvejen, og
+ejerens app bygger det om efter hver skrivning, så flyttes turen, kommer
+datoerne rigtigt med af sig selv. Gæsten skal ikke have en dagberegning, hun kan
+komme til at være uenig med. Aktivitet og overnatning skrives ud på dansk af
+samme grund som "uden tag" ovenfor — hun har ikke etikettabellen.
 
 ### Årsopgørelse, feltbog og billeder
 

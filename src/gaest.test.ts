@@ -9,7 +9,7 @@ import {
   linkvaert,
   SNAPSHOT_VERSION
 } from './gaest';
-import { lavBillede, lavItem, lavGruppe, lavTur } from './test/data';
+import { lavBillede, lavItem, lavGruppe, lavTur, lavTurDag } from './test/data';
 
 describe('nytDeletoken', () => {
   it('giver 32 hex-tegn', () => {
@@ -315,5 +315,108 @@ describe('laesSnapshot og billeder', () => {
   it('klarer at billed-feltet er vrøvl', () => {
     expect(laesSnapshot(JSON.stringify({ ...grund, billeder: 'nej' }))?.billeder).toEqual([]);
     expect(laesSnapshot(JSON.stringify({ ...grund, billeder: [null, 7] }))?.billeder).toEqual([]);
+  });
+});
+
+
+// ─────────────────────────────────────────────
+// Dagsplanen i snapshottet
+//
+// "Hvor sover vi tirsdag?" er det, en deltager spørger om. Dagene er ejerens
+// plan, og gæsten får dem frosset ned som alt andet.
+// ─────────────────────────────────────────────
+
+describe('dagsplanen i snapshottet', () => {
+  const turen = lavTur({ uid: 'tur-1', navn: 'Møn', startdato: '2026-07-10', naetter: 2 });
+  const dag = (dag_nr: number, felter = {}) => lavTurDag({ tur_uid: 'tur-1', dag_nr, ...felter });
+
+  it('kommer med, når turen har dage', () => {
+    const s = lavSnapshot(turen, [], [], new Date(), [], [
+      dag(1, { destination: 'Rold Skov', aktivitet: 'vandretur', overnatning: 'shelter' })
+    ]);
+
+    expect(s.dage).toEqual([expect.objectContaining({
+      nr: 1,
+      destination: 'Rold Skov',
+      aktivitet: 'vandretur',
+      overnatning: 'shelter'
+    })]);
+  });
+
+  // Datoen bages ind. Gæsten skal ikke have en dagberegning, hun kan komme
+  // til at være uenig med.
+  it('bager datoen ind, udledt af turens start', () => {
+    const s = lavSnapshot(turen, [], [], new Date(), [], [dag(1), dag(3)]);
+
+    expect(s.dage.map((d) => d.dato)).toEqual(['2026-07-10', '2026-07-12']);
+  });
+
+  it('lader datoen stå tom, når turen ingen startdato har', () => {
+    const uden = lavTur({ uid: 'tur-1', startdato: '', naetter: 2 });
+    const s = lavSnapshot(uden, [], [], new Date(), [], [dag(1)]);
+
+    expect(s.dage[0].dato).toBe('');
+  });
+
+  // Gæsten har ikke etikettabellen. Hun skal ikke sidde med "haengekoeje".
+  it('skriver aktivitet og overnatning ud på dansk', () => {
+    const s = lavSnapshot(turen, [], [], new Date(), [], [
+      dag(1, { overnatning: 'haengekoeje' })
+    ]);
+
+    expect(s.dage[0].overnatning).toBe('hængekøje');
+  });
+
+  it('står i rækkefølge', () => {
+    const s = lavSnapshot(turen, [], [], new Date(), [], [dag(3), dag(1), dag(2)]);
+
+    expect(s.dage.map((d) => d.nr)).toEqual([1, 2, 3]);
+  });
+
+  it('tager kun turens egne dage med', () => {
+    const fremmed = lavTurDag({ tur_uid: 'en-anden-tur', dag_nr: 1, destination: 'Ikke min' });
+    const s = lavSnapshot(turen, [], [], new Date(), [], [dag(1), fremmed]);
+
+    expect(s.dage).toHaveLength(1);
+  });
+
+  it('er tom på en tur uden dage — og det er de fleste', () => {
+    expect(lavSnapshot(turen, [], []).dage).toEqual([]);
+  });
+});
+
+describe('dagsplanen læst tilbage', () => {
+  const rundtur = (dage: unknown) => laesSnapshot(JSON.stringify({
+    version: SNAPSHOT_VERSION, navn: 'Møn', dage
+  }));
+
+  it('kommer hel igennem', () => {
+    const laest = rundtur([{ nr: 2, dato: '2026-07-11', aktivitet: 'kano', overnatning: 'telt', destination: 'Sortesø', noter: 'Kort dag' }]);
+
+    expect(laest?.dage).toEqual([{
+      nr: 2, dato: '2026-07-11', aktivitet: 'kano', overnatning: 'telt',
+      destination: 'Sortesø', noter: 'Kort dag'
+    }]);
+  });
+
+  // Et snapshot fra version 5 har feltet slet ikke. Det skal læses som
+  // "ingen dagsplan" og ikke som et hul.
+  it('læser et gammelt snapshot uden dage', () => {
+    const gammelt = laesSnapshot(JSON.stringify({ version: 5, navn: 'Fra i går' }));
+
+    expect(gammelt).not.toBeNull();
+    expect(gammelt?.dage).toEqual([]);
+  });
+
+  it('tåler at feltet er noget helt andet', () => {
+    expect(rundtur('ikke en liste')?.dage).toEqual([]);
+    expect(rundtur(null)?.dage).toEqual([]);
+    expect(rundtur([null, 42])?.dage).toHaveLength(2);
+  });
+
+  it('sorterer efter nummer, uanset hvad der stod i filen', () => {
+    const laest = rundtur([{ nr: 3 }, { nr: 1 }, { nr: 2 }]);
+
+    expect(laest?.dage.map((d) => d.nr)).toEqual([1, 2, 3]);
   });
 });

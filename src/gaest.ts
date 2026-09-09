@@ -1,6 +1,8 @@
 import { pb, mitNavn } from './pb';
 import { db } from './db';
-import type { Billede, Item, Gruppe, Tur, DeltTur } from './db';
+import { etiket } from './db';
+import type { Billede, Item, Gruppe, Tur, TurDag, DeltTur } from './db';
+import { dageFor, datoFor } from './turdag';
 import { billederPaaTur } from './billeder';
 import { pakkelisteEfterGruppe, baererAf } from './smartMotor';
 import type { VejrData } from './smartMotor';
@@ -26,7 +28,7 @@ import type { VejrData } from './smartMotor';
 // med, og ikke kun hos den, der ejer turen i basen. Ejerens navn kommer med
 // af samme grund: hendes egne indgange skal ikke stå med "Ejeren" på en tur,
 // man tog sammen.
-export const SNAPSHOT_VERSION = 5;
+export const SNAPSHOT_VERSION = 6;
 
 export interface GaesteItem {
   // Ejerens uid for gearet. Tomt i snapshots fra version 1.
@@ -70,6 +72,22 @@ export interface GaesteBillede {
   original_byte: number;
 }
 
+// Én dag på en flerdagestur, som gæsten ser den.
+//
+// Datoen bages ind her frem for at blive regnet af `startdato` på gæstesiden.
+// Snapshottet er frosset i forvejen, og ejerens app bygger det om efter hver
+// skrivning — flyttes turen, kommer datoerne rigtigt med af sig selv. Gæsten
+// skal ikke have en dagberegning, hun kan komme til at være uenig med.
+export interface GaesteDag {
+  nr: number;
+  // Tom, hvis turen ikke har en startdato at tælle fra.
+  dato: string;
+  aktivitet: string;
+  overnatning: string;
+  destination: string;
+  noter: string;
+}
+
 export interface Gaestesnapshot {
   version: number;
   navn: string;
@@ -97,6 +115,10 @@ export interface Gaestesnapshot {
   // delt, og et snapshot er frosset. De hentes ved siden af, fra
   // deltagelsesrækkerne — se deltagelse.ts.
   journal: GaesteJournal[];
+  // Dagsplanen. Tom i snapshots før version 6, og tom på en tur uden dage —
+  // og det er de fleste. Gæstesiden skal kunne læse begge dele som "ingen
+  // dagsplan" og ikke som et hul.
+  dage: GaesteDag[];
   vaegt_i_alt_g: number;
   delt_den: string;
 }
@@ -153,7 +175,8 @@ export function lavSnapshot(
   grupper: Gruppe[],
   pakItems: Item[],
   nu: Date = new Date(),
-  billeder: Billede[] = []
+  billeder: Billede[] = [],
+  turDage: TurDag[] = []
 ): Gaestesnapshot {
   const baerer = baererAf(tur);
   const navnPaa = new Map(tur.deltagere.map((d) => [d.id, d.navn]));
@@ -194,6 +217,16 @@ export function lavSnapshot(
       tid: n.tid,
       tekst: n.tekst,
       skrevet_af: ''
+    })),
+    dage: dageFor(turDage, tur.uid).map((d) => ({
+      nr: d.dag_nr,
+      dato: datoFor(tur, d.dag_nr),
+      // Skrevet ud på dansk her. Gæsten får ikke nøglerne uden æ/ø/å at
+      // oversætte — hun har ikke tabellen.
+      aktivitet: etiket(d.aktivitet),
+      overnatning: etiket(d.overnatning),
+      destination: d.destination,
+      noter: d.noter
     })),
     vaegt_i_alt_g: pakItems.reduce((s, i) => s + i.vaegt_g, 0),
     delt_den: nu.toISOString()
@@ -277,9 +310,29 @@ export function laesSnapshot(raa: unknown): Gaestesnapshot | null {
     afsnit: afsnit(s.afsnit),
     billeder: gaestebillederFra(s.billeder),
     journal: gaestejournalFra(s.journal),
+    dage: gaestedageFra(s.dage),
     vaegt_i_alt_g: tal(s.vaegt_i_alt_g),
     delt_den: tekst(s.delt_den)
   };
+}
+
+// Dagsplanen som den kommer ind. Alt er tekst og tal — der er ingen adresser
+// her — men formen skal stadig efterprøves: et snapshot fra version 5 har
+// feltet slet ikke, og et fra en fremtidig udgave kan have hvad som helst i det.
+function gaestedageFra(v: unknown): GaesteDag[] {
+  if (!Array.isArray(v)) return [];
+
+  return v
+    .map((raa) => (raa ?? {}) as Record<string, unknown>)
+    .map((d) => ({
+      nr: tal(d.nr, 1),
+      dato: tekst(d.dato),
+      aktivitet: tekst(d.aktivitet),
+      overnatning: tekst(d.overnatning),
+      destination: tekst(d.destination),
+      noter: tekst(d.noter)
+    }))
+    .sort((a, b) => a.nr - b.nr);
 }
 
 // Snapshottet krydser en tillidsgrænse: det er hentet fra serveren og lægges
