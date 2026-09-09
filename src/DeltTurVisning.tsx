@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { GaesteBillede, GaesteItem, Gaestesnapshot } from './gaest';
+import type { GaesteBillede, GaesteDag, GaesteItem, Gaestesnapshot } from './gaest';
 import { ledigtFaelles, gaestetitel } from './gaest';
 import type { Deltagelse } from './deltagelse';
 import { baererePrGear, samletMedbragtVaegt, visningsnavn } from './deltagelse';
@@ -219,6 +219,8 @@ function DeltTurVisning({
           )}
 
 
+          {(snapshot.dage ?? []).length > 0 && <Dagsplanen dage={snapshot.dage} />}
+
           {ledige.length > 0 && <Ledigt items={ledige} vaegt={ledigVaegt} kanMelde={!!kanMelde} />}
 
           {snapshot.vejr && snapshot.vejr.dage.length > 0 && (
@@ -394,6 +396,54 @@ function DeltTurVisning({
 // En liste med navne er ikke en fane værd — det står allerede i tallet på
 // fanebladet. Det, en gæst vil vide om selskabet, er hvordan byrden ligger:
 // hvem der har taget meget, og om der er nogen, der ikke har taget noget.
+// Dagsplanen, som en deltager ser den.
+//
+// "Hvor sover vi tirsdag?" er det, man spørger om, når man er skrevet på en
+// tur, man ikke selv har planlagt. Den står derfor højt på Overblik — og som
+// en sektion, ikke en fane, ligesom hos ejeren. Gæsten skal have den samme
+// mentale model, bare med færre rettigheder.
+//
+// Der er ingenting at rette her. Dagene er ejerens plan, og et snapshot er
+// frosset.
+function Dagsplanen({ dage }: { dage: GaesteDag[] }) {
+  return (
+    <Infokort label="Dag for dag">
+      <div style={{ display: 'grid', gap: 'var(--plads-3)' }}>
+        {dage.map((dag) => (
+          <div key={dag.nr} style={{ display: 'grid', gap: '2px' }}>
+            <div style={{ display: 'flex', gap: 'var(--plads-2)', alignItems: 'baseline', flexWrap: 'wrap' }}>
+              <strong style={{ fontSize: 'var(--skrift-knap)' }}>Dag {dag.nr}</strong>
+              {dag.dato && (
+                <span style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)' }}>
+                  {kortDag(dag.dato)}
+                </span>
+              )}
+              <span style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)' }}>
+                {[dag.aktivitet, dag.overnatning].filter(Boolean).join(' · ')}
+              </span>
+            </div>
+
+            {dag.destination && (
+              <div style={{ fontSize: 'var(--skrift-knap)' }}>{dag.destination}</div>
+            )}
+
+            {dag.noter && (
+              <div style={{
+                fontSize: 'var(--skrift-lille)',
+                color: 'var(--tekst-dæmpet)',
+                lineHeight: 1.5,
+                whiteSpace: 'pre-wrap'
+              }}>
+                {dag.noter}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </Infokort>
+  );
+}
+
 function Gruppen({ linjer, navne }: { linjer: Pakkelinje[]; navne: string[] }) {
   // Vægten pr. person regnes af den samme opdeling som pakkelisten bruger, så
   // de to steder ikke kan komme til at sige hver sit.

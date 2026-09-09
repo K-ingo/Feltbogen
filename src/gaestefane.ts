@@ -14,6 +14,11 @@
 // **Praktisk** er budget, booking og turkort — ejerens egne papirer. De skal
 // ikke deles, og de er heller ikke i snapshottet.
 //
+// Dagsplanen fik heller ikke en fane, og det er samme regel den anden vej: den
+// står som en sektion på Overblik, præcis som hos ejeren. Havde den fået sin
+// egen fane her, ville gæsten have en, ejeren ikke har — og så er det ikke
+// længere den samme tur set med forskellige rettigheder.
+//
 // Til gengæld er der en fane, ejeren ikke har på samme måde: **Journal**.
 // Ejeren skriver sine feltnoter under "Undervejs"; for dem, der var med, er
 // journalen turens historie og fortjener sit eget sted.

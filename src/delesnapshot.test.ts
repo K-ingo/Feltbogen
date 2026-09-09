@@ -6,8 +6,8 @@ import { db } from './db';
 import { pbMock } from './test/pbMock';
 import { friskDelteSnapshots } from './delesnapshot';
 import { laesSnapshot, lavSnapshot } from './gaest';
-import { opretItem, opretGruppe, opretTur, opdaterItem, opdaterTur, sletItem } from './sync';
-import { lavItem, lavGruppe, lavTur } from './test/data';
+import { opretItem, opretGruppe, opretTur, opdaterItem, opdaterTur, sletItem, opretTurDag, opdaterTurDag } from './sync';
+import { lavItem, lavGruppe, lavTur, lavTurDag } from './test/data';
 import { itemsPaaTur } from './smartMotor';
 
 // Gæstens udgave skal følge med af sig selv. Testene her handler lige så meget
@@ -38,7 +38,7 @@ async function delttur(over: Parameters<typeof lavTur>[0] = {}) {
 
 beforeEach(async () => {
   pbMock.reset();
-  await Promise.all([db.items.clear(), db.grupper.clear(), db.ture.clear(), db.slettede.clear()]);
+  await Promise.all([db.items.clear(), db.grupper.clear(), db.ture.clear(), db.tur_dage.clear(), db.slettede.clear()]);
 });
 
 describe('friskDelteSnapshots', () => {
@@ -151,5 +151,61 @@ describe('friskDelteSnapshots', () => {
 
     expect(laesSnapshot((await db.ture.get(turId))?.dele_snapshot)?.delt_den)
       .toBe(nu.toISOString());
+  });
+});
+
+
+// Dagsplanen er ejerens plan, og gæsten ser den frosset. Ændrer ejeren den,
+// skal gæsten se det — ellers møder nogen op det forkerte sted.
+describe('dagsplanen følger med', () => {
+  const dagPaa = async (turUid: string, dag_nr: number, felter = {}) => {
+    const { uid, id, ...resten } = lavTurDag({ tur_uid: turUid, dag_nr, ...felter });
+    void uid; void id;
+    return opretTurDag(resten);
+  };
+
+  it('bygger om, når der kommer en dag til', async () => {
+    const { turId } = await delttur();
+    const tur = (await db.ture.get(turId))!;
+
+    await dagPaa(tur.uid, 1, { destination: 'Sortesø' });
+
+    expect(await friskDelteSnapshots()).toBe(1);
+    const frisk = laesSnapshot((await db.ture.get(turId))!.dele_snapshot);
+    expect(frisk?.dage.map((d) => d.destination)).toEqual(['Sortesø']);
+  });
+
+  it('bygger om, når en dag rettes', async () => {
+    const { turId } = await delttur();
+    const tur = (await db.ture.get(turId))!;
+    const dagId = await dagPaa(tur.uid, 1, { destination: 'Sortesø' });
+    await friskDelteSnapshots();
+
+    await opdaterTurDag(dagId, { destination: 'Møns Klint' });
+
+    expect(await friskDelteSnapshots()).toBe(1);
+    const frisk = laesSnapshot((await db.ture.get(turId))!.dele_snapshot);
+    expect(frisk?.dage[0].destination).toBe('Møns Klint');
+  });
+
+  // Det samme krav som resten: uden en ændring må der ikke skrives, ellers
+  // udløser ombygningen sig selv i ring.
+  it('skriver ikke, når dagene står som de gjorde', async () => {
+    const { turId } = await delttur();
+    const tur = (await db.ture.get(turId))!;
+    await dagPaa(tur.uid, 1, { destination: 'Sortesø' });
+    await friskDelteSnapshots();
+
+    expect(await friskDelteSnapshots()).toBe(0);
+  });
+
+  it('rører ikke en tur, hvis dage hører til en anden', async () => {
+    const { turId } = await delttur();
+
+    await dagPaa('en-helt-anden-tur', 1, { destination: 'Ikke min' });
+
+    expect(await friskDelteSnapshots()).toBe(0);
+    const frisk = laesSnapshot((await db.ture.get(turId))!.dele_snapshot);
+    expect(frisk?.dage).toEqual([]);
   });
 });

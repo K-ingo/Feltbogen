@@ -7,7 +7,7 @@ const snapshot = (over: Partial<Gaestesnapshot> = {}): Gaestesnapshot => ({
   version: 5, navn: 'Rold Skov', sted: '', koordinater: null,
   startdato: '2026-09-18', slutdato: '2026-09-20', naetter: 2, personer: 3,
   baereafstand_km: 0, besked_fra_ejer: '', ejer: 'Emil', deltagere: [], vejr: null,
-  afsnit: [], billeder: [], journal: [], vaegt_i_alt_g: 0,
+  afsnit: [], billeder: [], journal: [], dage: [], vaegt_i_alt_g: 0,
   delt_den: '2026-09-17T10:00:00.000Z', ...over
 });
 
