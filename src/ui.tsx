@@ -101,9 +101,12 @@ interface KnapProps {
   style?: CSSProperties;
   type?: 'button' | 'submit';
   ariaExpanded?: boolean;
+  // Til knapper hvis indhold er et symbol. En pil siger ikke noget til en
+  // skærmlæser, og "↑" er ikke et navn man kan navigere efter.
+  ariaLabel?: string;
 }
 
-export function Knap({ children, onClick, variant = 'sekundaer', disabled, style, type = 'button', ariaExpanded }: KnapProps) {
+export function Knap({ children, onClick, variant = 'sekundaer', disabled, style, type = 'button', ariaExpanded, ariaLabel }: KnapProps) {
   const varianter: Record<string, CSSProperties> = {
     primaer: {
       background: 'var(--accent)',
@@ -135,6 +138,7 @@ export function Knap({ children, onClick, variant = 'sekundaer', disabled, style
       onClick={onClick}
       disabled={disabled}
       aria-expanded={ariaExpanded}
+      aria-label={ariaLabel}
       style={{
         // Højden kommer fra rørehøjden og ikke fra padding, så knappen kan
         // rammes med en finger uden at blive tyk på en skærm med mus.

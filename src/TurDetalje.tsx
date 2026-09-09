@@ -132,6 +132,8 @@ import { forslagTilTur, udenAfviste, maalFor } from './forslag';
 import { afvisForslag, useAfviste } from './afviste';
 import type { Forslag } from './forslag';
 import { MAALETS_FANE } from './turmaal';
+import { Dagsplan } from './Dagsplan';
+import { dagsplanResume, harBrugForDage } from './turdag';
 import { foreslaaFordeling, anvendFordeling, navnFor } from './fordeling';
 import type { Fordelingsforslag } from './fordeling';
 import type { Turfane, Turmaal } from './turmaal';
@@ -221,6 +223,13 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
   const steder = useLiveQuery(() => db.steder.toArray()) ?? [];
   const personer = useLiveQuery(() => db.personer.toArray()) ?? [];
   const alleTure = useLiveQuery(() => db.ture.toArray()) ?? [];
+  // Kun til linjen under overskriften, når sektionen er foldet sammen —
+  // Dagsplan henter selv sine dage, når den er åben. Turen slås op herinde
+  // frem for at læne sig på `tur`, som bindes længere nede.
+  const turDage = useLiveQuery(async () => {
+    const t = await db.ture.get(turId);
+    return t ? db.tur_dage.where('tur_uid').equals(t.uid).toArray() : [];
+  }, [turId]) ?? [];
   // Kun antallet bruges her — selve billederne hentes af BilledSektion, som
   // også er den der viser dem.
   const alleBilleder = useLiveQuery(() => db.billeder.toArray()) ?? [];
@@ -1057,6 +1066,17 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
             aabenFra={tur.status === 'kladde' || sigtet === 'overblik'}
           >
             {parametre}
+          </Foldbar>
+        )}
+        {/* Dagene er turens parametre, dag for dag. De står derfor her og ikke
+            i en fane for sig — og kun når turen er lang nok til at have dem. */}
+        {harBrugForDage(tur) && sigte('dage',
+          <Foldbar
+            titel="Dagene"
+            resume={dagsplanResume(tur, turDage ?? [])}
+            aabenFra={sigtet === 'dage'}
+          >
+            <Dagsplan tur={tur} />
           </Foldbar>
         )}
         {bookingSektion}
