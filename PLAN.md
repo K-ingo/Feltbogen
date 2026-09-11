@@ -592,9 +592,25 @@ afhængighed den anden vej.
    Forslaget står to steder: øverst i "Fordel gear" på turen, hvor man kan
    sige ja lige dér, og som et kort på hjem med `Turmaal`-målet `'fordeling'`,
    der lander foldet ud samme sted. Se §6.
-5. **Læringssløjfen og de sidste statistikker.** Nætter, besøgte steder,
-   turtyper, gennemsnitsvægt, bedste og dårligste grej efter egne stjerner.
-   Kun det, der kan forklares ud fra data, der findes.
+5. **~~Læringssløjfen og de sidste statistikker.~~** ✅ Nætter, besøgte steder,
+   turtyper, gennemsnitsvægt og stjernerne står nu under "Hvad turene har lært
+   os" på statistikken. `laering.ts` holder regnestykkerne.
+
+   To ting kom til, som listen ikke bad om, og som er det egentlige udbytte.
+   **Hyldevarerne**: det grej, der kommer med hver gang og bliver liggende i
+   tasken. Det er en anden og dyrere fejl end det, der aldrig kommer med — det
+   koster vægt på ryggen hver eneste tur. Og **det der ikke holder**: grej, der
+   er gået i stykker mere end én gang. Én gang er uheld; to er en egenskab ved
+   tingen.
+
+   Mønstrene holdes tilbage, indtil tre ture er gjort op. En side, der påstår
+   at kende ens vaner efter én tur, er værre end en, der siger fra — og en tur
+   uden pak-af-tjek tælles hverken som brugt eller ubrugt, så appen ikke
+   straffer én for ikke at føre regnskab.
+
+   `besøgte steder` og `turtyper` genbruger `mestBesoegte` og `fordeling` fra
+   `aarsopgoerelse.ts`. De er generiske og lå bare det forkerte sted; en kopi
+   ville være det samme regnestykke to steder.
 6. **~~Rute som eget domæne, og så `dage: TurDag[]`.~~ Rækkefølgen er byttet
    om: dagen først, ruten bagefter.** ✅ Fundamentet er bygget.
 

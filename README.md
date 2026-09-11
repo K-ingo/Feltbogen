@@ -89,6 +89,7 @@ appen starter.
 | Nye poster | `src/opret.ts` | Tomme poster med de samme standardværdier, uanset hvor man startede dem |
 | Datoer | `src/datotekst.ts` | Perioder og dage skrevet ud på dansk |
 | Statistik | `src/statistik.ts` | Aggregeringer over inventar og ture |
+| Læringssløjfen | `src/laering.ts` | Hvad turene har lært: hyldevarer, gennemsnitsvægt, stjerner og hvad der ikke holder |
 | Årsopgørelse | `src/aarsopgoerelse.ts` | Året talt op: nætter, vejr, steder, selskab og grej |
 | Årets feltbog | `src/feltbog.ts` | Én side pr. tur, sat op til at blive trykt |
 | Billeder | `src/billeder.ts` | Skalering, forsidevalg og turens galleri |
@@ -102,6 +103,33 @@ appen starter.
 | UI-primitiver | `src/ui.tsx`, `src/layout.ts` | Knap, Kort, Felt, Chip, Badge, listerækker, detalje-header |
 | Skærme | `src/App.tsx` m.fl. | Hjem, Ture, Grej, Folk, Mere — og skærmene derunder |
 | Gæstens skærme | `src/GaesteSide.tsx`, `src/DeltTurVisning.tsx`, `src/MitGrej.tsx` | Den delte tur som en gæst ser den, og det hun selv kan røre |
+
+### Hvad læringen tør sige
+
+`laering.ts` lægger sammen, hvad appen har samlet på: hvad der var med, hvad
+der blev brugt, hvad der gik i stykker, og hvad man selv syntes om det. To
+regler går igennem det hele.
+
+**En tur uden pak-af-tjek ved ingenting.** Den tælles hverken som brugt eller
+ubrugt. Talte man den som ubrugt, ville alt gear se ud som hyldevarer, så snart
+man holdt op med at gøre turene op — og så ville appen straffe én for ikke at
+føre regnskab.
+
+**Et mønster kræver noget at bygge på.** `grundlag()` holder mønstrene tilbage,
+indtil tre ture er gjort op, og siger i stedet hvad der mangler. Uden den ville
+en ny bruger møde en side, der påstår at kende hendes vaner efter én tur.
+Stjernerne står uden for porten: en vurdering er et svar, man har givet, og den
+kræver ikke et mønster for at gælde.
+
+Det skarpeste tal er **hyldevarerne**: det grej, der kommer med hver gang og
+bliver liggende i tasken. `ubrugteItems` i `statistik.ts` finder det, der aldrig
+kommer *med* — det her finder det, der bæres forgæves, og det er en dyrere fejl.
+Tungest først, for det er dér, der er mest at hente.
+
+Tallene om perioden — nætter, dage, gennemsnitsvægt, hvor man var — følger det
+udsnit, man har valgt. Mønstrene måles altid mod hele turhistorikken, af samme
+grund som ubrugt gear gør det: et snævrere vindue ville udråbe noget som en
+vane, bare fordi man kigger på et enkelt år.
 
 Vurderingen er den eneste ting, appen ved, som ikke er et tal eller en dato.
 Den ved, hvad der var med, hvad der blev brugt, og hvad der gik i stykker —

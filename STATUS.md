@@ -1,6 +1,6 @@
 # STATUS
 
-*Sidst opdateret: 9. september 2026. Udgangspunkt: `main` @ `284315d`.*
+*Sidst opdateret: 11. september 2026. Udgangspunkt: `main` @ `062257f`.*
 
 Kort svar på "hvor står vi nu?". Den skal kunne læses på to minutter og
 opdateres, hver gang noget bliver færdigt eller blokeret.
@@ -18,6 +18,9 @@ appen bliver klogere af det. Delingen er blevet til rigtigt samarbejde, hvor
 en deltager har sine egne faner, sin egen pakkeliste og kan bidrage til den
 fælles journal.
 
+Turene kan nu beskrives dag for dag, og appen siger, hvad de har lært os —
+hvad der slæbes med uden at blive brugt, og hvad der ikke holder.
+
 Serveren er sat helt op, og der er ingen kendt blokering. De to risici, der
 kunne koste data, er begge lukket: sletninger slår igennem på tværs af enheder
 (gravsten), og et login med en anden konto stopper frem for at blande. Det, der
@@ -27,13 +30,13 @@ står tilbage, er arbejde vi selv vælger — ikke noget, der spærrer.
 
 ## Grønt lys
 
-Kørt på grenen `claude/flerdagesture-deling` den 9. september 2026:
+Kørt på grenen `claude/laeringssloejfen` den 11. september 2026:
 
 | Kommando | Resultat |
 |---|---|
 | `npm run lint` | Bestået, ingen fejl |
-| `npm test` | 57 testfiler, 1.264 tests, alle grønne |
-| `npm run build` | Bestået. Startchunk 463,30 kB / 146,34 kB gzip |
+| `npm test` | 59 testfiler, 1.306 tests, alle grønne |
+| `npm run build` | Bestået. Startchunk 463,31 kB / 146,34 kB gzip |
 
 CI kører de samme tre på alle pull requests, plus et tjek for at et privat
 Railway-domæne ikke er havnet i bundlen.
@@ -109,26 +112,19 @@ I den rækkefølge, de sandsynligvis er værd at tage.
 
 ### Funktioner, der venter
 
-9. **Læringssløjfen og de sidste statistikker** — nætter, besøgte steder,
-   turtyper, gennemsnitsvægt, bedste og dårligste grej efter egne stjerner.
-   Kun det, der kan forklares ud fra data, der findes. (`PLAN.md` §9 trin 5)
-10. **Flerdagesture er bygget** — fundament, skærm og deling. Dagene kan
-    planlægges under turens Overblik og følger med ud til deltagerne i
-    snapshottet. Det, der står tilbage, er en dag med sit eget grej (fravalgt)
-    og en rute at pege på (punktet nedenfor).
-11. **Rute som eget domæne.** Nu efter dagen og ikke før — rækkefølgen er
-    byttet om, se `PLAN.md` §9 trin 6. Åbner for kilometer, højdemeter og
-    kortfanen på delte ture. Dagen får et `rute_uid`, og det er additivt.
-12. **Badges og notifikationer.** I fundamentet §9, ikke bygget.
-13. **Tidevand ved kystture.** Kræver en DMI-nøgle. (`IDEER.md` §5.4)
-14. **Onboarding og adaptiv hjælpegrad.** Bevidst udskudt — vi bygger til
+9. **Rute som eget domæne.** Nu efter dagen og ikke før — rækkefølgen er
+   byttet om, se `PLAN.md` §9 trin 6. Åbner for kilometer, højdemeter og
+   kortfanen på delte ture. Dagen får et `rute_uid`, og det er additivt.
+10. **Badges og notifikationer.** I fundamentet §9, ikke bygget.
+11. **Tidevand ved kystture.** Kræver en DMI-nøgle. (`IDEER.md` §5.4)
+12. **Onboarding og adaptiv hjælpegrad.** Bevidst udskudt — vi bygger til
     ejeren først. Bliver relevant, hvis appen skal ud til andre.
-15. **Virtualisering af lange gearlister.** Først værd at bygge, når en liste
+13. **Virtualisering af lange gearlister.** Først værd at bygge, når en liste
     er lang nok til at hakke. Afhænger af et rigtigt inventar.
 
 ### Kalibrering
 
-16. **Motorens tærskler er sat efter mavefornemmelse.** Hvornår vægten er
+14. **Motorens tærskler er sat efter mavefornemmelse.** Hvornår vægten er
     værd at nævne, hvor godt et grejsæt skal matche, hvor mange ture der skal
     til, før noget regnes som ubrugt. De er nemme at justere — men kun
     meningsfuldt, når de har været brugt på rigtige data over en sæson.
