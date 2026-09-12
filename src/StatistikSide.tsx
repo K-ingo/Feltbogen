@@ -2,7 +2,13 @@ import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import type { Item } from './db';
-import { Segment } from './ui';
+import {
+  turtal, gennemsnitsvaegt, bedsteGrej, daarligsteGrej, andelVurderet,
+  hyldevarer, hyldevarevaegt, skroebeligtGrej, grundlag
+} from './laering';
+import { mestBesoegte, fordeling } from './aarsopgoerelse';
+import { etiket } from './db';
+import { Segment, SektionsTitel } from './ui';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
 import { useErDesktop } from './useMedie';
@@ -68,6 +74,27 @@ function StatistikSide({ fane, skift, aabnItem, aabnAar }: Props) {
   // er der ikke noget at sammenligne med.
   const aar = periode === 'sidste_aar' ? nu.getFullYear() - 1 : nu.getFullYear();
   const tilvaekst = periode === 'alt' ? null : vaerditilvaekst(items, aar);
+
+  // Læringen deler sig i to, og det er ikke vilkårligt.
+  //
+  // Tallene om *perioden* — nætter, dage, gennemsnitsvægt, hvor man var —
+  // beskriver det udsnit, man kigger på, og følger derfor perioden.
+  //
+  // Mønstrene — hyldevarer, det der går i stykker — måles mod hele
+  // turhistorikken. Samme grund som ubrugt gear ovenfor: et snævrere vindue
+  // ville udråbe noget som en vane, bare fordi man kigger på et enkelt år.
+  const tal = turtal(ture);
+  const vaegt = gennemsnitsvaegt(ture, grupper, items);
+  const steder = useLiveQuery(() => db.steder.toArray()) ?? [];
+  const besoegte = mestBesoegte(ture, steder).slice(0, 5);
+  const turtyper = fordeling(ture, (t) => etiket(t.aktivitet));
+
+  const laeringsgrundlag = grundlag(alleTure);
+  const hylden = hyldevarer(items, alleTure);
+  const skroebelige = skroebeligtGrej(items, alleTure);
+  const bedste = bedsteGrej(items, 3);
+  const daarligste = daarligsteGrej(items, 3);
+  const vurderetAndel = andelVurderet(items);
 
   if (items.length === 0 && alleTure.length === 0) {
     return (
@@ -159,33 +186,144 @@ function StatistikSide({ fane, skift, aabnItem, aabnAar }: Props) {
 
         {topBrugt.length > 0 && (
           <Widget titel="Mest brugte grej">
-            <div style={{ display: 'grid', gap: '7px' }}>
-              {topBrugt.map((x, i) => (
-                <button
-                  key={x.item.uid}
-                  onClick={() => x.item.id !== undefined && aabnItem(x.item.id)}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'baseline',
-                    gap: '10px',
-                    background: 'transparent',
-                    border: 'none',
-                    padding: 0,
-                    cursor: 'pointer',
-                    textAlign: 'left'
-                  }}
-                >
-                  <span style={{ display: 'flex', gap: '10px', alignItems: 'baseline', minWidth: 0 }}>
-                    <span style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)' }}>{i + 1}.</span>
-                    <span style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst)' }}>{x.item.navn || 'Uden navn'}</span>
-                  </span>
-                  <span style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>
-                    {x.antalTure} {x.antalTure === 1 ? 'tur' : 'ture'}
-                  </span>
-                </button>
-              ))}
+            <Grejliste
+              raekker={topBrugt.map((x) => ({
+                item: x.item,
+                hoejre: `${x.antalTure} ${x.antalTure === 1 ? 'tur' : 'ture'}`
+              }))}
+              aabn={aabnItem}
+            />
+          </Widget>
+        )}
+      </div>
+
+      <div style={{ marginTop: 'var(--plads-5)' }}>
+        <SektionsTitel>Hvad turene har lært os</SektionsTitel>
+      </div>
+
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: erDesktop ? 'repeat(2, minmax(0, 1fr))' : '1fr',
+        gap: '10px',
+        alignItems: 'start'
+      }}>
+        <Widget titel={`Nætter ${PERIODE_LABEL[periode].toLowerCase()}`}>
+          <Tal vaerdi={`${tal.naetter}`} enhed={tal.naetter === 1 ? 'nat' : 'nætter'} />
+          <Undertekst>
+            {[
+              `${tal.ture} ${tal.ture === 1 ? 'tur' : 'ture'}`,
+              tal.snit_naetter !== null ? `${tal.snit_naetter} pr. tur i snit` : null,
+              tal.dagsture > 0 ? `${tal.dagsture} uden overnatning` : null
+            ].filter(Boolean).join(' · ')}
+          </Undertekst>
+        </Widget>
+
+        {/* Kun de ture, der faktisk havde grej valgt. En tom kladde talt som
+            nul ville trække snittet ned uden at sige noget. */}
+        {vaegt && (
+          <Widget titel="Gennemsnitsvægt pr. tur">
+            <Tal vaerdi={kilo(vaegt.snit_g, 1)} enhed="kg" />
+            <Undertekst>
+              {vaegt.antal === 1
+                ? 'Bygger på én tur med valgt grej'
+                : `Bygger på ${vaegt.antal} ture · letteste ${kilo(vaegt.letteste.vaegt_g, 1)} kg, tungeste ${kilo(vaegt.tungeste.vaegt_g, 1)} kg`}
+            </Undertekst>
+          </Widget>
+        )}
+
+        {turtyper.length > 0 && (
+          <Widget titel="Turtyper">
+            <Andelsliste
+              raekker={turtyper.map((a) => ({
+                navn: a.vaerdi,
+                hoejre: `${a.antal} ${a.antal === 1 ? 'tur' : 'ture'} · ${Math.round((a.antal / tal.ture) * 100)} %`
+              }))}
+            />
+          </Widget>
+        )}
+
+        {besoegte.length > 0 && (
+          <Widget titel="Mest besøgte steder">
+            <Andelsliste
+              nummerer
+              raekker={besoegte.map((b) => ({
+                navn: b.navn,
+                hoejre: `${b.ture} ${b.ture === 1 ? 'tur' : 'ture'}`
+              }))}
+            />
+          </Widget>
+        )}
+
+        {/* Mønstrene kræver noget at bygge på. Uden det her ville siden påstå
+            at kende ens vaner efter én tur. */}
+        {!laeringsgrundlag.nok ? (
+          <Widget titel="Mønstre i grejet" bred={erDesktop}>
+            <Undertekst>{laeringsgrundlag.mangler}</Undertekst>
+          </Widget>
+        ) : (
+          <>
+            {hylden.length > 0 && (
+              <Widget titel="Med hver gang, aldrig brugt" advarsel bred={erDesktop}>
+                <Tal vaerdi={kilo(hyldevarevaegt(hylden), 1)} enhed="kg" advarsel />
+                <Undertekst>
+                  {hylden.length === 1 ? 'Ét stykke grej' : `${hylden.length} stykker grej`} har
+                  været med mindst tre gange uden at blive brugt. Det er vægt, du kan lade blive hjemme.
+                </Undertekst>
+                <div style={{ marginTop: 'var(--plads-3)' }}>
+                  <Grejliste
+                    nummerer={false}
+                    raekker={hylden.map((h) => ({
+                      item: h.item,
+                      hoejre: `${kilo(h.vaegt_g, 1)} kg · med ${h.med} gange`
+                    }))}
+                    aabn={aabnItem}
+                  />
+                </div>
+              </Widget>
+            )}
+
+            {skroebelige.length > 0 && (
+              <Widget titel="Går i stykker" advarsel>
+                <Grejliste
+                  nummerer={false}
+                  raekker={skroebelige.map((s) => ({
+                    item: s.item,
+                    hoejre: `${s.gange} gange af ${s.med}`
+                  }))}
+                  aabn={aabnItem}
+                />
+              </Widget>
+            )}
+          </>
+        )}
+
+        {/* Stjernerne er det eneste, appen ved, som ikke er et tal eller en
+            dato. De står uden for grundlags-porten: en vurdering er et svar,
+            man har givet, og den kræver ikke et mønster for at gælde. */}
+        {bedste.length > 0 && (
+          <Widget titel="Bedst bedømt">
+            <Grejliste
+              nummerer={false}
+              raekker={bedste.map((s) => ({ item: s.item, hoejre: '★'.repeat(s.vurdering) }))}
+              aabn={aabnItem}
+            />
+            <div style={{ marginTop: 'var(--plads-2)' }}>
+              <Undertekst>
+                {vurderetAndel.vurderet} af {vurderetAndel.i_alt} stykker grej er vurderet
+              </Undertekst>
             </div>
+          </Widget>
+        )}
+
+        {/* Kun når der er nok til at "dårligst" betyder noget. Med tre
+            vurderinger i alt ville den nederste også stå på listen ovenfor. */}
+        {daarligste.length > 0 && vurderetAndel.vurderet > bedste.length && (
+          <Widget titel="Dårligst bedømt">
+            <Grejliste
+              nummerer={false}
+              raekker={daarligste.map((s) => ({ item: s.item, hoejre: '★'.repeat(s.vurdering) }))}
+              aabn={aabnItem}
+            />
           </Widget>
         )}
       </div>
@@ -196,6 +334,73 @@ function StatistikSide({ fane, skift, aabnItem, aabnAar }: Props) {
 // ─────────────────────────────────────────────
 // Widgets
 // ─────────────────────────────────────────────
+
+// Et navn og et tal, uden noget at klikke på. Turtyper og steder har samme
+// form — og de skal ikke gennem `Fordeling`, som skriver "kg" efter tallet.
+function Andelsliste({ raekker, nummerer = false }: {
+  raekker: { navn: string; hoejre: string }[];
+  nummerer?: boolean;
+}) {
+  return (
+    <div style={{ display: 'grid', gap: '7px' }}>
+      {raekker.map((r, i) => (
+        <div key={r.navn} style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'baseline' }}>
+          <span style={{ display: 'flex', gap: '10px', alignItems: 'baseline', minWidth: 0 }}>
+            {nummerer && (
+              <span style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)' }}>{i + 1}.</span>
+            )}
+            <span style={{ fontSize: 'var(--skrift-knap)' }}>{r.navn}</span>
+          </span>
+          <span style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>
+            {r.hoejre}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// En nummereret liste af grej med et tal til højre. Formen går igen — mest
+// brugt, hyldevarer, bedste og dårligste — og stod før skrevet ud hver gang.
+function Grejliste({ raekker, aabn, nummerer = true }: {
+  raekker: { item: Item; hoejre: React.ReactNode }[];
+  aabn: (id: number) => void;
+  nummerer?: boolean;
+}) {
+  return (
+    <div style={{ display: 'grid', gap: '7px' }}>
+      {raekker.map((r, i) => (
+        <button
+          key={r.item.uid}
+          onClick={() => r.item.id !== undefined && aabn(r.item.id)}
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'baseline',
+            gap: '10px',
+            background: 'transparent',
+            border: 'none',
+            padding: 0,
+            cursor: 'pointer',
+            textAlign: 'left'
+          }}
+        >
+          <span style={{ display: 'flex', gap: '10px', alignItems: 'baseline', minWidth: 0 }}>
+            {nummerer && (
+              <span style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)' }}>{i + 1}.</span>
+            )}
+            <span style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst)' }}>
+              {r.item.navn || 'Uden navn'}
+            </span>
+          </span>
+          <span style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>
+            {r.hoejre}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function Widget({ titel, children, bred, advarsel }: {
   titel: string;
