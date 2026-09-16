@@ -11,6 +11,7 @@ import {
   sidstTilfoejede
 } from './dashboard';
 import { aarsopgoerelseAtSe } from './aarsopgoerelse';
+import { hovedhandling } from './dashboard';
 import type { Handling, Syncstatus, Hjemsituation } from './dashboard';
 import { forslagTilTur, udenAfviste, maalFor } from './forslag';
 import { afvisForslag, useAfviste } from './afviste';
@@ -181,8 +182,15 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
       titel={hilsen(bruger?.name ?? '')}
       handlinger={
         <>
-          <Knap onClick={nytItem}>+ Tilføj grej</Knap>
-          <Knap variant="primaer" onClick={nyTur}>+ Ny tur</Knap>
+          {/* Headerens knapper er begge stille. Den fyldte accent hører til på
+              Næste Eventyr, og der må kun være én i det første skærmbillede —
+              se `hovedhandling` i dashboard.ts.
+
+              "+ Ny tur" er outline også uden en næste tur: så er det
+              tomme-tilstandens egen knap, der er den fyldte, og reglen holder
+              stadig. */}
+          <Knap variant="tekst" onClick={nytItem}>+ Tilføj grej</Knap>
+          <Knap onClick={nyTur}>+ Ny tur</Knap>
         </>
       }
       fab={nytItem}
@@ -249,6 +257,9 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
                 <Forslagskort
                   key={f.id}
                   forslag={f}
+                  // Outline og ikke fyldt: den fyldte accent er optaget af
+                  // Næste Eventyr. Inde på turen er kortet stadig det fyldte.
+                  staerk={false}
                   aabn={() => tur?.id !== undefined && aabnTur(tur.id)}
                   tagImod={() => void tagImod(f)}
                   afvis={() => void afvis(f)}
@@ -258,6 +269,26 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
           </section>
         )}
 
+        {/* Billederne ligger allerede i basen — de har bare aldrig været andre
+            steder end inde på turen, de blev taget på. Her står de, hvor man
+            kommer forbi hver gang, og fører tilbage til historien om dem. */}
+        {minder.length > 0 && (
+          <section>
+            <SektionsTitel>Seneste minder</SektionsTitel>
+            <Mindestribe
+              minder={minder}
+              aabn={(m) => m.tur.id !== undefined && aabnTur(m.tur.id)}
+            />
+          </section>
+        )}
+
+        {/* Tallene og skabet står ikke i det første skærmbillede.
+            Hilsenen og næste tur skal have pladsen; det her er noget, man
+            slår op, når man vil vide det — ikke noget, der skal kappes om
+            opmærksomheden med turen. */}
+        <details className="home-more">
+          <summary>Se mere</summary>
+          <div className="home-more-indhold">
         {/* Nøgletallene stod her før, og de sagde: værdi i kroner, ture i år,
             vægt i kilo. To af de tre handler om skabet og ikke om året — det
             er tal om et inventar, og de er rigtige nok, men de er ikke det man
@@ -283,19 +314,6 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
             <Noegletal label="Steder" vaerdi={`${aar.steder}`} />
           </div>
         </section>
-
-        {/* Billederne ligger allerede i basen — de har bare aldrig været andre
-            steder end inde på turen, de blev taget på. Her står de, hvor man
-            kommer forbi hver gang, og fører tilbage til historien om dem. */}
-        {minder.length > 0 && (
-          <section>
-            <SektionsTitel>Seneste minder</SektionsTitel>
-            <Mindestribe
-              minder={minder}
-              aabn={(m) => m.tur.id !== undefined && aabnTur(m.tur.id)}
-            />
-          </section>
-        )}
 
         {/* Specens §3 vil have et gearSummary: hvor meget man har, og hvor
             meget der skal passes. Vedligeholdet står også som handlingskort
@@ -341,6 +359,8 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
             ))
           )}
         </section>
+          </div>
+        </details>
 
         <Synclinje status={sync} tilLogin={tilLogin} />
       </div>
@@ -376,6 +396,12 @@ function Situationskort({ situation, items, grupper, aabn, opret, foersteTur, ha
   // felter er svær at begynde på; den tomme tur bliver stående ved siden af
   // for dem, der hellere vil skrive det ind selv.
   if (!tur) {
+    // Uden en tur er der ingen pakning at måle på. `hovedhandling` ser på
+    // turen først og rører aldrig tallene her.
+    const tomHandling = hovedhandling(situation, {
+      pakket: 0, ialt: 0, procent: 0, faerdig: false, mangler: []
+    });
+
     return (
       <Infokort label={situation.overskrift}>
         <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2rem)', margin: '12px 0' }}>Hvor går din næste tur hen?</h2>
@@ -386,7 +412,7 @@ function Situationskort({ situation, items, grupper, aabn, opret, foersteTur, ha
         </div>
         <div style={{ display: 'flex', gap: 'var(--plads-2)', flexWrap: 'wrap' }}>
           <Knap variant="primaer" onClick={foersteTur}>
-            {harKladde ? 'Fortsæt hvor du slap' : situation.handling}
+            {harKladde ? 'Fortsæt hvor du slap' : tomHandling.tekst}
           </Knap>
           <Knap onClick={opret}>Planlæg selv</Knap>
         </div>
@@ -403,6 +429,7 @@ function Situationskort({ situation, items, grupper, aabn, opret, foersteTur, ha
 
   const advarsler = findAdvarsler(paaTuren);
   const pakning = pakkefremdrift(tur, paaTuren);
+  const handling = hovedhandling(situation, pakning);
   const afgang = tur.afgangs_tjek;
 
   // En hjemkommen tur skal ikke stå og fortælle, hvor langt man er med
@@ -450,9 +477,14 @@ function Situationskort({ situation, items, grupper, aabn, opret, foersteTur, ha
         )}
         <div style={{ marginLeft: 'auto' }}>
           {/* Knappen siger, hvad man skal — og lander dér, hvor det kan gøres.
-              Se turmaal.ts. */}
-          <Knap variant="primaer" onClick={() => aabn(situation.maal)}>
-            {situation.handling}
+              Se turmaal.ts. Hvad der står, og om den er den fyldte, afgøres af
+              `hovedhandling`: teksten følger pakningen, og den fyldte accent
+              er kun til, når der faktisk er noget at gøre. */}
+          <Knap
+            variant={handling.fremhaevet ? 'primaer' : 'sekundaer'}
+            onClick={() => aabn(handling.maal)}
+          >
+            {handling.tekst}
           </Knap>
         </div>
       </div>

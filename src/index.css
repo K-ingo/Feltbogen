@@ -284,6 +284,15 @@ button:disabled { cursor: not-allowed; }
 .home-care summary span { display: inline-block; margin-left: 12px; font-weight: 400; color: var(--tekst-dæmpet); font-size: var(--skrift-detalje); }
 .home-care[open] summary { margin-bottom: 12px; }
 .home-care-more { margin-top: 10px; padding: 0 4px; color: var(--accent); font-size: var(--skrift-detalje); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+
+/* "Se mere" — tallene og skabet foldet væk.
+   Stille og ikke fremhævet: det er en vej videre, ikke en handling. Derfor
+   dæmpet tekst uden accent, i modsætning til .home-care-more ovenfor, som
+   åbner noget, der kan haste. */
+.home-more > summary { cursor: pointer; min-height: var(--roerehoejde); display: flex; align-items: center; color: var(--tekst-dæmpet); font-size: var(--skrift-knap); }
+.home-more > summary::marker { color: var(--tekst-svag); }
+.home-more[open] > summary { margin-bottom: var(--plads-4); }
+.home-more-indhold { display: grid; gap: var(--plads-5); }
 .people-intro { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 16px; padding: 18px 20px; margin-bottom: 20px; border: 1px solid var(--accent-border); border-radius: var(--runding); background: linear-gradient(135deg, var(--accent-bg), var(--bg-forhoejet)); }
 .people-intro-icon { display: grid; place-items: center; width: 54px; height: 54px; border-radius: 50%; color: var(--accent); background: var(--bg-forhoejet); border: 1px solid var(--accent-border); }
 .person-list { display: grid; gap: 8px; }

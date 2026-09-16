@@ -173,6 +173,35 @@ på en underskærm, bliver hovedfanen markeret i navigationen, og der kommer en
 "‹ Grej"-linje over titlen — begge dele udledt, så en vej tilbage ikke kan
 blive glemt ét sted. En ny skærm skal derfor kun skrives ind i den ene tabel.
 
+### Højst én fyldt knap
+
+Designsystemet har en hård regel: **højst én fyldt accent-knap i det første
+skærmbillede.** Den forrige forside havde flere grønne knapper, der kappedes om
+opmærksomheden — og når alt er primært, er intet det.
+
+Den fyldte hører til på Næste Eventyr, og kun når der er noget at gøre.
+`hovedhandling` i `dashboard.ts` afgør både teksten og vægten:
+
+| Tilstand | Knap |
+|---|---|
+| Intet grej valgt | **Vælg grej** — fyldt |
+| Pakning i gang | **Fortsæt pakning** — fyldt |
+| Pakket færdig | *Se turen* — outline |
+| På tur / hjemme uden opgør | turens egne ord — fyldt |
+
+Teksten følger pakningen og ikke turens status. "Pak færdig" på en tur, hvor man
+ikke har valgt grej endnu, beder om at få gjort noget færdigt, man ikke er
+begyndt på.
+
+Resten er stille: `+ Ny tur` og motorens `Kopiér grejet` er outline, `+ Tilføj
+grej` og `Ikke denne gang` er tekst. `Forslagskort` har derfor en `staerk`-prop
+— inde på turen er kortet den eneste handling i sit område og må gerne være
+fyldt; på startskærmen er pladsen optaget.
+
+Tallene — friluftsliv, skabet, sidst tilføjet — ligger foldet under *Se mere*.
+Hilsenen og næste tur skal have det første skærmbillede. Minderne bliver
+stående: de er ikke tal, og eventyret kommer først.
+
 Reglen bagved: en ny funktion får ikke automatisk sin egen fane. Hører den til
 en tur, ligger den under turen; hører den til et stykke grej, under Grej. Kun
 det tværgående hører under Mere.
