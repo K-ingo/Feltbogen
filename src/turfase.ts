@@ -131,6 +131,16 @@ export function turfase(tur: Tur, grupper: Gruppe[]): Turfase {
 // Rækkefølgen er den, man ville gøre tingene i: hvornår, hvorhen, hvad med,
 // hvem med. Kun det appen kan få øje på — at man har glemt at spørge om fri,
 // kan den ikke vide.
+// Et manglende sted er den ene af kladdens mangler, man kan se udefra på et
+// turkort — resten kræver, at man åbner turen. Derfor er det også den ene, der
+// står som mærke i listen.
+//
+// Definitionen ligger her frem for i skærmen, så mærket og manglelisten ikke
+// kan nå at blive uenige om, hvornår et sted mangler.
+export function manglerSted(tur: Tur): boolean {
+  return !tur.sted.trim();
+}
+
 function kladdemangler(tur: Tur, grupper: Gruppe[]): Mangel[] {
   const mangler: Mangel[] = [];
 
@@ -140,7 +150,7 @@ function kladdemangler(tur: Tur, grupper: Gruppe[]): Mangel[] {
     mangler.push({ tekst: 'Ingen slutdato', maal: 'overblik' });
   }
 
-  if (!tur.sted.trim()) mangler.push({ tekst: 'Intet sted', maal: 'overblik' });
+  if (manglerSted(tur)) mangler.push({ tekst: 'Intet sted', maal: 'overblik' });
 
   if (itemUidsPaaTur(tur, grupper).size === 0) {
     mangler.push({ tekst: 'Intet grej valgt', maal: 'pakning' });

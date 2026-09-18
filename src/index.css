@@ -275,6 +275,10 @@ button:disabled { cursor: not-allowed; }
 .trip-card-photo { display: block; position: relative; width: 100%; height: 180px; overflow: hidden; }
 .trip-card-fallback { display: grid; place-items: center; background: linear-gradient(135deg, var(--hero-top), var(--hero-bund)); color: var(--paa-billede); }
 .trip-card-body { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 20px; }
+/* En tur kan bære mere end ét mærke — fasen, og at der mangler et sted. De
+   skal kunne brydes til to linjer på et smalt kort frem for at presse
+   kortets bredde ud. */
+.trip-card-maerker { display: flex; flex-wrap: wrap; gap: var(--plads-2); }
 .trip-card-title { font-family: 'Fraunces', Georgia, serif; font-size: 1.5rem; line-height: 1.25; }
 .trip-card-meta { font-size: var(--skrift-detalje); color: var(--tekst-dæmpet); }
 .home-next { display: flex; min-width: 0; border: 1px solid var(--border-svag); border-radius: 20px; background: var(--bg-forhoejet); overflow: hidden; }

@@ -10,7 +10,7 @@ import type { Fane } from './Skal';
 import { Knap, Badge, ListeRaekke, SektionsTitel, TomListe, Segment } from './ui';
 import { Billedvisning } from './BilledSektion';
 import { hero } from './billeder';
-import { faseAf, FASENAVN } from './turfase';
+import { faseAf, FASENAVN, manglerSted } from './turfase';
 import type { Fase } from './turfase';
 
 // Farven signalerer hvor turen er i sit livsforløb.
@@ -36,7 +36,10 @@ interface Props {
 
 function TureListe({ fane, skift, aabnTur, aabnDeltTur, nyTur }: Props) {
   const [soegning, setSoegning] = useState('');
-  const [visning, setVisning] = useState<'Kort' | 'Liste'>('Kort');
+  // "Gitter" og ikke "Kort": kort betyder både et kartotekskort og et
+  // landkort på dansk, og en app med steder i har brug for at det andet
+  // ord er ledigt.
+  const [visning, setVisning] = useState<'Gitter' | 'Liste'>('Gitter');
   const ture = useLiveQuery(() => db.ture.orderBy('startdato').reverse().toArray());
   // Ture andre har delt med én. De ligger i deres egen tabel og kan ikke
   // redigeres, men de hører hjemme her — det er stadig ture man skal med på.
@@ -64,7 +67,7 @@ function TureListe({ fane, skift, aabnTur, aabnDeltTur, nyTur }: Props) {
 
       {egne + antalDelte > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
         <span style={{ color: 'var(--tekst-dæmpet)', fontSize: 'var(--skrift-detalje)' }}>{soegning ? `${visteTure.length + visteDelte.length} af ${egne + antalDelte} ture` : 'Dine ture'}</span>
-        <Segment vaerdier={['Kort', 'Liste'] as const} valgt={visning} vaelg={setVisning} />
+        <Segment vaerdier={['Gitter', 'Liste'] as const} valgt={visning} vaelg={setVisning} />
       </div>}
       <div className={`trip-grid${visning === 'Liste' ? ' is-compact' : ''}`}>
       {visteTure.map((t) => (
@@ -75,7 +78,14 @@ function TureListe({ fane, skift, aabnTur, aabnDeltTur, nyTur }: Props) {
         >
           <Forsidebillede tur={t} billeder={billeder} />
           <span className="trip-card-body">
-            <Badge niveau={FASE_NIVEAU[faseAf(t)]}>{FASENAVN[faseAf(t)]}</Badge>
+            <span className="trip-card-maerker">
+              <Badge niveau={FASE_NIVEAU[faseAf(t)]}>{FASENAVN[faseAf(t)]}</Badge>
+              {/* Står ved siden af fasen og ikke i stedet for den: en tur kan
+                  både være en kladde og mangle et sted, og de to ting siger
+                  hver sit. Linjen nedenunder siger "Sted ikke valgt" i
+                  forvejen — mærket er det, man kan se på afstand. */}
+              {manglerSted(t) && <Badge niveau="advarsel">Mangler sted</Badge>}
+            </span>
             <span className="trip-card-title">{t.navn || 'Din næste tur'}</span>
             <span className="trip-card-meta">{t.sted || 'Sted ikke valgt'} · {formatterPeriode(t.startdato, t.slutdato) || 'Dato ikke valgt'}</span>
             <span className="trip-card-meta">{t.personer} {t.personer === 1 ? 'person' : 'personer'} · {t.naetter} {t.naetter === 1 ? 'nat' : 'nætter'}</span>
