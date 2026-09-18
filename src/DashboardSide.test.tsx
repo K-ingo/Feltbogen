@@ -157,7 +157,7 @@ describe('tallene står ikke i det første skærmbillede', () => {
     await turMedGrej();
     vis();
 
-    const toggle = await screen.findByText('Se mere');
+    const toggle = await screen.findByText('Se mere (Stats & Sidst tilføjet)');
     const fold = toggle.closest('details')!;
 
     expect(fold).not.toHaveAttribute('open');

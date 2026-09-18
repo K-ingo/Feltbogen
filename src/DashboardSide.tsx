@@ -287,7 +287,7 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
             slår op, når man vil vide det — ikke noget, der skal kappes om
             opmærksomheden med turen. */}
         <details className="home-more">
-          <summary>Se mere</summary>
+          <summary>Se mere (Stats &amp; Sidst tilføjet)</summary>
           <div className="home-more-indhold">
         {/* Nøgletallene stod her før, og de sagde: værdi i kroner, ture i år,
             vægt i kilo. To af de tre handler om skabet og ikke om året — det
