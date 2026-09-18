@@ -890,11 +890,15 @@ export function Indlaeser() {
 // den er nødvendig af en grund, der ikke er høflighed: et forslag man ikke kan
 // få væk, bliver til støj, og støj læser man udenom. Så holder man også op med
 // at læse det, der var værd at læse.
-export function Forslagskort({ forslag, aabn, tagImod, afvis }: {
+export function Forslagskort({ forslag, aabn, tagImod, afvis, staerk = true }: {
   forslag: Forslag;
   aabn: () => void;
   tagImod: () => void;
   afvis: () => void;
+  // Om "tag imod"-knappen er den fyldte. På startskærmen er den ikke: dér må
+  // der kun være én fyldt accent, og den hører til på Næste Eventyr. Inde på
+  // turen er kortet den eneste handling i sit område, og der er den fyldt.
+  staerk?: boolean;
 }) {
   return (
     <div style={{
@@ -943,10 +947,14 @@ export function Forslagskort({ forslag, aabn, tagImod, afvis }: {
       </div>
 
       <div style={{ display: 'flex', gap: 'var(--plads-2)', marginTop: 'var(--plads-2)' }}>
-        <Knap variant="primaer" onClick={tagImod} style={{ flex: 1, fontSize: 'var(--skrift-lille)' }}>
+        <Knap
+          variant={staerk ? 'primaer' : 'sekundaer'}
+          onClick={tagImod}
+          style={{ flex: 1, fontSize: 'var(--skrift-lille)' }}
+        >
           {forslag.handling.tag_imod}
         </Knap>
-        <Knap onClick={afvis} style={{ fontSize: 'var(--skrift-lille)' }}>
+        <Knap variant="tekst" onClick={afvis} style={{ fontSize: 'var(--skrift-lille)' }}>
           {forslag.handling.afvis}
         </Knap>
       </div>

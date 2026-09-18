@@ -8,7 +8,8 @@ import {
   syncstatus,
   tureIAar,
   sidstTilfoejede,
-  friluftsliv
+  friluftsliv,
+  hovedhandling
 } from './dashboard';
 import { lavItem, lavGruppe, lavTur } from './test/data';
 
@@ -815,5 +816,99 @@ describe('friluftsliv', () => {
 
   it('siger ingenting om ændringen uden ture sidste år', () => {
     expect(friluftsliv([lavTur({ startdato: '2026-06-01' })], NU).aendringPct).toBeNull();
+  });
+});
+
+
+// ─────────────────────────────────────────────
+// Den ene fremhævede handling
+//
+// Reglen fra designsystemet: højst én fyldt accent-knap i det første
+// skærmbillede. Den hører til på Næste Eventyr, og kun når der er noget at
+// gøre.
+// ─────────────────────────────────────────────
+
+describe('hovedhandling', () => {
+  const pakning = (ialt: number, pakket: number) => ({
+    pakket,
+    ialt,
+    procent: ialt === 0 ? 0 : Math.floor((pakket / ialt) * 100),
+    faerdig: ialt > 0 && pakket === ialt,
+    mangler: []
+  });
+
+  const situationFor = (ture: Parameters<typeof hjemsituation>[0], nu?: Date) =>
+    hjemsituation(ture, nu);
+
+  const nu = new Date('2026-07-01T09:00:00Z');
+  const omEnUge = (over = {}) => lavTur({
+    navn: 'Møn', status: 'klar', startdato: '2026-07-08', slutdato: '2026-07-10', ...over
+  });
+
+  // "Pak færdig" beder om at få gjort noget færdigt, man ikke er begyndt på.
+  it('siger "Vælg grej", når intet grej er valgt', () => {
+    const h = hovedhandling(situationFor([omEnUge()], nu), pakning(0, 0));
+
+    expect(h.tekst).toBe('Vælg grej');
+    expect(h.maal).toBe('pakning');
+    expect(h.fremhaevet).toBe(true);
+  });
+
+  it('siger aldrig "Pak færdig"', () => {
+    for (const p of [pakning(0, 0), pakning(5, 0), pakning(5, 3), pakning(5, 5)]) {
+      expect(hovedhandling(situationFor([omEnUge()], nu), p).tekst).not.toBe('Pak færdig');
+    }
+  });
+
+  it('siger "Fortsæt pakning", når pakningen er i gang', () => {
+    const h = hovedhandling(situationFor([omEnUge()], nu), pakning(5, 2));
+
+    expect(h.tekst).toBe('Fortsæt pakning');
+    expect(h.maal).toBe('pakkeliste');
+    expect(h.fremhaevet).toBe(true);
+  });
+
+  // Er alt pakket, er der ikke en handling at haste med. En fyldt knap ville
+  // bede om noget, der ikke findes.
+  it('bliver stille, når turen er pakket færdig', () => {
+    const h = hovedhandling(situationFor([omEnUge()], nu), pakning(5, 5));
+
+    expect(h.fremhaevet).toBe(false);
+    expect(h.tekst).toBe('Se turen');
+  });
+
+  it('holder fast i turens egne ord, når man er på tur', () => {
+    const h = hovedhandling(situationFor([lavTur({ status: 'aktiv' })], nu), pakning(5, 5));
+
+    expect(h.tekst).toBe('Fortsæt turen');
+    expect(h.fremhaevet).toBe(true);
+  });
+
+  it('beder om opgøret, når man er hjemme uden at have gjort turen op', () => {
+    const hjemme = lavTur({ status: 'afsluttet', startdato: '2026-06-20', slutdato: '2026-06-22', pak_af_tjek: null });
+    const h = hovedhandling(situationFor([hjemme], nu), pakning(0, 0));
+
+    expect(h.tekst).toBe('Gør turen op');
+    expect(h.fremhaevet).toBe(true);
+  });
+
+  it('er fremhævet, når der slet ingen tur er — så er den den eneste', () => {
+    const h = hovedhandling(situationFor([], nu), pakning(0, 0));
+
+    expect(h.fremhaevet).toBe(true);
+  });
+});
+
+// Kriterium 7 i handoff'en: footeren må ikke være falsk grøn.
+describe('sync-footeren er ærlig', () => {
+  it('siger "Alt er sendt op", når det er sandt', () => {
+    expect(syncstatus(0, true, true).tekst).toBe('Alt er sendt op');
+  });
+
+  it('siger fra, når en sync fejlede', () => {
+    const s = syncstatus(0, true, true, { art: 'afvist', detalje: '', hvornaar: '' });
+
+    expect(s.tilstand).toBe('fejl');
+    expect(s.tekst).not.toContain('Alt er sendt op');
   });
 });

@@ -114,6 +114,19 @@ export function blokerNaesteUpdate() {
 export const pb = {
   autoCancellation: vi.fn(),
 
+  // `useAuth` lytter på authStore for at følge med i, om man er logget ind.
+  // Uden den falder enhver skærmtest, der monterer noget med en hilsen i.
+  // Testbrugeren er altid logget ind; afmelderen er en tom funktion, fordi der
+  // ikke er noget at melde sig af.
+  authStore: {
+    get isValid() { return true; },
+    get record() {
+      return { id: 'bruger1', email: 'test@eksempel.dk', name: testNavn, created: '', updated: '' };
+    },
+    onChange: () => () => {},
+    clear: () => {}
+  },
+
   filter: (raa: string, params: Record<string, unknown> = {}) =>
     raa.replace(/\{:(\w+)\}/g, (_, n) => JSON.stringify(params[n])),
 

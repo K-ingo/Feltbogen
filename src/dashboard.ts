@@ -1,4 +1,5 @@
 import type { Item, Tur, Gruppe, Reference } from './db';
+import type { Pakkefremdrift } from './pakning';
 import { itemUidsPaaTur, laesDanskDato, dageTil } from './smartMotor';
 import { filtrererTure } from './statistik';
 import { manglerPakAfTjek, dageSidenSlut, PAK_AF_FRIST_DAGE } from './pakAfTjek';
@@ -150,6 +151,59 @@ export function hjemsituation(
     overskrift: 'Næste tur',
     handling: 'Planlæg en tur'
   };
+}
+
+// ─────────────────────────────────────────────
+// Den ene fremhævede handling
+//
+// Reglen fra designsystemet: **højst én fyldt accent-knap i det første
+// skærmbillede.** Konkurrerende grønne knapper var netop det, den forrige
+// forside gjorde galt — når alt er primært, er intet det.
+//
+// Den fyldte knap hører til på Næste Eventyr, og kun når der er noget at gøre.
+// Er turen pakket færdig, er der ikke en handling at haste med, og så bliver
+// vejen ind en stille en.
+//
+// Teksten følger pakningen og ikke turens status. "Pak færdig" på en tur, hvor
+// man ikke har valgt grej endnu, beder om at få gjort noget færdigt, man ikke
+// er begyndt på.
+// ─────────────────────────────────────────────
+
+export interface Hovedhandling {
+  tekst: string;
+  maal?: Turmaal;
+  // Om knappen skal være den fyldte. Falsk betyder outline — samme handling,
+  // mindre vægt.
+  fremhaevet: boolean;
+}
+
+export function hovedhandling(
+  situation: Hjemsituation,
+  pakning: Pakkefremdrift
+): Hovedhandling {
+  // Uden en tur er der kun ét at gøre, og det er turens egne ord for det.
+  if (!situation.tur) {
+    return { tekst: situation.handling, fremhaevet: true };
+  }
+
+  // Er man midt i turen eller lige kommet hjem, handler det ikke om pakning.
+  if (situation.situation === 'paa_tur' || situation.situation === 'gjort_op_mangler') {
+    return { tekst: situation.handling, maal: situation.maal, fremhaevet: true };
+  }
+
+  // Intet grej valgt endnu. Man kan ikke fortsætte en pakning, der ikke er
+  // begyndt — man skal vælge grejet først.
+  if (pakning.ialt === 0) {
+    return { tekst: 'Vælg grej', maal: 'pakning', fremhaevet: true };
+  }
+
+  // Pakket færdig. Der er ikke noget at haste med, og en fyldt knap ville
+  // bede om en handling, der ikke findes.
+  if (pakning.faerdig) {
+    return { tekst: 'Se turen', fremhaevet: false };
+  }
+
+  return { tekst: 'Fortsæt pakning', maal: 'pakkeliste', fremhaevet: true };
 }
 
 // Kortet øverst ejer sin tur.
