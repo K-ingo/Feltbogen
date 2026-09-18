@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feltbogen — Ny tur</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; font-family: Inter, sans-serif; background: #F9F5EB; color: #24362C; }
+    .serif { font-family: Fraunces, serif; }
+  </style>
+</head>
+<body>
+  <div class="min-h-screen relative">
+    <div class="absolute inset-0 bg-[#24362C]/35" aria-hidden="true"></div>
+    <div class="relative min-h-screen flex items-center justify-center p-8">
+      <div class="w-full max-w-xl bg-[#F9F5EB] rounded-[16px] border border-[#315C45]/15 shadow-lg overflow-hidden">
+        <div class="px-6 pt-5 pb-3 border-b border-[#315C45]/10 flex items-center justify-between">
+          <h1 class="serif text-2xl">Ny tur</h1>
+          <a id="sheet-close" href="#close" class="text-[#536055] hover:text-[#24362C] p-2" aria-label="Luk"><iconify-icon icon="lucide:x" class="text-lg"></iconify-icon></a>
+        </div>
+
+        <div class="px-6 py-5 space-y-5 max-h-[70vh] overflow-y-auto">
+          <p class="text-xs text-[#536055]">Ingen kladde oprettes før du trykker Opret — så undgår vi tomme sync-fejl.</p>
+
+          <div>
+            <label for="trip-title" class="block text-[11px] uppercase tracking-wider text-[#536055] mb-1.5">Titel</label>
+            <input id="trip-title" type="text" placeholder="Fx Fovslet Skov" class="w-full h-12 px-4 rounded-xl border border-[#315C45]/25 bg-white text-sm focus:outline-none focus:ring-1 focus:ring-[#315C45]/40">
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="trip-from" class="block text-[11px] uppercase tracking-wider text-[#536055] mb-1.5">Fra</label>
+              <input id="trip-from" type="text" placeholder="Dato" class="w-full h-11 px-3 rounded-xl border border-[#315C45]/15 bg-white text-sm focus:outline-none">
+            </div>
+            <div>
+              <label for="trip-to" class="block text-[11px] uppercase tracking-wider text-[#536055] mb-1.5">Til</label>
+              <input id="trip-to" type="text" placeholder="Dato" class="w-full h-11 px-3 rounded-xl border border-[#315C45]/15 bg-white text-sm focus:outline-none">
+            </div>
+          </div>
+
+          <div>
+            <label for="trip-place" class="block text-[11px] uppercase tracking-wider text-[#536055] mb-1.5">Sted</label>
+            <input id="trip-place" type="text" placeholder="Valgfrit lige nu" class="w-full h-11 px-4 rounded-xl border border-[#315C45]/15 bg-white text-sm focus:outline-none">
+          </div>
+
+          <div>
+            <label for="trip-people" class="block text-[11px] uppercase tracking-wider text-[#536055] mb-1.5">Deltagere</label>
+            <input id="trip-people" type="text" placeholder="Navne, kommasepareret" class="w-full h-11 px-4 rounded-xl border border-[#315C45]/15 bg-white text-sm focus:outline-none">
+          </div>
+
+          <a id="toggle-more" href="#mere" class="inline-flex items-center gap-1 text-xs font-medium text-[#536055] hover:text-[#24362C]">
+            <iconify-icon icon="lucide:chevron-down"></iconify-icon> Flere detaljer
+          </a>
+        </div>
+
+        <div class="px-6 py-4 border-t border-[#315C45]/10 flex items-center justify-end gap-3">
+          <a id="btn-cancel" href="#annuller" class="h-11 px-5 inline-flex items-center rounded-[10px] text-sm font-medium text-[#536055] hover:bg-black/5">Annuller</a>
+          <a id="btn-create" href="#opret" class="h-12 px-[22px] inline-flex items-center rounded-[10px] bg-[#315C45]/40 text-[#F9F5EB] text-sm font-medium cursor-not-allowed" aria-disabled="true" title="Skriv en titel for at oprette">Opret tur</a>
+        </div>
+        <p class="px-6 pb-4 text-[11px] text-[#536055]">Primary aktiveres når titel er udfyldt.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

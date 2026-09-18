@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Feltbogen — Ture (mobil)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; font-family: Inter, sans-serif; background: #F9F5EB; color: #24362C; }
+    .serif { font-family: Fraunces, serif; }
+    .phone { max-width: 390px; margin: 0 auto; min-height: 100vh; position: relative; padding-bottom: 72px; }
+  </style>
+</head>
+<body>
+<div class="phone">
+
+  <header class="px-5 pt-8 pb-3 flex items-start justify-between gap-3">
+    <div>
+      <h1 class="serif text-[28px]">Ture</h1>
+      <p class="text-sm text-[#536055] mt-0.5">4 ture</p>
+    </div>
+    <a id="cta-ny-tur" href="#ny-tur" class="h-11 px-4 inline-flex items-center rounded-[10px] bg-[#315C45] text-[#F9F5EB] text-sm font-medium shrink-0">+ Ny tur</a>
+  </header>
+
+  <div class="px-5 mb-3">
+    <input id="search-ture" type="search" placeholder="Find tur eller sted…" class="w-full h-11 px-4 rounded-xl border border-[#315C45]/15 bg-white text-sm">
+  </div>
+
+  <div class="px-5 flex items-center justify-between mb-3">
+    <p class="text-sm font-semibold">Dine ture</p>
+    <div class="flex rounded-[10px] border border-[#315C45]/20 overflow-hidden text-[11px] font-medium">
+      <a id="view-gitter" href="#gitter" class="px-2.5 py-1 bg-[#315C45] text-[#F9F5EB]">Gitter</a>
+      <a id="view-liste" href="#liste" class="px-2.5 py-1 text-[#536055] bg-white">Liste</a>
+    </div>
+  </div>
+
+  <div class="px-5 space-y-3 mb-6">
+    <a id="card-reed" href="#reed" class="block rounded-[12px] overflow-hidden border border-[#315C45]/12 bg-white">
+      <div class="h-14 bg-[#315C45] px-3 flex items-center text-[#F9F5EB] text-[10px] uppercase tracking-wider gap-1.5">
+        <iconify-icon icon="lucide:compass"></iconify-icon> Bushcraft
+      </div>
+      <div class="p-3">
+        <div class="flex flex-wrap gap-1 mb-1.5">
+          <span class="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-[#DBE0D5]">Kladde</span>
+          <span class="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-[#FFF4E0] text-[#A06000]">Mangler sted</span>
+        </div>
+        <h2 class="serif text-xl">Reed testtur 8 sep</h2>
+        <p class="text-xs text-[#536055] mt-1">Sted ikke valgt · 7. sep</p>
+      </div>
+    </a>
+    <a id="card-fovslet" href="#fovslet" class="block rounded-[12px] overflow-hidden border border-[#315C45]/12 bg-white">
+      <div class="h-14 bg-[#315C45] px-3 flex items-center text-[#F9F5EB] text-[10px] uppercase tracking-wider gap-1.5">
+        <iconify-icon icon="lucide:compass"></iconify-icon> Bushcraft
+      </div>
+      <div class="p-3">
+        <span class="inline-block text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-[#E5EEE6] text-[#315C45] mb-1.5">Afsluttet</span>
+        <h2 class="serif text-xl">Fovslet Skov</h2>
+        <p class="text-xs text-[#536055] mt-1">27.–29. aug · 4 personer</p>
+      </div>
+    </a>
+    <a id="card-oehaven" href="#oehaven" class="block rounded-[12px] overflow-hidden border border-[#315C45]/12 bg-white">
+      <div class="h-14 bg-[#315C45] px-3 flex items-center text-[#F9F5EB] text-[10px] uppercase tracking-wider gap-1.5">
+        <iconify-icon icon="lucide:compass"></iconify-icon> Bushcraft
+      </div>
+      <div class="p-3">
+        <span class="inline-block text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-[#E5EEE6] text-[#315C45] mb-1.5">Afsluttet</span>
+        <h2 class="serif text-xl">Øghaven uge 32</h2>
+        <p class="text-xs text-[#536055] mt-1">1.–5. aug · 7 personer</p>
+      </div>
+    </a>
+  </div>
+<nav class="fixed bottom-0 inset-x-0 bg-[#F9F5EB]/95 border-t border-[#315C45]/12 backdrop-blur flex safe-pb z-20"><a id="tab-hjem" href="#hjem" class="flex-1 flex flex-col items-center gap-0.5 py-2 text-[#536055]  text-[10px]">
+          <iconify-icon icon="lucide:home" class="text-xl"></iconify-icon>Hjem
+        </a><a id="tab-ture" href="#ture" class="flex-1 flex flex-col items-center gap-0.5 py-2 text-[#315C45] font-semibold text-[10px]">
+          <iconify-icon icon="lucide:mountain" class="text-xl"></iconify-icon>Ture
+        </a><a id="tab-grej" href="#grej" class="flex-1 flex flex-col items-center gap-0.5 py-2 text-[#536055]  text-[10px]">
+          <iconify-icon icon="lucide:backpack" class="text-xl"></iconify-icon>Grej
+        </a><a id="tab-folk" href="#folk" class="flex-1 flex flex-col items-center gap-0.5 py-2 text-[#536055]  text-[10px]">
+          <iconify-icon icon="lucide:users" class="text-xl"></iconify-icon>Folk
+        </a><a id="tab-mere" href="#mere" class="flex-1 flex flex-col items-center gap-0.5 py-2 text-[#536055]  text-[10px]">
+          <iconify-icon icon="lucide:more-horizontal" class="text-xl"></iconify-icon>Mere
+        </a></nav></div></body></html>

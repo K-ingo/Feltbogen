@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Feltbogen — Folk (mobil)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; font-family: Inter, sans-serif; background: #F9F5EB; color: #24362C; }
+    .serif { font-family: Fraunces, serif; }
+    .phone { max-width: 390px; margin: 0 auto; min-height: 100vh; position: relative; padding-bottom: 72px; }
+  </style>
+</head>
+<body>
+<div class="phone">
+
+  <header class="px-5 pt-8 pb-2">
+    <h1 class="serif text-[28px]">Folk</h1>
+    <p class="text-sm text-[#536055] mt-0.5">0 personer</p>
+  </header>
+
+  <section class="mx-5 mt-4 rounded-[12px] border border-[#315C45]/12 bg-white/70 p-4">
+    <div class="flex items-start gap-3">
+      <div class="w-9 h-9 rounded-full bg-[#E5EEE6] flex items-center justify-center text-[#315C45] shrink-0"><iconify-icon icon="lucide:users"></iconify-icon></div>
+      <div>
+        <h2 class="text-sm font-semibold">Dit turhold</h2>
+        <p class="text-xs text-[#536055] mt-1 leading-relaxed">Se hvem du oftest tager afsted med. Navne kan også skrives direkte på en tur.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="px-5 mt-6">
+    <h2 class="text-[11px] uppercase tracking-wider text-[#536055] font-semibold mb-2">Personer</h2>
+    <div class="flex gap-2 items-start">
+      <div class="flex-1">
+        <input id="person-name" type="text" placeholder="Navn" class="w-full h-12 px-4 rounded-xl border border-[#315C45]/20 bg-white text-sm">
+        <p class="mt-1.5 text-[11px] text-[#536055]">Skriv et navn for at tilføje</p>
+      </div>
+      <a id="btn-add-person" href="#tilfoej" class="h-12 px-4 inline-flex items-center rounded-[10px] border border-[#315C45]/20 text-[#536055]/50 text-sm font-medium" aria-disabled="true">+ Tilføj</a>
+    </div>
+  </section>
+
+  <section class="px-5 mt-6 mb-6">
+    <h2 class="text-[11px] uppercase tracking-wider text-[#536055] font-semibold mb-1">Foreslået fra dine ture</h2>
+    <p class="text-xs text-[#536055] mb-3">Hurtig tilføjelse til din Feltbog</p>
+    <div class="flex flex-wrap gap-2">
+      <a id="quick-emil" href="#emil" class="px-3 py-1.5 rounded-full text-xs font-medium border border-[#315C45]/25 text-[#315C45]">+ Emil</a>
+      <a id="quick-jakob" href="#jakob" class="px-3 py-1.5 rounded-full text-xs font-medium border border-[#315C45]/25 text-[#315C45]">+ Jakob</a>
+      <a id="quick-mikkel" href="#mikkel" class="px-3 py-1.5 rounded-full text-xs font-medium border border-[#315C45]/25 text-[#315C45]">+ Mikkel</a>
+      <a id="quick-test" href="#test" class="px-3 py-1.5 rounded-full text-xs font-medium border border-[#315C45]/25 text-[#315C45]">+ Test</a>
+    </div>
+  </section>
+<nav class="fixed bottom-0 inset-x-0 bg-[#F9F5EB]/95 border-t border-[#315C45]/12 backdrop-blur flex z-20"><a id="tab-hjem" href="#hjem" class="flex-1 flex flex-col items-center gap-0.5 py-2 text-[#536055]  text-[10px]">
+          <iconify-icon icon="lucide:home" class="text-xl"></iconify-icon>Hjem
+        </a><a id="tab-ture" href="#ture" class="flex-1 flex flex-col items-center gap-0.5 py-2 text-[#536055]  text-[10px]">
+          <iconify-icon icon="lucide:mountain" class="text-xl"></iconify-icon>Ture
+        </a><a id="tab-grej" href="#grej" class="flex-1 flex flex-col items-center gap-0.5 py-2 text-[#536055]  text-[10px]">
+          <iconify-icon icon="lucide:backpack" class="text-xl"></iconify-icon>Grej
+        </a><a id="tab-folk" href="#folk" class="flex-1 flex flex-col items-center gap-0.5 py-2 text-[#315C45] font-semibold text-[10px]">
+          <iconify-icon icon="lucide:users" class="text-xl"></iconify-icon>Folk
+        </a><a id="tab-mere" href="#mere" class="flex-1 flex flex-col items-center gap-0.5 py-2 text-[#536055]  text-[10px]">
+          <iconify-icon icon="lucide:more-horizontal" class="text-xl"></iconify-icon>Mere
+        </a></nav></div></body></html>

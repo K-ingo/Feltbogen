@@ -1,0 +1,193 @@
+<!DOCTYPE html><html lang="da"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feltbogen - Fovslet Skov</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cream: '#F9F5EB',
+            surface: '#DBE0D5',
+            'surface-tint': '#E5EEE6',
+            'text-primary': '#24362C',
+            'text-muted': '#536055',
+            accent: '#315C45',
+            'accent-text': '#F9F5EB',
+            'accent-border': '#A8BFAD',
+            danger: '#A02020',
+          },
+          fontFamily: {
+            fraunces: ['Fraunces', 'serif'],
+            inter: ['Inter', 'sans-serif'],
+          },
+          boxShadow: {
+            'soft-warm': 'rgba(60, 45, 20, 0.06) 0px 2px 5px 0px',
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body>
+  <div class="min-h-screen bg-cream flex font-inter text-text-primary" data-sd-id="1">
+    
+    <!-- Sidebar -->
+    <aside class="w-[240px] flex-shrink-0 border-r border-surface p-6 flex flex-col h-screen sticky top-0" data-sd-id="2">
+      <a href="#" id="nav-logo" class="mb-10 block" data-sd-id="3">
+        <h1 class="font-fraunces text-[26px] tracking-tight" data-sd-id="4">Feltbogen</h1>
+      </a>
+      
+      <nav class="space-y-1 flex-1" data-sd-id="5">
+        <a href="#" id="nav-hjem" class="flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-text-muted hover:bg-surface/50 transition-colors" data-sd-id="6">
+          <iconify-icon icon="lucide:home" class="text-lg"></iconify-icon>
+          <span data-sd-id="7">Hjem</span>
+        </a>
+        <a href="#" id="nav-ture" class="flex items-center gap-3 px-3 py-2.5 rounded-[10px] bg-surface-tint text-text-primary font-medium" data-sd-id="8">
+          <iconify-icon icon="lucide:mountain" class="text-lg"></iconify-icon>
+          <span data-sd-id="9">Ture</span>
+        </a>
+        <a href="#" id="nav-grej" class="flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-text-muted hover:bg-surface/50 transition-colors" data-sd-id="10">
+          <iconify-icon icon="lucide:backpack" class="text-lg"></iconify-icon>
+          <span data-sd-id="11">Grej</span>
+        </a>
+        <a href="#" id="nav-folk" class="flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-text-muted hover:bg-surface/50 transition-colors" data-sd-id="12">
+          <iconify-icon icon="lucide:users" class="text-lg"></iconify-icon>
+          <span data-sd-id="13">Folk</span>
+        </a>
+      </nav>
+
+      <div class="mt-auto" data-sd-id="14">
+        <a href="#" id="nav-mere" class="flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-text-muted hover:bg-surface/50 transition-colors" data-sd-id="15">
+          <iconify-icon icon="lucide:more-horizontal" class="text-lg"></iconify-icon>
+          <span data-sd-id="16">Mere</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto p-8 lg:p-12" data-sd-id="17">
+      <div class="max-w-[1000px] mx-auto" data-sd-id="18">
+        
+        <!-- Top Navigation -->
+        <div class="flex justify-between items-center mb-6" data-sd-id="19">
+          <a href="#" id="btn-tilbage" class="text-text-muted hover:text-text-primary flex items-center gap-1.5 text-sm transition-colors" data-sd-id="20">
+            <iconify-icon icon="lucide:chevron-left" class="text-base"></iconify-icon>
+            Tilbage
+          </a>
+          <button id="btn-trip-options" class="text-text-muted hover:text-text-primary p-1" data-sd-id="21">
+            <iconify-icon icon="lucide:more-horizontal" class="text-xl"></iconify-icon>
+          </button>
+        </div>
+
+        <!-- Hero Banner -->
+        <div class="relative h-48 rounded-[10px] bg-accent overflow-hidden p-8 flex flex-col justify-end shadow-sm mb-6" data-sd-id="22">
+          <!-- Subtle texture overlay simulation -->
+          <div class="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white via-transparent to-transparent pointer-events-none" data-sd-id="23"></div>
+          <div class="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:100%_12px] pointer-events-none" data-sd-id="24"></div>
+          
+          <div class="relative z-10" data-sd-id="25">
+            <h2 class="font-fraunces text-[32px] text-accent-text mb-1 leading-tight" data-sd-id="26">Fovslet Skov</h2>
+            <p class="text-accent-border text-sm" data-sd-id="27">27.–29. august · Fovslet Skov · 4 deltagere · bushcraft</p>
+          </div>
+        </div>
+
+        <!-- Action Row (Status & Primary CTA) -->
+        <div class="flex justify-between items-center mb-8" data-sd-id="28">
+          <div class="flex items-center gap-4" data-sd-id="29">
+            <div class="flex items-center gap-2 border border-surface bg-white rounded-full px-3 py-1 shadow-sm" data-sd-id="30">
+              <div class="w-2 h-2 rounded-full bg-accent" data-sd-id="31"></div>
+              <span class="text-sm font-medium text-text-primary" data-sd-id="32">Afsluttet</span>
+            </div>
+            <button id="btn-skift-status" class="text-sm text-text-muted hover:text-text-primary transition-colors py-1 px-2" data-sd-id="33">
+              Skift status
+            </button>
+          </div>
+          
+          <button id="cta-pak-af" class="bg-[#315C45] text-[#F9F5EB] rounded-[10px] h-[48px] px-[22px] font-medium shadow-soft-warm hover:bg-[#254634] transition-colors border border-[rgb(49,92,69)]" data-sd-id="34">
+            Se pak-af-tjek
+          </button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="flex gap-8 border-b border-surface mb-8 px-2" data-sd-id="35">
+          <button class="pb-3 border-b-2 border-accent text-text-primary font-medium text-sm" data-sd-id="36">
+            Overblik
+          </button>
+          <button class="pb-3 border-b-2 border-transparent text-text-muted hover:text-text-primary text-sm transition-colors" data-sd-id="37">
+            Pakning
+          </button>
+          <button class="pb-3 border-b-2 border-transparent text-text-muted hover:text-text-primary text-sm transition-colors" data-sd-id="38">
+            Deltagere 4
+          </button>
+        </div>
+
+        <!-- Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6" data-sd-id="39">
+          
+          <!-- Left Column: Summary & Stats -->
+          <div class="space-y-4" data-sd-id="40">
+            <!-- Stats Row -->
+            <div class="grid grid-cols-3 gap-4" data-sd-id="41">
+              <div class="bg-white border border-surface rounded-[10px] p-4 shadow-sm" data-sd-id="42">
+                <div class="text-[11px] uppercase tracking-wider text-text-muted mb-1 font-semibold" data-sd-id="43">Pakket</div>
+                <div class="text-lg" data-sd-id="44">—</div>
+              </div>
+              <div class="bg-white border border-surface rounded-[10px] p-4 shadow-sm" data-sd-id="45">
+                <div class="text-[11px] uppercase tracking-wider text-text-muted mb-1 font-semibold" data-sd-id="46">Vægt pr. person</div>
+                <div class="text-lg" data-sd-id="47">0 kg</div>
+              </div>
+              <div class="bg-white border border-surface rounded-[10px] p-4 shadow-sm" data-sd-id="48">
+                <div class="text-[11px] uppercase tracking-wider text-text-muted mb-1 font-semibold" data-sd-id="49">Deltagere</div>
+                <div class="text-lg" data-sd-id="50">4</div>
+              </div>
+            </div>
+
+            <!-- Info Rows -->
+            <button class="w-full flex justify-between items-center bg-white border border-surface rounded-[10px] p-5 shadow-sm text-left hover:bg-cream/50 transition-colors" data-sd-id="51">
+              <div data-sd-id="52">
+                <div class="text-[11px] uppercase tracking-wider text-text-muted mb-1 font-semibold" data-sd-id="53">Turparametre</div>
+                <div class="text-text-primary" data-sd-id="54">2 nætter · 4 pers · shelter · 1 km bæreafstand</div>
+              </div>
+              <iconify-icon icon="lucide:chevron-right" class="text-text-muted text-lg"></iconify-icon>
+            </button>
+
+            <button class="w-full flex justify-between items-center bg-white border border-surface rounded-[10px] p-5 shadow-sm text-left hover:bg-cream/50 transition-colors" data-sd-id="55">
+              <div data-sd-id="56">
+                <div class="text-[11px] uppercase tracking-wider text-text-muted mb-1 font-semibold" data-sd-id="57">Booking</div>
+                <div class="text-text-primary" data-sd-id="58">Booket</div>
+              </div>
+              <iconify-icon icon="lucide:chevron-right" class="text-text-muted text-lg"></iconify-icon>
+            </button>
+          </div>
+
+          <!-- Right Column: Warnings & Widgets -->
+          <div class="space-y-4" data-sd-id="59">
+            <!-- Warning Card -->
+            <div class="bg-white border border-surface rounded-[10px] p-5 shadow-sm" data-sd-id="60">
+              <div class="text-[11px] uppercase tracking-wider text-text-muted mb-3 font-semibold" data-sd-id="61">Advarsler (1)</div>
+              <h3 class="text-danger font-medium mb-1.5" data-sd-id="62">Jakob sover i hængekøje</h3>
+              <p class="text-sm text-text-muted leading-relaxed" data-sd-id="63">
+                Intet gear på turen hedder eller er tagget "hængekøje". Sæt tagget på det gear der dækker, eller tilføj det til listen. 
+                <a href="#" id="link-hvorfor" class="underline hover:text-text-primary decoration-surface hover:decoration-text-muted transition-colors" data-sd-id="64">hvorfor?</a>
+              </p>
+            </div>
+
+            <!-- Weather Card Placeholder -->
+            <button class="w-full flex justify-between items-center bg-white border border-surface rounded-[10px] p-5 shadow-sm text-left hover:bg-cream/50 transition-colors" data-sd-id="65">
+              <div class="text-[11px] uppercase tracking-wider text-text-muted font-semibold" data-sd-id="66">Vejrudsigt</div>
+              <iconify-icon icon="lucide:chevron-right" class="text-text-muted text-lg"></iconify-icon>
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </main>
+  </div>
+
+</body></html>

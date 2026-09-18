@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Feltbogen — Hjem (mobil)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; font-family: Inter, sans-serif; background: #F9F5EB; color: #24362C; }
+    .serif { font-family: Fraunces, serif; }
+    .phone { max-width: 390px; margin: 0 auto; min-height: 100vh; position: relative; padding-bottom: 72px; }
+  </style>
+</head>
+<body>
+<div class="phone">
+
+  <header class="px-5 pt-8 pb-4">
+    <p class="text-xs text-[#536055] uppercase tracking-wider font-semibold">Onsdag 9. sep</p>
+    <h1 class="serif text-[28px] leading-tight mt-1">Hej Emil</h1>
+  </header>
+
+  <section class="px-5 mb-5">
+    <div class="rounded-[12px] bg-[#315C45] text-[#F9F5EB] p-5 shadow-sm">
+      <p class="text-[11px] uppercase tracking-wider text-[#A8BFAD] font-semibold">Næste eventyr</p>
+      <h2 class="serif text-2xl mt-1">Fovslet Skov</h2>
+      <p class="text-sm text-[#A8BFAD] mt-1">27.–29. aug · Klar · 4 deltagere</p>
+      <div class="mt-4 flex gap-2">
+        <a id="cta-fortsaet-pakning" href="#pakning" class="flex-1 h-12 inline-flex items-center justify-center rounded-[10px] bg-[#F9F5EB] text-[#315C45] text-sm font-semibold">Fortsæt pakning</a>
+      </div>
+      <a id="cta-ny-tur-outline" href="#ny-tur" class="mt-2 w-full h-11 inline-flex items-center justify-center rounded-[10px] border border-[#A8BFAD]/50 text-sm text-[#F9F5EB]">+ Ny tur</a>
+    </div>
+  </section>
+
+  <section class="px-5 mb-5">
+    <h2 class="text-[11px] uppercase tracking-wider text-[#536055] font-semibold mb-2">Opmærksomhed</h2>
+    <a id="card-vedligehold" href="#vedligehold" class="block rounded-[12px] border border-[#FFF4E0] bg-[#FFF4E0]/50 px-4 py-3">
+      <p class="text-sm font-medium text-[#A06000]">Vedligehold (4)</p>
+      <p class="text-xs text-[#536055] mt-0.5">Grej der skal ses efter inden næste tur</p>
+    </a>
+  </section>
+
+  <section class="px-5 mb-6">
+    <div class="flex items-center justify-between mb-2">
+      <h2 class="text-[11px] uppercase tracking-wider text-[#536055] font-semibold">Seneste</h2>
+      <a id="link-se-mere" href="#mere-stats" class="text-xs text-[#315C45] font-medium">Se mere</a>
+    </div>
+    <div class="rounded-[12px] border border-[#315C45]/12 bg-white overflow-hidden text-sm">
+      <a id="row-oehaven" href="#oehaven" class="flex justify-between px-4 py-3 border-b border-[#315C45]/08">
+        <span>Øghaven uge 32</span><span class="text-xs text-[#536055]">Afsluttet</span>
+      </a>
+      <a id="row-emil-zindy" href="#emil" class="flex justify-between px-4 py-3">
+        <span>Emil og Zindy</span><span class="text-xs text-[#536055]">Kladde</span>
+      </a>
+    </div>
+  </section>
+<nav class="fixed bottom-0 inset-x-0 bg-[#F9F5EB]/95 border-t border-[#315C45]/12 backdrop-blur flex safe-pb z-20"><a id="tab-hjem" href="#hjem" class="flex-1 flex flex-col items-center gap-0.5 py-2 text-[#315C45] font-semibold text-[10px]">
+          <iconify-icon icon="lucide:home" class="text-xl"></iconify-icon>Hjem
+        </a><a id="tab-ture" href="#ture" class="flex-1 flex flex-col items-center gap-0.5 py-2 text-[#536055]  text-[10px]">
+          <iconify-icon icon="lucide:mountain" class="text-xl"></iconify-icon>Ture
+        </a><a id="tab-grej" href="#grej" class="flex-1 flex flex-col items-center gap-0.5 py-2 text-[#536055]  text-[10px]">
+          <iconify-icon icon="lucide:backpack" class="text-xl"></iconify-icon>Grej
+        </a><a id="tab-folk" href="#folk" class="flex-1 flex flex-col items-center gap-0.5 py-2 text-[#536055]  text-[10px]">
+          <iconify-icon icon="lucide:users" class="text-xl"></iconify-icon>Folk
+        </a><a id="tab-mere" href="#mere" class="flex-1 flex flex-col items-center gap-0.5 py-2 text-[#536055]  text-[10px]">
+          <iconify-icon icon="lucide:more-horizontal" class="text-xl"></iconify-icon>Mere
+        </a></nav></div></body></html>

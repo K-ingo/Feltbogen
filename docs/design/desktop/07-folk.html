@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feltbogen — Folk</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; font-family: Inter, sans-serif; background: #F9F5EB; color: #24362C; }
+    .serif { font-family: Fraunces, serif; }
+  </style>
+</head>
+<body>
+  <div class="min-h-screen flex bg-[#F9F5EB]">
+    <aside class="w-52 shrink-0 border-r border-[#315C45]/15 px-4 py-6">
+      <div class="serif text-lg mb-8 px-2">Feltbogen</div>
+      <nav class="space-y-1 text-sm">
+        <a id="nav-hjem" href="#hjem" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055]"><iconify-icon icon="lucide:home"></iconify-icon> Hjem</a>
+        <a id="nav-ture" href="#ture" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055]"><iconify-icon icon="lucide:mountain"></iconify-icon> Ture</a>
+        <a id="nav-grej" href="#grej" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055]"><iconify-icon icon="lucide:backpack"></iconify-icon> Grej</a>
+        <a id="nav-folk" href="#folk" class="flex items-center gap-2 px-3 py-2 rounded-full bg-[#E5EEE6] text-[#315C45] font-medium"><iconify-icon icon="lucide:users"></iconify-icon> Folk</a>
+        <div class="border-t border-[#315C45]/10 my-3"></div>
+        <a id="nav-mere" href="#mere" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055]"><iconify-icon icon="lucide:more-horizontal"></iconify-icon> Mere</a>
+      </nav>
+    </aside>
+
+    <main class="flex-1 px-10 py-8 max-w-3xl">
+      <h1 class="serif text-4xl">Folk</h1>
+      <p class="text-sm text-[#536055] mt-1">0 personer</p>
+
+      <section class="mt-6 rounded-[12px] border border-[#315C45]/12 bg-white/70 p-5">
+        <div class="flex items-start gap-3">
+          <div class="w-10 h-10 rounded-full bg-[#E5EEE6] flex items-center justify-center text-[#315C45]"><iconify-icon icon="lucide:users" class="text-lg"></iconify-icon></div>
+          <div>
+            <h2 class="text-sm font-semibold">Dit turhold</h2>
+            <p class="text-xs text-[#536055] mt-1 leading-relaxed">Se hvem du oftest tager afsted med, og hvad I plejer at have med. Navne kan også skrives direkte på en tur.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="mt-8">
+        <h2 class="text-[11px] uppercase tracking-wider text-[#536055] mb-3">Personer</h2>
+        <div class="flex gap-2 items-start">
+          <div class="flex-1">
+            <label for="person-name" class="sr-only">Navn</label>
+            <input id="person-name" type="text" placeholder="Navn" class="w-full h-12 px-4 rounded-xl border border-[#315C45]/20 bg-white text-sm focus:outline-none focus:ring-1 focus:ring-[#315C45]/35">
+            <p class="mt-1.5 text-[11px] text-[#536055]">Skriv et navn for at tilføje</p>
+          </div>
+          <a id="btn-add-person" href="#tilfoej" class="h-12 px-5 inline-flex items-center rounded-[10px] border border-[#315C45]/20 text-[#536055]/50 text-sm font-medium cursor-not-allowed" aria-disabled="true" title="Skriv et navn først">+ Tilføj</a>
+        </div>
+      </section>
+
+      <section class="mt-8">
+        <h2 class="text-[11px] uppercase tracking-wider text-[#536055] mb-2">Foreslået fra dine ture</h2>
+        <p class="text-xs text-[#536055] mb-3">Hurtig tilføjelse — opretter personen i din Feltbog.</p>
+        <div class="flex flex-wrap gap-2">
+          <a id="quick-emil" href="#emil" class="px-3 py-1.5 rounded-full text-xs font-medium border border-[#315C45]/25 text-[#315C45] hover:bg-[#E5EEE6]/50">+ Emil</a>
+          <a id="quick-jakob" href="#jakob" class="px-3 py-1.5 rounded-full text-xs font-medium border border-[#315C45]/25 text-[#315C45] hover:bg-[#E5EEE6]/50">+ Jakob</a>
+          <a id="quick-mikkel" href="#mikkel" class="px-3 py-1.5 rounded-full text-xs font-medium border border-[#315C45]/25 text-[#315C45] hover:bg-[#E5EEE6]/50">+ Mikkel</a>
+          <a id="quick-test" href="#test" class="px-3 py-1.5 rounded-full text-xs font-medium border border-[#315C45]/25 text-[#315C45] hover:bg-[#E5EEE6]/50">+ Test</a>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
