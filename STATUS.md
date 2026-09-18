@@ -1,6 +1,6 @@
 # STATUS
 
-*Sidst opdateret: 11. september 2026. Udgangspunkt: `main` @ `062257f`.*
+*Sidst opdateret: 18. september 2026. Udgangspunkt: `main` @ `321d0af`.*
 
 Kort svar på "hvor står vi nu?". Den skal kunne læses på to minutter og
 opdateres, hver gang noget bliver færdigt eller blokeret.
@@ -26,17 +26,24 @@ kunne koste data, er begge lukket: sletninger slår igennem på tværs af enhede
 (gravsten), og et login med en anden konto stopper frem for at blande. Det, der
 står tilbage, er arbejde vi selv vælger — ikke noget, der spærrer.
 
+Det næste stykke arbejde er ikke funktionalitet, men udseende. Designsystemet
+er låst og ligger nu i repoet sammen med en tegning af hver eneste skærm. Én
+af tyve er bygget.
+
 ---
 
 ## Grønt lys
 
-Kørt på grenen `claude/laeringssloejfen` den 11. september 2026:
+Kørt på grenen `claude/design-fundament` den 18. september 2026:
 
 | Kommando | Resultat |
 |---|---|
 | `npm run lint` | Bestået, ingen fejl |
 | `npm test` | 59 testfiler, 1.306 tests, alle grønne |
-| `npm run build` | Bestået. Startchunk 463,31 kB / 146,34 kB gzip |
+| `npm run build` | Bestået |
+
+På `claude/hjem-desktop-handoff` (PR #62) er tallet 60 testfiler og 1.326
+tests — den gren lægger `DashboardSide.test.tsx` oveni.
 
 CI kører de samme tre på alle pull requests, plus et tjek for at et privat
 Railway-domæne ikke er havnet i bundlen.
@@ -72,6 +79,42 @@ på den enhed, de blev lavet på. Ingen fejl på skærmen.
 `./scripts/tjek-pocketbase.sh <appens adresse>` er værd at køre efter en
 opsætningsændring: den kalder som en helt uindlogget fremmed og siger fra, hvis
 en samling er åben for alle. Den skriver ingenting.
+
+## Designsystemet er låst — og ligger nu i repoet
+
+`docs/design/` kom ind med PR #63 den 18. september. Den indeholder det, der
+før kun lå bag et login: tokens, CTA-regler og **én HTML-reference pr. skærm**
+— tolv til PC og otte til telefon.
+
+Det løser et konkret problem. Handoff-siderne i Notion peger på previews på
+`superdesign.dev`, og det domæne er blokeret af netværkspolitikken i
+agent-miljøer. Hjem på PC blev derfor implementeret uden at nogen kunne se,
+hvad den skulle ligne. `docs/design/README.md` siger det nu selv: *hent ikke
+Superdesign, brug filerne her*. Reglen står også i `AGENTS.md` under
+"Design", så den ikke skal genopdages.
+
+**Notion er token-sandheden, `docs/design/` er den visuelle.** De to skal sige
+det samme; gør de ikke, er det Notion der gælder, og så skal filerne rettes.
+
+Alle elleve farver i `docs/design/TOKENS.md` stemmer nu med `:root` i
+`src/index.css`. Sidebaggrunden var den sidste, der manglede.
+
+**Der ligger tyve handoffs i kø.** Hjem på PC er den eneste, der er bygget,
+og den var udtrykkeligt tænkt som en prøve på formatet. Resten — Ture,
+Tur-detalje, Pakning, Grej, Grejsæt, Folk, Mere, Steder & Statistik,
+Indstillinger og de to opret-ark, plus otte mobilskærme — er ikke rørt.
+Rækkefølgen er ikke besluttet.
+
+Tre regler fra `TOKENS.md` gælder bredere end den enkelte skærm og er ikke
+efterprøvet på det, der allerede står:
+
+- Maks **én** fyldt accent-knap pr. skærmbillede.
+- Et opret-ark må ikke oprette noget, før man trykker Opret, og den primære
+  knap er slået fra, indtil navnet er gyldigt.
+- Det hedder **Afsluttet**, ikke "arkiveret". (Tjekket: ordet "arkiveret"
+  findes ikke i `src/`. Den er allerede opfyldt.)
+
+---
 
 ## Åbne arbejdsområder
 
@@ -109,22 +152,26 @@ I den rækkefølge, de sandsynligvis er værd at tage.
    ændret viewport. (`UI_REVIEW.md` P1)
 8. **Eksterne fetch-kald mangler fælles timeout.** En langsom vejr- eller
    adresseudbyder kan holde en UI-handling åben længe. (`CODE_REVIEW.md` §5)
+9. **De nitten resterende skærme er ikke holdt op mod designet.** Kun Hjem på
+   PC er gennemgået mod sin HTML-reference. De øvrige kan afvige fra de låste
+   tokens og fra reglen om én fyldt knap, uden at nogen har set efter. Det er
+   ikke en fejl, der er meldt — det er en gennemgang, der ikke er foretaget.
 
 ### Funktioner, der venter
 
-9. **Rute som eget domæne.** Nu efter dagen og ikke før — rækkefølgen er
-   byttet om, se `PLAN.md` §9 trin 6. Åbner for kilometer, højdemeter og
-   kortfanen på delte ture. Dagen får et `rute_uid`, og det er additivt.
-10. **Badges og notifikationer.** I fundamentet §9, ikke bygget.
-11. **Tidevand ved kystture.** Kræver en DMI-nøgle. (`IDEER.md` §5.4)
-12. **Onboarding og adaptiv hjælpegrad.** Bevidst udskudt — vi bygger til
+10. **Rute som eget domæne.** Nu efter dagen og ikke før — rækkefølgen er
+    byttet om, se `PLAN.md` §9 trin 6. Åbner for kilometer, højdemeter og
+    kortfanen på delte ture. Dagen får et `rute_uid`, og det er additivt.
+11. **Badges og notifikationer.** I fundamentet §9, ikke bygget.
+12. **Tidevand ved kystture.** Kræver en DMI-nøgle. (`IDEER.md` §5.4)
+13. **Onboarding og adaptiv hjælpegrad.** Bevidst udskudt — vi bygger til
     ejeren først. Bliver relevant, hvis appen skal ud til andre.
-13. **Virtualisering af lange gearlister.** Først værd at bygge, når en liste
+14. **Virtualisering af lange gearlister.** Først værd at bygge, når en liste
     er lang nok til at hakke. Afhænger af et rigtigt inventar.
 
 ### Kalibrering
 
-14. **Motorens tærskler er sat efter mavefornemmelse.** Hvornår vægten er
+15. **Motorens tærskler er sat efter mavefornemmelse.** Hvornår vægten er
     værd at nævne, hvor godt et grejsæt skal matche, hvor mange ture der skal
     til, før noget regnes som ubrugt. De er nemme at justere — men kun
     meningsfuldt, når de har været brugt på rigtige data over en sæson.
@@ -149,12 +196,29 @@ står i `PLAN.md` §4 og §9.
 
 ## Grene
 
-**Ingen åbne pull requests.**
+**To åbne pull requests:**
 
-15 fjerngrene er ikke merged ind i `main`. De fleste er formodentlig
-forældede rester fra tidligere sessioner, men ingen har gennemgået dem.
-Den største er `claude/code-review-g3oqnn` med 55 commits. Oprydningen er
-ikke foretaget, og ingen gren er slettet — det kræver ejerens accept.
+| PR | Gren | Hvad den gør |
+|---|---|---|
+| [#62](https://github.com/K-ingo/Feltbogen/pull/62) | `claude/hjem-desktop-handoff` | Hjem på PC: én fyldt knap, tallene foldet væk |
+| [#64](https://github.com/K-ingo/Feltbogen/pull/64) | `claude/design-fundament` | `--bg` rettet til det låste token, designreglerne ind i `AGENTS.md` |
+
+#64 er værd at tage først: de to andre bygger videre på tokenet.
+
+Én beslutning står åben på #62: **`Seneste minder` står over folden**, men
+findes ikke i designets Hjem-skærm. Det kan betyde, at afsnittet er fravalgt
+— eller bare at det ikke er tegnet. Det er en produktbeslutning, ikke en
+oprydning, så den er ikke truffet.
+
+17 fjerngrene er ikke merged ind i `main`, heraf de to ovenfor. De øvrige
+femten er formodentlig forældede rester fra tidligere sessioner, men ingen
+har gennemgået dem. Den største er `claude/code-review-g3oqnn` med 55
+commits. Oprydningen er ikke foretaget, og ingen gren er slettet — det
+kræver ejerens accept.
+
+Sletningen er i øvrigt forsøgt: `git push origin --delete` bliver afvist med
+en 403 af den egress-proxy, agent-miljøet kører bag. Grenene skal slettes
+fra GitHubs egen brugerflade.
 
 ---
 
