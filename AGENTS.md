@@ -125,6 +125,33 @@ afvigelse gør koden inkonsistent:
   `POCKETBASE.md` opdateres i samme ombæring, og `src/sync.ts` (`tilPb`) skal
   have det med — `sync.test.ts` falder, hvis et felt bliver glemt.
 
+## Design
+
+Designsystemet er **låst**. Det ligger to steder, der skal sige det samme:
+`docs/design/` i repoet og Notion (`Feltbogen — Design System`, godkendt
+9. sep 2026). Notion er token-sandheden, `docs/design/` er den visuelle.
+
+- **Hent aldrig `superdesign.dev`.** Netværkspolitikken i agent-miljøer
+  blokerer domænet, og et kald derud ender i en 403 uanset hvad. Hele
+  designpakken ligger derfor lokalt under `docs/design/`. Det står også i
+  `docs/design/README.md`.
+- **Læs `docs/design/TOKENS.md` før du ændrer UI.** Farverne må ikke
+  opfindes. `src/index.css` er den tekniske udgave af den samme tabel, og de
+  to skal stemme.
+- **Én skærm ad gangen.** Hver skærm har en handoff-side i Notion
+  (acceptkriterierne) og en HTML-fil i `docs/design/desktop/` eller
+  `docs/design/mobile/` (det visuelle). Begge læses, før der kodes.
+- **Maks én fyldt accent-knap pr. skærmbillede.** Næste prioritet er outline,
+  resten er ghost/tekst. Tekst på fyldt accent er creme (`--accent-tekst`),
+  aldrig hvid.
+- **Opret-ark opretter ikke noget, før man trykker Opret.** Annuller skal
+  findes, og den primære knap er slået fra, indtil navnet er gyldigt.
+- **Det hedder "Afsluttet", ikke "arkiveret".** Og synkroniseringsstatus skal
+  være ærlig — aldrig grøn, hvis noget fejlede.
+
+HTML-filerne er Tailwind-udkast, ikke produktionskode. Kopiér hierarki,
+tokens og knap-regler — ikke klassenavne.
+
 ## Tests
 
 `npm test` kører uden browser og uden server: Dexie får et IndexedDB af
@@ -150,6 +177,7 @@ skriv det i pull requesten frem for at lade det stå uprøvet.
 | [`IDEER.md`](./IDEER.md) | Ideer til det videre arbejde, nummereret så de kan refereres |
 | [`CODE_REVIEW.md`](./CODE_REVIEW.md) | Seneste kodegennemgang, rettelserne og de kendte risici |
 | [`UI_REVIEW.md`](./UI_REVIEW.md) | Seneste visuelle review, designprincipper og anbefalinger |
+| [`docs/design/`](./docs/design/) | Det låste designsystem: tokens, CTA-regler og en HTML-reference pr. skærm. **Læs `TOKENS.md` før UI-ændringer** |
 
 Læs `PLAN.md` §8 og §9 før du foreslår ny funktionalitet — mange oplagte
 ideer er allerede bygget eller bevidst fravalgt, og begrundelsen står der.
