@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Feltbogen — Mere (mobil)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; font-family: Inter, sans-serif; background: #F9F5EB; color: #24362C; }
+    .serif { font-family: Fraunces, serif; }
+    .phone { max-width: 390px; margin: 0 auto; min-height: 100vh; position: relative; padding-bottom: 72px; }
+  </style>
+</head>
+<body>
+<div class="phone">
+
+  <header class="px-5 pt-8 pb-4">
+    <h1 class="serif text-[28px]">Mere</h1>
+  </header>
+
+  <section class="px-5 mb-6">
+    <h2 class="text-[11px] uppercase tracking-wider text-[#536055] font-semibold mb-2">Din friluftshistorik</h2>
+    <div class="rounded-[12px] border border-[#315C45]/12 bg-white overflow-hidden">
+      <a id="row-steder" href="#steder" class="flex items-center justify-between px-4 py-3.5 border-b border-[#315C45]/08">
+        <div>
+          <p class="text-sm font-medium">Steder</p>
+          <p class="text-xs text-[#536055]">3 fra ture · 0 favoritter</p>
+        </div>
+        <iconify-icon icon="lucide:chevron-right" class="text-[#536055]"></iconify-icon>
+      </a>
+      <a id="row-statistik" href="#statistik" class="flex items-center justify-between px-4 py-3.5">
+        <div>
+          <p class="text-sm font-medium">Statistik</p>
+          <p class="text-xs text-[#536055]">4 ture · 12 nætter</p>
+        </div>
+        <iconify-icon icon="lucide:chevron-right" class="text-[#536055]"></iconify-icon>
+      </a>
+    </div>
+  </section>
+
+  <section class="px-5 mb-6">
+    <h2 class="text-[11px] uppercase tracking-wider text-[#536055] font-semibold mb-2">Appen</h2>
+    <div class="rounded-[12px] border border-[#315C45]/12 bg-white overflow-hidden">
+      <a id="row-sync" href="#sync" class="flex items-center justify-between px-4 py-3.5 border-b border-[#315C45]/08">
+        <div>
+          <p class="text-sm font-medium">Synkronisering</p>
+          <p class="text-xs text-[#A06000] flex items-center gap-1.5 mt-0.5"><span class="w-1.5 h-1.5 rounded-full bg-[#A06000]"></span> 1 ting kunne ikke synkes</p>
+        </div>
+        <iconify-icon icon="lucide:chevron-right" class="text-[#536055]"></iconify-icon>
+      </a>
+      <a id="row-skabeloner" href="#skabeloner" class="flex items-center justify-between px-4 py-3.5 border-b border-[#315C45]/08">
+        <div>
+          <p class="text-sm font-medium">Skabeloner</p>
+          <p class="text-xs text-[#536055]">Afgangs-tjek og pak-af-tjek</p>
+        </div>
+        <iconify-icon icon="lucide:chevron-right" class="text-[#536055]"></iconify-icon>
+      </a>
+      <a id="row-backup" href="#backup" class="flex items-center justify-between px-4 py-3.5 border-b border-[#315C45]/08">
+        <div>
+          <p class="text-sm font-medium">Backup, eksport og import</p>
+          <p class="text-xs text-[#536055]">Gem en kopi, eller læs en ind</p>
+        </div>
+        <iconify-icon icon="lucide:chevron-right" class="text-[#536055]"></iconify-icon>
+      </a>
+      <a id="row-indstillinger" href="#indstillinger" class="flex items-center justify-between px-4 py-3.5 border-b border-[#315C45]/08">
+        <div>
+          <p class="text-sm font-medium">Indstillinger</p>
+          <p class="text-xs text-[#536055]">Konto, krop og app</p>
+        </div>
+        <iconify-icon icon="lucide:chevron-right" class="text-[#536055]"></iconify-icon>
+      </a>
+      <a id="row-hjaelp" href="#hjaelp" class="flex items-center justify-between px-4 py-3.5">
+        <div>
+          <p class="text-sm font-medium">Hjælp og om Feltbogen</p>
+          <p class="text-xs text-[#536055]">Rundvisning, version og data</p>
+        </div>
+        <iconify-icon icon="lucide:chevron-right" class="text-[#536055]"></iconify-icon>
+      </a>
+    </div>
+  </section>
+<nav class="fixed bottom-0 inset-x-0 bg-[#F9F5EB]/95 border-t border-[#315C45]/12 backdrop-blur flex z-20"><a id="tab-hjem" href="#hjem" class="flex-1 flex flex-col items-center gap-0.5 py-2 text-[#536055]  text-[10px]">
+          <iconify-icon icon="lucide:home" class="text-xl"></iconify-icon>Hjem
+        </a><a id="tab-ture" href="#ture" class="flex-1 flex flex-col items-center gap-0.5 py-2 text-[#536055]  text-[10px]">
+          <iconify-icon icon="lucide:mountain" class="text-xl"></iconify-icon>Ture
+        </a><a id="tab-grej" href="#grej" class="flex-1 flex flex-col items-center gap-0.5 py-2 text-[#536055]  text-[10px]">
+          <iconify-icon icon="lucide:backpack" class="text-xl"></iconify-icon>Grej
+        </a><a id="tab-folk" href="#folk" class="flex-1 flex flex-col items-center gap-0.5 py-2 text-[#536055]  text-[10px]">
+          <iconify-icon icon="lucide:users" class="text-xl"></iconify-icon>Folk
+        </a><a id="tab-mere" href="#mere" class="flex-1 flex flex-col items-center gap-0.5 py-2 text-[#315C45] font-semibold text-[10px]">
+          <iconify-icon icon="lucide:more-horizontal" class="text-xl"></iconify-icon>Mere
+        </a></nav></div></body></html>

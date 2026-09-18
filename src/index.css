@@ -16,7 +16,11 @@
 
   --succes: #4a7040;
 
-  --bg: #f6f4ee;
+  /* Sidebaggrunden er creme og står i docs/design/TOKENS.md. Den var
+     #f6f4ee indtil designsystemet blev låst; forskellen er lille, men
+     den er den samme creme som --accent-tekst, og så hænger fyldt knap
+     og side sammen. Ændres kun sammen med TOKENS.md. */
+  --bg: #f9f5eb;
   --bg-forhoejet: #fffdf8;
   --bg-topbar: #eeeee5;
   --tekst: #24362c;

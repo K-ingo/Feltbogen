@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feltbogen — Mere</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; font-family: Inter, sans-serif; background: #F9F5EB; color: #24362C; }
+    .serif { font-family: Fraunces, serif; }
+  </style>
+</head>
+<body>
+  <div class="min-h-screen flex bg-[#F9F5EB]">
+    <aside class="w-52 shrink-0 border-r border-[#315C45]/15 px-4 py-6">
+      <div class="serif text-lg mb-8 px-2">Feltbogen</div>
+      <nav class="space-y-1 text-sm">
+        <a id="nav-hjem" href="#hjem" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055]"><iconify-icon icon="lucide:home"></iconify-icon> Hjem</a>
+        <a id="nav-ture" href="#ture" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055]"><iconify-icon icon="lucide:mountain"></iconify-icon> Ture</a>
+        <a id="nav-grej" href="#grej" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055]"><iconify-icon icon="lucide:backpack"></iconify-icon> Grej</a>
+        <a id="nav-folk" href="#folk" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055]"><iconify-icon icon="lucide:users"></iconify-icon> Folk</a>
+        <div class="border-t border-[#315C45]/10 my-3"></div>
+        <a id="nav-mere" href="#mere" class="flex items-center gap-2 px-3 py-2 rounded-full bg-[#E5EEE6] text-[#315C45] font-medium"><iconify-icon icon="lucide:more-horizontal"></iconify-icon> Mere</a>
+      </nav>
+    </aside>
+
+    <main class="flex-1 px-10 py-8 max-w-2xl">
+      <h1 class="serif text-4xl mb-8">Mere</h1>
+
+      <section class="mb-8">
+        <h2 class="text-[11px] uppercase tracking-wider text-[#536055] mb-3">Din friluftshistorik</h2>
+        <div class="rounded-[12px] border border-[#315C45]/12 bg-white overflow-hidden">
+          <a id="row-steder" href="#steder" class="flex items-center justify-between px-4 py-3.5 border-b border-[#315C45]/08 hover:bg-[#F9F5EB]">
+            <div>
+              <p class="text-sm font-medium">Steder</p>
+              <p class="text-xs text-[#536055]">0 steder du kommer tilbage til</p>
+            </div>
+            <iconify-icon icon="lucide:chevron-right" class="text-[#536055]"></iconify-icon>
+          </a>
+          <a id="row-statistik" href="#statistik" class="flex items-center justify-between px-4 py-3.5 hover:bg-[#F9F5EB]">
+            <div>
+              <p class="text-sm font-medium">Statistik</p>
+              <p class="text-xs text-[#536055]">4 ture · 4 ting talt op</p>
+            </div>
+            <iconify-icon icon="lucide:chevron-right" class="text-[#536055]"></iconify-icon>
+          </a>
+        </div>
+      </section>
+
+      <section>
+        <h2 class="text-[11px] uppercase tracking-wider text-[#536055] mb-3">Appen</h2>
+        <div class="rounded-[12px] border border-[#315C45]/12 bg-white overflow-hidden">
+          <a id="row-sync" href="#sync" class="flex items-center justify-between px-4 py-3.5 border-b border-[#315C45]/08 hover:bg-[#F9F5EB]">
+            <div>
+              <p class="text-sm font-medium">Synkronisering</p>
+              <p class="text-xs text-[#A06000] flex items-center gap-1.5 mt-0.5"><span class="w-1.5 h-1.5 rounded-full bg-[#A06000]"></span> 1 ting kunne ikke synkes</p>
+            </div>
+            <iconify-icon icon="lucide:chevron-right" class="text-[#536055]"></iconify-icon>
+          </a>
+          <a id="row-skabeloner" href="#skabeloner" class="flex items-center justify-between px-4 py-3.5 border-b border-[#315C45]/08 hover:bg-[#F9F5EB]">
+            <div>
+              <p class="text-sm font-medium">Skabeloner</p>
+              <p class="text-xs text-[#536055]">Afgangs-tjek og pak-af-tjek</p>
+            </div>
+            <iconify-icon icon="lucide:chevron-right" class="text-[#536055]"></iconify-icon>
+          </a>
+          <a id="row-backup" href="#backup" class="flex items-center justify-between px-4 py-3.5 border-b border-[#315C45]/08 hover:bg-[#F9F5EB]">
+            <div>
+              <p class="text-sm font-medium">Backup, eksport og import</p>
+              <p class="text-xs text-[#536055]">Gem en kopi, eller læs en ind</p>
+            </div>
+            <iconify-icon icon="lucide:chevron-right" class="text-[#536055]"></iconify-icon>
+          </a>
+          <a id="row-indstillinger" href="#indstillinger" class="flex items-center justify-between px-4 py-3.5 border-b border-[#315C45]/08 hover:bg-[#F9F5EB]">
+            <div>
+              <p class="text-sm font-medium">Indstillinger</p>
+              <p class="text-xs text-[#536055]">Konto, krop og app-indstillinger</p>
+            </div>
+            <iconify-icon icon="lucide:chevron-right" class="text-[#536055]"></iconify-icon>
+          </a>
+          <a id="row-hjaelp" href="#hjaelp" class="flex items-center justify-between px-4 py-3.5 hover:bg-[#F9F5EB]">
+            <div>
+              <p class="text-sm font-medium">Hjælp og om Feltbogen</p>
+              <p class="text-xs text-[#536055]">Rundvisning, version og data</p>
+            </div>
+            <iconify-icon icon="lucide:chevron-right" class="text-[#536055]"></iconify-icon>
+          </a>
+        </div>
+      </section>
+
+      <p class="mt-4 text-xs text-[#536055]">Sync-rækken lyver ikke: viser fejl når kø fejler — ikke “Alt er sendt op”.</p>
+    </main>
+  </div>
+</body>
+</html>

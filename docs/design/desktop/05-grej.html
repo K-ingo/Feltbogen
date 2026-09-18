@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feltbogen — Grej</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; font-family: Inter, sans-serif; background: #F9F5EB; color: #24362C; }
+    .serif { font-family: Fraunces, serif; }
+    .tab-active { border-bottom: 2px solid #315C45; color: #315C45; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="min-h-screen flex bg-[#F9F5EB]">
+    <aside class="w-52 shrink-0 border-r border-[#315C45]/15 px-4 py-6 flex flex-col">
+      <div class="serif text-lg mb-8 px-2">Feltbogen</div>
+      <nav class="space-y-1 text-sm">
+        <a id="nav-hjem" href="#hjem" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055] hover:bg-[#E5EEE6]/60"><iconify-icon icon="lucide:home"></iconify-icon> Hjem</a>
+        <a id="nav-ture" href="#ture" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055] hover:bg-[#E5EEE6]/60"><iconify-icon icon="lucide:mountain"></iconify-icon> Ture</a>
+        <a id="nav-grej" href="#grej" class="flex items-center gap-2 px-3 py-2 rounded-full bg-[#E5EEE6] text-[#315C45] font-medium"><iconify-icon icon="lucide:backpack"></iconify-icon> Grej</a>
+        <a id="nav-folk" href="#folk" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055] hover:bg-[#E5EEE6]/60"><iconify-icon icon="lucide:users"></iconify-icon> Folk</a>
+        <div class="border-t border-[#315C45]/10 my-3"></div>
+        <a id="nav-mere" href="#mere" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055]"><iconify-icon icon="lucide:more-horizontal"></iconify-icon> Mere</a>
+      </nav>
+    </aside>
+
+    <main class="flex-1 px-10 py-8 max-w-5xl">
+      <header class="flex items-start justify-between mb-6">
+        <div>
+          <h1 class="serif text-4xl text-[#24362C]">Grej</h1>
+          <p class="text-sm text-[#536055] mt-1">4 ting · 13,1 kg</p>
+        </div>
+        <a id="cta-add-gear" href="#tilfoej-grej" class="inline-flex items-center h-12 px-[22px] rounded-[10px] bg-[#315C45] text-[#F9F5EB] text-sm font-medium shadow-sm">
+          <iconify-icon icon="lucide:plus" class="mr-2"></iconify-icon> Tilføj grej
+        </a>
+      </header>
+
+      <a id="grejsaet-card" href="#grejsaet" class="block mb-6 rounded-[10px] border border-[#315C45]/20 bg-white/70 px-5 py-4 hover:bg-[#E5EEE6]/40 transition-colors">
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <p class="text-sm font-semibold text-[#24362C]">Grejsæt</p>
+            <p class="text-xs text-[#536055] mt-0.5">Saml grej i sæt, så en hel pakning kan vælges på én gang</p>
+          </div>
+          <span class="text-xs font-medium text-[#315C45] border border-[#315C45]/30 rounded-[10px] px-3 py-1.5">Åbn</span>
+        </div>
+      </a>
+
+      <div class="mb-4">
+        <label class="sr-only" for="search-grej">Søg grej</label>
+        <input id="search-grej" type="search" placeholder="Søg grej eller tags…" class="w-full h-11 px-4 rounded-xl border border-[#315C45]/15 bg-white text-sm placeholder:text-[#536055]/50 focus:outline-none focus:ring-1 focus:ring-[#315C45]/30">
+      </div>
+
+      <nav class="flex gap-1 border-b border-[#315C45]/10 mb-6 overflow-x-auto text-sm">
+        <a id="tab-ejer" href="#ejer" class="px-4 py-3 tab-active whitespace-nowrap">Ejer (4)</a>
+        <a id="tab-indkoeb" href="#indkoeb" class="px-4 py-3 text-[#536055] whitespace-nowrap">Indkøb (0)</a>
+        <a id="tab-solgt" href="#solgt" class="px-4 py-3 text-[#536055] whitespace-nowrap">Solgt (0)</a>
+        <a id="tab-laan" href="#laan" class="px-4 py-3 text-[#536055] whitespace-nowrap">Lån (0)</a>
+        <a id="tab-vedligehold" href="#vedligehold" class="px-4 py-3 text-[#536055] whitespace-nowrap flex items-center gap-2">
+          Vedligehold
+          <span class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-[#FFF4E0] text-[#A06000] text-[11px] font-semibold">(4)</span>
+        </a>
+      </nav>
+
+      <div class="rounded-[10px] border border-[#315C45]/10 bg-white overflow-hidden">
+        <div class="grid grid-cols-12 gap-2 px-4 py-2 text-[11px] uppercase tracking-wider text-[#536055] border-b border-[#315C45]/10">
+          <div class="col-span-4">Navn</div>
+          <div class="col-span-2">Grupper</div>
+          <div class="col-span-2">Vægt</div>
+          <div class="col-span-2">Pris</div>
+          <div class="col-span-2">Sidst brugt</div>
+        </div>
+        <a id="row-liggeunderlag" href="#item-1" class="grid grid-cols-12 gap-2 px-4 py-3 text-sm border-b border-[#315C45]/08 hover:bg-[#F9F5EB] items-center">
+          <div class="col-span-4 font-medium flex items-center gap-2">test ligge underlag <span class="text-[10px] font-semibold uppercase tracking-wide bg-[#FFF4E0] text-[#A06000] px-1.5 py-0.5 rounded">Pas på</span></div>
+          <div class="col-span-2 text-[#536055]">—</div>
+          <div class="col-span-2 text-[#536055]">575 g</div>
+          <div class="col-span-2 text-[#536055]">1.000 kr</div>
+          <div class="col-span-2 text-[#536055]">aldrig</div>
+        </a>
+        <a id="row-sovepose" href="#item-2" class="grid grid-cols-12 gap-2 px-4 py-3 text-sm border-b border-[#315C45]/08 hover:bg-[#F9F5EB] items-center">
+          <div class="col-span-4 font-medium flex items-center gap-2">test sovepose <span class="text-[10px] font-semibold uppercase tracking-wide bg-[#FFF4E0] text-[#A06000] px-1.5 py-0.5 rounded">Pas på</span></div>
+          <div class="col-span-2 text-[#536055]">—</div>
+          <div class="col-span-2 text-[#536055]">1.500 g</div>
+          <div class="col-span-2 text-[#536055]">1.000 kr</div>
+          <div class="col-span-2 text-[#536055]">aldrig</div>
+        </a>
+        <a id="row-taske" href="#item-3" class="grid grid-cols-12 gap-2 px-4 py-3 text-sm border-b border-[#315C45]/08 hover:bg-[#F9F5EB] items-center">
+          <div class="col-span-4 font-medium">test taske</div>
+          <div class="col-span-2 text-[#536055]">—</div>
+          <div class="col-span-2 text-[#536055]">1.000 g</div>
+          <div class="col-span-2 text-[#536055]">1.000 kr</div>
+          <div class="col-span-2 text-[#536055]">aldrig</div>
+        </a>
+        <a id="row-testtest" href="#item-4" class="grid grid-cols-12 gap-2 px-4 py-3 text-sm hover:bg-[#F9F5EB] items-center">
+          <div class="col-span-4 font-medium flex items-center gap-2">Testtest <span class="text-[10px] font-semibold uppercase tracking-wide bg-[#FFF4E0] text-[#A06000] px-1.5 py-0.5 rounded">Pas på</span></div>
+          <div class="col-span-2 text-[#536055]">—</div>
+          <div class="col-span-2 text-[#536055]">9.999 g</div>
+          <div class="col-span-2 text-[#536055]">9.999 kr</div>
+          <div class="col-span-2 text-[#536055]">aldrig</div>
+        </a>
+      </div>
+
+      <p class="mt-4 text-xs text-[#536055]">Vedligehold (4) matcher Hjems opmærksomhedspunkter — badge på rækker der kræver dig.</p>
+    </main>
+  </div>
+</body>
+</html>

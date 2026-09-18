@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feltbogen — Tilføj grej</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; font-family: Inter, sans-serif; background: #F9F5EB; color: #24362C; }
+    .serif { font-family: Fraunces, serif; }
+  </style>
+</head>
+<body>
+  <div class="min-h-screen relative">
+    <div class="absolute inset-0 bg-[#24362C]/35" aria-hidden="true"></div>
+    <div class="relative min-h-screen flex items-center justify-center p-8">
+      <div class="w-full max-w-lg bg-[#F9F5EB] rounded-[16px] border border-[#315C45]/15 shadow-lg overflow-hidden">
+        <div class="px-6 pt-5 pb-3 border-b border-[#315C45]/10 flex items-center justify-between">
+          <h1 class="serif text-2xl">Tilføj grej</h1>
+          <a id="sheet-close" href="#close" class="text-[#536055] hover:text-[#24362C] p-2" aria-label="Luk"><iconify-icon icon="lucide:x" class="text-lg"></iconify-icon></a>
+        </div>
+
+        <div class="px-6 py-5 space-y-5">
+          <p class="text-xs text-[#536055]">Gemmes først når du trykker Opret — intet oprettes bare ved at åbne.</p>
+
+          <div>
+            <label for="gear-name" class="block text-[11px] uppercase tracking-wider text-[#536055] mb-1.5">Navn</label>
+            <input id="gear-name" type="text" placeholder="Navn på grej" class="w-full h-12 px-4 rounded-xl border border-[#315C45]/25 bg-white text-sm focus:outline-none focus:ring-1 focus:ring-[#315C45]/40">
+          </div>
+
+          <div>
+            <p class="text-[11px] uppercase tracking-wider text-[#536055] mb-2">Status</p>
+            <div class="flex gap-2">
+              <a id="status-ejer" href="#ejer" class="px-3 py-1.5 rounded-full text-xs font-semibold bg-[#315C45] text-[#F9F5EB]">Ejer</a>
+              <a id="status-overvejer" href="#overvejer" class="px-3 py-1.5 rounded-full text-xs font-medium border border-[#315C45]/25 text-[#536055]">Overvejer</a>
+              <a id="status-solgt" href="#solgt" class="px-3 py-1.5 rounded-full text-xs font-medium border border-[#315C45]/25 text-[#536055]">Solgt</a>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-3">
+            <div>
+              <label for="gear-weight" class="block text-[11px] uppercase tracking-wider text-[#536055] mb-1.5">Vægt</label>
+              <div class="flex items-center h-11 rounded-xl border border-[#315C45]/15 bg-white px-3">
+                <input id="gear-weight" type="text" placeholder="0" class="w-full text-sm focus:outline-none bg-transparent">
+                <span class="text-xs text-[#536055] ml-1">g</span>
+              </div>
+            </div>
+            <div>
+              <label for="gear-price" class="block text-[11px] uppercase tracking-wider text-[#536055] mb-1.5">Pris</label>
+              <div class="flex items-center h-11 rounded-xl border border-[#315C45]/15 bg-white px-3">
+                <input id="gear-price" type="text" placeholder="0" class="w-full text-sm focus:outline-none bg-transparent">
+                <span class="text-xs text-[#536055] ml-1">kr</span>
+              </div>
+            </div>
+            <div>
+              <label for="gear-qty" class="block text-[11px] uppercase tracking-wider text-[#536055] mb-1.5">Antal</label>
+              <input id="gear-qty" type="text" value="1" class="w-full h-11 px-3 rounded-xl border border-[#315C45]/15 bg-white text-sm focus:outline-none">
+            </div>
+          </div>
+
+          <a id="toggle-advanced" href="#avanceret" class="inline-flex items-center gap-1 text-xs font-medium text-[#536055] hover:text-[#24362C]">
+            <iconify-icon icon="lucide:chevron-down"></iconify-icon> Avanceret
+          </a>
+        </div>
+
+        <div class="px-6 py-4 border-t border-[#315C45]/10 flex items-center justify-end gap-3 bg-[#F9F5EB]">
+          <a id="btn-cancel" href="#annuller" class="h-11 px-5 inline-flex items-center rounded-[10px] text-sm font-medium text-[#536055] hover:bg-black/5">Annuller</a>
+          <a id="btn-create" href="#opret" class="h-12 px-[22px] inline-flex items-center rounded-[10px] bg-[#315C45]/40 text-[#F9F5EB] text-sm font-medium cursor-not-allowed" aria-disabled="true" title="Skriv et navn for at oprette">Opret grej</a>
+        </div>
+        <p class="px-6 pb-4 text-[11px] text-[#536055]">Primary aktiveres når navn er udfyldt.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

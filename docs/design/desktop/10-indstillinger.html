@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feltbogen — Indstillinger</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; font-family: Inter, sans-serif; background: #F9F5EB; color: #24362C; }
+    .serif { font-family: Fraunces, serif; }
+  </style>
+</head>
+<body>
+  <div class="min-h-screen flex bg-[#F9F5EB]">
+    <aside class="w-52 shrink-0 border-r border-[#315C45]/15 px-4 py-6">
+      <div class="serif text-lg mb-8 px-2">Feltbogen</div>
+      <nav class="space-y-1 text-sm">
+        <a id="nav-hjem" href="#hjem" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055]"><iconify-icon icon="lucide:home"></iconify-icon> Hjem</a>
+        <a id="nav-ture" href="#ture" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055]"><iconify-icon icon="lucide:mountain"></iconify-icon> Ture</a>
+        <a id="nav-grej" href="#grej" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055]"><iconify-icon icon="lucide:backpack"></iconify-icon> Grej</a>
+        <a id="nav-folk" href="#folk" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055]"><iconify-icon icon="lucide:users"></iconify-icon> Folk</a>
+        <div class="border-t border-[#315C45]/10 my-3"></div>
+        <a id="nav-mere" href="#mere" class="flex items-center gap-2 px-3 py-2 rounded-full bg-[#E5EEE6] text-[#315C45] font-medium"><iconify-icon icon="lucide:more-horizontal"></iconify-icon> Mere</a>
+      </nav>
+    </aside>
+
+    <main class="flex-1 px-10 py-8 max-w-2xl">
+      <a id="btn-tilbage-mere" href="#mere" class="text-sm text-[#536055] inline-flex items-center gap-1 mb-4">
+        <iconify-icon icon="lucide:chevron-left"></iconify-icon> Mere
+      </a>
+
+      <h1 class="serif text-4xl mb-1">Indstillinger</h1>
+      <p class="text-sm text-[#536055] mb-8">Konto, din krop og det der gælder hele appen</p>
+
+      <!-- Konto -->
+      <section class="mb-8">
+        <h2 class="text-[11px] uppercase tracking-wider text-[#536055] font-semibold mb-3">Konto</h2>
+        <div class="rounded-[12px] border border-[#315C45]/12 bg-white overflow-hidden">
+          <div class="px-4 py-3.5 border-b border-[#315C45]/08">
+            <label class="text-xs text-[#536055]" for="field-navn">Visningsnavn</label>
+            <input id="field-navn" type="text" value="Emil" class="mt-1 w-full h-11 px-3 rounded-xl border border-[#315C45]/15 bg-[#F9F5EB] text-sm focus:outline-none focus:ring-1 focus:ring-[#315C45]/30">
+            <p class="text-[11px] text-[#536055] mt-1.5">Bruges på ture og i deling. Må ikke være tomt (ellers fejler sync).</p>
+          </div>
+          <div class="px-4 py-3.5 border-b border-[#315C45]/08 flex items-center justify-between gap-3">
+            <div>
+              <p class="text-sm font-medium">E-mail</p>
+              <p class="text-xs text-[#536055] mt-0.5">Test@test.com</p>
+            </div>
+            <span class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[#E5EEE6] text-[#315C45]">Logget ind</span>
+          </div>
+          <a id="btn-log-ud" href="#log-ud" class="flex items-center justify-between px-4 py-3.5 hover:bg-[#F9F5EB] text-sm text-[#536055]">
+            Log ud
+            <iconify-icon icon="lucide:log-out" class="text-base"></iconify-icon>
+          </a>
+        </div>
+      </section>
+
+      <!-- Krop -->
+      <section class="mb-8">
+        <h2 class="text-[11px] uppercase tracking-wider text-[#536055] font-semibold mb-3">Din krop</h2>
+        <p class="text-xs text-[#536055] mb-3">Bruges til vægtforslag og forbrug — kun på din enhed / sync, ikke offentlig.</p>
+        <div class="rounded-[12px] border border-[#315C45]/12 bg-white p-4 grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-[#536055]" for="field-vaegt">Vægt</label>
+            <div class="mt-1 flex items-center gap-2">
+              <input id="field-vaegt" type="text" inputmode="decimal" placeholder="—" class="w-full h-11 px-3 rounded-xl border border-[#315C45]/15 bg-[#F9F5EB] text-sm">
+              <span class="text-xs text-[#536055] shrink-0">kg</span>
+            </div>
+          </div>
+          <div>
+            <label class="text-xs text-[#536055]" for="field-hoejde">Højde</label>
+            <div class="mt-1 flex items-center gap-2">
+              <input id="field-hoejde" type="text" inputmode="numeric" placeholder="—" class="w-full h-11 px-3 rounded-xl border border-[#315C45]/15 bg-[#F9F5EB] text-sm">
+              <span class="text-xs text-[#536055] shrink-0">cm</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- App -->
+      <section class="mb-8">
+        <h2 class="text-[11px] uppercase tracking-wider text-[#536055] font-semibold mb-3">App</h2>
+        <div class="rounded-[12px] border border-[#315C45]/12 bg-white overflow-hidden">
+          <div class="flex items-center justify-between px-4 py-3.5 border-b border-[#315C45]/08">
+            <div>
+              <p class="text-sm font-medium">Vægtenhed</p>
+              <p class="text-xs text-[#536055]">Grej og pakning</p>
+            </div>
+            <div class="flex rounded-[10px] border border-[#315C45]/20 overflow-hidden text-xs font-medium">
+              <a id="unit-g" href="#g" class="px-2.5 py-1.5 bg-[#315C45] text-[#F9F5EB]">g / kg</a>
+              <a id="unit-lb" href="#lb" class="px-2.5 py-1.5 text-[#536055] bg-white">lb</a>
+            </div>
+          </div>
+          <div class="flex items-center justify-between px-4 py-3.5 border-b border-[#315C45]/08">
+            <div>
+              <p class="text-sm font-medium">Sprog</p>
+              <p class="text-xs text-[#536055]">UI-tekster</p>
+            </div>
+            <span class="text-sm text-[#536055]">Dansk</span>
+          </div>
+          <a id="row-tjeklister" href="#tjeklister" class="flex items-center justify-between px-4 py-3.5 hover:bg-[#F9F5EB]">
+            <div>
+              <p class="text-sm font-medium">Standard-tjeklister</p>
+              <p class="text-xs text-[#536055]">Afgang og pak-af — også under Skabeloner</p>
+            </div>
+            <iconify-icon icon="lucide:chevron-right" class="text-[#536055]"></iconify-icon>
+          </a>
+        </div>
+        <p class="text-xs text-[#536055] mt-2">Ingen “Gem”-primary her: ændringer gemmes løbende. Synk-status ligger under Mere → Synkronisering.</p>
+      </section>
+
+      <!-- Farezone -->
+      <section class="mb-4">
+        <h2 class="text-[11px] uppercase tracking-wider text-[#A02020] font-semibold mb-3">Farezone</h2>
+        <div class="rounded-[12px] border border-[#A02020]/25 bg-white overflow-hidden">
+          <a id="row-ryd-koe" href="#ryd-koe" class="flex items-center justify-between px-4 py-3.5 border-b border-[#315C45]/08 hover:bg-[#F9F5EB]">
+            <div>
+              <p class="text-sm font-medium">Ryd sync-kø</p>
+              <p class="text-xs text-[#536055]">Fjerner fejlende poster lokalt — sletter ikke ture</p>
+            </div>
+            <iconify-icon icon="lucide:chevron-right" class="text-[#536055]"></iconify-icon>
+          </a>
+          <a id="row-ryd-enhed" href="#ryd-enhed" class="flex items-center justify-between px-4 py-3.5 border-b border-[#315C45]/08 hover:bg-[#F9F5EB]">
+            <div>
+              <p class="text-sm font-medium text-[#A02020]">Ryd denne enhed</p>
+              <p class="text-xs text-[#536055]">Sletter lokal data på enheden. Kræver bekræftelse.</p>
+            </div>
+            <iconify-icon icon="lucide:chevron-right" class="text-[#A02020]"></iconify-icon>
+          </a>
+          <a id="row-slet-konto" href="#slet" class="flex items-center justify-between px-4 py-3.5 hover:bg-[#F9F5EB]">
+            <div>
+              <p class="text-sm font-medium text-[#A02020]">Slet konto</p>
+              <p class="text-xs text-[#536055]">Permanent — ikke det samme som log ud</p>
+            </div>
+            <iconify-icon icon="lucide:chevron-right" class="text-[#A02020]"></iconify-icon>
+          </a>
+        </div>
+      </section>
+
+      <div class="flex justify-end mt-2">
+        <a id="cta-gem-navn" href="#gem" class="inline-flex items-center h-12 px-[22px] rounded-[10px] bg-[#315C45] text-[#F9F5EB] text-sm font-medium shadow-sm">Gem navn</a>
+      </div>
+      <p class="text-xs text-[#536055] mt-3 text-right max-w-sm ml-auto">Én filled primary kun når navn er ændret (eller tomt — for at rette sync). Ellers auto-gem uden knap.</p>
+    </main>
+  </div>
+</body>
+</html>
