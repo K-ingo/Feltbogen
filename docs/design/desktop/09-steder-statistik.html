@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feltbogen — Friluftshistorik</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; font-family: Inter, sans-serif; background: #F9F5EB; color: #24362C; }
+    .serif { font-family: Fraunces, serif; }
+  </style>
+</head>
+<body>
+  <div class="min-h-screen flex bg-[#F9F5EB]">
+    <aside class="w-52 shrink-0 border-r border-[#315C45]/15 px-4 py-6">
+      <div class="serif text-lg mb-8 px-2">Feltbogen</div>
+      <nav class="space-y-1 text-sm">
+        <a id="nav-hjem" href="#hjem" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055]"><iconify-icon icon="lucide:home"></iconify-icon> Hjem</a>
+        <a id="nav-ture" href="#ture" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055]"><iconify-icon icon="lucide:mountain"></iconify-icon> Ture</a>
+        <a id="nav-grej" href="#grej" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055]"><iconify-icon icon="lucide:backpack"></iconify-icon> Grej</a>
+        <a id="nav-folk" href="#folk" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055]"><iconify-icon icon="lucide:users"></iconify-icon> Folk</a>
+        <div class="border-t border-[#315C45]/10 my-3"></div>
+        <a id="nav-mere" href="#mere" class="flex items-center gap-2 px-3 py-2 rounded-full bg-[#E5EEE6] text-[#315C45] font-medium"><iconify-icon icon="lucide:more-horizontal"></iconify-icon> Mere</a>
+      </nav>
+    </aside>
+
+    <main class="flex-1 px-10 py-8 max-w-3xl">
+      <a id="btn-tilbage-mere" href="#mere" class="text-sm text-[#536055] inline-flex items-center gap-1 mb-4">
+        <iconify-icon icon="lucide:chevron-left"></iconify-icon> Mere
+      </a>
+
+      <header class="flex flex-wrap items-start justify-between gap-4 mb-6">
+        <div>
+          <h1 class="serif text-4xl">Friluftshistorik</h1>
+          <p class="text-sm text-[#536055] mt-1">Steder du har været · rolige tal fra dine ture</p>
+        </div>
+        <a id="cta-aarsopgoerelse" href="#aars" class="inline-flex items-center h-12 px-4 rounded-[10px] border border-[#315C45]/25 bg-white text-sm font-medium">
+          Årsopgørelse 2026
+        </a>
+      </header>
+
+      <div class="flex rounded-[10px] border border-[#315C45]/20 overflow-hidden text-sm font-medium mb-6 w-fit">
+        <a id="tab-steder" href="#steder" class="px-4 py-2 bg-[#315C45] text-[#F9F5EB]">Steder</a>
+        <a id="tab-statistik" href="#statistik" class="px-4 py-2 text-[#536055] bg-white hover:bg-[#E5EEE6]/40">Statistik</a>
+      </div>
+
+      <!-- STEDER -->
+      <section id="panel-steder" class="space-y-4 mb-10">
+        <div class="rounded-[10px] border border-[#315C45]/12 bg-white p-4 shadow-sm">
+          <p class="text-[11px] uppercase tracking-wider text-[#536055] font-semibold">Fra dine ture</p>
+          <p class="text-sm text-[#536055] mt-1">3 steder · auto fra tur-sted (ikke tomt “0” når du har været ude)</p>
+        </div>
+
+        <a id="place-fovslet" href="#fovslet" class="block rounded-[10px] border border-[#315C45]/12 bg-white p-4 hover:shadow-sm">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <h2 class="font-semibold">Fovslet Skov</h2>
+              <p class="text-xs text-[#536055] mt-1">Bushcraft · Skov · sidst 27.–29. aug</p>
+              <p class="text-xs text-[#536055] mt-2">2 ture · 4 nætter i alt</p>
+            </div>
+            <button type="button" id="pin-fovslet" class="text-xs font-medium text-[#315C45] border border-[#315C45]/25 rounded-[10px] px-2.5 py-1">Gem</button>
+          </div>
+        </a>
+
+        <a id="place-oehaven" href="#oehaven" class="block rounded-[10px] border border-[#315C45]/12 bg-white p-4 hover:shadow-sm">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <h2 class="font-semibold">Øhaven</h2>
+              <p class="text-xs text-[#536055] mt-1">Bushcraft · Skov · sidst 1.–5. aug</p>
+              <p class="text-xs text-[#536055] mt-2">1 tur · 4 nætter</p>
+            </div>
+            <button type="button" id="pin-oehaven" class="text-xs font-medium text-[#315C45] border border-[#315C45]/25 rounded-[10px] px-2.5 py-1">Gem</button>
+          </div>
+        </a>
+
+        <a id="place-palnatoke" href="#palnatoke" class="block rounded-[10px] border border-[#315C45]/12 bg-white p-4 hover:shadow-sm">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <h2 class="font-semibold">palnatokesvej 22</h2>
+              <p class="text-xs text-[#536055] mt-1">Adresse · sidst 9.–15. aug</p>
+              <p class="text-xs text-[#536055] mt-2">1 tur · 6 nætter · <span class="text-[#A06000]">kladde</span></p>
+            </div>
+            <button type="button" id="pin-palnatoke" class="text-xs font-medium text-[#315C45] border border-[#315C45]/25 rounded-[10px] px-2.5 py-1">Gem</button>
+          </div>
+        </a>
+
+        <div class="rounded-[10px] border border-dashed border-[#315C45]/25 bg-white/60 p-4">
+          <p class="text-sm font-medium">Favoritter du kommer tilbage til</p>
+          <p class="text-xs text-[#536055] mt-1">Ingen gemt endnu. Tryk Gem på et sted — det er dem Mere-rækken tæller (“steder du kommer tilbage til”).</p>
+        </div>
+      </section>
+
+      <!-- STATISTIK (shown as second block for one-canvas review; tab would swap in product) -->
+      <div class="border-t border-[#315C45]/10 pt-8 mb-3">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="serif text-2xl">Statistik</h2>
+          <div class="flex rounded-[10px] border border-[#315C45]/20 overflow-hidden text-xs font-medium">
+            <a id="year-2026" href="#2026" class="px-3 py-1.5 bg-[#315C45] text-[#F9F5EB]">2026</a>
+            <a id="year-alle" href="#alle" class="px-3 py-1.5 text-[#536055] bg-white">Alle år</a>
+          </div>
+        </div>
+      </div>
+
+      <section id="panel-statistik" class="space-y-4">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="rounded-[10px] border border-[#315C45]/12 bg-white p-4">
+            <p class="text-[11px] uppercase tracking-wider text-[#536055] font-semibold">Ture</p>
+            <p class="serif text-3xl mt-1">4</p>
+          </div>
+          <div class="rounded-[10px] border border-[#315C45]/12 bg-white p-4">
+            <p class="text-[11px] uppercase tracking-wider text-[#536055] font-semibold">Nætter</p>
+            <p class="serif text-3xl mt-1">12</p>
+          </div>
+          <div class="rounded-[10px] border border-[#315C45]/12 bg-white p-4">
+            <p class="text-[11px] uppercase tracking-wider text-[#536055] font-semibold">Grej i bog</p>
+            <p class="serif text-3xl mt-1">4</p>
+          </div>
+          <div class="rounded-[10px] border border-[#315C45]/12 bg-white p-4">
+            <p class="text-[11px] uppercase tracking-wider text-[#536055] font-semibold">Kg grej</p>
+            <p class="serif text-3xl mt-1">13</p>
+          </div>
+        </div>
+
+        <div class="rounded-[10px] border border-[#315C45]/12 bg-white p-5 shadow-sm">
+          <p class="text-[11px] uppercase tracking-wider text-[#536055] font-semibold mb-4">Nætter pr. måned</p>
+          <div class="space-y-3">
+            <div>
+              <div class="flex justify-between text-xs mb-1"><span>Aug</span><span class="text-[#536055]">10 nætter</span></div>
+              <div class="h-2 rounded-full bg-[#DBE0D5]"><div class="h-full w-[83%] bg-[#315C45] rounded-full"></div></div>
+            </div>
+            <div>
+              <div class="flex justify-between text-xs mb-1"><span>Sep</span><span class="text-[#536055]">2 nætter</span></div>
+              <div class="h-2 rounded-full bg-[#DBE0D5]"><div class="h-full w-[17%] bg-[#315C45] rounded-full"></div></div>
+            </div>
+            <div>
+              <div class="flex justify-between text-xs mb-1 text-[#536055]"><span>Jul</span><span>0</span></div>
+              <div class="h-2 rounded-full bg-[#DBE0D5]"></div>
+            </div>
+          </div>
+          <p class="text-xs text-[#536055] mt-4">Ingen pie charts. Bare det du kan bruge til årsopgørelsen.</p>
+        </div>
+
+        <div class="rounded-[10px] border border-[#315C45]/12 bg-white overflow-hidden">
+          <div class="px-4 py-3 border-b border-[#315C45]/08">
+            <p class="text-sm font-semibold">Mest brugte grej</p>
+          </div>
+          <ul class="divide-y divide-[#315C45]/08 text-sm">
+            <li class="flex justify-between px-4 py-3"><span>test sovepose</span><span class="text-xs text-[#536055]">1 tur</span></li>
+            <li class="flex justify-between px-4 py-3"><span>test ligge underlag</span><span class="text-xs text-[#536055]">1 tur</span></li>
+            <li class="flex justify-between px-4 py-3 text-[#536055]"><span>Resten</span><span class="text-xs">aldrig brugt endnu</span></li>
+          </ul>
+        </div>
+
+        <p class="text-xs text-[#536055]">Mere-rækken: <strong class="font-medium text-[#24362C]">Statistik</strong> — “4 ture · 12 nætter” (ikke kun “ting talt op”). <strong class="font-medium text-[#24362C]">Steder</strong> — “3 fra ture · 0 favoritter”.</p>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

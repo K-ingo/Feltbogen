@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feltbogen — Pakning · Fovslet Skov</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; font-family: Inter, sans-serif; background: #F9F5EB; color: #24362C; }
+    .serif { font-family: Fraunces, serif; }
+  </style>
+</head>
+<body>
+  <div class="min-h-screen flex bg-[#F9F5EB]">
+    <aside class="w-52 shrink-0 border-r border-[#315C45]/15 px-4 py-6">
+      <div class="serif text-lg mb-8 px-2">Feltbogen</div>
+      <nav class="space-y-1 text-sm">
+        <a id="nav-hjem" href="#hjem" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055]"><iconify-icon icon="lucide:home"></iconify-icon> Hjem</a>
+        <a id="nav-ture" href="#ture" class="flex items-center gap-2 px-3 py-2 rounded-full bg-[#E5EEE6] text-[#315C45] font-medium"><iconify-icon icon="lucide:mountain"></iconify-icon> Ture</a>
+        <a id="nav-grej" href="#grej" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055]"><iconify-icon icon="lucide:backpack"></iconify-icon> Grej</a>
+        <a id="nav-folk" href="#folk" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055]"><iconify-icon icon="lucide:users"></iconify-icon> Folk</a>
+        <div class="border-t border-[#315C45]/10 my-3"></div>
+        <a id="nav-mere" href="#mere" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055]"><iconify-icon icon="lucide:more-horizontal"></iconify-icon> Mere</a>
+      </nav>
+    </aside>
+
+    <main class="flex-1 px-10 py-8 max-w-5xl">
+      <div class="flex justify-between items-center mb-5">
+        <a id="btn-tilbage" href="#tilbage" class="text-sm text-[#536055] inline-flex items-center gap-1"><iconify-icon icon="lucide:chevron-left"></iconify-icon> Tilbage</a>
+        <button id="btn-trip-options" type="button" class="text-[#536055] p-1" aria-label="Flere"><iconify-icon icon="lucide:more-horizontal" class="text-xl"></iconify-icon></button>
+      </div>
+
+      <div class="relative h-36 rounded-[10px] bg-[#315C45] overflow-hidden p-6 flex flex-col justify-end mb-5 shadow-sm">
+        <h1 class="serif text-3xl text-[#F9F5EB] leading-tight">Fovslet Skov</h1>
+        <p class="text-sm text-[#A8BFAD] mt-1">27.–29. august · 4 deltagere · bushcraft</p>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div class="flex items-center gap-3">
+          <div class="inline-flex items-center gap-2 border border-[#DBE0D5] bg-white rounded-full px-3 py-1 shadow-sm">
+            <span class="w-2 h-2 rounded-full bg-[#315C45]"></span>
+            <span class="text-sm font-medium">Klar</span>
+          </div>
+          <a id="btn-skift-status" href="#status" class="text-sm text-[#536055]">Skift status</a>
+        </div>
+        <div class="flex items-center gap-2">
+          <a id="cta-grejsaet" href="#grejsaet" class="inline-flex items-center h-12 px-4 rounded-[10px] border border-[#315C45]/25 bg-white text-sm font-medium text-[#24362C]">Indlæs grejsæt</a>
+          <a id="cta-tilfoej-grej" href="#tilfoej" class="inline-flex items-center h-12 px-[22px] rounded-[10px] bg-[#315C45] text-[#F9F5EB] text-sm font-medium shadow-sm">
+            <iconify-icon icon="lucide:plus" class="mr-2"></iconify-icon> Tilføj grej
+          </a>
+        </div>
+      </div>
+
+      <div class="flex gap-8 border-b border-[#DBE0D5] mb-6 px-1 text-sm">
+        <a id="tab-overblik" href="#overblik" class="pb-3 border-b-2 border-transparent text-[#536055]">Overblik</a>
+        <a id="tab-pakning" href="#pakning" class="pb-3 border-b-2 border-[#315C45] text-[#24362C] font-medium">Pakning</a>
+        <a id="tab-deltagere" href="#deltagere" class="pb-3 border-b-2 border-transparent text-[#536055]">Deltagere 4</a>
+      </div>
+
+      <!-- Progress -->
+      <div class="rounded-[10px] border border-[#315C45]/12 bg-white p-4 mb-5 shadow-sm">
+        <div class="flex flex-wrap items-end justify-between gap-2 mb-2">
+          <div>
+            <p class="text-[11px] uppercase tracking-wider text-[#536055] font-semibold">Pakket</p>
+            <p class="text-lg font-medium mt-0.5">8 af 14</p>
+          </div>
+          <p class="text-sm text-[#536055]">12,4 kg · 3,1 kg pr. person</p>
+        </div>
+        <div class="h-2 rounded-full bg-[#DBE0D5] overflow-hidden">
+          <div class="h-full w-[57%] bg-[#315C45] rounded-full"></div>
+        </div>
+        <p class="text-xs text-[#536055] mt-2">6 mangler — inkl. 1 indkøb. Markér klar til tur når listen er komplet.</p>
+      </div>
+
+      <!-- Filters -->
+      <div class="flex flex-wrap gap-2 mb-5 text-xs font-medium">
+        <a id="filter-alle" href="#alle" class="px-3 py-1.5 rounded-full bg-[#315C45] text-[#F9F5EB]">Alle</a>
+        <a id="filter-faelles" href="#faelles" class="px-3 py-1.5 rounded-full bg-white border border-[#315C45]/20 text-[#536055]">Fælles</a>
+        <a id="filter-dig" href="#dig" class="px-3 py-1.5 rounded-full bg-white border border-[#315C45]/20 text-[#536055]">Dig</a>
+        <a id="filter-mangler" href="#mangler" class="px-3 py-1.5 rounded-full bg-white border border-[#315C45]/20 text-[#536055]">Mangler (6)</a>
+      </div>
+
+      <div class="space-y-5">
+        <!-- Fælles -->
+        <section class="rounded-[10px] border border-[#315C45]/12 bg-white overflow-hidden shadow-sm">
+          <header class="px-4 py-3 border-b border-[#315C45]/08 flex items-center justify-between bg-[#E5EEE6]/40">
+            <div>
+              <h2 class="text-sm font-semibold">Fælles lejr</h2>
+              <p class="text-xs text-[#536055]">3 af 5 pakket</p>
+            </div>
+            <span class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[#E5EEE6] text-[#315C45]">Fælles</span>
+          </header>
+          <ul class="divide-y divide-[#315C45]/08">
+            <li class="flex items-center gap-3 px-4 py-3">
+              <span class="w-5 h-5 rounded border-2 border-[#315C45] bg-[#315C45] flex items-center justify-center text-[#F9F5EB] text-xs shrink-0"><iconify-icon icon="lucide:check"></iconify-icon></span>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm">Tarp 3×3</p>
+                <p class="text-xs text-[#536055]">Emil · 890 g</p>
+              </div>
+            </li>
+            <li class="flex items-center gap-3 px-4 py-3">
+              <span class="w-5 h-5 rounded border-2 border-[#315C45] bg-[#315C45] flex items-center justify-center text-[#F9F5EB] text-xs shrink-0"><iconify-icon icon="lucide:check"></iconify-icon></span>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm">Stormkøkken</p>
+                <p class="text-xs text-[#536055]">Jakob · 1,2 kg</p>
+              </div>
+            </li>
+            <li class="flex items-center gap-3 px-4 py-3 opacity-90">
+              <span class="w-5 h-5 rounded border-2 border-[#315C45]/35 bg-white shrink-0"></span>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm">Økse</p>
+                <p class="text-xs text-[#A06000]">Ikke tildelt · 780 g</p>
+              </div>
+              <a id="assign-oekse" href="#tildel" class="text-xs font-medium text-[#315C45] shrink-0">Tildel</a>
+            </li>
+            <li class="flex items-center gap-3 px-4 py-3 opacity-90">
+              <span class="w-5 h-5 rounded border-2 border-[#315C45]/35 bg-white shrink-0"></span>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm">Førstehjælp</p>
+                <p class="text-xs text-[#536055]">Emil · 420 g</p>
+              </div>
+            </li>
+            <li class="flex items-center gap-3 px-4 py-3">
+              <span class="w-5 h-5 rounded border-2 border-[#315C45] bg-[#315C45] flex items-center justify-center text-[#F9F5EB] text-xs shrink-0"><iconify-icon icon="lucide:check"></iconify-icon></span>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm">Sav</p>
+                <p class="text-xs text-[#536055]">Mikkel · 650 g</p>
+              </div>
+            </li>
+          </ul>
+        </section>
+
+        <!-- Dig -->
+        <section class="rounded-[10px] border border-[#315C45]/12 bg-white overflow-hidden shadow-sm">
+          <header class="px-4 py-3 border-b border-[#315C45]/08 flex items-center justify-between">
+            <div>
+              <h2 class="text-sm font-semibold">Dig</h2>
+              <p class="text-xs text-[#536055]">4 af 5 pakket</p>
+            </div>
+            <span class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[#DBE0D5] text-[#24362C]">Personligt</span>
+          </header>
+          <ul class="divide-y divide-[#315C45]/08">
+            <li class="flex items-center gap-3 px-4 py-3">
+              <span class="w-5 h-5 rounded border-2 border-[#315C45] bg-[#315C45] flex items-center justify-center text-[#F9F5EB] text-xs shrink-0"><iconify-icon icon="lucide:check"></iconify-icon></span>
+              <div class="flex-1"><p class="text-sm">Sovepose −5°</p><p class="text-xs text-[#536055]">1,4 kg</p></div>
+            </li>
+            <li class="flex items-center gap-3 px-4 py-3">
+              <span class="w-5 h-5 rounded border-2 border-[#315C45] bg-[#315C45] flex items-center justify-center text-[#F9F5EB] text-xs shrink-0"><iconify-icon icon="lucide:check"></iconify-icon></span>
+              <div class="flex-1"><p class="text-sm">Liggeunderlag</p><p class="text-xs text-[#536055]">480 g</p></div>
+            </li>
+            <li class="flex items-center gap-3 px-4 py-3">
+              <span class="w-5 h-5 rounded border-2 border-[#315C45] bg-[#315C45] flex items-center justify-center text-[#F9F5EB] text-xs shrink-0"><iconify-icon icon="lucide:check"></iconify-icon></span>
+              <div class="flex-1"><p class="text-sm">Regnjakke</p><p class="text-xs text-[#536055]">360 g</p></div>
+            </li>
+            <li class="flex items-center gap-3 px-4 py-3">
+              <span class="w-5 h-5 rounded border-2 border-[#315C45] bg-[#315C45] flex items-center justify-center text-[#F9F5EB] text-xs shrink-0"><iconify-icon icon="lucide:check"></iconify-icon></span>
+              <div class="flex-1"><p class="text-sm">Hovedlampe</p><p class="text-xs text-[#536055]">95 g</p></div>
+            </li>
+            <li class="flex items-center gap-3 px-4 py-3 opacity-90">
+              <span class="w-5 h-5 rounded border-2 border-[#315C45]/35 bg-white shrink-0"></span>
+              <div class="flex-1"><p class="text-sm">Termokop</p><p class="text-xs text-[#536055]">280 g</p></div>
+            </li>
+          </ul>
+        </section>
+
+        <!-- Indkøb -->
+        <section class="rounded-[10px] border border-[#FFF4E0] bg-[#FFF4E0]/40 overflow-hidden">
+          <header class="px-4 py-3 border-b border-[#A06000]/15 flex items-center justify-between">
+            <div>
+              <h2 class="text-sm font-semibold text-[#A06000]">Indkøb</h2>
+              <p class="text-xs text-[#A06000]/80">1 vare mangler endnu</p>
+            </div>
+            <span class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[#FFF4E0] text-[#A06000]">At købe</span>
+          </header>
+          <ul>
+            <li class="flex items-center gap-3 px-4 py-3">
+              <span class="w-5 h-5 rounded border-2 border-[#A06000]/40 bg-white shrink-0"></span>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm">Gaspatron 230 g</p>
+                <p class="text-xs text-[#536055]">Fælles · tip: køb inden fredag</p>
+              </div>
+            </li>
+          </ul>
+        </section>
+
+        <!-- Empty hint for other person -->
+        <section class="rounded-[10px] border border-dashed border-[#315C45]/25 bg-white/60 p-4">
+          <h2 class="text-sm font-semibold">Hartvig</h2>
+          <p class="text-xs text-[#536055] mt-1">Intet grej tildelt endnu.</p>
+          <a id="cta-tildel-hartvig" href="#tildel-hartvig" class="inline-flex mt-3 text-sm font-medium text-[#315C45]">Tildel grej →</a>
+        </section>
+      </div>
+
+      <p class="text-xs text-[#536055] mt-6 max-w-xl">
+        Én fane: <strong class="font-medium text-[#24362C]">Pakning</strong> erstatter den gamle opsplitning Pakning + Pakkeliste. Listen er både plan og tjekliste.
+      </p>
+    </main>
+  </div>
+</body>
+</html>

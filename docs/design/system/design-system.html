@@ -1,0 +1,333 @@
+<!DOCTYPE html><html lang="da"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feltbogen Design System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600;700&display=swap');
+
+    :root {
+      --bg: #F9F5EB;
+      --surface: #DBE0D5;
+      --surface-tint: #E8F3EE;
+      --text: #24362C;
+      --text-muted: #536055;
+      --accent: #315C45;
+      --accent-border: #A8BFAD;
+      --warning: #A06000;
+      --warning-bg: #FFF4E0;
+      --danger: #A02020;
+    }
+
+    body {
+      background-color: #F9F5EB;
+      color: #24362C;
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .font-fraunces {
+      font-family: 'Fraunces', serif;
+      tracking-tight: -0.01em;
+    }
+
+    .btn-primary {
+      background-color: var(--accent);
+      color: #F9F5EB;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(60, 45, 20, 0.06);
+      transition: all 0.2s ease;
+      font-weight: 500;
+    }
+
+    .btn-secondary {
+      background-color: transparent;
+      border: 1px solid var(--accent-border);
+      color: var(--text);
+      border-radius: 10px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-utility {
+      background-color: var(--surface);
+      color: var(--text);
+      border-radius: 2px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-ghost {
+      color: var(--text-muted);
+      border-radius: 10px;
+      transition: all 0.2s ease;
+    }
+
+    .section-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .doc-card {
+      background: #FFFFFF;
+      border: 1px solid rgba(49, 92, 69, 0.08);
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 180px;
+    }
+
+    .caption {
+      font-size: 12px;
+      color: #536055;
+      margin-top: 12px;
+      font-weight: 500;
+    }
+
+    @view-transition {
+      navigation: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="min-h-screen max-w-[1200px] mx-auto px-6 py-12 md:py-20">
+    
+    <!-- Header -->
+    <header class="mb-16">
+      <div class="flex items-center gap-2 mb-4">
+        <span class="px-2 py-0.5 bg-[#315C45] text-[#F9F5EB] text-[10px] font-bold tracking-tighter rounded-sm">V 1.0</span>
+        <p class="section-label">Design Specifikation</p>
+      </div>
+      <h1 class="text-4xl md:text-5xl font-fraunces text-[#315C45] mb-4 tracking-tight">Feltbogen Design System</h1>
+      <p class="text-base text-[#536055] max-w-2xl leading-relaxed">
+        Et redaktionelt-pragmatisk system bygget på Field-index sage paletten. Skabt til at give en følelse af analog ro i digitale felteksperimenter.
+      </p>
+    </header>
+
+    <!-- 01 Colors -->
+    <section class="mb-20">
+      <div class="flex items-center gap-3 mb-8">
+        <h2 class="section-label">01. Farvepalet</h2>
+        <div class="h-px flex-1 bg-[#315C45]/10"></div>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4">
+        <div class="space-y-2.5">
+          <div class="aspect-square w-full rounded-lg border border-[#315C45]/10" style="background-color: #F9F5EB;"></div>
+          <div>
+            <p class="text-[13px] font-semibold text-[#24362C]">Baggrund</p>
+            <p class="text-[11px] font-mono text-[#536055] uppercase">#F9F5EB</p>
+          </div>
+        </div>
+        <div class="space-y-2.5">
+          <div class="aspect-square w-full rounded-lg border border-[#315C45]/10" style="background-color: #DBE0D5;"></div>
+          <div>
+            <p class="text-[13px] font-semibold text-[#24362C]">Surface</p>
+            <p class="text-[11px] font-mono text-[#536055] uppercase">#DBE0D5</p>
+          </div>
+        </div>
+        <div class="space-y-2.5">
+          <div class="aspect-square w-full rounded-lg border border-[#315C45]/10" style="background-color: #E8F3EE;"></div>
+          <div>
+            <p class="text-[13px] font-semibold text-[#24362C]">Surface Tint</p>
+            <p class="text-[11px] font-mono text-[#536055] uppercase">#E8F3EE</p>
+          </div>
+        </div>
+        <div class="space-y-2.5">
+          <div class="aspect-square w-full rounded-lg shadow-sm" style="background-color: #315C45;"></div>
+          <div>
+            <p class="text-[13px] font-semibold text-[#24362C]">Accent</p>
+            <p class="text-[11px] font-mono text-[#536055] uppercase">#315C45</p>
+          </div>
+        </div>
+        <div class="space-y-2.5">
+          <div class="aspect-square w-full rounded-lg" style="background-color: #24362C;"></div>
+          <div>
+            <p class="text-[13px] font-semibold text-[#24362C]">Text Primary</p>
+            <p class="text-[11px] font-mono text-[#536055] uppercase">#24362C</p>
+          </div>
+        </div>
+        <div class="space-y-2.5">
+          <div class="aspect-square w-full rounded-lg" style="background-color: #A06000;"></div>
+          <div>
+            <p class="text-[13px] font-semibold text-[#24362C]">Warning</p>
+            <p class="text-[11px] font-mono text-[#536055] uppercase">#A06000</p>
+          </div>
+        </div>
+        <div class="space-y-2.5">
+          <div class="aspect-square w-full rounded-lg" style="background-color: #A02020;"></div>
+          <div>
+            <p class="text-[13px] font-semibold text-[#24362C]">Danger</p>
+            <p class="text-[11px] font-mono text-[#536055] uppercase">#A02020</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 02 Typography -->
+    <section class="mb-20">
+      <div class="flex items-center gap-3 mb-8">
+        <h2 class="section-label">02. Typografi</h2>
+        <div class="h-px flex-1 bg-[#315C45]/10"></div>
+      </div>
+      <div class="space-y-12 max-w-4xl">
+        <div>
+          <p class="caption mb-2 uppercase tracking-widest">Display / Fraunces Roman</p>
+          <h3 class="text-5xl font-fraunces text-[#315C45] leading-tight">Journal fra Ryegaard, Oktober 2026</h3>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div>
+            <p class="caption mb-2 uppercase tracking-widest">Body / Inter Regular</p>
+            <p class="text-[16px] leading-relaxed text-[#24362C]">
+              Dette system prioriterer læsbarhed og ro. Brug Inter til alt tekstindhold, for at sikre klarhed på tværs af platforme. <strong>Vigtige informationer fremhæves med vægt.</strong>
+            </p>
+          </div>
+          <div>
+            <p class="caption mb-2 uppercase tracking-widest">UI Label / Inter Tracked</p>
+            <p class="section-label text-[#24362C] border-l-2 border-[#315C45] pl-3 py-1">OVERBLIK • PAKKELISTE • JOURNAL</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 03 Component Grid -->
+    <section class="mb-20">
+      <div class="flex items-center gap-3 mb-8">
+        <h2 class="section-label">03. Komponentbibliotek</h2>
+        <div class="h-px flex-1 bg-[#315C45]/10"></div>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Primary Action -->
+        <div class="doc-card">
+          <div class="flex-1 flex items-center justify-center">
+            <button id="cta-primary-btn" class="btn-primary h-12 px-8 text-[15px]">Åbn Feltbogen</button>
+          </div>
+          <p class="caption">Primary Button (10px radius)</p>
+        </div>
+
+        <!-- Secondary Action -->
+        <div class="doc-card">
+          <div class="flex-1 flex items-center justify-center">
+            <button id="cta-secondary-btn" class="btn-secondary h-12 px-6 text-[15px]">Gem i Feltbog</button>
+          </div>
+          <p class="caption">Secondary Outline</p>
+        </div>
+
+        <!-- Badge & Ghost -->
+        <div class="doc-card">
+          <div class="flex-1 flex flex-col items-center justify-center gap-4">
+            <span class="bg-[#E8F3EE] text-[#315C45] text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">Gæst</span>
+            <button id="cta-ghost-btn" class="btn-ghost text-sm underline">Fortryd valg</button>
+          </div>
+          <p class="caption">Badge & Ghost Action</p>
+        </div>
+
+        <!-- Tab Bar -->
+        <div class="doc-card">
+          <div class="flex-1 flex items-end justify-center px-4">
+            <div class="flex gap-6 border-b border-[#315C45]/10 w-full">
+              <button id="nav-tab-1" class="pb-3 border-b-2 border-[#315C45] font-semibold text-[#315C45] text-sm">Overblik</button>
+              <button id="nav-tab-2" class="pb-3 text-[#536055] text-sm hover:text-[#315C45] transition-colors">Pakning</button>
+            </div>
+          </div>
+          <p class="caption">Horizontal Navigation Tabs</p>
+        </div>
+
+        <!-- Filled Card -->
+        <div class="doc-card">
+          <div class="flex-1">
+             <div class="bg-[#F9F5EB] border border-[#315C45]/10 rounded-lg p-3 flex gap-3 items-center">
+                <div class="w-10 h-10 bg-[#DBE0D5] rounded flex items-center justify-center">
+                   <iconify-icon icon="lucide:map-pin" class="text-[#315C45]"></iconify-icon>
+                </div>
+                <div>
+                  <p class="text-[13px] font-semibold">Ryegaard Shelter</p>
+                  <p class="text-[11px] text-[#536055]">Nordsjælland</p>
+                </div>
+             </div>
+          </div>
+          <p class="caption">Data Card Surface</p>
+        </div>
+
+        <!-- Empty Card -->
+        <div class="doc-card">
+          <div class="flex-1 flex items-center justify-center">
+            <div class="w-full border-2 border-dashed border-[#DBE0D5] py-6 rounded-lg flex flex-col items-center">
+              <iconify-icon icon="lucide:plus" class="text-[#536055] mb-1"></iconify-icon>
+              <span class="text-[12px] text-[#536055] font-medium">Tilføj indhold</span>
+            </div>
+          </div>
+          <p class="caption">Empty State (Dashed)</p>
+        </div>
+
+        <!-- Input -->
+        <div class="doc-card lg:col-span-1">
+          <div class="flex-1 flex flex-col justify-center">
+            <label class="text-[10px] font-bold uppercase tracking-widest text-[#536055] mb-2">Navn på tur</label>
+            <input id="input-sample" type="text" placeholder="F.eks. Sommerlejr" class="w-full h-11 px-4 bg-[#F9F5EB] border border-[#A8BFAD] rounded-[8px] focus:outline-none focus:ring-2 focus:ring-[#315C45]/10 text-sm">
+          </div>
+          <p class="caption">Form Input Field</p>
+        </div>
+
+        <!-- Permission Bar -->
+        <div class="doc-card lg:col-span-2">
+          <div class="flex-1 flex items-center">
+            <div class="w-full bg-[#E8F3EE] p-3.5 rounded-lg flex items-center gap-3 border-l-4 border-[#315C45]">
+              <iconify-icon icon="lucide:info" class="text-lg text-[#315C45]"></iconify-icon>
+              <p class="text-[13px] text-[#24362C]">Din tur er nu delt med dine gæster. De kan se din pakkeliste.</p>
+            </div>
+          </div>
+          <p class="caption">Permission & Info Bar</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04 Do & Don't -->
+    <section class="mb-20">
+      <div class="flex items-center gap-3 mb-8">
+        <h2 class="section-label">04. Best Practice (Do/Don't)</h2>
+        <div class="h-px flex-1 bg-[#315C45]/10"></div>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- DO -->
+        <div class="space-y-4">
+          <div class="flex items-center gap-2 text-[#315C45]">
+            <iconify-icon icon="lucide:check-circle" class="text-lg"></iconify-icon>
+            <span class="text-[12px] font-bold uppercase tracking-wide">Gør dette: Ét klart fokus</span>
+          </div>
+          <div class="bg-white p-10 rounded-xl border border-[#E8F3EE] shadow-sm flex items-center justify-between">
+             <button id="do-action-btn" class="btn-primary h-12 px-8">Start turen</button>
+             <button id="do-skip-btn" class="btn-ghost text-sm underline">Spring over</button>
+          </div>
+          <p class="text-[12px] text-[#536055] italic">Rationer din accent farve. Én primær handling pr. visning er ideelt.</p>
+        </div>
+
+        <!-- DONT -->
+        <div class="space-y-4">
+          <div class="flex items-center gap-2 text-[#A02020]">
+            <iconify-icon icon="lucide:x-circle" class="text-lg"></iconify-icon>
+            <span class="text-[12px] font-bold uppercase tracking-wide">Undgå dette: Kompiterende CTAs</span>
+          </div>
+          <div class="bg-white p-10 rounded-xl border border-rose-50 flex gap-4">
+             <button id="dont-action-1" class="btn-primary h-12 px-6 flex-1">Start turen</button>
+             <button id="dont-action-2" class="btn-primary h-12 px-6 flex-1">Del tur</button>
+             <button id="dont-action-3" class="btn-primary h-12 px-6 flex-1">Arkiver</button>
+          </div>
+          <p class="text-[12px] text-[#536055] italic">For mange primære knapper skaber beslutningstræthed og visuel støj.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="pt-12 border-t border-[#315C45]/5 flex justify-between items-center text-[11px] text-[#536055] font-medium uppercase tracking-widest">
+      <p>© 2026 Feltbogen System</p>
+      <p>Field-index Sage v1.0.4</p>
+    </footer>
+  </div>
+</body></html>

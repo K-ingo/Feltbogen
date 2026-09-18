@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Feltbogen — Tilføj grej (mobil)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; font-family: Inter, sans-serif; background: #F9F5EB; color: #24362C; }
+    .serif { font-family: Fraunces, serif; }
+    .phone { max-width: 390px; margin: 0 auto; min-height: 100vh; position: relative; }
+  </style>
+</head>
+<body>
+<div class="phone">
+  <div class="px-5 pt-10 opacity-40 pointer-events-none">
+    <h1 class="serif text-[28px]">Grej</h1>
+    <p class="text-sm text-[#536055]">4 ting · 13,1 kg</p>
+  </div>
+  <div class="absolute inset-0 bg-[#24362C]/40" aria-hidden="true"></div>
+
+  <div class="absolute bottom-0 inset-x-0 bg-[#F9F5EB] rounded-t-[20px] border border-[#315C45]/15 shadow-lg max-h-[92vh] flex flex-col">
+    <div class="flex justify-center pt-2 pb-1">
+      <span class="w-10 h-1 rounded-full bg-[#315C45]/25"></span>
+    </div>
+    <div class="px-5 pb-3 flex items-center justify-between border-b border-[#315C45]/10">
+      <h1 class="serif text-2xl">Tilføj grej</h1>
+      <a id="sheet-close" href="#close" class="text-[#536055] p-2" aria-label="Luk"><iconify-icon icon="lucide:x" class="text-lg"></iconify-icon></a>
+    </div>
+
+    <div class="px-5 py-4 space-y-4 overflow-y-auto flex-1">
+      <p class="text-xs text-[#536055]">Gemmes først ved Opret — intet ved åbning.</p>
+      <div>
+        <label for="gear-name" class="block text-[11px] uppercase tracking-wider text-[#536055] mb-1.5">Navn</label>
+        <input id="gear-name" type="text" placeholder="Navn på grej" class="w-full h-12 px-4 rounded-xl border border-[#315C45]/25 bg-white text-sm">
+      </div>
+      <div>
+        <p class="text-[11px] uppercase tracking-wider text-[#536055] mb-2">Status</p>
+        <div class="flex flex-wrap gap-2">
+          <a id="status-ejer" href="#ejer" class="px-3 py-1.5 rounded-full text-xs font-semibold bg-[#315C45] text-[#F9F5EB]">Ejer</a>
+          <a id="status-overvejer" href="#overvejer" class="px-3 py-1.5 rounded-full text-xs font-medium border border-[#315C45]/25 text-[#536055]">Overvejer</a>
+          <a id="status-solgt" href="#solgt" class="px-3 py-1.5 rounded-full text-xs font-medium border border-[#315C45]/25 text-[#536055]">Solgt</a>
+        </div>
+      </div>
+      <div class="grid grid-cols-3 gap-2">
+        <div>
+          <label for="gear-weight" class="block text-[11px] uppercase tracking-wider text-[#536055] mb-1.5">Vægt</label>
+          <div class="flex items-center h-11 rounded-xl border border-[#315C45]/15 bg-white px-2">
+            <input id="gear-weight" type="text" placeholder="0" class="w-full text-sm bg-transparent focus:outline-none">
+            <span class="text-[10px] text-[#536055]">g</span>
+          </div>
+        </div>
+        <div>
+          <label for="gear-price" class="block text-[11px] uppercase tracking-wider text-[#536055] mb-1.5">Pris</label>
+          <div class="flex items-center h-11 rounded-xl border border-[#315C45]/15 bg-white px-2">
+            <input id="gear-price" type="text" placeholder="0" class="w-full text-sm bg-transparent focus:outline-none">
+            <span class="text-[10px] text-[#536055]">kr</span>
+          </div>
+        </div>
+        <div>
+          <label for="gear-qty" class="block text-[11px] uppercase tracking-wider text-[#536055] mb-1.5">Antal</label>
+          <input id="gear-qty" type="text" value="1" class="w-full h-11 px-2 rounded-xl border border-[#315C45]/15 bg-white text-sm">
+        </div>
+      </div>
+      <a id="toggle-advanced" href="#avanceret" class="inline-flex items-center gap-1 text-xs font-medium text-[#536055]">
+        <iconify-icon icon="lucide:chevron-down"></iconify-icon> Avanceret
+      </a>
+    </div>
+
+    <div class="px-5 py-4 border-t border-[#315C45]/10 flex gap-2 pb-6">
+      <a id="btn-cancel" href="#annuller" class="flex-1 h-12 inline-flex items-center justify-center rounded-[10px] text-sm font-medium text-[#536055] border border-[#315C45]/15">Annuller</a>
+      <a id="btn-create" href="#opret" class="flex-1 h-12 inline-flex items-center justify-center rounded-[10px] bg-[#315C45]/40 text-[#F9F5EB] text-sm font-medium" aria-disabled="true">Opret grej</a>
+    </div>
+  </div>
+</div>
+</body>
+</html>

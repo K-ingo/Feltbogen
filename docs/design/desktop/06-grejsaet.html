@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feltbogen — Grejsæt</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; font-family: Inter, sans-serif; background: #F9F5EB; color: #24362C; }
+    .serif { font-family: Fraunces, serif; }
+  </style>
+</head>
+<body>
+  <div class="min-h-screen flex bg-[#F9F5EB]">
+    <aside class="w-52 shrink-0 border-r border-[#315C45]/15 px-4 py-6">
+      <div class="serif text-lg mb-8 px-2">Feltbogen</div>
+      <nav class="space-y-1 text-sm">
+        <a id="nav-hjem" href="#hjem" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055]"><iconify-icon icon="lucide:home"></iconify-icon> Hjem</a>
+        <a id="nav-ture" href="#ture" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055]"><iconify-icon icon="lucide:mountain"></iconify-icon> Ture</a>
+        <a id="nav-grej" href="#grej" class="flex items-center gap-2 px-3 py-2 rounded-full bg-[#E5EEE6] text-[#315C45] font-medium"><iconify-icon icon="lucide:backpack"></iconify-icon> Grej</a>
+        <a id="nav-folk" href="#folk" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055]"><iconify-icon icon="lucide:users"></iconify-icon> Folk</a>
+        <div class="border-t border-[#315C45]/10 my-3"></div>
+        <a id="nav-mere" href="#mere" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055]"><iconify-icon icon="lucide:more-horizontal"></iconify-icon> Mere</a>
+      </nav>
+    </aside>
+
+    <main class="flex-1 px-10 py-8 max-w-5xl">
+      <a id="btn-tilbage-grej" href="#grej" class="text-sm text-[#536055] inline-flex items-center gap-1 mb-4">
+        <iconify-icon icon="lucide:chevron-left"></iconify-icon> Grej
+      </a>
+
+      <header class="flex items-start justify-between mb-2">
+        <div>
+          <h1 class="serif text-4xl">Grejsæt</h1>
+          <p class="text-sm text-[#536055] mt-1">2 sæt · genbrug hele pakninger</p>
+        </div>
+        <a id="cta-nyt-saet" href="#nyt-saet" class="inline-flex items-center h-12 px-[22px] rounded-[10px] bg-[#315C45] text-[#F9F5EB] text-sm font-medium shadow-sm">
+          <iconify-icon icon="lucide:plus" class="mr-2"></iconify-icon> Nyt sæt
+        </a>
+      </header>
+      <p class="text-sm text-[#536055] mb-6 max-w-xl">Et grejsæt er en gemt pakning. Indlæs det på en tur, i stedet for at tilføje ting én for én.</p>
+
+      <div class="grid grid-cols-1 lg:grid-cols-[1fr_1.1fr] gap-5">
+        <!-- List -->
+        <div class="space-y-3">
+          <a id="set-bushcraft" href="#bushcraft" class="block rounded-[10px] border-2 border-[#315C45] bg-white p-4 shadow-sm">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <h2 class="font-semibold text-base">Bushcraft weekend</h2>
+                <p class="text-xs text-[#536055] mt-1">8 ting · 6,2 kg · brugt på Fovslet</p>
+              </div>
+              <span class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[#E5EEE6] text-[#315C45]">Valgt</span>
+            </div>
+          </a>
+
+          <a id="set-letvaegt" href="#letvaegt" class="block rounded-[10px] border border-[#315C45]/12 bg-white p-4 hover:border-[#315C45]/30">
+            <h2 class="font-semibold text-base">Letvægts solo</h2>
+            <p class="text-xs text-[#536055] mt-1">5 ting · 3,8 kg · aldrig brugt på tur</p>
+          </a>
+
+          <div class="rounded-[10px] border border-dashed border-[#315C45]/25 bg-white/50 p-4">
+            <p class="text-sm font-medium">Tomt sæt?</p>
+            <p class="text-xs text-[#536055] mt-1">Opret et sæt fra en tur du allerede har pakket — eller start blankt med Nyt sæt.</p>
+            <a id="cta-fra-tur" href="#fra-tur" class="inline-flex mt-3 text-sm font-medium text-[#315C45]">Opret fra tur →</a>
+          </div>
+        </div>
+
+        <!-- Detail -->
+        <section class="rounded-[10px] border border-[#315C45]/12 bg-white overflow-hidden shadow-sm">
+          <header class="px-5 py-4 border-b border-[#315C45]/08 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 class="serif text-2xl">Bushcraft weekend</h2>
+              <p class="text-xs text-[#536055] mt-1">8 ting · 6,2 kg</p>
+            </div>
+            <div class="flex gap-2">
+              <a id="cta-rediger" href="#rediger" class="inline-flex items-center h-10 px-3 rounded-[10px] border border-[#315C45]/25 text-sm font-medium">Rediger</a>
+              <a id="cta-brug-paa-tur" href="#brug" class="inline-flex items-center h-10 px-4 rounded-[10px] bg-[#315C45] text-[#F9F5EB] text-sm font-medium shadow-sm">Brug på tur</a>
+            </div>
+          </header>
+
+          <ul class="divide-y divide-[#315C45]/08">
+            <li class="flex items-center justify-between gap-3 px-5 py-3 text-sm">
+              <span>Tarp 3×3</span><span class="text-xs text-[#536055]">890 g · fælles</span>
+            </li>
+            <li class="flex items-center justify-between gap-3 px-5 py-3 text-sm">
+              <span>Stormkøkken</span><span class="text-xs text-[#536055]">1,2 kg · fælles</span>
+            </li>
+            <li class="flex items-center justify-between gap-3 px-5 py-3 text-sm">
+              <span>Sav</span><span class="text-xs text-[#536055]">650 g · fælles</span>
+            </li>
+            <li class="flex items-center justify-between gap-3 px-5 py-3 text-sm">
+              <span>Førstehjælp</span><span class="text-xs text-[#536055]">420 g · fælles</span>
+            </li>
+            <li class="flex items-center justify-between gap-3 px-5 py-3 text-sm">
+              <span>Sovepose −5°</span><span class="text-xs text-[#536055]">1,4 kg · personligt</span>
+            </li>
+            <li class="flex items-center justify-between gap-3 px-5 py-3 text-sm">
+              <span>Liggeunderlag</span><span class="text-xs text-[#536055]">480 g · personligt</span>
+            </li>
+            <li class="flex items-center justify-between gap-3 px-5 py-3 text-sm">
+              <span>Regnjakke</span><span class="text-xs text-[#536055]">360 g · personligt</span>
+            </li>
+            <li class="flex items-center justify-between gap-3 px-5 py-3 text-sm">
+              <span>Hovedlampe</span><span class="text-xs text-[#536055]">95 g · personligt</span>
+            </li>
+          </ul>
+
+          <div class="px-5 py-4 bg-[#E5EEE6]/35 border-t border-[#315C45]/08">
+            <p class="text-xs text-[#536055]">
+              <strong class="text-[#24362C] font-medium">Brug på tur</strong> åbner tur-valg og lægger sættet ind under Pakning (samme flow som “Indlæs grejsæt” dér). Duplikater merges — du får et kort overblik før bekræft.
+            </p>
+          </div>
+        </section>
+      </div>
+
+      <!-- Sheet preview: Brug på tur -->
+      <div class="mt-8 rounded-[12px] border border-[#315C45]/15 bg-white shadow-sm max-w-md ml-auto overflow-hidden">
+        <div class="px-5 py-4 border-b border-[#315C45]/08 flex items-center justify-between">
+          <h3 class="font-semibold text-sm">Brug “Bushcraft weekend” på tur</h3>
+          <span class="text-xs text-[#536055]">Sheet</span>
+        </div>
+        <div class="px-5 py-4 space-y-2">
+          <p class="text-xs text-[#536055] mb-3">Vælg hvilken tur sættet skal indlæses på.</p>
+          <a id="pick-fovslet" href="#fovslet" class="flex items-center justify-between rounded-[10px] border-2 border-[#315C45] bg-[#E5EEE6]/40 px-3 py-2.5 text-sm">
+            <span>Fovslet Skov <span class="text-xs text-[#536055]">· Klar</span></span>
+            <iconify-icon icon="lucide:check" class="text-[#315C45]"></iconify-icon>
+          </a>
+          <a id="pick-oehaven" href="#oehaven" class="flex items-center justify-between rounded-[10px] border border-[#315C45]/15 px-3 py-2.5 text-sm text-[#536055]">
+            <span>Øghaven uge 32 <span class="text-xs">· Afsluttet</span></span>
+          </a>
+          <a id="pick-kladde" href="#kladde" class="flex items-center justify-between rounded-[10px] border border-[#315C45]/15 px-3 py-2.5 text-sm">
+            <span>Reed testtur 8 sep <span class="text-xs text-[#536055]">· Kladde</span></span>
+          </a>
+        </div>
+        <div class="px-5 py-4 flex items-center justify-end gap-2 border-t border-[#315C45]/08 bg-[#F9F5EB]/80">
+          <a id="sheet-annuller" href="#annuller" class="h-11 px-4 inline-flex items-center text-sm text-[#536055]">Annuller</a>
+          <a id="sheet-indlaes" href="#indlaes" class="h-11 px-5 inline-flex items-center rounded-[10px] bg-[#315C45] text-[#F9F5EB] text-sm font-medium">Indlæs 8 ting</a>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

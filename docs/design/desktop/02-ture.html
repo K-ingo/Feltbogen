@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feltbogen — Ture</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; font-family: Inter, sans-serif; background: #F9F5EB; color: #24362C; }
+    .serif { font-family: Fraunces, serif; }
+  </style>
+</head>
+<body>
+  <div class="min-h-screen flex bg-[#F9F5EB]">
+    <aside class="w-52 shrink-0 border-r border-[#315C45]/15 px-4 py-6">
+      <div class="serif text-lg mb-8 px-2">Feltbogen</div>
+      <nav class="space-y-1 text-sm">
+        <a id="nav-hjem" href="#hjem" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055]"><iconify-icon icon="lucide:home"></iconify-icon> Hjem</a>
+        <a id="nav-ture" href="#ture" class="flex items-center gap-2 px-3 py-2 rounded-full bg-[#E5EEE6] text-[#315C45] font-medium"><iconify-icon icon="lucide:mountain"></iconify-icon> Ture</a>
+        <a id="nav-grej" href="#grej" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055]"><iconify-icon icon="lucide:backpack"></iconify-icon> Grej</a>
+        <a id="nav-folk" href="#folk" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055]"><iconify-icon icon="lucide:users"></iconify-icon> Folk</a>
+        <div class="border-t border-[#315C45]/10 my-3"></div>
+        <a id="nav-mere" href="#mere" class="flex items-center gap-2 px-3 py-2 rounded-full text-[#536055]"><iconify-icon icon="lucide:more-horizontal"></iconify-icon> Mere</a>
+      </nav>
+    </aside>
+
+    <main class="flex-1 px-10 py-8 max-w-5xl">
+      <header class="flex items-start justify-between mb-6">
+        <div>
+          <h1 class="serif text-4xl">Ture</h1>
+          <p class="text-sm text-[#536055] mt-1">4 ture</p>
+        </div>
+        <a id="cta-ny-tur" href="#ny-tur" class="inline-flex items-center h-12 px-[22px] rounded-[10px] bg-[#315C45] text-[#F9F5EB] text-sm font-medium shadow-sm">
+          <iconify-icon icon="lucide:plus" class="mr-2"></iconify-icon> Ny tur
+        </a>
+      </header>
+
+      <div class="mb-4">
+        <label class="sr-only" for="search-ture">Søg ture</label>
+        <input id="search-ture" type="search" placeholder="Find en tur eller et sted…" class="w-full h-11 px-4 rounded-xl border border-[#315C45]/15 bg-white text-sm placeholder:text-[#536055]/50 focus:outline-none focus:ring-1 focus:ring-[#315C45]/30">
+      </div>
+
+      <div class="flex items-center justify-between mb-5">
+        <h2 class="text-sm font-semibold text-[#24362C]">Dine ture</h2>
+        <div class="flex rounded-[10px] border border-[#315C45]/20 overflow-hidden text-xs font-medium">
+          <a id="view-gitter" href="#gitter" class="px-3 py-1.5 bg-[#315C45] text-[#F9F5EB]">Gitter</a>
+          <a id="view-liste" href="#liste" class="px-3 py-1.5 text-[#536055] bg-white hover:bg-[#E5EEE6]/40">Liste</a>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <a id="card-reed" href="#reed" class="rounded-[12px] overflow-hidden border border-[#315C45]/12 bg-white hover:shadow-sm transition-shadow">
+          <div class="h-20 bg-[#315C45] flex items-center gap-2 px-4 text-[#F9F5EB] text-xs uppercase tracking-wider">
+            <iconify-icon icon="lucide:compass" class="text-lg"></iconify-icon> Bushcraft · Skov
+          </div>
+          <div class="p-4">
+            <div class="flex flex-wrap gap-1.5 mb-2">
+              <span class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[#DBE0D5] text-[#24362C]">Kladde</span>
+              <span class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[#FFF4E0] text-[#A06000]">Mangler sted</span>
+            </div>
+            <h3 class="serif text-xl">Reed testtur 8 sep</h3>
+            <p class="text-xs text-[#536055] mt-1">Sted ikke valgt · 7. september</p>
+            <p class="text-xs text-[#536055] mt-2">1 person · 0 nætter</p>
+          </div>
+        </a>
+
+        <a id="card-fovslet" href="#fovslet" class="rounded-[12px] overflow-hidden border border-[#315C45]/12 bg-white hover:shadow-sm transition-shadow">
+          <div class="h-20 bg-[#315C45] flex items-center gap-2 px-4 text-[#F9F5EB] text-xs uppercase tracking-wider">
+            <iconify-icon icon="lucide:compass" class="text-lg"></iconify-icon> Bushcraft · Skov
+          </div>
+          <div class="p-4">
+            <span class="inline-block text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[#E5EEE6] text-[#315C45] mb-2">Afsluttet</span>
+            <h3 class="serif text-xl">Fovslet Skov</h3>
+            <p class="text-xs text-[#536055] mt-1">Fovslet Skov · 27.–29. august</p>
+            <p class="text-xs text-[#536055] mt-2">4 personer · 2 nætter</p>
+          </div>
+        </a>
+
+        <a id="card-emil" href="#emil" class="rounded-[12px] overflow-hidden border border-[#315C45]/12 bg-white hover:shadow-sm transition-shadow">
+          <div class="h-20 bg-[#315C45] flex items-center gap-2 px-4 text-[#F9F5EB] text-xs uppercase tracking-wider">
+            <iconify-icon icon="lucide:compass" class="text-lg"></iconify-icon> Bushcraft · Skov
+          </div>
+          <div class="p-4">
+            <span class="inline-block text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[#DBE0D5] text-[#24362C] mb-2">Kladde</span>
+            <h3 class="serif text-xl">Emil og Zindy</h3>
+            <p class="text-xs text-[#536055] mt-1">palnatokesvej 22 · 9.–15. august</p>
+            <p class="text-xs text-[#536055] mt-2">2 personer · 6 nætter</p>
+          </div>
+        </a>
+
+        <a id="card-oehaven" href="#oehaven" class="rounded-[12px] overflow-hidden border border-[#315C45]/12 bg-white hover:shadow-sm transition-shadow">
+          <div class="h-20 bg-[#315C45] flex items-center gap-2 px-4 text-[#F9F5EB] text-xs uppercase tracking-wider">
+            <iconify-icon icon="lucide:compass" class="text-lg"></iconify-icon> Bushcraft · Skov
+          </div>
+          <div class="p-4">
+            <span class="inline-block text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[#E5EEE6] text-[#315C45] mb-2">Afsluttet</span>
+            <h3 class="serif text-xl">Øghaven uge 32</h3>
+            <p class="text-xs text-[#536055] mt-1">Øhaven · 1.–5. august</p>
+            <p class="text-xs text-[#536055] mt-2">7 personer · 4 nætter</p>
+          </div>
+        </a>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,200 @@
+<!DOCTYPE html><html lang="da"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feltbogen Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #F9F5EB;
+            --surface: #DBE0D5;
+            --surface-tint: #E5EEE6;
+            --text: #24362C;
+            --text-muted: #536055;
+            --accent: #315C45;
+            --accent-text: #F9F5EB;
+            --accent-border: #A8BFAD;
+            --border: rgba(49, 92, 69, 0.1);
+            --font-display: 'Fraunces', serif;
+            --font-ui: 'Inter', sans-serif;
+        }
+
+        body {
+            color: var(--text);
+            font-family: var(--font-ui);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .font-display {
+            font-family: var(--font-display);
+            letter-spacing: -0.3px;
+        }
+
+        .bg-cream {
+            background-color: var(--bg);
+        }
+
+        .bg-accent {
+            background-color: var(--accent);
+        }
+
+        .text-accent {
+            color: var(--accent);
+        }
+
+        .btn-shadow {
+            box-shadow: rgba(60, 45, 20, 0.06) 0px 2px 5px 0px;
+        }
+
+        .nav-pill-active {
+            background-color: var(--surface-tint);
+        }
+
+        .sidebar-border {
+            border-right: 1px solid rgba(49, 92, 69, 0.08);
+        }
+
+        .custom-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="flex min-h-screen bg-cream" data-sd-id="1">
+        <!-- Sidebar -->
+        <aside class="w-64 sidebar-border flex flex-col fixed h-full bg-cream z-50" data-sd-id="2">
+            <div class="p-8 pb-10" data-sd-id="3">
+                <h1 class="font-display text-2xl tracking-tight text-accent" data-sd-id="4">Feltbogen</h1>
+            </div>
+            
+            <nav class="flex-1 px-4 space-y-1" data-sd-id="5">
+                <a href="#" id="nav-hjem" class="flex items-center gap-3 px-4 py-2.5 rounded-[10px] nav-pill-active text-accent font-medium" data-sd-id="6">
+                    <iconify-icon icon="lucide:home" class="text-xl"></iconify-icon>
+                    <span data-sd-id="7">Hjem</span>
+                </a>
+                <a href="#" id="nav-ture" class="flex items-center gap-3 px-4 py-2.5 rounded-[10px] text-text-muted hover:bg-black/5 transition-colors" data-sd-id="8">
+                    <iconify-icon icon="lucide:map-pin" class="text-xl"></iconify-icon>
+                    <span data-sd-id="9">Ture</span>
+                </a>
+                <a href="#" id="nav-grej" class="flex items-center gap-3 px-4 py-2.5 rounded-[10px] text-text-muted hover:bg-black/5 transition-colors" data-sd-id="10">
+                    <iconify-icon icon="lucide:package" class="text-xl"></iconify-icon>
+                    <span data-sd-id="11">Grej</span>
+                </a>
+                <a href="#" id="nav-folk" class="flex items-center gap-3 px-4 py-2.5 rounded-[10px] text-text-muted hover:bg-black/5 transition-colors" data-sd-id="12">
+                    <iconify-icon icon="lucide:users" class="text-xl"></iconify-icon>
+                    <span data-sd-id="13">Folk</span>
+                </a>
+                
+                <div class="pt-4 mt-4 border-t border-accent/5" data-sd-id="14">
+                    <a href="#" id="nav-mere" class="flex items-center gap-3 px-4 py-2.5 rounded-[10px] text-text-muted hover:bg-black/5 transition-colors" data-sd-id="15">
+                        <iconify-icon icon="lucide:more-horizontal" class="text-xl"></iconify-icon>
+                        <span data-sd-id="16">Mere</span>
+                    </a>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 ml-64 p-8 max-w-[1000px]" data-sd-id="17">
+            <!-- Header -->
+            <header class="flex justify-between items-end mb-8" data-sd-id="18">
+                <div data-sd-id="19">
+                    <h2 class="font-display text-[26px] leading-relaxed text-[#24362C]" data-sd-id="20">Godmorgen, Test</h2>
+                </div>
+                <div class="flex gap-3" data-sd-id="21">
+                    <a href="#" id="header-add-gear" class="flex items-center px-4 h-11 text-[#536055] hover:text-[#24362C] transition-colors rounded-[10px] text-sm font-medium" data-sd-id="22">
+                        <iconify-icon icon="lucide:plus" class="mr-1.5"></iconify-icon>
+                        Tilføj grej
+                    </a>
+                    <a href="#" id="header-new-trip" class="flex items-center px-[22px] h-12 border border-accent/30 text-accent rounded-[10px] text-sm font-medium hover:bg-accent/5 transition-colors" data-sd-id="23">
+                        <iconify-icon icon="lucide:compass" class="mr-2"></iconify-icon>
+                        + Ny tur
+                    </a>
+                </div>
+            </header>
+
+            <!-- Hero: Next Trip Card -->
+            <section class="mb-6" data-sd-id="24">
+                <div class="bg-white rounded-[10px] border border-accent/10 flex overflow-hidden min-h-[220px]" data-sd-id="25">
+                    <div class="w-[320px] bg-[#3E5645] flex flex-col items-center justify-center text-center p-8" data-sd-id="26">
+                        <div class="w-16 h-16 rounded-full border border-white/20 flex items-center justify-center mb-4" data-sd-id="27">
+                            <iconify-icon icon="lucide:compass" class="text-white text-3xl"></iconify-icon>
+                        </div>
+                        <span class="text-white/60 text-[10px] uppercase tracking-[0.2em] font-medium" data-sd-id="28">Næste eventyr</span>
+                    </div>
+                    <div class="flex-1 p-8 flex flex-col justify-between" data-sd-id="29">
+                        <div data-sd-id="30">
+                            <div class="flex items-center gap-2 mb-2" data-sd-id="31">
+                                <span class="text-[10px] uppercase tracking-wider text-[#536055] font-semibold" data-sd-id="32">Næste tur • I gang</span>
+                            </div>
+                            <h3 class="font-display text-2xl text-[#24362C] mb-1" data-sd-id="33">Reed testtur 8 sep</h3>
+                            <p class="text-[#536055] text-sm" data-sd-id="34">0 nætter · 1 person · 0 kg</p>
+                            <p class="text-[#536055] italic text-sm mt-3 opacity-60" data-sd-id="35">Intet grej valgt endnu</p>
+                        </div>
+                        <div class="flex justify-end" data-sd-id="36">
+                            <a href="#" id="trip-cta" class="flex items-center px-[22px] h-11 rounded-[10px] font-medium shadow-sm bg-[#315C45] text-[#F9F5EB]" data-sd-id="37">
+                                Fortsæt pakning
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Alert Bar -->
+            <details class="bg-white rounded-[10px] border border-accent/10 mb-10 overflow-hidden group">
+                <summary class="p-4 px-6 flex items-center gap-4 cursor-pointer hover:bg-black/[0.02] transition-colors list-none">
+                    <iconify-icon icon="lucide:play" class="text-[10px] text-[#536055] transition-transform group-open:rotate-90"></iconify-icon>
+                    <span class="text-[#24362C] font-medium text-sm">Pas på dit grej</span>
+                    <span class="text-[#536055] text-sm opacity-60">4 opmærksomhedspunkter</span>
+                </summary>
+                <div class="px-6 pb-4 text-sm text-[#536055] border-t border-accent/5 pt-3">
+                    <!-- Details of warnings would go here -->
+                    Udstyr med manglende vægt eller status.
+                </div>
+            </details>
+
+            <!-- Suggestions Section -->
+            <section class="mb-10" data-sd-id="41">
+                <h4 class="text-[10px] uppercase tracking-[0.15em] font-bold text-[#536055] mb-4" data-sd-id="42">Feltbogen foreslår</h4>
+                <div class="bg-[#E8F3EE]/30 border border-[#A8BFAD]/30 rounded-[10px] p-6" data-sd-id="43">
+                    <div class="flex justify-between items-start mb-6" data-sd-id="44">
+                        <div data-sd-id="45">
+                            <p class="text-sm font-semibold text-[#2D6A4F]" data-sd-id="46">Pak ligesom Fovslet Skov</p>
+                            <p class="text-xs text-[#536055] mt-0.5" data-sd-id="47">10 ting at kopiere over</p>
+                            <a href="#" id="suggestion-link" class="text-xs text-[#536055] underline decoration-[#536055]/30 mt-2 inline-block" data-sd-id="48">hvorfor?</a>
+                        </div>
+                        <span class="text-[10px] font-semibold text-[#2D6A4F]/60 tracking-wider uppercase" data-sd-id="49">Sikker</span>
+                    </div>
+                    <div class="flex gap-3" data-sd-id="50">
+                        <a href="#" id="copy-gear-btn" class="flex-1 flex items-center justify-center h-11 border border-accent/30 text-accent rounded-[10px] text-sm font-medium hover:bg-accent/5 transition-colors" data-sd-id="51">
+                            Kopiér grejet
+                        </a>
+                        <a href="#" id="skip-suggestion" class="flex items-center justify-center px-6 h-11 text-[#536055] rounded-[10px] text-sm font-medium hover:bg-black/5 transition-colors" data-sd-id="52">
+                            Ikke denne gang
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Folded Content Toggle -->
+            <div class="pt-6 border-t border-accent/10" data-sd-id="53">
+                <button class="flex items-center gap-2 text-sm text-[#536055] hover:text-[#24362C] transition-colors" data-sd-id="54">
+                    <span data-sd-id="55">Se mere (Stats &amp; Sidst tilføjet)</span>
+                    <iconify-icon icon="lucide:chevron-down"></iconify-icon>
+                </button>
+            </div>
+
+            <!-- Small status footer -->
+            <footer class="mt-20 flex items-center gap-2 opacity-50" data-sd-id="56">
+                <div class="w-2 h-2 rounded-full bg-[#2D6A4F]" data-sd-id="57"></div>
+                <span class="text-xs" data-sd-id="58">Alt er sendt op</span>
+            </footer>
+        </main>
+    </div>
+
+</body></html>
