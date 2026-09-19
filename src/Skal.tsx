@@ -120,9 +120,10 @@ export function Skal({ fane, skift, titel, undertitel, handlinger, fab, children
       <div className="app-shell" style={{ display: 'flex', minHeight: '100vh' }}>
         <Sidebar fane={fane} skift={skift} />
         {/* Loftet er der for læsbarhedens skyld — en linje der løber tværs
-            over en bred skærm er svær at følge. Men 1100 px lod en tredjedel
-            af skærmen stå tom på en almindelig PC-skærm. */}
-        <main className="desktop-main" style={{ flex: 1, minWidth: 0, padding: '32px 40px 60px', maxWidth: '1360px', margin: '0 auto' }}>
+            over en bred skærm er svær at følge. Tallet står som
+            `--hovedspalte` i index.css sammen med begrundelsen for, at det
+            har flyttet sig fra 1100 til 1360 og nu til designets 1024. */}
+        <main className="desktop-main" style={{ flex: 1, minWidth: 0, padding: '32px 40px 60px', maxWidth: 'var(--hovedspalte)', margin: '0 auto' }}>
           {titel && (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginBottom: '20px' }}>
               <div>
