@@ -52,6 +52,11 @@ npm run preview  # den eneste måde at teste offline/PWA på
 CI kører lint, test og build på alle pull requests (`.github/workflows/ci.yml`,
 Node 22) og fejler desuden, hvis et privat Railway-domæne er havnet i bundlen.
 
+**Typekontrollen er `tsc -b` — ikke `tsc --noEmit`.** Roden `tsconfig.json`
+har `"files": []` og peger kun videre til `tsconfig.app.json` og
+`tsconfig.node.json`. Et `npx tsc --noEmit` tjekker derfor ingen filer og
+svarer grønt på alt. Kør `npm run build`.
+
 Implementér, test **og** dokumentér. En ændring uden test eller uden en note i
 dokumentationen er ikke færdig.
 

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import type { Item, ItemStatus, Tur, Gruppe } from './db';
-import { opretTomtItem } from './opret';
 import { sidstBrugtPrItem, grupperPrItem, turePrItem } from './statistik';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
@@ -16,6 +15,9 @@ interface Props {
   fane: Fane;
   skift: (f: Fane) => void;
   aabnItem: (id: number, nyOprettet?: boolean) => void;
+  // Åbner opret-arket. Statussen er den fane man står på — arket kan skifte
+  // den, men skal åbne med det rigtige gæt.
+  nytItem: (status?: ItemStatus) => void;
 }
 
 // Fanerne over listen.
@@ -72,7 +74,7 @@ function iUdsnit(items: Item[], udsnit: Udsnit): Item[] {
 
 const MAKS_TAG_CHIPS = 5;
 
-function InventarSide({ fane, skift, aabnItem }: Props) {
+function InventarSide({ fane, skift, aabnItem, nytItem }: Props) {
   const erDesktop = useErDesktop();
 
   const [valgtStatus, setValgtStatus] = useState<Udsnit>('ejer');
@@ -117,9 +119,8 @@ function InventarSide({ fane, skift, aabnItem }: Props) {
   // Den nye post lander i den fane man står på, så den ikke forsvinder ud af
   // syne i det øjeblik den bliver oprettet. Lån og Vedligehold er ikke
   // statusser, man kan oprette noget i — der bliver det til noget man ejer.
-  const nytItem = async () => aabnItem(
-    await opretTomtItem(valgtStatus === 'laan' || valgtStatus === 'vedligehold' ? 'ejer' : valgtStatus),
-    true
+  const aabnArk = () => nytItem(
+    valgtStatus === 'laan' || valgtStatus === 'vedligehold' ? 'ejer' : valgtStatus
   );
 
   return (
@@ -128,8 +129,8 @@ function InventarSide({ fane, skift, aabnItem }: Props) {
       skift={skift}
       titel="Grej"
       undertitel={`${iStatus.length} stykker grej · ${vaerdiIStatus.toLocaleString('da-DK')} kr`}
-      handlinger={<Knap variant="primaer" onClick={nytItem}>+ Tilføj grej</Knap>}
-      fab={nytItem}
+      handlinger={<Knap variant="primaer" onClick={aabnArk}>+ Tilføj grej</Knap>}
+      fab={aabnArk}
     >
       {/* Grejsættene stod før som deres egen fane i bunden. De hører til her:
           et sæt er en måde at samle sit grej på, ikke et sted man arbejder.
@@ -217,7 +218,7 @@ function InventarSide({ fane, skift, aabnItem }: Props) {
       {filtreret.length === 0 ? (
         <TomListe
           handling={iStatus.length > 0 ? 'Ryd filtre' : valgtStatus === 'ejer' || valgtStatus === 'overvejer' ? 'Tilføj grej' : 'Se dit grej'}
-          onClick={iStatus.length > 0 ? nulstilFiltre : valgtStatus === 'ejer' || valgtStatus === 'overvejer' ? nytItem : () => { setValgtStatus('ejer'); nulstilFiltre(); }}
+          onClick={iStatus.length > 0 ? nulstilFiltre : valgtStatus === 'ejer' || valgtStatus === 'overvejer' ? aabnArk : () => { setValgtStatus('ejer'); nulstilFiltre(); }}
         >
           {iStatus.length === 0
             ? ({ ejer: 'Dit næste eventyr begynder med det grej, du allerede har. Tilføj den første ting.', overvejer: 'Plads til det grej, du drømmer om at tage med.', solgt: 'Intet solgt grej endnu. Din turhistorik bliver bevaret, når noget får en ny ejer.', laan: 'Ingen aktive lån. Dit grej er klar til næste tur.', vedligehold: 'Ingen vedligeholdelse på listen lige nu. Klar til mere tid ude.' })[valgtStatus]
