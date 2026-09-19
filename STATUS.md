@@ -1,6 +1,6 @@
 # STATUS
 
-*Sidst opdateret: 18. september 2026. Udgangspunkt: `main` @ `321d0af`.*
+*Sidst opdateret: 19. september 2026. Udgangspunkt: `main` @ `bc40465`.*
 
 Kort svar på "hvor står vi nu?". Den skal kunne læses på to minutter og
 opdateres, hver gang noget bliver færdigt eller blokeret.
@@ -34,16 +34,17 @@ af tyve er bygget.
 
 ## Grønt lys
 
-Kørt på grenen `claude/design-fundament` den 18. september 2026:
+Kørt på grenen `claude/tur-detalje-handoff` den 19. september 2026:
 
 | Kommando | Resultat |
 |---|---|
 | `npm run lint` | Bestået, ingen fejl |
-| `npm test` | 59 testfiler, 1.306 tests, alle grønne |
+| `npm test` | 61 testfiler, 1.336 tests, alle grønne |
 | `npm run build` | Bestået |
 
-På `claude/hjem-desktop-handoff` (PR #62) er tallet 60 testfiler og 1.326
-tests — den gren lægger `DashboardSide.test.tsx` oveni.
+**Brug `npm run build` til typekontrol, ikke `npx tsc --noEmit`.** Roden
+`tsconfig.json` har `"files": []` og peger kun videre. `tsc --noEmit` tjekker
+derfor ingenting og siger pænt god dag. Det rigtige kald er `tsc -b`.
 
 CI kører de samme tre på alle pull requests, plus et tjek for at et privat
 Railway-domæne ikke er havnet i bundlen.
@@ -152,10 +153,15 @@ I den rækkefølge, de sandsynligvis er værd at tage.
    ændret viewport. (`UI_REVIEW.md` P1)
 8. **Eksterne fetch-kald mangler fælles timeout.** En langsom vejr- eller
    adresseudbyder kan holde en UI-handling åben længe. (`CODE_REVIEW.md` §5)
-9. **De nitten resterende skærme er ikke holdt op mod designet.** Kun Hjem på
-   PC er gennemgået mod sin HTML-reference. De øvrige kan afvige fra de låste
-   tokens og fra reglen om én fyldt knap, uden at nogen har set efter. Det er
-   ikke en fejl, der er meldt — det er en gennemgang, der ikke er foretaget.
+9. **De sytten resterende skærme er ikke holdt op mod designet.** Hjem, Ture
+   og Tur-detalje på PC er gennemgået mod deres HTML-reference. De øvrige kan
+   afvige fra de låste tokens og fra reglen om én fyldt knap, uden at nogen
+   har set efter. Det er ikke en fejl, der er meldt — det er en gennemgang,
+   der ikke er foretaget.
+
+   To af de tre gennemgåede havde en rigtig overtrædelse, ingen havde meldt:
+   Hjem havde tre fyldte accent-knapper over folden, Tur-detalje havde to.
+   Det er værd at regne med, at de øvrige også har.
 
 ### Funktioner, der venter
 

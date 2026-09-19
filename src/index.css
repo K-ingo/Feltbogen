@@ -307,6 +307,32 @@ button:disabled { cursor: not-allowed; }
 .gear-status-tabs::-webkit-scrollbar { display: none; }
 .gear-filter-toggle { margin: -2px 0 12px; }
 .trip-status { min-width: 0; }
+
+/* Turens fase, som noget man aflæser. Den stod før som en segmentvælger,
+   hvis valgte felt er en fyldt accent-flade — og så var der to fyldte
+   accenter i det første skærmbillede, hvor designsystemet tillader én.
+   Vælgeren er der stadig, den ligger bare bag "Skift status". */
+.trip-status-pille {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--plads-2);
+  min-height: var(--roerehoejde);
+  padding: 0 var(--plads-3);
+  border: 1px solid var(--border-svag);
+  border-radius: var(--runding-pille);
+  background: var(--bg-forhoejet);
+  box-shadow: 0 1px 2px var(--skygge);
+  font-size: var(--skrift-detalje);
+  font-weight: 500;
+}
+
+.trip-status-prik {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--accent);
+}
 .packing-row { min-height: 56px; border-radius: 6px; padding: 10px 4px !important; column-gap: 10px !important; }
 input[type='checkbox'] { accent-color: var(--accent); width: 22px !important; height: 22px; min-height: 22px; padding: 0; margin: 0 4px 0 0; flex-shrink: 0; cursor: pointer; }
 input[type='checkbox']:checked { animation: check-in 160ms ease-out; }
