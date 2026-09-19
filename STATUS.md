@@ -34,12 +34,12 @@ af tyve er bygget.
 
 ## Grønt lys
 
-Kørt på grenen `claude/opret-ark` den 19. september 2026:
+Kørt på grenen `claude/tur-detalje-handoff` den 19. september 2026:
 
 | Kommando | Resultat |
 |---|---|
 | `npm run lint` | Bestået, ingen fejl |
-| `npm test` | 63 testfiler, 1.382 tests, alle grønne |
+| `npm test` | 65 testfiler, 1.402 tests, alle grønne |
 | `npm run build` | Bestået |
 
 **Brug `npm run build` til typekontrol, ikke `npx tsc --noEmit`.** Roden
@@ -163,11 +163,15 @@ I den rækkefølge, de sandsynligvis er værd at tage.
    eneste værn mod at de to efterlader tomme poster. Selve oprettelsen er
    dækket hele vejen fra ark til post af `opretflow.test.ts`; det er
    sammenkoblingen inde i `App.tsx`, der mangler.
-10. **De atten resterende skærme er ikke holdt op mod designet.** Hjem og
-    Ture på PC er gennemgået mod deres HTML-reference. De øvrige kan afvige
-    fra de låste tokens og fra reglen om én fyldt knap, uden at nogen har set
-    efter. Det er ikke en fejl, der er meldt — det er en gennemgang, der ikke
-    er foretaget.
+10. **De sytten resterende skærme er ikke holdt op mod designet.** Hjem, Ture
+    og Tur-detalje på PC er gennemgået mod deres HTML-reference. De øvrige
+    kan afvige fra de låste tokens og fra reglen om én fyldt knap, uden at
+    nogen har set efter. Det er ikke en fejl, der er meldt — det er en
+    gennemgang, der ikke er foretaget.
+
+    To af de tre gennemgåede havde en rigtig overtrædelse, ingen havde meldt:
+    Hjem havde tre fyldte accent-knapper over folden, Tur-detalje havde to.
+    Det er værd at regne med, at de øvrige også har.
 
 ### Funktioner, der venter
 
@@ -208,13 +212,17 @@ står i `PLAN.md` §4 og §9.
 
 ## Grene
 
-**Én åben pull request** (merges lige nu sammen med #65 og #67):
+**Én åben pull request:**
 
 | PR | Gren | Hvad den gør |
 |---|---|---|
-| [#66](https://github.com/K-ingo/Feltbogen/pull/66) | `claude/opret-ark` | Opret-ark for tur og grej — lukker create-before-confirm |
+| [#68](https://github.com/K-ingo/Feltbogen/pull/68) | `claude/tur-detalje-handoff` | Tur-detalje på PC: status som pille, `Find` gjort outline |
 
-#62, #64, #65 og #67 er merget.
+#62, #64, #65, #66 og #67 er merget.
+
+De tre sidste blev **squash-merget**. Grenene er derfor ikke forfædre til
+`main`, og `git branch --merged` melder dem som åbne, selvom indholdet er
+inde. Tjek på indholdet, ikke på grenen.
 
 **Ingen beslutninger står åbne.** De tre, der gjorde, blev truffet
 19. september:
@@ -230,8 +238,9 @@ står i `PLAN.md` §4 og §9.
 - **Hovedspalten sættes til 1024 px** — designets mål på både Hjem og Ture
   (`--hovedspalte` i #67).
 
-16 fjerngrene er ikke merged ind i `main` (plus denne). De øvrige
-er formodentlig forældede rester fra tidligere sessioner, men ingen
+16 fjerngrene er ikke merged ind i `main`, heraf `claude/tur-detalje-handoff`
+ovenfor og tre, der er squash-merget og bare ikke slettet. De øvrige tolv er
+formodentlig forældede rester fra tidligere sessioner, men ingen
 har gennemgået dem. Den største er `claude/code-review-g3oqnn` med 55
 commits. Oprydningen er ikke foretaget, og ingen gren er slettet — det
 kræver ejerens accept.
