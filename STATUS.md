@@ -39,12 +39,14 @@ Kørt på grenen `claude/tur-detalje-handoff` den 19. september 2026:
 | Kommando | Resultat |
 |---|---|
 | `npm run lint` | Bestået, ingen fejl |
-| `npm test` | 61 testfiler, 1.336 tests, alle grønne |
+| `npm test` | 65 testfiler, 1.402 tests, alle grønne |
 | `npm run build` | Bestået |
 
 **Brug `npm run build` til typekontrol, ikke `npx tsc --noEmit`.** Roden
-`tsconfig.json` har `"files": []` og peger kun videre. `tsc --noEmit` tjekker
-derfor ingenting og siger pænt god dag. Det rigtige kald er `tsc -b`.
+`tsconfig.json` har `"files": []` og peger kun videre til `tsconfig.app.json`
+og `tsconfig.node.json`. `tsc --noEmit` tjekker derfor ingenting og siger
+pænt god dag. Det rigtige kald er `tsc -b`, som er det `npm run build` og CI
+kører.
 
 CI kører de samme tre på alle pull requests, plus et tjek for at et privat
 Railway-domæne ikke er havnet i bundlen.
@@ -110,8 +112,10 @@ Tre regler fra `TOKENS.md` gælder bredere end den enkelte skærm og er ikke
 efterprøvet på det, der allerede står:
 
 - Maks **én** fyldt accent-knap pr. skærmbillede.
-- Et opret-ark må ikke oprette noget, før man trykker Opret, og den primære
-  knap er slået fra, indtil navnet er gyldigt.
+- ~~Et opret-ark må ikke oprette noget, før man trykker Opret.~~ **Indfriet.**
+  Ture og grej oprettes nu gennem et ark (`src/Ark.tsx`). Grejsæt og steder
+  opretter stadig med det samme — de har ikke fået et ark tegnet, og
+  oprydningen i `lukDetalje` dækker dem indtil da.
 - Det hedder **Afsluttet**, ikke "arkiveret". (Tjekket: ordet "arkiveret"
   findes ikke i `src/`. Den er allerede opfyldt.)
 
@@ -153,31 +157,37 @@ I den rækkefølge, de sandsynligvis er værd at tage.
    ændret viewport. (`UI_REVIEW.md` P1)
 8. **Eksterne fetch-kald mangler fælles timeout.** En langsom vejr- eller
    adresseudbyder kan holde en UI-handling åben længe. (`CODE_REVIEW.md` §5)
-9. **De sytten resterende skærme er ikke holdt op mod designet.** Hjem, Ture
-   og Tur-detalje på PC er gennemgået mod deres HTML-reference. De øvrige kan
-   afvige fra de låste tokens og fra reglen om én fyldt knap, uden at nogen
-   har set efter. Det er ikke en fejl, der er meldt — det er en gennemgang,
-   der ikke er foretaget.
+9. **`App.tsx` har ingen tests.** Oprydningen i `lukDetalje` — den der
+   sletter en navnløs post igen, når man fortryder — er udækket i begge
+   retninger. Den dækker nu kun grejsæt og steder, men den er stadig det
+   eneste værn mod at de to efterlader tomme poster. Selve oprettelsen er
+   dækket hele vejen fra ark til post af `opretflow.test.ts`; det er
+   sammenkoblingen inde i `App.tsx`, der mangler.
+10. **De sytten resterende skærme er ikke holdt op mod designet.** Hjem, Ture
+    og Tur-detalje på PC er gennemgået mod deres HTML-reference. De øvrige
+    kan afvige fra de låste tokens og fra reglen om én fyldt knap, uden at
+    nogen har set efter. Det er ikke en fejl, der er meldt — det er en
+    gennemgang, der ikke er foretaget.
 
-   To af de tre gennemgåede havde en rigtig overtrædelse, ingen havde meldt:
-   Hjem havde tre fyldte accent-knapper over folden, Tur-detalje havde to.
-   Det er værd at regne med, at de øvrige også har.
+    To af de tre gennemgåede havde en rigtig overtrædelse, ingen havde meldt:
+    Hjem havde tre fyldte accent-knapper over folden, Tur-detalje havde to.
+    Det er værd at regne med, at de øvrige også har.
 
 ### Funktioner, der venter
 
-10. **Rute som eget domæne.** Nu efter dagen og ikke før — rækkefølgen er
+11. **Rute som eget domæne.** Nu efter dagen og ikke før — rækkefølgen er
     byttet om, se `PLAN.md` §9 trin 6. Åbner for kilometer, højdemeter og
     kortfanen på delte ture. Dagen får et `rute_uid`, og det er additivt.
-11. **Badges og notifikationer.** I fundamentet §9, ikke bygget.
-12. **Tidevand ved kystture.** Kræver en DMI-nøgle. (`IDEER.md` §5.4)
-13. **Onboarding og adaptiv hjælpegrad.** Bevidst udskudt — vi bygger til
+12. **Badges og notifikationer.** I fundamentet §9, ikke bygget.
+13. **Tidevand ved kystture.** Kræver en DMI-nøgle. (`IDEER.md` §5.4)
+14. **Onboarding og adaptiv hjælpegrad.** Bevidst udskudt — vi bygger til
     ejeren først. Bliver relevant, hvis appen skal ud til andre.
-14. **Virtualisering af lange gearlister.** Først værd at bygge, når en liste
+15. **Virtualisering af lange gearlister.** Først værd at bygge, når en liste
     er lang nok til at hakke. Afhænger af et rigtigt inventar.
 
 ### Kalibrering
 
-15. **Motorens tærskler er sat efter mavefornemmelse.** Hvornår vægten er
+16. **Motorens tærskler er sat efter mavefornemmelse.** Hvornår vægten er
     værd at nævne, hvor godt et grejsæt skal matche, hvor mange ture der skal
     til, før noget regnes som ubrugt. De er nemme at justere — men kun
     meningsfuldt, når de har været brugt på rigtige data over en sæson.
@@ -202,22 +212,35 @@ står i `PLAN.md` §4 og §9.
 
 ## Grene
 
-**To åbne pull requests:**
+**Én åben pull request:**
 
 | PR | Gren | Hvad den gør |
 |---|---|---|
-| [#62](https://github.com/K-ingo/Feltbogen/pull/62) | `claude/hjem-desktop-handoff` | Hjem på PC: én fyldt knap, tallene foldet væk |
-| [#64](https://github.com/K-ingo/Feltbogen/pull/64) | `claude/design-fundament` | `--bg` rettet til det låste token, designreglerne ind i `AGENTS.md` |
+| [#68](https://github.com/K-ingo/Feltbogen/pull/68) | `claude/tur-detalje-handoff` | Tur-detalje på PC: status som pille, `Find` gjort outline |
 
-#64 er værd at tage først: de to andre bygger videre på tokenet.
+#62, #64, #65, #66 og #67 er merget.
 
-Én beslutning står åben på #62: **`Seneste minder` står over folden**, men
-findes ikke i designets Hjem-skærm. Det kan betyde, at afsnittet er fravalgt
-— eller bare at det ikke er tegnet. Det er en produktbeslutning, ikke en
-oprydning, så den er ikke truffet.
+De tre sidste blev **squash-merget**. Grenene er derfor ikke forfædre til
+`main`, og `git branch --merged` melder dem som åbne, selvom indholdet er
+inde. Tjek på indholdet, ikke på grenen.
 
-17 fjerngrene er ikke merged ind i `main`, heraf de to ovenfor. De øvrige
-femten er formodentlig forældede rester fra tidligere sessioner, men ingen
+**Ingen beslutninger står åbne.** De tre, der gjorde, blev truffet
+19. september:
+
+- **`Seneste minder` bliver stående** over folden på Hjem, selvom designets
+  Hjem-skærm ikke har afsnittet. `UI_REVIEW.md`s første princip vejer
+  tungere: *"Eventyret først — næste tur og egne minder har højere visuel
+  prioritet"*. Minder er ikke statistik.
+- **`Afsluttet` beholder sin neutrale farve.** Designet viser den i sage
+  grøn, men tinten er reserveret til `Gjort op`. Fulgtes designet, ville de
+  to blive næsten umulige at skelne, og påmindelsen om at gøre turen op
+  ville forsvinde. Designet kender kun to faser; koden har fem.
+- **Hovedspalten sættes til 1024 px** — designets mål på både Hjem og Ture
+  (`--hovedspalte` i #67).
+
+16 fjerngrene er ikke merged ind i `main`, heraf `claude/tur-detalje-handoff`
+ovenfor og tre, der er squash-merget og bare ikke slettet. De øvrige tolv er
+formodentlig forældede rester fra tidligere sessioner, men ingen
 har gennemgået dem. Den største er `claude/code-review-g3oqnn` med 55
 commits. Oprydningen er ikke foretaget, og ingen gren er slettet — det
 kræver ejerens accept.
