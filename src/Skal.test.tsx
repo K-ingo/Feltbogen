@@ -111,6 +111,17 @@ describe('sidebaren på PC', () => {
     expect(nav).toHaveClass('sidebar');
     expect(nav).not.toHaveClass('bottom-nav');
   });
+
+  // Loftet på hovedspalten er et valg, der er flyttet sig tre gange — 1100,
+  // 1360, nu designets 1024. Testen holder ikke tallet, men reglen: det skal
+  // bo ét sted. Skrives et tal direkte i skærmen igen, har vi to sandheder at
+  // holde i sync, og næste ændring rammer kun den ene.
+  it('tager spaltens loft fra tokenet og ikke fra et tal i skærmen', () => {
+    tegnSkal('dashboard', DESKTOP);
+
+    const hoved = document.querySelector('.desktop-main') as HTMLElement;
+    expect(hoved.style.maxWidth).toBe('var(--hovedspalte)');
+  });
 });
 
 describe('plus-knappen', () => {

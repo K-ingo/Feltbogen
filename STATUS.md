@@ -1,6 +1,6 @@
 # STATUS
 
-*Sidst opdateret: 18. september 2026. Udgangspunkt: `main` @ `321d0af`.*
+*Sidst opdateret: 19. september 2026. Udgangspunkt: `main` @ `bc40465`.*
 
 Kort svar på "hvor står vi nu?". Den skal kunne læses på to minutter og
 opdateres, hver gang noget bliver færdigt eller blokeret.
@@ -34,16 +34,18 @@ af tyve er bygget.
 
 ## Grønt lys
 
-Kørt på grenen `claude/design-fundament` den 18. september 2026:
+Kørt på grenen `claude/spaltebredde` den 19. september 2026:
 
 | Kommando | Resultat |
 |---|---|
 | `npm run lint` | Bestået, ingen fejl |
-| `npm test` | 59 testfiler, 1.306 tests, alle grønne |
+| `npm test` | 60 testfiler, 1.327 tests, alle grønne |
 | `npm run build` | Bestået |
 
-På `claude/hjem-desktop-handoff` (PR #62) er tallet 60 testfiler og 1.326
-tests — den gren lægger `DashboardSide.test.tsx` oveni.
+**Brug `npm run build` til typekontrol, ikke `npx tsc --noEmit`.** Roden
+`tsconfig.json` har `"files": []` og peger kun videre til `tsconfig.app.json`
+og `tsconfig.node.json`. `tsc --noEmit` tjekker derfor ingenting og siger
+pænt god dag. Det rigtige kald er `tsc -b`, som `npm run build` og CI kører.
 
 CI kører de samme tre på alle pull requests, plus et tjek for at et privat
 Railway-domæne ikke er havnet i bundlen.
@@ -196,21 +198,31 @@ står i `PLAN.md` §4 og §9.
 
 ## Grene
 
-**To åbne pull requests:**
+**Tre åbne pull requests:**
 
 | PR | Gren | Hvad den gør |
 |---|---|---|
-| [#62](https://github.com/K-ingo/Feltbogen/pull/62) | `claude/hjem-desktop-handoff` | Hjem på PC: én fyldt knap, tallene foldet væk |
-| [#64](https://github.com/K-ingo/Feltbogen/pull/64) | `claude/design-fundament` | `--bg` rettet til det låste token, designreglerne ind i `AGENTS.md` |
+| [#65](https://github.com/K-ingo/Feltbogen/pull/65) | `claude/ture-desktop-handoff` | Ture på PC: mærke for manglende sted, gitteret hedder gitter |
+| [#66](https://github.com/K-ingo/Feltbogen/pull/66) | `claude/opret-ark` | Opret-ark for tur og grej — lukker create-before-confirm |
+| [#67](https://github.com/K-ingo/Feltbogen/pull/67) | `claude/spaltebredde` | Hovedspalten til designets 1024 px, som et token |
 
-#64 er værd at tage først: de to andre bygger videre på tokenet.
+#62 og #64 er merget.
 
-Én beslutning står åben på #62: **`Seneste minder` står over folden**, men
-findes ikke i designets Hjem-skærm. Det kan betyde, at afsnittet er fravalgt
-— eller bare at det ikke er tegnet. Det er en produktbeslutning, ikke en
-oprydning, så den er ikke truffet.
+**Ingen beslutninger står åbne.** De tre, der gjorde, blev truffet
+19. september:
 
-17 fjerngrene er ikke merged ind i `main`, heraf de to ovenfor. De øvrige
+- **`Seneste minder` bliver stående** over folden på Hjem, selvom designets
+  Hjem-skærm ikke har afsnittet. `UI_REVIEW.md`s første princip vejer
+  tungere: *"Eventyret først — næste tur og egne minder har højere visuel
+  prioritet"*. Minder er ikke statistik.
+- **`Afsluttet` beholder sin neutrale farve.** Designet viser den i sage
+  grøn, men tinten er reserveret til `Gjort op`. Fulgtes designet, ville de
+  to blive næsten umulige at skelne, og påmindelsen om at gøre turen op
+  ville forsvinde. Designet kender kun to faser; koden har fem.
+- **Hovedspalten sættes til 1024 px** — designets mål på både Hjem og Ture.
+  Prøves i #67, hvor den kan ses i browseren og rulles tilbage med én linje.
+
+18 fjerngrene er ikke merged ind i `main`, heraf de tre ovenfor. De øvrige
 femten er formodentlig forældede rester fra tidligere sessioner, men ingen
 har gennemgået dem. Den største er `claude/code-review-g3oqnn` med 55
 commits. Oprydningen er ikke foretaget, og ingen gren er slettet — det
