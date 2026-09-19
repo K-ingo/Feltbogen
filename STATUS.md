@@ -39,7 +39,7 @@ Kørt på grenen `claude/opret-ark` den 19. september 2026:
 | Kommando | Resultat |
 |---|---|
 | `npm run lint` | Bestået, ingen fejl |
-| `npm test` | 62 testfiler, 1.370 tests, alle grønne |
+| `npm test` | 63 testfiler, 1.382 tests, alle grønne |
 | `npm run build` | Bestået |
 
 **Brug `npm run build` til typekontrol, ikke `npx tsc --noEmit`.** Roden
@@ -159,8 +159,10 @@ I den rækkefølge, de sandsynligvis er værd at tage.
    adresseudbyder kan holde en UI-handling åben længe. (`CODE_REVIEW.md` §5)
 9. **`App.tsx` har ingen tests.** Oprydningen i `lukDetalje` — den der
    sletter en navnløs post igen, når man fortryder — er udækket i begge
-   retninger. Den dækker nu kun grejsæt og steder, men den er stadig den
-   eneste værn mod at de to efterlader tomme poster.
+   retninger. Den dækker nu kun grejsæt og steder, men den er stadig det
+   eneste værn mod at de to efterlader tomme poster. Selve oprettelsen er
+   dækket hele vejen fra ark til post af `opretflow.test.ts`; det er
+   sammenkoblingen inde i `App.tsx`, der mangler.
 10. **De atten resterende skærme er ikke holdt op mod designet.** Hjem og
     Ture på PC er gennemgået mod deres HTML-reference. De øvrige kan afvige
     fra de låste tokens og fra reglen om én fyldt knap, uden at nogen har set
