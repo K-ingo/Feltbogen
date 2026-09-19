@@ -1,6 +1,6 @@
 # STATUS
 
-*Sidst opdateret: 18. september 2026. Udgangspunkt: `main` @ `321d0af`.*
+*Sidst opdateret: 19. september 2026. Udgangspunkt: `main` @ `bc40465`.*
 
 Kort svar på "hvor står vi nu?". Den skal kunne læses på to minutter og
 opdateres, hver gang noget bliver færdigt eller blokeret.
@@ -34,16 +34,19 @@ af tyve er bygget.
 
 ## Grønt lys
 
-Kørt på grenen `claude/design-fundament` den 18. september 2026:
+Kørt på grenen `claude/opret-ark` den 19. september 2026:
 
 | Kommando | Resultat |
 |---|---|
 | `npm run lint` | Bestået, ingen fejl |
-| `npm test` | 59 testfiler, 1.306 tests, alle grønne |
+| `npm test` | 62 testfiler, 1.370 tests, alle grønne |
 | `npm run build` | Bestået |
 
-På `claude/hjem-desktop-handoff` (PR #62) er tallet 60 testfiler og 1.326
-tests — den gren lægger `DashboardSide.test.tsx` oveni.
+**Brug `npm run build` til typekontrol, ikke `npx tsc --noEmit`.** Roden
+`tsconfig.json` har `"files": []` og peger kun videre til `tsconfig.app.json`
+og `tsconfig.node.json`. `tsc --noEmit` tjekker derfor ingenting og siger
+pænt god dag. Det rigtige kald er `tsc -b`, som er det `npm run build` og CI
+kører.
 
 CI kører de samme tre på alle pull requests, plus et tjek for at et privat
 Railway-domæne ikke er havnet i bundlen.
@@ -109,8 +112,10 @@ Tre regler fra `TOKENS.md` gælder bredere end den enkelte skærm og er ikke
 efterprøvet på det, der allerede står:
 
 - Maks **én** fyldt accent-knap pr. skærmbillede.
-- Et opret-ark må ikke oprette noget, før man trykker Opret, og den primære
-  knap er slået fra, indtil navnet er gyldigt.
+- ~~Et opret-ark må ikke oprette noget, før man trykker Opret.~~ **Indfriet.**
+  Ture og grej oprettes nu gennem et ark (`src/Ark.tsx`). Grejsæt og steder
+  opretter stadig med det samme — de har ikke fået et ark tegnet, og
+  oprydningen i `lukDetalje` dækker dem indtil da.
 - Det hedder **Afsluttet**, ikke "arkiveret". (Tjekket: ordet "arkiveret"
   findes ikke i `src/`. Den er allerede opfyldt.)
 
@@ -152,26 +157,31 @@ I den rækkefølge, de sandsynligvis er værd at tage.
    ændret viewport. (`UI_REVIEW.md` P1)
 8. **Eksterne fetch-kald mangler fælles timeout.** En langsom vejr- eller
    adresseudbyder kan holde en UI-handling åben længe. (`CODE_REVIEW.md` §5)
-9. **De nitten resterende skærme er ikke holdt op mod designet.** Kun Hjem på
-   PC er gennemgået mod sin HTML-reference. De øvrige kan afvige fra de låste
-   tokens og fra reglen om én fyldt knap, uden at nogen har set efter. Det er
-   ikke en fejl, der er meldt — det er en gennemgang, der ikke er foretaget.
+9. **`App.tsx` har ingen tests.** Oprydningen i `lukDetalje` — den der
+   sletter en navnløs post igen, når man fortryder — er udækket i begge
+   retninger. Den dækker nu kun grejsæt og steder, men den er stadig den
+   eneste værn mod at de to efterlader tomme poster.
+10. **De atten resterende skærme er ikke holdt op mod designet.** Hjem og
+    Ture på PC er gennemgået mod deres HTML-reference. De øvrige kan afvige
+    fra de låste tokens og fra reglen om én fyldt knap, uden at nogen har set
+    efter. Det er ikke en fejl, der er meldt — det er en gennemgang, der ikke
+    er foretaget.
 
 ### Funktioner, der venter
 
-10. **Rute som eget domæne.** Nu efter dagen og ikke før — rækkefølgen er
+11. **Rute som eget domæne.** Nu efter dagen og ikke før — rækkefølgen er
     byttet om, se `PLAN.md` §9 trin 6. Åbner for kilometer, højdemeter og
     kortfanen på delte ture. Dagen får et `rute_uid`, og det er additivt.
-11. **Badges og notifikationer.** I fundamentet §9, ikke bygget.
-12. **Tidevand ved kystture.** Kræver en DMI-nøgle. (`IDEER.md` §5.4)
-13. **Onboarding og adaptiv hjælpegrad.** Bevidst udskudt — vi bygger til
+12. **Badges og notifikationer.** I fundamentet §9, ikke bygget.
+13. **Tidevand ved kystture.** Kræver en DMI-nøgle. (`IDEER.md` §5.4)
+14. **Onboarding og adaptiv hjælpegrad.** Bevidst udskudt — vi bygger til
     ejeren først. Bliver relevant, hvis appen skal ud til andre.
-14. **Virtualisering af lange gearlister.** Først værd at bygge, når en liste
+15. **Virtualisering af lange gearlister.** Først værd at bygge, når en liste
     er lang nok til at hakke. Afhænger af et rigtigt inventar.
 
 ### Kalibrering
 
-15. **Motorens tærskler er sat efter mavefornemmelse.** Hvornår vægten er
+16. **Motorens tærskler er sat efter mavefornemmelse.** Hvornår vægten er
     værd at nævne, hvor godt et grejsæt skal matche, hvor mange ture der skal
     til, før noget regnes som ubrugt. De er nemme at justere — men kun
     meningsfuldt, når de har været brugt på rigtige data over en sæson.
@@ -200,15 +210,23 @@ står i `PLAN.md` §4 og §9.
 
 | PR | Gren | Hvad den gør |
 |---|---|---|
-| [#62](https://github.com/K-ingo/Feltbogen/pull/62) | `claude/hjem-desktop-handoff` | Hjem på PC: én fyldt knap, tallene foldet væk |
-| [#64](https://github.com/K-ingo/Feltbogen/pull/64) | `claude/design-fundament` | `--bg` rettet til det låste token, designreglerne ind i `AGENTS.md` |
+| [#65](https://github.com/K-ingo/Feltbogen/pull/65) | `claude/ture-desktop-handoff` | Ture på PC: mærke for manglende sted, gitteret hedder gitter |
+| [#66](https://github.com/K-ingo/Feltbogen/pull/66) | `claude/opret-ark` | Opret-ark for tur og grej — lukker create-before-confirm |
 
-#64 er værd at tage først: de to andre bygger videre på tokenet.
+#62 og #64 er merget.
 
-Én beslutning står åben på #62: **`Seneste minder` står over folden**, men
-findes ikke i designets Hjem-skærm. Det kan betyde, at afsnittet er fravalgt
-— eller bare at det ikke er tegnet. Det er en produktbeslutning, ikke en
-oprydning, så den er ikke truffet.
+**Tre beslutninger står åbne:**
+
+1. **`Seneste minder` står over folden** på Hjem, men findes ikke i designets
+   Hjem-skærm. Det kan betyde, at afsnittet er fravalgt — eller bare at det
+   ikke er tegnet.
+2. **`Afsluttet` har ikke designets grønne tint.** Referencen kender kun to
+   faser; koden har fem, og tinten er reserveret til `Gjort op`. Følges
+   referencen, bliver de to umulige at skelne.
+3. **Hovedspaltens bredde.** `Skal` har 1360 px; både Hjem- og
+   Ture-handoff'en tegner den omkring 1000–1024 px. Det rammer hver eneste
+   skærm og hører derfor til i sin egen ændring — men to designs peger nu
+   samme vej, og de atten resterende skærme bygges i den bredde, der vælges.
 
 17 fjerngrene er ikke merged ind i `main`, heraf de to ovenfor. De øvrige
 femten er formodentlig forældede rester fra tidligere sessioner, men ingen

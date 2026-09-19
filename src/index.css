@@ -275,6 +275,85 @@ button:disabled { cursor: not-allowed; }
 .trip-card-photo { display: block; position: relative; width: 100%; height: 180px; overflow: hidden; }
 .trip-card-fallback { display: grid; place-items: center; background: linear-gradient(135deg, var(--hero-top), var(--hero-bund)); color: var(--paa-billede); }
 .trip-card-body { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 20px; }
+/* ─────────────────────────────────────────────
+   Opret-ark
+
+   Et lag over skærmen, hvor man skriver det, der skal til, og først derefter
+   trykker Opret. Se Ark.tsx for hvorfor det findes.
+
+   Designet er tegnet til PC, men arket er den eneste vej til at oprette noget
+   — også på en telefon. Derfor fylder det bredden ud på en smal skærm frem
+   for at stå som en lille firkant midt i den.
+   ───────────────────────────────────────────── */
+.ark-baggrund {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--plads-4);
+  background: rgba(36, 54, 44, 0.35);
+}
+
+.ark {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 576px;
+  max-height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  border: 1px solid var(--border-svag);
+  border-radius: var(--runding);
+  box-shadow: 0 12px 32px var(--overlay);
+}
+
+.ark-hoved {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--plads-3);
+  padding: var(--plads-4) var(--plads-5) var(--plads-3);
+  border-bottom: 1px solid var(--border-svag);
+}
+
+.ark-hoved h2 { margin: 0; }
+
+/* Felterne står under hinanden med samme luft. Bliver de flere, end der er
+   plads til, ruller indholdet — hovedet og foden bliver stående, så Annuller
+   og Opret altid kan nås. */
+.ark-indhold {
+  display: grid;
+  gap: var(--plads-5);
+  padding: var(--plads-5);
+  overflow-y: auto;
+}
+
+.ark-forklaring {
+  margin: 0;
+  color: var(--tekst-dæmpet);
+  font-size: var(--skrift-detalje);
+}
+
+.ark-to-felter, .ark-tre-felter { display: grid; gap: var(--plads-3); }
+.ark-to-felter { grid-template-columns: 1fr 1fr; }
+.ark-tre-felter { grid-template-columns: 1fr 1fr 1fr; }
+
+.ark-fod {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--plads-3);
+  padding: var(--plads-4) var(--plads-5);
+  border-top: 1px solid var(--border-svag);
+}
+
+/* Tre talfelter ved siden af hinanden bliver for smalle på en telefon. */
+@media (max-width: 479px) {
+  .ark-tre-felter { grid-template-columns: 1fr 1fr; }
+}
+
 .trip-card-title { font-family: 'Fraunces', Georgia, serif; font-size: 1.5rem; line-height: 1.25; }
 .trip-card-meta { font-size: var(--skrift-detalje); color: var(--tekst-dæmpet); }
 .home-next { display: flex; min-width: 0; border: 1px solid var(--border-svag); border-radius: 20px; background: var(--bg-forhoejet); overflow: hidden; }

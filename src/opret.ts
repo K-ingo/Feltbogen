@@ -1,12 +1,16 @@
-import type { ItemStatus, Sted, Person } from './db';
+import type { Item, ItemStatus, Sted, Person, Tur } from './db';
 import { opretItem, opretGruppe, opretTur, opretSted, opretPerson } from './sync';
 import { mitNavn } from './pb';
 
 // Tomme poster med fornuftige standardværdier. De ligger her, fordi både
 // listeskærmene og dashboardet opretter gear og ture — en post skal se ens ud
 // uanset hvor man startede den fra.
+//
+// `start` er det, opret-arket allerede har spurgt om. Standardværdierne
+// nedenfor gælder alt det, arket ikke spørger om, så en tur ser ens ud, om den
+// kom fra arket eller et andet sted i appen.
 
-export function opretTomtItem(status: ItemStatus = 'ejer'): Promise<number> {
+export function opretTomtItem(status: ItemStatus = 'ejer', start: Partial<Item> = {}): Promise<number> {
   const nu = new Date();
   return opretItem({
     navn: '',
@@ -30,7 +34,8 @@ export function opretTomtItem(status: ItemStatus = 'ejer'): Promise<number> {
     vurdering: null,
     noter: '',
     oprettet: nu,
-    aendret: nu
+    aendret: nu,
+    ...start
   });
 }
 
@@ -46,7 +51,7 @@ export function opretTomGruppe(): Promise<number> {
   });
 }
 
-export function opretTomTur(): Promise<number> {
+export function opretTomTur(start: Partial<Tur> = {}): Promise<number> {
   const nu = new Date();
   const idag = nu.toISOString().slice(0, 10);
 
@@ -94,7 +99,8 @@ export function opretTomTur(): Promise<number> {
     hero_billede: '',
     booking: null,
     oprettet: nu,
-    aendret: nu
+    aendret: nu,
+    ...start
   });
 }
 

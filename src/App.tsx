@@ -4,9 +4,9 @@ import AuthSide from './AuthSide';
 import { useAuth } from './useAuth';
 import { useKontostatus } from './konto';
 import KontoskiftSide from './KontoskiftSide';
-import { fornyLogin } from './pb';
-import { afstemMedServer, sendAfventende, sletItem, sletGruppe, sletTur, sletSted, opdaterTur } from './sync';
-import type { Sted } from './db';
+import { fornyLogin, mitNavn } from './pb';
+import { afstemMedServer, sendAfventende, sletItem, sletGruppe, sletTur, sletSted } from './sync';
+import type { ItemStatus, Sted } from './db';
 import type { Indstillingsmaal } from './indstillingsmaal';
 import { db } from './db';
 import DashboardSide from './DashboardSide';
@@ -28,6 +28,9 @@ import type { Turmaal } from './turmaal';
 // bivirkning — modulet melder sig selv til hos sync.
 import './delesnapshot';
 import { opretTomtItem, opretTomGruppe, opretTomTur, opretTomtSted } from './opret';
+import { NyTurArk, NytGrejArk } from './Ark';
+import { turFraArk, grejFraArk } from './opretark';
+import type { NyTurFelter, NytGrejFelter } from './opretark';
 import { markerSet, useErSet, ONBOARDING_SET } from './indstillinger';
 // Skærme man sjældent åbner, hentes først når man åbner dem.
 //
@@ -62,6 +65,12 @@ import type { Fane } from './Skal';
 // null indgår i returtypen: onboardingen kan være uafgjort, og så tegner
 // appen ingenting frem for at blinke velkomstskærmen forbi. Uden strengt
 // nul-tjek i oversætteren fanges den slags ikke af sig selv.
+// Hvilket opret-ark der ligger over skærmen. `sted` er sat, når man kom fra
+// et sted og vil lave en tur dér — så er stedet udfyldt i forvejen.
+type Ark =
+  | { slags: 'tur'; sted?: Sted }
+  | { slags: 'grej'; status?: ItemStatus };
+
 function App(): ReactElement | null {
   const { bruger, erLoggetInd } = useAuth();
   const kontostatus = useKontostatus(bruger?.id ?? null);
@@ -109,23 +118,73 @@ function App(): ReactElement | null {
   const aabnSted = (id: number, ny = false) => setValgtSted({ id, ny });
   const aabnDeltTur = (id: number) => setValgtDeltTur(id);
 
-  // Nye poster åbnes med det samme — en tom post man skal lede efter bagefter
-  // er ikke til nogen nytte.
-  const nytItem = async () => aabnItem(await opretTomtItem(), true);
+  // Ture og grej oprettes gennem et ark: man skriver navnet først, og posten
+  // bliver til i det øjeblik man trykker Opret.
+  //
+  // Før skete oprettelsen i selve trykket. Gik man tilbage, blev den navnløse
+  // post ryddet op igen af `lukDetalje` — men lukkede man fanen i stedet,
+  // sendte `visibilitychange` den op på serveren, og oprydningen nåede aldrig
+  // at køre. Så stod der en tur, der hed "Din næste tur", på alle ens enheder.
+  //
+  // Grejsæt og steder opretter stadig med det samme. De har ikke fået et ark
+  // tegnet endnu, og oprydningen i `lukDetalje` dækker dem indtil da.
+  const [ark, setArk] = useState<Ark | null>(null);
+  const nytItem = (status?: ItemStatus) => setArk({ slags: 'grej', status });
+  const nyTur = () => setArk({ slags: 'tur' });
   const nyGruppe = async () => aabnGruppe(await opretTomGruppe(), true);
-  const nyTur = async () => aabnTur(await opretTomTur(), true);
+
+  const opretTurFraArk = async (felter: NyTurFelter, fraSted?: Sted) => {
+    const id = await opretTomTur({
+      ...turFraArk(felter, mitNavn()),
+      // Kom man fra et sted, følger koblingen og koordinaterne med — dem kan
+      // man ikke skrive i et tekstfelt. Rettede man stednavnet i arket, er
+      // det et andet sted, og så følger de ikke med.
+      ...(fraSted && felter.sted.trim() === fraSted.navn
+        ? { sted_uid: fraSted.uid, koordinater: fraSted.koordinater }
+        : {})
+    });
+    setArk(null);
+    // Ikke ny=true: turen har både navn og svar med, og der er intet at rydde
+    // op efter. Flaget sætter kun markøren i navnefeltet, og det er skrevet.
+    aabnTur(id);
+  };
+
+  const opretGrejFraArk = async (felter: NytGrejFelter) => {
+    const id = await opretTomtItem(felter.status, grejFraArk(felter));
+    setArk(null);
+    aabnItem(id);
+  };
+
+  // Arket ligger over den skærm, man stod på. Det tegnes derfor sammen med
+  // skærmen frem for i stedet for den — lukker man arket, er man, hvor man
+  // var, og ikke et nyt sted.
+  const medArk = (skaerm: ReactElement): ReactElement => (
+    <>
+      {skaerm}
+      {ark?.slags === 'tur' && (
+        <NyTurArk
+          idag={new Date().toISOString().slice(0, 10)}
+          sted={ark.sted?.navn}
+          opret={(felter) => void opretTurFraArk(felter, ark.sted)}
+          annuller={() => setArk(null)}
+        />
+      )}
+      {ark?.slags === 'grej' && (
+        <NytGrejArk
+          status={ark.status}
+          opret={(felter) => void opretGrejFraArk(felter)}
+          annuller={() => setArk(null)}
+        />
+      )}
+    </>
+  );
+
 
   // En tur på et sted man kender. Stedet, navnet og koordinaterne følger med,
   // så turen åbner med det udfyldt, man kom for — resten er som en ny tur.
-  const nyTurPaaSted = async (sted: Sted) => {
-    const id = await opretTomTur();
-    await opdaterTur(id, {
-      sted: sted.navn,
-      sted_uid: sted.uid,
-      koordinater: sted.koordinater
-    });
+  const nyTurPaaSted = (sted: Sted) => {
     setValgtSted(null);
-    aabnTur(id, true);
+    setArk({ slags: 'tur', sted });
   };
   const nytSted = async () => aabnSted(await opretTomtSted(), true);
 
@@ -169,7 +228,7 @@ function App(): ReactElement | null {
 
   // Markeringen skrives færdig først, så velkomstskærmen er væk inden den
   // næste skærm kommer op — ellers ville den nå at blinke igennem.
-  const efterVelkomst = async (saa?: () => Promise<void>) => {
+  const efterVelkomst = async (saa?: () => void | Promise<void>) => {
     await markerSet(ONBOARDING_SET);
     await saa?.();
   };
@@ -270,7 +329,7 @@ function App(): ReactElement | null {
   }
 
   if (viserRundvisning) {
-    return (
+    return medArk(
       <Rundvisning
         kunOpslag
         nytItem={() => void nytItem()}
@@ -366,6 +425,7 @@ function App(): ReactElement | null {
     );
   }
 
+  const side = ((): ReactElement => {
   switch (fane) {
     case 'dashboard':
       return (
@@ -394,7 +454,7 @@ function App(): ReactElement | null {
     case 'ture': return <TureListe fane={fane} skift={skiftFane} aabnTur={aabnTur} aabnDeltTur={aabnDeltTur} nyTur={nyTur} />;
     case 'steder': return <StederListe fane={fane} skift={skiftFane} aabnSted={aabnSted} nytSted={nytSted} />;
     case 'statistik': return <StatistikSide fane={fane} skift={skiftFane} aabnItem={aabnItem} aabnAar={setValgtAar} />;
-    case 'inventar': return <InventarSide fane={fane} skift={skiftFane} aabnItem={aabnItem} />;
+    case 'inventar': return <InventarSide fane={fane} skift={skiftFane} aabnItem={aabnItem} nytItem={nytItem} />;
     case 'indstillinger':
       return (
         <IndstillingerSide
@@ -417,6 +477,9 @@ function App(): ReactElement | null {
       throw new Error(`Fanen "${uhaandteret}" har ingen skærm`);
     }
   }
+  })();
+
+  return medArk(side);
 }
 
 export default App;
