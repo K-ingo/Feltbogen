@@ -93,6 +93,16 @@
      på. Med mus er 36 px rigeligt, og 44 ville bare gøre alting luftigt
      uden at hjælpe nogen. Derfor to værdier og ikke ét kompromis. */
   --roerehoejde: 44px;
+
+  /* Hovedspaltens loft på PC. Sidebaren står ved siden af og tæller ikke med.
+
+     Tallet har været 1100, så 1360, og er nu 1024 — det designsystemet tegner
+     på både Hjem og Ture. 1360 blev valgt, fordi 1100 lod en tredjedel af en
+     almindelig PC-skærm stå tom; 1024 er et snævrere loft end begge og
+     prioriterer læsbarheden af den enkelte linje over at fylde skærmen ud.
+
+     Det er et valg, ikke en udledning. Ændres det, ændres det her og kun her. */
+  --hovedspalte: 1024px;
 }
 
 @media (pointer: coarse) {
@@ -353,6 +363,11 @@ button:disabled { cursor: not-allowed; }
 @media (max-width: 479px) {
   .ark-tre-felter { grid-template-columns: 1fr 1fr; }
 }
+
+/* En tur kan bære mere end ét mærke — fasen, og at der mangler et sted. De
+   skal kunne brydes til to linjer på et smalt kort frem for at presse
+   kortets bredde ud. */
+.trip-card-maerker { display: flex; flex-wrap: wrap; gap: var(--plads-2); }
 
 .trip-card-title { font-family: 'Fraunces', Georgia, serif; font-size: 1.5rem; line-height: 1.25; }
 .trip-card-meta { font-size: var(--skrift-detalje); color: var(--tekst-dæmpet); }

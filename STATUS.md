@@ -208,30 +208,30 @@ står i `PLAN.md` §4 og §9.
 
 ## Grene
 
-**To åbne pull requests:**
+**Én åben pull request** (merges lige nu sammen med #65 og #67):
 
 | PR | Gren | Hvad den gør |
 |---|---|---|
-| [#65](https://github.com/K-ingo/Feltbogen/pull/65) | `claude/ture-desktop-handoff` | Ture på PC: mærke for manglende sted, gitteret hedder gitter |
 | [#66](https://github.com/K-ingo/Feltbogen/pull/66) | `claude/opret-ark` | Opret-ark for tur og grej — lukker create-before-confirm |
 
-#62 og #64 er merget.
+#62, #64, #65 og #67 er merget.
 
-**Tre beslutninger står åbne:**
+**Ingen beslutninger står åbne.** De tre, der gjorde, blev truffet
+19. september:
 
-1. **`Seneste minder` står over folden** på Hjem, men findes ikke i designets
-   Hjem-skærm. Det kan betyde, at afsnittet er fravalgt — eller bare at det
-   ikke er tegnet.
-2. **`Afsluttet` har ikke designets grønne tint.** Referencen kender kun to
-   faser; koden har fem, og tinten er reserveret til `Gjort op`. Følges
-   referencen, bliver de to umulige at skelne.
-3. **Hovedspaltens bredde.** `Skal` har 1360 px; både Hjem- og
-   Ture-handoff'en tegner den omkring 1000–1024 px. Det rammer hver eneste
-   skærm og hører derfor til i sin egen ændring — men to designs peger nu
-   samme vej, og de atten resterende skærme bygges i den bredde, der vælges.
+- **`Seneste minder` bliver stående** over folden på Hjem, selvom designets
+  Hjem-skærm ikke har afsnittet. `UI_REVIEW.md`s første princip vejer
+  tungere: *"Eventyret først — næste tur og egne minder har højere visuel
+  prioritet"*. Minder er ikke statistik.
+- **`Afsluttet` beholder sin neutrale farve.** Designet viser den i sage
+  grøn, men tinten er reserveret til `Gjort op`. Fulgtes designet, ville de
+  to blive næsten umulige at skelne, og påmindelsen om at gøre turen op
+  ville forsvinde. Designet kender kun to faser; koden har fem.
+- **Hovedspalten sættes til 1024 px** — designets mål på både Hjem og Ture
+  (`--hovedspalte` i #67).
 
-17 fjerngrene er ikke merged ind i `main`, heraf de to ovenfor. De øvrige
-femten er formodentlig forældede rester fra tidligere sessioner, men ingen
+16 fjerngrene er ikke merged ind i `main` (plus denne). De øvrige
+er formodentlig forældede rester fra tidligere sessioner, men ingen
 har gennemgået dem. Den største er `claude/code-review-g3oqnn` med 55
 commits. Oprydningen er ikke foretaget, og ingen gren er slettet — det
 kræver ejerens accept.
