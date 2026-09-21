@@ -173,6 +173,12 @@ const FANEBLADE: { id: Turfane; label: string }[] = [
 function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
   const erDesktop = useErDesktop();
   const erBred = useErBredskaerm();
+  // Statusvælgeren ligger bag et tryk. Den var fremme hele tiden, og dens
+  // valgte felt er en fyldt accent-flade — sammen med turens primære knap
+  // gav det to fyldte accenter i det første skærmbillede, hvor
+  // designsystemet tillader én. Status er noget man aflæser oftere, end man
+  // ændrer den.
+  const [skifterStatus, setSkifterStatus] = useState(false);
   const [visning, setVisning] = useState<Visning>('gruppe');
   const [pakkesoegning, setPakkesoegning] = useState('');
   // Man lander på overblikket, medmindre man er sendt hertil af et forslag
@@ -961,7 +967,25 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
         flexWrap: 'wrap'
       }}>
         <div className="trip-status">
-          <Segment vaerdier={TUR_STATUS} valgt={tur.status} vaelg={(s) => opdater({ status: s })} kompakt />
+          {skifterStatus ? (
+            <Segment
+              vaerdier={TUR_STATUS}
+              valgt={tur.status}
+              vaelg={(s) => { void opdater({ status: s }); setSkifterStatus(false); }}
+              kompakt
+            />
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--plads-3)', flexWrap: 'wrap' }}>
+              {/* Fasen og ikke statussen: de fire statusser kender ikke
+                  forskel på en afsluttet tur og en, der er gjort op, og det
+                  er netop den forskel, man står og vil vide. */}
+              <span className="trip-status-pille">
+                <span className="trip-status-prik" aria-hidden="true" />
+                {fase.navn}
+              </span>
+              <Knap variant="tekst" onClick={() => setSkifterStatus(true)}>Skift status</Knap>
+            </div>
+          )}
         </div>
         {erDesktop && (
           <div style={{ display: 'flex', gap: 'var(--plads-2)' }}>
@@ -1520,7 +1544,11 @@ function Turparametre({
             placeholder="fx Palnatokesvej 22, Odense"
             style={{ flex: 1, minWidth: 0 }}
           />
-          <Knap onClick={soegPaaSted} disabled={stedSoeger || !tur.sted.trim()} variant="primaer">
+          {/* Outline og ikke fyldt. Den stod som fyldt accent, og på en kladde
+              er parametrene foldet ud fra start — så var der to fyldte
+              accenter i det første skærmbillede. Den fyldte hører til turens
+              næste skridt; et opslag på et stednavn er ikke det. */}
+          <Knap onClick={soegPaaSted} disabled={stedSoeger || !tur.sted.trim()}>
             {stedSoeger ? 'Søger...' : 'Find'}
           </Knap>
         </div>
