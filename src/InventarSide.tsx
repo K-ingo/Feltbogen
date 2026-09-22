@@ -6,10 +6,10 @@ import { sidstBrugtPrItem, grupperPrItem, turePrItem } from './statistik';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
 import { useErDesktop } from './useMedie';
-import { Knap, TagChips, ListeRaekke, TomListe } from './ui';
+import { Knap, TagChips, ListeRaekke, TomListe, Badge } from './ui';
 import { udlaanteItems, laanteItems } from './udlaan';
 import { forfaldne } from './vedligehold';
-import { gram } from './talformat';
+import { gram, kilo } from './talformat';
 
 interface Props {
   fane: Fane;
@@ -106,7 +106,18 @@ function InventarSide({ fane, skift, aabnItem, nytItem }: Props) {
   });
 
   const antal = (udsnit: Udsnit) => iUdsnit(items, udsnit).length;
-  const vaerdiIStatus = iStatus.reduce((sum, i) => sum + i.pris_kr * i.antal, 0);
+
+  // Linjen under overskriften siger antal og vægt. Den sagde antal og kroner,
+  // men både `docs/design/desktop/05-grej.html` og mobilens tegning skriver
+  // "4 ting · 13,1 kg": vægten er det tal, man handler på, når man kigger på
+  // sit grej — det er den, man skal bære. Den samlede værdi står stadig på
+  // Statistik, hvor den er ét tal blandt de andre penge-tal.
+  const vaegtIStatus = iStatus.reduce((sum, i) => sum + i.vaegt_g * i.antal, 0);
+
+  // Grej med noget vedligehold, der forfalder inden længe. Det er de samme
+  // poster som "Vedligehold"-fanen og som Hjems opmærksomhedspunkter —
+  // `forfaldne` er kilden alle tre steder, så de ikke kan blive uenige.
+  const passPaa = new Set(forfaldne(items).map((f) => f.item.uid));
 
   const grejsaet = useLiveQuery(() => db.grupper.toArray()) ?? [];
 
@@ -128,44 +139,56 @@ function InventarSide({ fane, skift, aabnItem, nytItem }: Props) {
       fane={fane}
       skift={skift}
       titel="Grej"
-      undertitel={`${iStatus.length} stykker grej · ${vaerdiIStatus.toLocaleString('da-DK')} kr`}
+      undertitel={`${iStatus.length} ting · ${kilo(vaegtIStatus, 1)} kg`}
       handlinger={<Knap variant="primaer" onClick={aabnArk}>+ Tilføj grej</Knap>}
       fab={aabnArk}
     >
       {/* Grejsættene stod før som deres egen fane i bunden. De hører til her:
           et sæt er en måde at samle sit grej på, ikke et sted man arbejder.
-          Linjen står øverst, så den er det første man ser — ikke gemt under
-          listen hvor man aldrig ville falde over den. */}
-      <ListeRaekke
-        titel="Grejsæt"
-        detalje={
-          grejsaet.length === 0
-            ? 'Saml grej i sæt, så en hel pakning kan vælges på én gang'
-            : `${grejsaet.length} sæt · ${saetnavne(grejsaet)}`
-        }
-        onClick={() => skift('grupper')}
-      />
+          Indgangen står øverst, så den er det første man ser — ikke gemt under
+          listen hvor man aldrig ville falde over den.
 
-      <div className="gear-status-tabs" style={{ display: 'flex', gap: '6px', margin: 'var(--plads-4) 0 var(--plads-3)', flexWrap: 'wrap' }}>
-        {FANEBLADE.map(({ udsnit, label }) => (
-          <button
-            key={udsnit}
-            aria-pressed={valgtStatus === udsnit}
-            onClick={() => { setValgtStatus(udsnit); nulstilFiltre(); }}
-            style={{
-              padding: '6px 14px',
-              fontSize: 'var(--skrift-detalje)',
-              borderRadius: '16px',
-              cursor: 'pointer',
-              fontWeight: 500,
-              background: valgtStatus === udsnit ? 'var(--accent)' : 'transparent',
-              color: valgtStatus === udsnit ? 'var(--accent-tekst)' : 'var(--tekst-dæmpet)',
-              border: `1px solid ${valgtStatus === udsnit ? 'var(--accent)' : 'var(--border)'}`
-            }}
-          >
-            {label} ({antal(udsnit)})
-          </button>
-        ))}
+          Den var en helt almindelig listerække med en chevron og lignede
+          dermed et stykke grej i listen nedenunder. Referencen tegner den som
+          et kort med en outline-knap: den er skærmens næsthøjeste vej, og
+          outline er dét, designsystemet giver den — den fyldte accent er
+          optaget af "+ Tilføj grej". */}
+      <button type="button" className="gear-sets-card" onClick={() => skift('grupper')}>
+        <span className="gear-sets-tekst">
+          <span className="gear-sets-titel">Grejsæt</span>
+          <span className="gear-sets-detalje">
+            {grejsaet.length === 0
+              ? 'Saml grej i sæt, så en hel pakning kan vælges på én gang'
+              : `${grejsaet.length} sæt · ${saetnavne(grejsaet)}`}
+          </span>
+        </span>
+        <span className="gear-sets-aabn">Åbn</span>
+      </button>
+
+      {/* Fanebladene stod som piller, hvor den valgte var en fyldt accent-flade.
+          Sammen med "+ Tilføj grej" var det to fyldte accenter i det samme
+          skærmbillede, hvor designsystemet tillader én. Referencen tegner dem
+          som faneblade med en streg under det valgte: markeringen kan stadig
+          aflæses, og den grønne flade bliver knappens alene. */}
+      <div className="gear-status-tabs">
+        {FANEBLADE.map(({ udsnit, label }) => {
+          const n = antal(udsnit);
+          // Tallet på Vedligehold er et varsel og ikke en optælling som de
+          // andre: det er grej, der venter på én. Derfor står det i
+          // advarselsfarven, og kun når der faktisk er noget.
+          const varsler = udsnit === 'vedligehold' && n > 0;
+
+          return (
+            <button
+              key={udsnit}
+              aria-pressed={valgtStatus === udsnit}
+              onClick={() => { setValgtStatus(udsnit); nulstilFiltre(); }}
+            >
+              {label}
+              <span className={varsler ? 'gear-tab-tal gear-tab-tal--advarsel' : 'gear-tab-tal'}>({n})</span>
+            </button>
+          );
+        })}
       </div>
 
       <input
@@ -225,12 +248,23 @@ function InventarSide({ fane, skift, aabnItem, nytItem }: Props) {
             : 'Ingen matcher. Prøv en anden søgning eller et andet tag.'}
         </TomListe>
       ) : erDesktop ? (
-        <ItemTabel
-          items={filtreret}
-          sidstBrugt={sidstBrugtPrItem(ture, grupper)}
-          grupperFor={grupperPrItem(grupper)}
-          aabn={aabnItem}
-        />
+        <>
+          <ItemTabel
+            items={filtreret}
+            sidstBrugt={sidstBrugtPrItem(ture, grupper)}
+            grupperFor={grupperPrItem(grupper)}
+            passPaa={passPaa}
+            aabn={aabnItem}
+          />
+          {/* Mærket i listen og tallet på fanen er det samme grej, og det er
+              også Hjems opmærksomhedspunkter. Linjen siger det, så de tre
+              steder ikke ligner tre forskellige tal. */}
+          {passPaa.size > 0 && (
+            <p className="gear-care-note">
+              Vedligehold ({passPaa.size}) er de samme opmærksomhedspunkter som på Hjem — rækkerne, der kræver dig, er mærket Pas på.
+            </p>
+          )}
+        </>
       ) : (
         <Mobilliste items={filtreret} ture={ture} grupper={grupper} aabn={aabnItem} />
       )}
@@ -322,10 +356,13 @@ function FilterChip({ aktiv, vaelg, children }: { aktiv: boolean; vaelg: () => v
 
 type Kolonne = 'navn' | 'vaegt' | 'pris' | 'sidst';
 
-function ItemTabel({ items, sidstBrugt, grupperFor, aabn }: {
+function ItemTabel({ items, sidstBrugt, grupperFor, passPaa, aabn }: {
   items: Item[];
   sidstBrugt: Map<string, string>;
   grupperFor: Map<string, string[]>;
+  // Uid'erne på det grej, der har vedligehold på vej. Sendes ind frem for at
+  // blive regnet ud her, så tabellen og fanetallet tæller det samme.
+  passPaa: Set<string>;
   aabn: (id: number) => void;
 }) {
   const [sorterEfter, setSorterEfter] = useState<Kolonne>('navn');
@@ -397,7 +434,16 @@ function ItemTabel({ items, sidstBrugt, grupperFor, aabn }: {
                 onClick={() => item.id !== undefined && aabn(item.id)}
                 style={{ cursor: 'pointer' }}
               >
-                <td style={{ ...celle, fontWeight: 500 }}><button className="gear-name" onClick={(e) => { e.stopPropagation(); if (item.id !== undefined) aabn(item.id); }}>{item.navn}</button></td>
+                <td style={{ ...celle, fontWeight: 500 }}>
+                  <span className="gear-navn-celle">
+                    <button className="gear-name" onClick={(e) => { e.stopPropagation(); if (item.id !== undefined) aabn(item.id); }}>{item.navn}</button>
+                    {/* Vedligeholdet står som et mærke på selve rækken og ikke
+                        kun som en fane, man skal huske at åbne. Referencen
+                        sætter det ved siden af navnet — det er dér, man
+                        kigger, når man løber listen igennem. */}
+                    {passPaa.has(item.uid) && <Badge niveau="advarsel">Pas på</Badge>}
+                  </span>
+                </td>
                 <td style={{ ...celle, color: 'var(--tekst-dæmpet)' }}>
                   {(grupperFor.get(item.uid) ?? []).join(', ') || '—'}
                 </td>

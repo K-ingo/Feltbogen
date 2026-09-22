@@ -102,8 +102,8 @@ det samme; gør de ikke, er det Notion der gælder, og så skal filerne rettes.
 Alle elleve farver i `docs/design/TOKENS.md` stemmer nu med `:root` i
 `src/index.css`. Sidebaggrunden var den sidste, der manglede.
 
-**Der ligger tyve handoffs i kø.** Fire er bygget: Hjem, Ture, Tur-detalje og
-Pakning på PC. Resten — Grej, Grejsæt, Folk, Mere, Steder & Statistik,
+**Der ligger tyve handoffs i kø.** Fem er bygget: Hjem, Ture, Tur-detalje,
+Pakning og Grej på PC. Resten — Grejsæt, Folk, Mere, Steder & Statistik,
 Indstillinger og de to opret-ark, plus otte mobilskærme — er ikke rørt.
 Rækkefølgen er ikke besluttet.
 
@@ -111,6 +111,18 @@ Pakning kostede mere end en farverettelse: den var **to** faner, "Pakning" og
 "Pakkeliste", og designet har én. Det er den samme liste to steder — man stod
 med tasken på den ene fane, mens tallet, man pakkede efter, stod på den anden.
 De to er nu én flade med fremdriften øverst.
+
+Grej var den femte, og overtrædelsen var den samme som på de andre: de fem
+faneblade over listen tegnede den valgte fane som en fyldt accent-pille, og
+sammen med "+ Tilføj grej" var det to fyldte accenter i det samme
+skærmbillede. Referencen tegner faneblade med en streg under det valgte.
+Dertil tre ting, referencen havde og skærmen ikke: Vedligehold-tallet i
+advarselsfarven, mærket **Pas på** ude på de rækker, der venter på én, og en
+Grejsæt-indgang som et kort med en outline-knap frem for en listerække med en
+chevron — den lignede et stykke grej i listen nedenunder. Linjen under
+overskriften siger nu antal og vægt ("4 ting · 13,1 kg") og ikke antal og
+kroner; det er dét, både desktop- og mobiltegningen skriver, og den samlede
+værdi står stadig på Statistik.
 
 Tre regler fra `TOKENS.md` gælder bredere end den enkelte skærm og er ikke
 efterprøvet på det, der allerede står:
@@ -167,21 +179,26 @@ I den rækkefølge, de sandsynligvis er værd at tage.
    eneste værn mod at de to efterlader tomme poster. Selve oprettelsen er
    dækket hele vejen fra ark til post af `opretflow.test.ts`; det er
    sammenkoblingen inde i `App.tsx`, der mangler.
-10. **De seksten resterende skærme er ikke holdt op mod designet.** Hjem,
-    Ture, Tur-detalje og Pakning på PC er gennemgået mod deres HTML-reference.
-    De øvrige kan afvige fra de låste tokens og fra reglen om én fyldt knap,
-    uden at nogen har set efter. Det er ikke en fejl, der er meldt — det er en
-    gennemgang, der ikke er foretaget.
+10. **De femten resterende skærme er ikke holdt op mod designet.** Hjem,
+    Ture, Tur-detalje, Pakning og Grej på PC er gennemgået mod deres
+    HTML-reference. De øvrige kan afvige fra de låste tokens og fra reglen om
+    én fyldt knap, uden at nogen har set efter. Det er ikke en fejl, der er
+    meldt — det er en gennemgang, der ikke er foretaget.
 
-    Tre af de fire gennemgåede havde en rigtig overtrædelse, ingen havde meldt:
-    Hjem havde tre fyldte accent-knapper over folden, Tur-detalje havde to, og
-    pakkelistens opdelingsvælger var den anden fyldte accent på Pakning. Det er
-    værd at regne med, at de øvrige også har.
+    Fire af de fem gennemgåede havde en rigtig overtrædelse, ingen havde meldt:
+    Hjem havde tre fyldte accent-knapper over folden, Tur-detalje havde to,
+    pakkelistens opdelingsvælger var den anden fyldte accent på Pakning, og
+    Grejs fanebladsvælger var den anden på Grej. Det er værd at regne med, at
+    de øvrige også har.
 
     **Set undervejs, ikke rettet:** Overblik-fanen på en tur har to fyldte
     accenter på telefonen — turens primære knap og `Se fordelingen` i
     forslagskortet. Det hører til Tur-detalje · mobil og ikke til denne
     skærm.
+
+    **Set undervejs, ikke rettet:** `docs/design/mobile/03-grej.html` sætter
+    også **Pas på** på rækkerne i telefonens grejliste. Mærket er kun lagt i
+    PC-tabellen — mobilen har sin egen handoff, og den er ikke bygget endnu.
 
 ### Funktioner, der venter
 
