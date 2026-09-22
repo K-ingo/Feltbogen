@@ -189,8 +189,10 @@ function StedDetalje({ stedId, tilbage, aabnTur, opretTurHer, nyOprettet }: Prop
               placeholder="55.66, 10.05"
               style={{ flex: 1, minWidth: 0 }}
             />
+            {/* Outline: "Opret tur her" længere nede er stedets fyldte
+                accent. Find er et opslag, ikke skærmens næste skridt. */}
             <Knap
-              variant="primaer"
+              variant="sekundaer"
               onClick={() => void findKoordinater()}
               disabled={soeger || !soegning()}
             >

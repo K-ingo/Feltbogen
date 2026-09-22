@@ -60,6 +60,19 @@ describe('kun én fyldt primary', () => {
   });
 });
 
+describe('visningsvælgeren', () => {
+  it('er ikke en fyldt accent ved siden af + Ny tur', async () => {
+    await db.ture.add(lavTur({ navn: 'Fovslet Skov', sted: 'Fovslet' }));
+    vis();
+
+    const gitter = await screen.findByRole('button', { name: 'Gitter' });
+    // Referencen tegner "Gitter" fyldt, men så var der to grønne flader i
+    // skærmbilledet. Valget står stadig som valgt — bare stille.
+    expect(gitter).toHaveAttribute('aria-pressed', 'true');
+    expect(gitter.style.background).not.toBe('var(--accent)');
+  });
+});
+
 describe('Ture er den aktive fane', () => {
   it('er markeret i sidebaren', async () => {
     await db.ture.add(lavTur({ navn: 'Fovslet Skov', sted: 'Fovslet' }));

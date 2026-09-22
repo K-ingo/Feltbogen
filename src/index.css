@@ -328,7 +328,11 @@ button:disabled { cursor: not-allowed; }
   border-bottom: 1px solid var(--border-svag);
 }
 
-.ark-hoved h2 { margin: 0; }
+.ark--smal { max-width: 512px; }
+
+/* 24 px i Fraunces, som referencen tegner titlen. Den almindelige h2 er 20 —
+   den står inde på en side mellem andre overskrifter, arkets står alene. */
+.ark-hoved h2 { margin: 0; font-size: 24px; }
 
 /* Felterne står under hinanden med samme luft. Bliver de flere, end der er
    plads til, ruller indholdet — hovedet og foden bliver stående, så Annuller
@@ -358,6 +362,46 @@ button:disabled { cursor: not-allowed; }
   padding: var(--plads-4) var(--plads-5);
   border-top: 1px solid var(--border-svag);
 }
+
+/* Hvorfor Opret er slået fra, under foden. Samme lille, dæmpede tekst som
+   referencens linje under knapperne. */
+.ark-hint {
+  margin: 0;
+  padding: 0 var(--plads-5) var(--plads-4);
+  color: var(--tekst-dæmpet);
+  font-size: var(--skrift-mikro);
+  text-align: right;
+}
+
+/* Talfelt med enheden inde i rammen. Rammen er feltet; inputtet i den har
+   hverken egen kant eller egen baggrund. */
+.ark-enhedsfelt {
+  display: flex;
+  align-items: center;
+  gap: var(--plads-1);
+  min-height: var(--roerehoejde);
+  padding: 0 var(--plads-3);
+  border: 1px solid var(--border);
+  border-radius: var(--runding-lille);
+  background: var(--input-bg);
+}
+/* Ringen lægges på rammen og ikke på inputtet, ellers sidder den inde om
+   tallet og ikke om det, der ligner feltet. */
+.ark-enhedsfelt:focus-within {
+  border-color: var(--fokus);
+  outline: 2px solid var(--fokus);
+  outline-offset: 2px;
+}
+.ark-enhedsfelt input {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+}
+.ark-enhedsfelt span { color: var(--tekst-dæmpet); font-size: var(--skrift-lille); }
 
 /* Tre talfelter ved siden af hinanden bliver for smalle på en telefon. */
 @media (max-width: 479px) {

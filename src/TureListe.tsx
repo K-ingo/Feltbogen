@@ -67,7 +67,10 @@ function TureListe({ fane, skift, aabnTur, aabnDeltTur, nyTur }: Props) {
 
       {egne + antalDelte > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
         <span style={{ color: 'var(--tekst-dæmpet)', fontSize: 'var(--skrift-detalje)' }}>{soegning ? `${visteTure.length + visteDelte.length} af ${egne + antalDelte} ture` : 'Dine ture'}</span>
-        <Segment vaerdier={['Gitter', 'Liste'] as const} valgt={visning} vaelg={setVisning} />
+        {/* Stille og ikke fyldt: "+ Ny tur" er skærmens ene fyldte accent.
+            Referencen tegner "Gitter" fyldt, men en vælger, der ændrer
+            visningen, er ikke skærmens næste skridt. */}
+        <Segment vaerdier={['Gitter', 'Liste'] as const} valgt={visning} vaelg={setVisning} stille />
       </div>}
       <div className={`trip-grid${visning === 'Liste' ? ' is-compact' : ''}`}>
       {visteTure.map((t) => (

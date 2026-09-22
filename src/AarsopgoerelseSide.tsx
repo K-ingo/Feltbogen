@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import type { Tur } from './db';
 import { layout } from './layout';
-import { Knap, SektionsTitel } from './ui';
+import { Knap, SektionsTitel, Segment } from './ui';
 import { kortDag } from './datotekst';
 import { mestBrugte, tureFordeltPrMaaned } from './statistik';
 import {
@@ -74,11 +74,15 @@ function AarsopgoerelseSide({ aar, vaelgAar, aabnFeltbog, tilbage, aabnTur, aabn
 
       {aarene.length > 1 && (
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '22px' }}>
-          {aarene.map((a) => (
-            <Knap key={a} variant={a === aar ? 'primaer' : 'sekundaer'} onClick={() => vaelgAar(a)}>
-              {a}
-            </Knap>
-          ))}
+          {/* Året er et valg og ikke en handling. Det stod som fyldte
+              knapper, og det valgte år var dermed den anden fyldte accent ved
+              siden af "Årets feltbog". Nu en stille segment som på Statistik. */}
+          <Segment
+            vaerdier={aarene.map(String)}
+            valgt={String(aar)}
+            vaelg={(a) => vaelgAar(Number(a))}
+            stille
+          />
         </div>
       )}
 
