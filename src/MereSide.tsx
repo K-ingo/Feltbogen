@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import { aarsopgoerelseAtSe } from './aarsopgoerelse';
+import { stederFraTure } from './friluftshistorik';
 import { usendtAntal } from './sync';
 import { syncstatus } from './dashboard';
 import type { Syncstatus } from './dashboard';
@@ -38,17 +39,24 @@ interface Props {
 function MereSide({ fane, skift, aabnAar, aabnIndstillinger }: Props) {
   const { erLoggetInd } = useAuth();
   const online = useErOnline();
-  // Tællinger og ikke toArray. Skærmen viser to tal, og at hente hele
-  // inventaret ned i hukommelsen for at måle længden af det er spild på en
-  // telefon med et par hundrede ting.
-  const antalSteder = useLiveQuery(() => db.steder.count(), [], 0);
-  const antalItems = useLiveQuery(() => db.items.count(), [], 0);
+  const steder = useLiveQuery(() => db.steder.toArray()) ?? [];
 
   // Turene hentes helt: årsopgørelsen skal bruge dem for at afgøre om der er
   // noget at se. Så er antallet gratis, og en tælling ved siden af ville være
   // den samme tabel læst to gange.
   const ture = useLiveQuery(() => db.ture.toArray()) ?? [];
   const opgoerelse = aarsopgoerelseAtSe(ture);
+
+  // Rækkerne skal sige det samme som skærmen bag dem.
+  //
+  // Steder sagde "0 steder du kommer tilbage til", mens Steder-skærmen stod
+  // med tre steder fra turene — tallet talte kun de gemte. Nu står begge tal,
+  // og "favoritter" er det ord, skærmen selv bruger om dem, man har gemt.
+  //
+  // Statistik sagde "ting talt op". Det var inventaret, og det er ikke det,
+  // man åbner en friluftshistorik for. Referencen siger ture og nætter.
+  const fraTure = stederFraTure(ture, steder);
+  const naetter = ture.reduce((sum, t) => sum + t.naetter, 0);
 
   // Rækken siger det samme som linjen på startskærmen, og af samme kilde.
   // Den sagde først "Alt er sendt op" ud fra antallet alene — også uden en
@@ -72,12 +80,12 @@ function MereSide({ fane, skift, aabnAar, aabnIndstillinger }: Props) {
         <div className="hub-kort">
           <ListeRaekke
             titel="Steder"
-            detalje={`${antalSteder} ${antalSteder === 1 ? 'sted' : 'steder'} du kommer tilbage til`}
+            detalje={`${fraTure.length} fra ture · ${steder.length} ${steder.length === 1 ? 'favorit' : 'favoritter'}`}
             onClick={() => skift('steder')}
           />
           <ListeRaekke
             titel="Statistik"
-            detalje={`${ture.length} ${ture.length === 1 ? 'tur' : 'ture'} · ${antalItems} ting talt op`}
+            detalje={`${ture.length} ${ture.length === 1 ? 'tur' : 'ture'} · ${naetter} ${naetter === 1 ? 'nat' : 'nætter'}`}
             onClick={() => skift('statistik')}
           />
           {/* Årsopgørelsen står ikke i referencen, fordi den kun findes, når

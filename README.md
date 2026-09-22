@@ -217,6 +217,19 @@ linjen på startskærmen — så den ikke kan stå og sige "Alt er sendt op" om 
 kø, der aldrig kom op. Er der en fejl, står den i advarselsfarven med en prik
 foran. Det følger `docs/design/desktop/08-mere.html`.
 
+Steder og Statistik er **én skærm** — *Friluftshistorik* — med to faneblade.
+De stillede det samme spørgsmål hver for sig: hvor har jeg været, og hvad blev
+det til. Stederne kommer nu fra turene (`stederFraTure()` i
+`friluftshistorik.ts`) og ikke kun fra dem, man havde gemt — havde man tre ture
+med et stednavn og ingen gemte steder, stod skærmen tom og Mere-rækken sagde
+"0". «Gem» laver stedet *og* kobler turene til det, så stedets detalje kender
+sin egen historik; de gemte er favoritterne, og det er dem, Mere-rækken tæller.
+Statistikken er vendt om: de fire tal, nætterne pr. måned og det mest brugte
+grej øverst, resten under folden i *Mere fra tallene*. Ingen cirkeldiagrammer.
+Det valgte faneblad er skærmens ene fyldte accent — derfor er «Årsopgørelse»
+outline og årsvælgeren tonet. Det følger
+`docs/design/desktop/09-steder-statistik.html`.
+
 Skallen kender selv den sammenhæng (`HOERER_TIL` i `Skal.tsx`). Står man inde
 på en underskærm, bliver hovedfanen markeret i navigationen, og der kommer en
 "‹ Grej"-linje over titlen — begge dele udledt, så en vej tilbage ikke kan

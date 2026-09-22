@@ -1,91 +1,260 @@
 import { useState } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from './db';
-import type { Item } from './db';
+import type { CSSProperties, ReactNode } from 'react';
+import type { Gruppe, Item, Sted, Tur } from './db';
+import { etiket } from './db';
 import {
   turtal, gennemsnitsvaegt, bedsteGrej, daarligsteGrej, andelVurderet,
   hyldevarer, hyldevarevaegt, skroebeligtGrej, grundlag
 } from './laering';
 import { mestBesoegte, fordeling } from './aarsopgoerelse';
-import { etiket } from './db';
-import { Segment, SektionsTitel } from './ui';
-import { Skal } from './Skal';
-import type { Fane } from './Skal';
+import { SektionsTitel } from './ui';
 import { useErDesktop } from './useMedie';
 import { kilo } from './talformat';
 import {
-  filtrererTure,
   samletInventarvaerdi,
   samletVaegt,
   antalPrStatus,
   vaerditilvaekst,
-  tureFordeltPrMaaned,
   mestBrugte,
   ubrugteItems,
   fordelingPrGruppe
 } from './statistik';
-import type { Periode } from './statistik';
-import { aarMedTure } from './aarsopgoerelse';
+import {
+  aarsvalgMuligheder,
+  aldrigBrugt,
+  historiktal,
+  naetterPrMaaned,
+  tureIAarsvalg
+} from './friluftshistorik';
+import type { Aarsvalg } from './friluftshistorik';
 import { gennemsnit, snittekst } from './vurdering';
 
 interface Props {
-  fane: Fane;
-  skift: (f: Fane) => void;
-  aabnItem: (id: number, nyOprettet?: boolean) => void;
-  aabnAar: (aar: number) => void;
+  ture: Tur[];
+  items: Item[];
+  grupper: Gruppe[];
+  steder: Sted[];
+  aabnItem: (id: number) => void;
 }
 
-const PERIODER: readonly Periode[] = ['i_aar', 'sidste_aar', 'alt'];
-const PERIODE_LABEL: Record<Periode, string> = {
-  i_aar: 'I år',
-  sidste_aar: 'Sidste år',
-  alt: 'Alt'
-};
-
-const MAANEDER = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
-// Kun hver tredje måned får en etiket — tolv navne under en søjlegraf på en
-// telefon bliver til grød.
-const MAANED_ETIKETTER = [0, 3, 6, 9, 11];
+// Statistik-panelet i friluftshistorikken.
+//
+// Skærmen var et instrumentbræt: en periodevælger og et dusin widgets i to
+// kolonner, hvor de fire tal, man faktisk kom efter, lå spredt imellem dem.
+// Referencen (docs/design/desktop/09-steder-statistik.html) vender det om —
+// fire tal, nætterne pr. måned og det mest brugte grej øverst, i den ro en
+// dagbog har. Ingen cirkeldiagrammer.
+//
+// Resten af tallene er ikke væk. De ligger under folden, hvor de kan slås op
+// af den, der leder efter dem, uden at være det første man møder.
+const MAANEDER = ['Jan', 'Feb', 'Mar', 'Apr', 'Maj', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec'];
 
 const MAKS_MEST_BRUGTE = 5;
 
-function StatistikSide({ fane, skift, aabnItem, aabnAar }: Props) {
+function StatistikPanel({ ture: alleTure, items, grupper, steder, aabnItem }: Props) {
   const erDesktop = useErDesktop();
-  const [periode, setPeriode] = useState<Periode>('i_aar');
+  const muligheder = aarsvalgMuligheder(alleTure);
+  const [valgtAar, setValgtAar] = useState<Aarsvalg>(muligheder[0]);
 
-  const items = useLiveQuery(() => db.items.toArray()) ?? [];
-  const alleTure = useLiveQuery(() => db.ture.toArray()) ?? [];
-  const grupper = useLiveQuery(() => db.grupper.toArray()) ?? [];
-  const aarene = aarMedTure(alleTure);
+  // Har man fået sin første tur i et nyt år, mens skærmen stod åben, kan det
+  // valgte år være et, der ikke står i vælgeren længere. Så er det nyeste år
+  // det rigtige at vise — en markering, der ikke står nogen steder, er værre
+  // end et skift, man kan se.
+  const aar = muligheder.includes(valgtAar) ? valgtAar : muligheder[0];
+  const ture = tureIAarsvalg(alleTure, aar);
 
-  const nu = new Date();
-  const ture = filtrererTure(alleTure, periode);
-
-  const antal = antalPrStatus(items);
+  const tal = historiktal(ture, items);
+  const maaneder = naetterPrMaaned(ture);
   const topBrugt = mestBrugte(items, ture, grupper, MAKS_MEST_BRUGTE);
+  const rest = aldrigBrugt(items, ture, grupper);
+
+  return (
+    <div className="hist-panel">
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <div className="hist-aar" role="group" aria-label="Vælg år">
+          {muligheder.map((mulighed) => (
+            <button
+              key={String(mulighed)}
+              type="button"
+              aria-pressed={mulighed === aar}
+              onClick={() => setValgtAar(mulighed)}
+            >
+              {mulighed === 'alle' ? 'Alle år' : mulighed}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="hist-kpi">
+        <Kpi label="Ture" vaerdi={tal.ture} />
+        <Kpi label="Nætter" vaerdi={tal.naetter} />
+        <Kpi label="Grej i bog" vaerdi={tal.grej} />
+        <Kpi label="Kg grej" vaerdi={kilo(tal.vaegt_g, 1)} />
+      </div>
+
+      {/* Ærligheden i de fire tal: to af dem følger året, to gør ikke. En
+          sovepose, man købte i fjor, ligger der stadig. */}
+      <p className="hist-fodnote">
+        Ture og nætter er {aarstekst(aar)}. Grej i bog og kg grej er det, du ejer nu — de
+        følger ikke året.
+      </p>
+
+      <div className="hist-kort">
+        <p className="hist-label">Nætter pr. måned</p>
+        {maaneder.length === 0 ? (
+          <p className="hist-info-tekst">
+            Ingen ture med en dato {aarstekst(aar)}. Sæt datoer på en tur, så kommer
+            månederne her.
+          </p>
+        ) : (
+          <>
+            <Soejler maaneder={maaneder} />
+            <p className="hist-fodnote" style={{ marginTop: 'var(--plads-4)' }}>
+              {aar === 'alle'
+                ? 'Alle år lagt sammen måned for måned — det er, når på året du kommer ud.'
+                : 'Kun de måneder, du var ude i. Ingen cirkeldiagrammer.'}
+            </p>
+          </>
+        )}
+      </div>
+
+      <div className="hist-kort hist-kort--liste">
+        <div className="hist-liste-hoved">
+          <p className="hist-label">Mest brugte grej</p>
+        </div>
+        {topBrugt.length === 0 && rest === 0 ? (
+          <div className="hist-liste-raekke hist-liste-raekke--rest">
+            Intet grej har været med på en tur {aarstekst(aar)} endnu.
+          </div>
+        ) : (
+          <ul className="hist-liste">
+            {topBrugt.map((brugt) => (
+              <li key={brugt.item.uid}>
+                <button
+                  type="button"
+                  className="hist-liste-raekke"
+                  onClick={() => brugt.item.id !== undefined && aabnItem(brugt.item.id)}
+                >
+                  <span>{brugt.item.navn || 'Uden navn'}</span>
+                  <span className="hist-liste-hoejre">
+                    {brugt.antalTure} {brugt.antalTure === 1 ? 'tur' : 'ture'}
+                  </span>
+                </button>
+              </li>
+            ))}
+            {rest > 0 && (
+              <li>
+                <div className="hist-liste-raekke hist-liste-raekke--rest">
+                  <span>Resten</span>
+                  <span className="hist-liste-hoejre">
+                    {rest} {rest === 1 ? 'stykke' : 'stykker'} · aldrig brugt endnu
+                  </span>
+                </div>
+              </li>
+            )}
+          </ul>
+        )}
+      </div>
+
+      <Underfolden
+        aar={aar}
+        ture={ture}
+        alleTure={alleTure}
+        items={items}
+        grupper={grupper}
+        steder={steder}
+        erDesktop={erDesktop}
+        aabnItem={aabnItem}
+      />
+    </div>
+  );
+}
+
+// "i 2026" / "i alt". Står i de sætninger, der skal kunne læses uden at man
+// kigger op på vælgeren for at se, hvad de handler om.
+function aarstekst(aar: Aarsvalg): string {
+  return aar === 'alle' ? 'i alt' : `i ${aar}`;
+}
+
+function Kpi({ label, vaerdi }: { label: string; vaerdi: string | number }) {
+  return (
+    <div className="hist-kort">
+      <p className="hist-label">{label}</p>
+      <p className="hist-kpi-tal">{vaerdi}</p>
+    </div>
+  );
+}
+
+// Liggende søjler. Tallet står ved siden af navnet, så grafen ikke er det
+// eneste, der siger det — en søjle på 17 % er ikke til at aflæse som 2 nætter.
+function Soejler({ maaneder }: { maaneder: { maaned: number; naetter: number; ture: number }[] }) {
+  const maks = Math.max(...maaneder.map((m) => m.naetter), 1);
+
+  return (
+    <div className="hist-soejler">
+      {maaneder.map((m) => (
+        <div key={m.maaned} className={m.naetter === 0 ? 'hist-soejle--tom' : undefined}>
+          <div className="hist-soejle-hoved">
+            <span>{MAANEDER[m.maaned]}</span>
+            <span className="hist-soejle-tal">
+              {m.naetter === 0
+                ? `0 nætter · ${m.ture} ${m.ture === 1 ? 'dagstur' : 'dagsture'}`
+                : `${m.naetter} ${m.naetter === 1 ? 'nat' : 'nætter'}`}
+            </span>
+          </div>
+          <div className="hist-soejle-bane">
+            {m.naetter > 0 && (
+              <div
+                className="hist-soejle-fyld"
+                style={{ width: `${Math.max((m.naetter / maks) * 100, 4)}%` }}
+              />
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Under folden
+//
+// Det, referencen ikke tegner, men som stadig er sandt: inventarets værdi,
+// det ubrugte grej og hvad turene har lært os. Det lå før øverst og gjorde
+// skærmen til et instrumentbræt. Her kan det slås op af den, der leder efter
+// det — og ingen af kortene har en fyldt accent.
+// ─────────────────────────────────────────────
+
+function Underfolden({ aar, ture, alleTure, items, grupper, steder, erDesktop, aabnItem }: {
+  aar: Aarsvalg;
+  ture: Tur[];
+  alleTure: Tur[];
+  items: Item[];
+  grupper: Gruppe[];
+  steder: Sted[];
+  erDesktop: boolean;
+  aabnItem: (id: number) => void;
+}) {
+  const antal = antalPrStatus(items);
   // Ubrugt måles altid mod hele turhistorikken — et snævrere vindue ville
   // udråbe gear som ubrugt bare fordi man kigger på et enkelt år.
   const ubrugt = ubrugteItems(items, alleTure, grupper);
   const gruppeFordeling = fordelingPrGruppe(items, grupper);
   // Kun det man ejer. Solgt grej siger ikke noget om, hvad man er glad for nu.
   const snit = gennemsnit(items.filter((i) => i.status === 'ejer'));
-
-  // "I år" sammenlignes med sidste år, "sidste år" med året før. Under "alt"
-  // er der ikke noget at sammenligne med.
-  const aar = periode === 'sidste_aar' ? nu.getFullYear() - 1 : nu.getFullYear();
-  const tilvaekst = periode === 'alt' ? null : vaerditilvaekst(items, aar);
+  // Under "Alle år" er der ikke noget enkelt år at måle tilvæksten i.
+  const tilvaekst = aar === 'alle' ? null : vaerditilvaekst(items, aar);
 
   // Læringen deler sig i to, og det er ikke vilkårligt.
   //
-  // Tallene om *perioden* — nætter, dage, gennemsnitsvægt, hvor man var —
-  // beskriver det udsnit, man kigger på, og følger derfor perioden.
+  // Tallene om *året* — nætter, gennemsnitsvægt, hvor man var — beskriver det
+  // udsnit, man kigger på, og følger derfor vælgeren.
   //
   // Mønstrene — hyldevarer, det der går i stykker — måles mod hele
   // turhistorikken. Samme grund som ubrugt gear ovenfor: et snævrere vindue
   // ville udråbe noget som en vane, bare fordi man kigger på et enkelt år.
   const tal = turtal(ture);
   const vaegt = gennemsnitsvaegt(ture, grupper, items);
-  const steder = useLiveQuery(() => db.steder.toArray()) ?? [];
   const besoegte = mestBesoegte(ture, steder).slice(0, 5);
   const turtyper = fordeling(ture, (t) => etiket(t.aktivitet));
 
@@ -96,55 +265,21 @@ function StatistikSide({ fane, skift, aabnItem, aabnAar }: Props) {
   const daarligste = daarligsteGrej(items, 3);
   const vurderetAndel = andelVurderet(items);
 
-  if (items.length === 0 && alleTure.length === 0) {
-    return (
-      <Skal fane={fane} skift={skift} titel="Statistik">
-        <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--tekst-svag)', fontSize: 'var(--skrift-knap)' }}>
-          Ingen tal endnu. Tilføj grej under Grej, så begynder det at fylde her.
-        </div>
-      </Skal>
-    );
-  }
+  const gitter: CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: erDesktop ? 'repeat(2, minmax(0, 1fr))' : '1fr',
+    gap: '10px',
+    alignItems: 'start'
+  };
 
   return (
-    <Skal
-      fane={fane}
-      skift={skift}
-      titel="Statistik"
-      handlinger={
-        <Segment vaerdier={PERIODER} valgt={periode} vaelg={(p) => setPeriode(p)} formater={(p) => PERIODE_LABEL[p]} kompakt />
-      }
-    >
-      {!erDesktop && (
-        <div style={{ marginBottom: '14px' }}>
-          <Segment vaerdier={PERIODER} valgt={periode} vaelg={(p) => setPeriode(p)} formater={(p) => PERIODE_LABEL[p]} kompakt />
-        </div>
-      )}
+    <details className="hist-mere">
+      <summary>Mere fra tallene</summary>
 
-      {/* Årsopgørelsen er den samme data læst som en beretning frem for som
-          måleinstrumenter. Den ligger her, fordi det er her man i forvejen er
-          når man vil vide hvordan det gik. */}
-      {aarene.length > 0 && <Aarsknap aar={aarene[0]} aabn={() => aabnAar(aarene[0])} />}
-
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: erDesktop ? 'repeat(2, minmax(0, 1fr))' : '1fr',
-        gap: '10px',
-        alignItems: 'start'
-      }}>
-        <Widget titel={`Ture ${PERIODE_LABEL[periode].toLowerCase()} — månedligt`} bred={erDesktop}>
-          <Maanedsgraf
-            maaneder={tureFordeltPrMaaned(ture)}
-            // Måneder der ikke er kommet endnu står dæmpet, så en tom søjle
-            // ikke ser ud som en måned man ikke kom afsted i.
-            fremtidFra={periode === 'i_aar' ? nu.getMonth() + 1 : 12}
-            antal={ture.length}
-          />
-        </Widget>
-
+      <div style={{ marginTop: 'var(--plads-4)', ...gitter }}>
         <Widget titel="Inventarværdi">
           <Tal vaerdi={kroner(samletInventarvaerdi(items))} enhed="kr" />
-          <Undertekst>{tilvaekstTekst(tilvaekst, periode, samletVaegt(items))}</Undertekst>
+          <Undertekst>{tilvaekstTekst(tilvaekst, aar, samletVaegt(items))}</Undertekst>
         </Widget>
 
         {/* Kun når der faktisk er vurderet noget. Et snit af nul vurderinger
@@ -183,31 +318,14 @@ function StatistikSide({ fane, skift, aabnItem, aabnAar }: Props) {
             <Fordeling fordeling={gruppeFordeling} />
           </Widget>
         )}
-
-        {topBrugt.length > 0 && (
-          <Widget titel="Mest brugte grej">
-            <Grejliste
-              raekker={topBrugt.map((x) => ({
-                item: x.item,
-                hoejre: `${x.antalTure} ${x.antalTure === 1 ? 'tur' : 'ture'}`
-              }))}
-              aabn={aabnItem}
-            />
-          </Widget>
-        )}
       </div>
 
       <div style={{ marginTop: 'var(--plads-5)' }}>
         <SektionsTitel>Hvad turene har lært os</SektionsTitel>
       </div>
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: erDesktop ? 'repeat(2, minmax(0, 1fr))' : '1fr',
-        gap: '10px',
-        alignItems: 'start'
-      }}>
-        <Widget titel={`Nætter ${PERIODE_LABEL[periode].toLowerCase()}`}>
+      <div style={gitter}>
+        <Widget titel={`Nætter ${aarstekst(aar)}`}>
           <Tal vaerdi={`${tal.naetter}`} enhed={tal.naetter === 1 ? 'nat' : 'nætter'} />
           <Undertekst>
             {[
@@ -327,7 +445,7 @@ function StatistikSide({ fane, skift, aabnItem, aabnAar }: Props) {
           </Widget>
         )}
       </div>
-    </Skal>
+    </details>
   );
 }
 
@@ -360,10 +478,10 @@ function Andelsliste({ raekker, nummerer = false }: {
   );
 }
 
-// En nummereret liste af grej med et tal til højre. Formen går igen — mest
-// brugt, hyldevarer, bedste og dårligste — og stod før skrevet ud hver gang.
+// En nummereret liste af grej med et tal til højre. Formen går igen —
+// hyldevarer, bedste og dårligste — og stod før skrevet ud hver gang.
 function Grejliste({ raekker, aabn, nummerer = true }: {
-  raekker: { item: Item; hoejre: React.ReactNode }[];
+  raekker: { item: Item; hoejre: ReactNode }[];
   aabn: (id: number) => void;
   nummerer?: boolean;
 }) {
@@ -404,7 +522,7 @@ function Grejliste({ raekker, aabn, nummerer = true }: {
 
 function Widget({ titel, children, bred, advarsel }: {
   titel: string;
-  children: React.ReactNode;
+  children: ReactNode;
   // Spænder over begge kolonner på PC.
   bred?: boolean;
   advarsel?: boolean;
@@ -446,49 +564,9 @@ function Tal({ vaerdi, enhed, advarsel }: { vaerdi: string; enhed?: string; adva
   );
 }
 
-function Undertekst({ children }: { children: React.ReactNode }) {
+function Undertekst({ children }: { children: ReactNode }) {
   return (
     <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginTop: '4px' }}>{children}</div>
-  );
-}
-
-function Maanedsgraf({ maaneder, fremtidFra, antal }: {
-  maaneder: number[];
-  fremtidFra: number;
-  antal: number;
-}) {
-  const maks = Math.max(...maaneder, 1);
-
-  return (
-    <div>
-      <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-dæmpet)', marginBottom: '10px' }}>
-        {antal} {antal === 1 ? 'tur' : 'ture'}
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: '72px' }}>
-        {maaneder.map((n, i) => (
-          <div
-            key={i}
-            title={`${MAANEDER[i]}: ${n} ${n === 1 ? 'tur' : 'ture'}`}
-            style={{
-              flex: 1,
-              height: n > 0 ? `${Math.max((n / maks) * 100, 6)}%` : '2px',
-              borderRadius: '3px 3px 0 0',
-              background: n > 0 ? 'var(--accent)' : 'var(--border-svag)',
-              opacity: i >= fremtidFra ? 0.35 : 1
-            }}
-          />
-        ))}
-      </div>
-
-      <div style={{ display: 'flex', gap: '4px', marginTop: '5px' }}>
-        {maaneder.map((_, i) => (
-          <div key={i} style={{ flex: 1, fontSize: '9px', color: 'var(--tekst-svag)', textAlign: 'center' }}>
-            {MAANED_ETIKETTER.includes(i) ? MAANEDER[i] : ''}
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -602,54 +680,20 @@ function Udfoldelig({ items, aabn }: { items: Item[]; aabn: (id: number) => void
 // Hjælpere
 // ─────────────────────────────────────────────
 
-// Linjen under inventarværdien: hvor meget der kom til i perioden. Under
-// "alt" er der ingen periode at måle tilvæksten i, og så siger vægten mere.
-function tilvaekstTekst(tilvaekst: number | null, periode: Periode, vaegt: number): string {
+// Linjen under inventarværdien: hvor meget der kom til i året. Under "Alle
+// år" er der ingen periode at måle tilvæksten i, og så siger vægten mere.
+function tilvaekstTekst(tilvaekst: number | null, aar: Aarsvalg, vaegt: number): string {
   if (tilvaekst === null) return `${kilo(vaegt, 1)} kg i alt`;
 
-  const label = periode === 'sidste_aar' ? 'vs. året før' : 'vs. sidste år';
   // Uden en købsdato kan et stykke gear ikke placeres i et år. Er der ingen
   // daterede køb, er nul ikke det samme som "du købte ikke noget".
-  if (tilvaekst === 0) return 'Ingen daterede køb i perioden';
+  if (tilvaekst === 0) return `Ingen daterede køb i ${aar}`;
 
-  return `+${kroner(tilvaekst)} kr ${label}`;
+  return `+${kroner(tilvaekst)} kr købt i ${aar}`;
 }
 
 function kroner(beloeb: number): string {
   return Math.round(beloeb).toLocaleString('da-DK');
 }
 
-function Aarsknap({ aar, aabn }: { aar: number; aabn: () => void }) {
-  return (
-    <button
-      onClick={aabn}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '12px',
-        width: '100%',
-        padding: '14px 16px',
-        marginBottom: '14px',
-        borderRadius: '12px',
-        background: 'var(--accent-bg)',
-        border: '1px solid var(--accent-border)',
-        cursor: 'pointer',
-        textAlign: 'left',
-        color: 'var(--tekst)'
-      }}
-    >
-      <span>
-        <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '17px' }}>
-          Årsopgørelse {aar}
-        </span>
-        <span style={{ display: 'block', fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)', marginTop: '2px' }}>
-          Året talt op — nætter, steder, selskab og grej
-        </span>
-      </span>
-      <span style={{ color: 'var(--accent)', fontSize: '18px' }}>›</span>
-    </button>
-  );
-}
-
-export default StatistikSide;
+export default StatistikPanel;

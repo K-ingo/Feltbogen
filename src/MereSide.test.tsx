@@ -127,22 +127,26 @@ describe('sektionen Din friluftshistorik', () => {
     expect(within(historik).getByText('Statistik')).toBeInTheDocument();
   });
 
-  it('tæller steder og ting i undertitlerne', async () => {
+  // Rækkerne skal sige det samme som skærmen bag dem. Steder-rækken talte før
+  // kun favoritterne og stod med "0", mens skærmen havde tre steder fra
+  // turene; Statistik-rækken talte inventaret og ikke turene. Se
+  // FriluftshistorikSide.tsx.
+  it('tæller både stederne fra turene og favoritterne', async () => {
     await db.steder.add(lavSted({ navn: 'Rold Skov' }));
     await db.items.bulkAdd([lavItem({ navn: 'Tarp' }), lavItem({ navn: 'Kogegrej' })]);
-    await db.ture.add(lavTur({ navn: 'Sensommer' }));
+    await db.ture.add(lavTur({ navn: 'Sensommer', sted: 'Fovslet Skov', naetter: 2 }));
     vis();
 
-    expect(await screen.findByText('1 sted du kommer tilbage til')).toBeInTheDocument();
-    expect(await screen.findByText('1 tur · 2 ting talt op')).toBeInTheDocument();
+    expect(await screen.findByText('1 fra ture · 1 favorit')).toBeInTheDocument();
+    expect(await screen.findByText('1 tur · 2 nætter')).toBeInTheDocument();
   });
 
   it('bøjer i flertal', async () => {
     await db.steder.bulkAdd([lavSted({ navn: 'Rold' }), lavSted({ navn: 'Hald' })]);
     vis();
 
-    expect(await screen.findByText('2 steder du kommer tilbage til')).toBeInTheDocument();
-    expect(await screen.findByText('0 ture · 0 ting talt op')).toBeInTheDocument();
+    expect(await screen.findByText('0 fra ture · 2 favoritter')).toBeInTheDocument();
+    expect(await screen.findByText('0 ture · 0 nætter')).toBeInTheDocument();
   });
 });
 
