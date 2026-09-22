@@ -94,7 +94,12 @@ import {
   deltagerFraPerson,
   deltagerFraNavn
 } from './personer';
-import { foreslaaSteder, sorterEfterBesoeg, besoegPrSted, besoegstekst, naermesteSted } from './steder';
+import {
+  foreslaaSteder, sorterEfterBesoeg, besoegPrSted, besoegstekst, naermesteSted,
+  tidligereBesoeg, noteFraSidst, genbesoegstekst
+} from './steder';
+import type { NoteFraSidst } from './steder';
+import { formatterPeriode } from './datotekst';
 import { udlaansAdvarsler } from './udlaan';
 import { vaegtresultat, bedsteBytter, byt, manglendeTags } from './vaegtbrydere';
 import type { Vaegtresultat, Risiko, Bytte } from './vaegtbrydere';
@@ -740,6 +745,8 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
       alleSteder={sorterEfterBesoeg(steder, alleTure)}
       valgtSted={steder.find((s) => s.uid === tur.sted_uid) ?? null}
       besoeg={besoegPrSted(alleTure)}
+      tidligere={tidligereBesoeg(alleTure, tur).length}
+      fraSidst={noteFraSidst(alleTure, tur)}
       vaelgGemtSted={vaelgGemtSted}
       gemSomSted={gemSomSted}
       frigoerSted={frigoerSted}
@@ -1626,11 +1633,36 @@ function Foldbar({ titel, resume, children, aabenFra, advarsel }: {
 // Sektioner
 // ─────────────────────────────────────────────
 
+// "Fra sidst · 4.–6. maj 2026" og det, man skrev. Er der ingen note fra
+// forrige besøg, står det — der opfindes ikke noget i stedet.
+function FraSidst({ note }: { note: NoteFraSidst | null }) {
+  if (!note) {
+    return (
+      <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', marginTop: '6px' }}>
+        Ingen note fra sidste besøg.
+      </div>
+    );
+  }
+
+  const periode = formatterPeriode(note.tur.startdato, note.tur.slutdato);
+
+  return (
+    <div style={{ marginTop: '6px', paddingTop: '6px', borderTop: '1px solid var(--accent-border)' }}>
+      <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', fontWeight: 500 }}>
+        {periode ? `Fra sidst · ${periode}` : 'Fra sidst'}
+      </div>
+      <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst)', marginTop: '2px', lineHeight: 1.5, whiteSpace: 'pre-line' }}>
+        {note.tekst}
+      </div>
+    </div>
+  );
+}
+
 function Turparametre({
   tur, opdater, skiftDato, koordinatTekst, koordinatFejl, opdaterKoordinater,
   soegPaaSted, stedSoeger, stedForslag, vaelgSted,
-  gemteForslag, alleSteder, valgtSted, besoeg, vaelgGemtSted, gemSomSted, frigoerSted,
-  beregninger
+  gemteForslag, alleSteder, valgtSted, besoeg, tidligere, fraSidst, vaelgGemtSted, gemSomSted,
+  frigoerSted, beregninger
 }: {
   tur: Tur;
   opdater: (a: Partial<Tur>) => Promise<void>;
@@ -1646,6 +1678,9 @@ function Turparametre({
   alleSteder: Sted[];
   valgtSted: Sted | null;
   besoeg: Map<Reference, number>;
+  // Besøg på stedet fra før denne tur. Turen selv tæller aldrig med.
+  tidligere: number;
+  fraSidst: NoteFraSidst | null;
   vaelgGemtSted: (s: Sted) => Promise<void>;
   gemSomSted: () => Promise<void>;
   frigoerSted: () => Promise<void>;
@@ -1690,7 +1725,7 @@ function Turparametre({
                 {valgtSted.navn}
               </span>
               <span style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)' }}>
-                {besoegstekst(besoeg.get(valgtSted.uid) ?? 0)}
+                {genbesoegstekst(tidligere)}
               </span>
               <button
                 onClick={() => void frigoerSted()}
@@ -1704,6 +1739,10 @@ function Turparametre({
                 {valgtSted.noter}
               </div>
             )}
+            {/* Noten fra forrige besøg — kun det ene, og aldrig fra den tur,
+                man står i. Første gang er der ingen, og det siges roligt i
+                stedet for at stå tomt. */}
+            {tidligere > 0 && <FraSidst note={fraSidst} />}
           </div>
         ) : (
           tur.sted.trim() !== '' && (
