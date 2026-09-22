@@ -90,7 +90,7 @@ appen starter.
 | Nye poster | `src/opret.ts` | Tomme poster med de samme standardværdier, uanset hvor man startede dem |
 | Datoer | `src/datotekst.ts` | Perioder og dage skrevet ud på dansk |
 | Statistik | `src/statistik.ts` | Aggregeringer over inventar og ture |
-| Friluftshistorik | `src/friluftshistorik.ts` | Stederne udledt af turene, og de rolige tal bag dem |
+| Friluftshistorik | `src/friluftshistorik.ts` | Stederne udledt af turene, og de rolige tal bag dem — top-steder og grej brugt vs urørt fra pak-af |
 | Læringssløjfen | `src/laering.ts` | Hvad turene har lært: hyldevarer, gennemsnitsvægt, stjerner og hvad der ikke holder |
 | Årsopgørelse | `src/aarsopgoerelse.ts` | Året talt op: nætter, vejr, steder, selskab og grej |
 | Årets feltbog | `src/feltbog.ts` | Én side pr. tur, sat op til at blive trykt |

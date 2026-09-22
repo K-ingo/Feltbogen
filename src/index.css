@@ -753,6 +753,9 @@ button:disabled { cursor: not-allowed; }
 }
 
 .historik-grejliste { display: grid; gap: var(--plads-2); }
+/* Brugt og urørt fra pak-af: to tal side om side, i talfelternes skrift men
+   uden deres ramme — de står allerede i et kort. */
+.historik-brugt { display: flex; gap: var(--plads-5); }
 .historik-grejrække {
   display: flex;
   justify-content: space-between;
@@ -764,6 +767,8 @@ button:disabled { cursor: not-allowed; }
   text-align: left;
   cursor: pointer;
 }
+/* Et top-sted, der kun findes som navn på en tur — der er intet at åbne. */
+.historik-grejrække-stille { cursor: default; min-height: var(--roerehoejde); }
 
 /* Folden over mønstrene. Den er en linje man slår op, ikke en menu: hvad der
    ligger bag står skrevet under knappen, så man ved det uden at trykke. */

@@ -7,8 +7,11 @@ import {
   besoegstal,
   historiktal,
   naetterPrMaaned,
-  saesonen
+  saesonen,
+  topSteder,
+  brugtOgUroert
 } from './friluftshistorik';
+import type { PakAfLinje, PakAfStatus } from './db';
 import { lavItem, lavSted, lavTur } from './test/data';
 
 // ─────────────────────────────────────────────
@@ -259,5 +262,102 @@ describe('stedtal', () => {
       uden_ture: 1,
       gensyn: 1
     });
+  });
+});
+
+describe('topSteder', () => {
+  it('giver de steder med flest ture, og kun dem man har været', () => {
+    const steder = [
+      lavSted({ uid: 's-rold', navn: 'Rold Skov' }),
+      lavSted({ uid: 's-plan', navn: 'Kun en plan' })
+    ];
+    const ture = [
+      lavTur({ sted_uid: 's-rold', naetter: 1 }),
+      lavTur({ sted_uid: 's-rold', naetter: 2 }),
+      lavTur({ sted: 'Øhaven', naetter: 4 }),
+      lavTur({ sted: 'Fovslet Skov', naetter: 1 }),
+      lavTur({ sted: 'Mols', naetter: 0 })
+    ];
+
+    const top = topSteder(steder, ture);
+
+    expect(top.map((l) => l.navn)).toEqual(['Rold Skov', 'Øhaven', 'Fovslet Skov']);
+    expect(top[0]).toMatchObject({ ture: 2, naetter: 3 });
+  });
+
+  it('er tom, når ingen tur har et sted skrevet på', () => {
+    expect(topSteder([lavSted()], [lavTur({ sted: '' })])).toEqual([]);
+  });
+});
+
+describe('brugtOgUroert', () => {
+  const tjek = (linjer: [string, PakAfStatus][]) => ({
+    udfyldt_dato: '2026-07-20',
+    niveau: 'let' as const,
+    linjer: linjer.map(([item_uid, status]): PakAfLinje => ({ item_uid, status }))
+  });
+
+  const telt = lavItem({ uid: 'telt', navn: 'Telt', vaegt_g: 2000 });
+  const kniv = lavItem({ uid: 'kniv', navn: 'Kniv', vaegt_g: 150 });
+  const sav = lavItem({ uid: 'sav', navn: 'Sav', vaegt_g: 400 });
+  const kande = lavItem({ uid: 'kande', navn: 'Kande', vaegt_g: 300 });
+  const items = [telt, kniv, sav, kande];
+
+  it('tæller grej brugt mindst én gang, og grej der lå urørt hver gang', () => {
+    const ture = [
+      lavTur({ status: 'afsluttet', pak_af_tjek: tjek([['telt', 'brugt'], ['kniv', 'ubrugt'], ['sav', 'ubrugt']]) }),
+      lavTur({ status: 'afsluttet', pak_af_tjek: tjek([['kniv', 'brugt'], ['sav', 'ubrugt'], ['kande', 'ubrugt']]) })
+    ];
+
+    const r = brugtOgUroert(ture, items);
+
+    expect(r).toMatchObject({ ture_gjort_op: 2, ture_uden_tjek: 0, grej: 4, brugt: 2, uroert: 2 });
+    // Saven lå urørt to gange, kanden én — flest urørte ture først.
+    expect(r.uroerte.map((u) => [u.item.navn, u.uroert, u.gjort_op])).toEqual([
+      ['Sav', 2, 2],
+      ['Kande', 1, 1]
+    ]);
+  });
+
+  it('regner i stykker som brugt', () => {
+    const r = brugtOgUroert(
+      [lavTur({ status: 'afsluttet', pak_af_tjek: tjek([['telt', 'i_stykker']]) })],
+      items
+    );
+    expect(r).toMatchObject({ brugt: 1, uroert: 0 });
+  });
+
+  it('sorterer urørt grej lige mange gange efter vægt, tungest først', () => {
+    const r = brugtOgUroert(
+      [lavTur({ status: 'afsluttet', pak_af_tjek: tjek([['kniv', 'ubrugt'], ['telt', 'ubrugt']]) })],
+      items
+    );
+    expect(r.uroerte.map((u) => u.item.navn)).toEqual(['Telt', 'Kniv']);
+  });
+
+  // En tur uden tjek ved ikke, hvad der blev brugt. Den må hverken gøre grej
+  // brugt eller urørt — men en afsluttet tur uden tjek skal kunne nævnes.
+  it('lader ture uden tjek ude, og tæller de afsluttede af dem', () => {
+    const ture = [
+      lavTur({ status: 'afsluttet', pak_af_tjek: null, pakkede_item_uids: ['telt'] }),
+      lavTur({ status: 'kladde', pak_af_tjek: null })
+    ];
+
+    expect(brugtOgUroert(ture, items)).toEqual({
+      ture_gjort_op: 0,
+      ture_uden_tjek: 1,
+      grej: 0,
+      brugt: 0,
+      uroert: 0,
+      uroerte: []
+    });
+  });
+
+  it('springer linjer over til grej, der ikke længere står i bogen', () => {
+    const r = brugtOgUroert(
+      [lavTur({ status: 'afsluttet', pak_af_tjek: tjek([['slettet', 'ubrugt'], ['kniv', 'brugt']]) })],
+      items
+    );
+    expect(r).toMatchObject({ ture_gjort_op: 1, grej: 1, brugt: 1, uroert: 0 });
   });
 });

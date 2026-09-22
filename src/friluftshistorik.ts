@@ -217,3 +217,103 @@ export function saesonen(ture: Tur[]): Maanedsnaetter[] {
     .slice(foerste, sidste + 1)
     .map((naetter, i) => ({ maaned: foerste + i, naetter }));
 }
+
+// ─────────────────────────────────────────────
+// Top-steder
+// ─────────────────────────────────────────────
+
+// De steder, man oftest har været i perioden. Kun steder med en tur — et gemt
+// sted uden ture er en plan og ikke en historie, og det hører under Steder.
+//
+// Rækkefølgen er `stederMedBesoeg`'s: flest ture, så flest nætter, så navnet.
+// Tallet kan forklares i én sætning: "tre ture til Rold Skov i år".
+export function topSteder(steder: Sted[], ture: Tur[], topN: number = 3): Stedlinje[] {
+  return stederMedBesoeg(steder, ture)
+    .filter((l) => l.ture > 0)
+    .slice(0, topN);
+}
+
+// ─────────────────────────────────────────────
+// Grej brugt vs urørt — fra pak-af
+// ─────────────────────────────────────────────
+
+export interface Uroertlinje {
+  item: Item;
+  // Ture i perioden, hvor gearet stod på pak-af-tjekket.
+  gjort_op: number;
+  // Heraf dem, hvor det lå urørt.
+  uroert: number;
+}
+
+export interface BrugtOgUroert {
+  // Ture i perioden med et pak-af-tjek. Det er det, alt herunder bygger på.
+  ture_gjort_op: number;
+  // Afsluttede ture i perioden uden tjek. De ved ingenting om grejet, og de
+  // tælles hverken som brugt eller urørt — men de skal kunne nævnes, for det
+  // er dem, der ville gøre tallet større.
+  ture_uden_tjek: number;
+  // Forskellige stykker grej, der har stået på et tjek i perioden.
+  grej: number;
+  // Brugt mindst én gang i perioden. "I stykker" tæller som brugt: grej går
+  // i stykker, fordi det bliver brugt.
+  brugt: number;
+  // Lå urørt på hver eneste tur, det var med på og blev gjort op.
+  uroert: number;
+  // De urørte, flest urørte ture først, så tungest — det er dem, der koster
+  // mest at slæbe på.
+  uroerte: Uroertlinje[];
+}
+
+// Hvad pak-af-tjekkene i perioden siger om grejet: hvor meget blev brugt, og
+// hvor meget lå urørt i bunden af rygsækken.
+//
+// Kilden er kun tjekkenes linjer. En tur uden tjek ved ikke, om grejet blev
+// brugt, og at kalde det urørt ville gøre alt til hyldevarer — samme regel som
+// `brugPrItem` i pakAfTjek.ts. Linjer til grej, der ikke længere står i bogen,
+// springes over: de kan ikke vises, og et tal uden navne kan ikke forklares.
+export function brugtOgUroert(ture: Tur[], items: Item[]): BrugtOgUroert {
+  const itemsPrUid = new Map(items.map((i) => [i.uid, i]));
+  const pr = new Map<Reference, { gjort_op: number; uroert: number }>();
+  let tureGjortOp = 0;
+  let tureUdenTjek = 0;
+
+  for (const tur of ture) {
+    if (!tur.pak_af_tjek) {
+      if (tur.status === 'afsluttet') tureUdenTjek++;
+      continue;
+    }
+    tureGjortOp++;
+
+    for (const linje of tur.pak_af_tjek.linjer) {
+      if (!itemsPrUid.has(linje.item_uid)) continue;
+      const foer = pr.get(linje.item_uid) ?? { gjort_op: 0, uroert: 0 };
+      pr.set(linje.item_uid, {
+        gjort_op: foer.gjort_op + 1,
+        uroert: foer.uroert + (linje.status === 'ubrugt' ? 1 : 0)
+      });
+    }
+  }
+
+  const uroerte: Uroertlinje[] = [];
+  for (const [uid, tal] of pr) {
+    if (tal.uroert === tal.gjort_op) {
+      uroerte.push({ item: itemsPrUid.get(uid)!, ...tal });
+    }
+  }
+
+  uroerte.sort(
+    (a, b) =>
+      b.uroert - a.uroert ||
+      b.item.vaegt_g * b.item.antal - a.item.vaegt_g * a.item.antal ||
+      a.item.navn.localeCompare(b.item.navn, 'da')
+  );
+
+  return {
+    ture_gjort_op: tureGjortOp,
+    ture_uden_tjek: tureUdenTjek,
+    grej: pr.size,
+    brugt: pr.size - uroerte.length,
+    uroert: uroerte.length,
+    uroerte
+  };
+}
