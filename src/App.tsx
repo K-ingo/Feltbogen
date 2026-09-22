@@ -13,7 +13,6 @@ import DashboardSide from './DashboardSide';
 import InventarSide from './InventarSide';
 import GrupperListe from './GrupperListe';
 import TureListe from './TureListe';
-import StederListe from './StederListe';
 
 import FolkSide from './FolkSide';
 import MereSide from './MereSide';
@@ -41,7 +40,7 @@ import { markerSet, useErSet, ONBOARDING_SET } from './indstillinger';
 //
 // Det er specens §25, og den advarsel byggeriet har skrevet ved hver eneste
 // kørsel: "Some chunks are larger than 500 kB".
-const StatistikSide = lazy(() => import('./StatistikSide'));
+const FriluftshistorikSide = lazy(() => import('./FriluftshistorikSide'));
 const AarsopgoerelseSide = lazy(() => import('./AarsopgoerelseSide'));
 const FeltbogSide = lazy(() => import('./FeltbogSide'));
 const IndstillingerSide = lazy(() => import('./IndstillingerSide'));
@@ -452,8 +451,21 @@ function App(): ReactElement | null {
     );
     case 'grupper': return <GrupperListe fane={fane} skift={skiftFane} aabnGruppe={aabnGruppe} nyGruppe={nyGruppe} />;
     case 'ture': return <TureListe fane={fane} skift={skiftFane} aabnTur={aabnTur} aabnDeltTur={aabnDeltTur} nyTur={nyTur} />;
-    case 'steder': return <StederListe fane={fane} skift={skiftFane} aabnSted={aabnSted} nytSted={nytSted} />;
-    case 'statistik': return <StatistikSide fane={fane} skift={skiftFane} aabnItem={aabnItem} aabnAar={setValgtAar} />;
+    // Steder og Statistik er to faner på den samme skærm — Friluftshistorik.
+    // De beholder hver sin fane-id, så Mere-rækkerne kan pege hver sin vej
+    // ind, og så skallen ved, at vejen tilbage går til Mere.
+    case 'steder':
+    case 'statistik':
+      return (
+        <FriluftshistorikSide
+          fane={fane}
+          skift={skiftFane}
+          aabnSted={aabnSted}
+          nytSted={nytSted}
+          aabnItem={aabnItem}
+          aabnAar={setValgtAar}
+        />
+      );
     case 'inventar': return <InventarSide fane={fane} skift={skiftFane} aabnItem={aabnItem} nytItem={nytItem} />;
     case 'indstillinger':
       return (

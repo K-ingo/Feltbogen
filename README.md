@@ -90,6 +90,7 @@ appen starter.
 | Nye poster | `src/opret.ts` | Tomme poster med de samme standardværdier, uanset hvor man startede dem |
 | Datoer | `src/datotekst.ts` | Perioder og dage skrevet ud på dansk |
 | Statistik | `src/statistik.ts` | Aggregeringer over inventar og ture |
+| Friluftshistorik | `src/friluftshistorik.ts` | Stederne udledt af turene, og de rolige tal bag dem |
 | Læringssløjfen | `src/laering.ts` | Hvad turene har lært: hyldevarer, gennemsnitsvægt, stjerner og hvad der ikke holder |
 | Årsopgørelse | `src/aarsopgoerelse.ts` | Året talt op: nætter, vejr, steder, selskab og grej |
 | Årets feltbog | `src/feltbog.ts` | Én side pr. tur, sat op til at blive trykt |
@@ -166,8 +167,11 @@ have sagt det først.
 
 Navigationen har fem faner: **Hjem, Ture, Grej, Folk** og **Mere**. Grejsæt
 ligger under Grej, fordi et sæt er en måde at samle sit grej på og ikke et
-sted man arbejder; Steder, Statistik og Indstillinger ligger under Mere, fordi
+sted man arbejder; Friluftshistorik og Indstillinger ligger under Mere, fordi
 de bruges sjældnere end ture og grej og ellers ville fylde lige så meget.
+**Friluftshistorik** er Steder og Statistik som to faneblade på én skærm
+(`FriluftshistorikSide.tsx`) — det er den samme historie læst to gange: hvor
+man har været, og hvad det blev til. Se `docs/design/desktop/09-steder-statistik.html`.
 
 Turen har fem faner: **Overblik · Pakning · Deltagere · Undervejs ·
 Praktisk** (`FANEBLADE` i `TurDetalje.tsx`, typen i `turmaal.ts`). Pakning er

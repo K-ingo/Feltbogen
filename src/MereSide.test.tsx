@@ -127,22 +127,39 @@ describe('sektionen Din friluftshistorik', () => {
     expect(within(historik).getByText('Statistik')).toBeInTheDocument();
   });
 
-  it('tæller steder og ting i undertitlerne', async () => {
-    await db.steder.add(lavSted({ navn: 'Rold Skov' }));
-    await db.items.bulkAdd([lavItem({ navn: 'Tarp' }), lavItem({ navn: 'Kogegrej' })]);
-    await db.ture.add(lavTur({ navn: 'Sensommer' }));
+  // Rækkerne siger det samme som skærmen, de fører hen til. Steder-rækken
+  // talte før stedbogen op og kaldte tallet "du kommer tilbage til" — et sted
+  // man har oprettet er ikke et sted man har været, og ét besøg er ikke et
+  // gensyn. Statistik-rækken talte grej op på en skærm om ture.
+  it('tæller stederne fra turene og gensynene for sig', async () => {
+    await db.steder.add(lavSted({ uid: 's-rold', navn: 'Rold Skov' }));
+    await db.ture.bulkAdd([
+      lavTur({ navn: 'Forår', sted_uid: 's-rold', startdato: '2026-05-01', naetter: 1 }),
+      lavTur({ navn: 'Sensommer', sted_uid: 's-rold', startdato: '2026-08-01', naetter: 2 }),
+      lavTur({ navn: 'Efterår', sted: 'Øhaven', sted_uid: '', startdato: '2026-10-01', naetter: 1 })
+    ]);
     vis();
 
-    expect(await screen.findByText('1 sted du kommer tilbage til')).toBeInTheDocument();
-    expect(await screen.findByText('1 tur · 2 ting talt op')).toBeInTheDocument();
+    expect(await screen.findByText('2 steder · 1 du er kommet tilbage til')).toBeInTheDocument();
+    expect(await screen.findByText('3 ture · 4 nætter')).toBeInTheDocument();
   });
 
-  it('bøjer i flertal', async () => {
+  it('bøjer i ental', async () => {
+    await db.ture.add(lavTur({ navn: 'Sensommer', sted: 'Øhaven', sted_uid: '', naetter: 1 }));
+    vis();
+
+    expect(await screen.findByText('1 sted · 0 du er kommet tilbage til')).toBeInTheDocument();
+    expect(await screen.findByText('1 tur · 1 nat')).toBeInTheDocument();
+  });
+
+  it('er ærlig, når der ikke er nogen ture endnu', async () => {
     await db.steder.bulkAdd([lavSted({ navn: 'Rold' }), lavSted({ navn: 'Hald' })]);
     vis();
 
-    expect(await screen.findByText('2 steder du kommer tilbage til')).toBeInTheDocument();
-    expect(await screen.findByText('0 ture · 0 ting talt op')).toBeInTheDocument();
+    // De to gemte steder tælles med — de er oprettet med vilje — men ingen af
+    // dem er nogen, man er kommet tilbage til.
+    expect(await screen.findByText('2 steder · 0 du er kommet tilbage til')).toBeInTheDocument();
+    expect(await screen.findByText('0 ture · 0 nætter')).toBeInTheDocument();
   });
 });
 
