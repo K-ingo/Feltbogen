@@ -241,6 +241,9 @@ function ikkeFundet() {
 export const nuvaerendeBruger = () => ({
   id: 'bruger1',
   email: 'test@eksempel.dk',
+  // Det samme navn som mitNavn() svarer med, så en skærm, der læser navnet
+  // af brugeren, ser det samme som en, der spørger efter det.
+  name: testNavn,
   created: '2026-01-01 00:00:00Z',
   updated: '2026-01-01 00:00:00Z'
 });
@@ -259,3 +262,8 @@ export const gemNavn = async (navn: string) => { testNavn = navn.trim(); };
 // vi.fn frem for en almindelig funktion, så en skærmtest kan efterprøve, at
 // knappen faktisk logger ud. Den gør stadig det samme.
 export const logUd = vi.fn(() => { testNavn = ''; });
+
+// Indstillinger viser adressen og kan spørge serveren, om den er der. Testene
+// har ingen server; adressen er en fast pladsholder, og tjekket svarer ja.
+export const serveradresse = () => 'http://pocketbase.test';
+export const tjekForbindelse = async () => ({ ok: true, tekst: 'Serveren svarer.' });

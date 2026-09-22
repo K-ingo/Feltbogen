@@ -221,6 +221,14 @@ linjen på startskærmen — så den ikke kan stå og sige "Alt er sendt op" om 
 kø, der aldrig kom op. Er der en fejl, står den i advarselsfarven med en prik
 foran. Det følger `docs/design/desktop/08-mere.html`.
 
+Indstillinger har **ingen** fyldt accent, før der er noget at gemme. Alt andet
+på skærmen gemmes løbende; kun navnet har en Gem-knap, fordi det sendes til
+serveren og ses af de andre på delte ture. Knappen er fyldt, når navnet er
+ændret og ikke tomt, slukket når feltet er tomt, og væk når navnet er uændret
+— reglen er `navnestatus()` i `navnestatus.ts`. Sync-knapperne er outline og
+segmenterne stille. Versionslinjen under **Om** er urørt. Det følger
+`docs/design/desktop/10-indstillinger.html`.
+
 Skallen kender selv den sammenhæng (`HOERER_TIL` i `Skal.tsx`). Står man inde
 på en underskærm, bliver hovedfanen markeret i navigationen, og der kommer en
 "‹ Grej"-linje over titlen — begge dele udledt, så en vej tilbage ikke kan

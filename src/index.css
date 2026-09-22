@@ -1160,6 +1160,69 @@ label:has(> input[type='checkbox']) { min-height: 48px; }
 }
 
 /* ─────────────────────────────────────────────
+   Indstillinger
+
+   Efter docs/design/desktop/10-indstillinger.html. Skærmens ene fyldte accent
+   er "Gem navn", og kun når navnet er ændret og ikke tomt — se
+   navnestatus.ts. Resten er outline, stille segmenter og rækker. Alt herunder
+   er tokens fra docs/design/TOKENS.md.
+   ───────────────────────────────────────────── */
+
+/* En række inde i et kort: tekst til venstre, værdi eller mærke til højre og
+   en hårfin streg over. */
+.indst-raekke {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--plads-3);
+  min-height: var(--roerehoejde);
+  margin-top: var(--plads-3);
+  padding-top: var(--plads-3);
+  border-top: 1px solid var(--border-svag);
+}
+
+/* Log ud er en dør og ikke en fare: data bliver på enheden. */
+.indst-logud {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--border-svag);
+  padding: var(--plads-3) 0 0;
+  font: inherit;
+  font-size: var(--skrift-knap);
+  color: var(--tekst-dæmpet);
+  text-align: left;
+  cursor: pointer;
+}
+.indst-logud:hover { color: var(--tekst); }
+
+.indst-maerke {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border-radius: 2px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-size: var(--skrift-mikro);
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.indst-intro {
+  margin: 0 0 var(--plads-3);
+  font-size: var(--skrift-lille);
+  color: var(--tekst-dæmpet);
+  line-height: 1.5;
+}
+
+.indst-fodnote {
+  margin: var(--plads-2) 0 0;
+  font-size: var(--skrift-mikro);
+  color: var(--tekst-svag);
+  line-height: 1.6;
+}
+
+/* ─────────────────────────────────────────────
    Print — årets feltbog
 
    Det ene af de to steder i appen der bruger klasser — det andet er

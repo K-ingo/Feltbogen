@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useId } from 'react';
+import { navnestatus } from './navnestatus';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, etiket, PAK_AF_NIVEAU, AKTIVITETSNIVEAU } from './db';
 import {
@@ -175,7 +176,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
   };
 
   return (
-    <Skal fane={fane} skift={skift} titel="Indstillinger">
+    <Skal fane={fane} skift={skift} titel="Indstillinger" undertitel="Konto, din krop og det der gælder hele appen">
       <div className="settings-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '24px', maxWidth: '720px', margin: '0 auto' }}>
 
         <section ref={sigte('konto')}>
@@ -183,22 +184,36 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
           <Kort>
             {bruger ? (
               <>
-                <Raekke label="Logget ind som" vaerdi={bruger.email} />
                 <Navnefelt
                   start={bruger.name ?? ''}
                   gem={async (v) => {
                     try {
                       await gemNavn(v);
                       setNavnBesked({ slags: 'ok', tekst: 'Navnet er gemt.' });
+                      return true;
                     } catch {
                       setNavnBesked({ slags: 'fejl', tekst: 'Kunne ikke gemme navnet.' });
+                      return false;
                     }
                   }}
                 />
                 {navnBesked && <Kvittering besked={navnBesked} />}
-                <div style={{ marginTop: '12px' }}>
-                  <Knap variant="fare" onClick={logUd}>Log ud</Knap>
+                <div className="indst-raekke">
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 'var(--skrift-knap)', fontWeight: 500 }}>E-mail</div>
+                    <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', overflowWrap: 'anywhere' }}>
+                      {bruger.email}
+                    </div>
+                  </div>
+                  <span className="indst-maerke">Logget ind</span>
                 </div>
+                {/* Log ud er en række og ikke en rød knap. Det sletter ikke
+                    noget — data bliver på enheden — og fejlfarven hører til
+                    det, der ikke kan fortrydes. */}
+                <button type="button" className="indst-raekke indst-logud" onClick={logUd}>
+                  Log ud
+                  <span aria-hidden="true">→</span>
+                </button>
                 <Hjaelp>
                   Data bliver liggende på denne enhed når du logger ud. Log ind igen for at
                   synkronisere videre.
@@ -222,6 +237,51 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
           </Kort>
         </section>
 
+        <section>
+          <SektionsTitel>Din krop</SektionsTitel>
+          <p className="indst-intro">
+            Bruges til vand- og madforslag på turene. Tallene bliver på denne enhed og deles
+            aldrig med gæster.
+          </p>
+          <Kort>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
+              <Felt
+                label="Vægt"
+                type="number"
+                value={krop.kropsvaegt_kg ?? ''}
+                onChange={(v) => void saet(KROPSVAEGT, v)}
+                hjaelp="kg"
+              />
+              <Felt
+                label="Kalorier pr. dag"
+                type="number"
+                value={krop.daglig_kalorie ?? ''}
+                onChange={(v) => void saet(DAGLIG_KALORIE, v)}
+                hjaelp="valgfrit"
+              />
+            </div>
+
+            <div style={{ marginTop: '12px' }}>
+              <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginBottom: '8px' }}>
+                Aktivitetsniveau
+              </div>
+              <Segment
+                vaerdier={AKTIVITETSNIVEAU}
+                valgt={krop.aktivitetsniveau ?? 'middel'}
+                vaelg={(n) => void saet(AKTIVITETSNIVEAU_VALG, n)}
+                formater={(n) => etiket(n)}
+                stille
+              />
+            </div>
+
+            <Hjaelp>
+              Uden en vægt regner motoren med en person på 75 kg — en 65-kilos vandrer
+              og en 95-kilos bushcrafter med bålmad drikker ikke det samme. Skriver du et
+              kaloriebehov ind, bruges det i stedet for skønnet over maden.
+            </Hjaelp>
+          </Kort>
+        </section>
+
         <section ref={sigte('synkronisering')}>
           <SektionsTitel>Synkronisering</SektionsTitel>
           <Kort>
@@ -237,7 +297,9 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
             <Raekke label="Server" vaerdi={serveradresse()} />
 
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
-              <Knap variant="primaer" onClick={synkroniser} disabled={arbejder !== null}>
+              {/* Outline og ikke fyldt: sync sker af sig selv, knappen er en
+                  genvej. Skærmens ene fyldte accent hører til "Gem navn". */}
+              <Knap onClick={synkroniser} disabled={arbejder !== null}>
                 {arbejder === 'sync' ? 'Synkroniserer…' : 'Synkronisér nu'}
               </Knap>
               <Knap onClick={tjekServer} disabled={arbejder !== null}>
@@ -300,48 +362,6 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
           </Kort>
         </section>
 
-        <section>
-          <SektionsTitel>Kroppen</SektionsTitel>
-          <Kort>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
-              <Felt
-                label="Din vægt"
-                type="number"
-                value={krop.kropsvaegt_kg ?? ''}
-                onChange={(v) => void saet(KROPSVAEGT, v)}
-                hjaelp="kg"
-              />
-              <Felt
-                label="Kalorier pr. dag"
-                type="number"
-                value={krop.daglig_kalorie ?? ''}
-                onChange={(v) => void saet(DAGLIG_KALORIE, v)}
-                hjaelp="valgfrit"
-              />
-            </div>
-
-            <div style={{ marginTop: '12px' }}>
-              <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginBottom: '8px' }}>
-                Aktivitetsniveau
-              </div>
-              <Segment
-                vaerdier={AKTIVITETSNIVEAU}
-                valgt={krop.aktivitetsniveau ?? 'middel'}
-                vaelg={(n) => void saet(AKTIVITETSNIVEAU_VALG, n)}
-                formater={(n) => etiket(n)}
-              />
-            </div>
-
-            <Hjaelp>
-              Bruges til at regne vand og mad ud på turene. Uden dem regner motoren med
-              en person på 75 kg — en 65-kilos vandrer og en 95-kilos bushcrafter med
-              bålmad drikker ikke det samme. Skriver du et kaloriebehov ind, bruges det
-              i stedet for skønnet over maden. Tallene bliver på denne enhed og deles
-              aldrig med gæster på dine ture.
-            </Hjaelp>
-          </Kort>
-        </section>
-
         <section ref={sigte('skabeloner')}>
           <SektionsTitel>Afgangs-tjek</SektionsTitel>
           <Kort>
@@ -368,6 +388,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
               vaerdier={PAK_AF_NIVEAU}
               valgt={pakAfNiveau}
               vaelg={(n) => void saet(PAK_AF_NIVEAU_VALG, n)}
+              stille
             />
             <Hjaelp>
               Let er tre knapper pr. stykke grej — brugt, ubrugt, gik i stykker. Grundig
@@ -376,6 +397,10 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
               enkelte tur.
             </Hjaelp>
           </Kort>
+          <p className="indst-fodnote">
+            Ændringer her gemmes løbende. Kun navnet har en Gem-knap — det sendes til
+            serveren og ses af de andre på dine ture.
+          </p>
         </section>
 
         <section ref={sigte('data')}>
@@ -446,28 +471,67 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
 // Navnet er det de andre ser på en delt tur — og det, startskærmen hilser med
 // om morgenen. Det gemmes med en knap og ikke pr. tastetryk: hvert gem er et
 // kald til serveren.
-function Navnefelt({ start, gem }: { start: string; gem: (v: string) => Promise<void> }) {
+//
+// Knappen er skærmens ene fyldte accent, men kun når der er noget at gemme:
+// navnet er ændret og ikke tomt. Er navnet uændret, er der ingen knap — der er
+// intet at gøre. Mangler navnet på kontoen, står knappen der (slukket), så man
+// kan se, hvor det rettes. Reglen ligger i navnestatus().
+function Navnefelt({ start, gem }: { start: string; gem: (v: string) => Promise<boolean> }) {
   const [navn, setNavn] = useState(start);
+  const [gemt, setGemt] = useState(start);
   const [gemmer, setGemmer] = useState(false);
+  const [roert, setRoert] = useState(false);
+  const id = useId();
+  const status = navnestatus(navn, gemt);
+  const visFejl = status.tomt && (roert || gemt.trim() === '');
+
+  const gemNu = () => {
+    if (!status.kanGemmes || gemmer) return;
+    const nyt = navn.trim();
+    setGemmer(true);
+    void gem(nyt)
+      .then((ok) => { if (ok) { setGemt(nyt); setNavn(nyt); } })
+      .finally(() => setGemmer(false));
+  };
 
   return (
-    <div style={{ marginTop: '14px' }}>
-      <Felt
-        label="Dit navn"
+    <form
+      className="indst-navn"
+      onSubmit={(e) => { e.preventDefault(); gemNu(); }}
+    >
+      <label htmlFor={id} style={{ display: 'block', fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginBottom: '4px' }}>
+        Visningsnavn
+      </label>
+      <input
+        id={id}
         value={navn}
-        onChange={setNavn}
+        onChange={(e) => { setNavn(e.target.value); setRoert(true); }}
         placeholder="Fx Emil"
-        hjaelp="vises på forsiden og for de andre på delte ture"
+        aria-invalid={visFejl}
+        aria-describedby={`${id}-hjaelp`}
+        style={{ width: '100%', borderColor: visFejl ? 'var(--fejl)' : undefined }}
       />
-      <div style={{ marginTop: '8px' }}>
-        <Knap
-          onClick={() => { setGemmer(true); void gem(navn).finally(() => setGemmer(false)); }}
-          disabled={gemmer || navn.trim() === start.trim()}
-        >
-          {gemmer ? 'Gemmer…' : 'Gem navn'}
-        </Knap>
-      </div>
-    </div>
+      <p
+        id={`${id}-hjaelp`}
+        role={visFejl ? 'alert' : undefined}
+        style={{ margin: '6px 0 0', fontSize: 'var(--skrift-lille)', lineHeight: 1.5, color: visFejl ? 'var(--fejl)' : 'var(--tekst-svag)' }}
+      >
+        {visFejl
+          ? 'Navnet må ikke være tomt. Skriv det, de andre skal se dig som.'
+          : 'Vises på forsiden og for de andre på ture, du deler. Må ikke være tomt.'}
+      </p>
+      {status.visKnap && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+          <Knap
+            type="submit"
+            variant={status.kanGemmes ? 'primaer' : 'sekundaer'}
+            disabled={gemmer || !status.kanGemmes}
+          >
+            {gemmer ? 'Gemmer…' : 'Gem navn'}
+          </Knap>
+        </div>
+      )}
+    </form>
   );
 }
 
@@ -535,7 +599,7 @@ function Kort({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
       border: '1px solid var(--border-svag)',
-      borderRadius: '10px',
+      borderRadius: '12px',
       padding: '14px',
       background: 'var(--bg-forhoejet)'
     }}>

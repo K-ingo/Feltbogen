@@ -27,19 +27,19 @@ kunne koste data, er begge lukket: sletninger slår igennem på tværs af enhede
 står tilbage, er arbejde vi selv vælger — ikke noget, der spærrer.
 
 Det næste stykke arbejde er ikke funktionalitet, men udseende. Designsystemet
-er låst og ligger nu i repoet sammen med en tegning af hver eneste skærm. Otte
+er låst og ligger nu i repoet sammen med en tegning af hver eneste skærm. Ti
 af tyve er bygget.
 
 ---
 
 ## Grønt lys
 
-Kørt på grenen `claude/cool-davinci-ym8zou` den 22. september 2026:
+Kørt på grenen `claude/serene-newton-xkaupc` den 22. september 2026:
 
 | Kommando | Resultat |
 |---|---|
 | `npm run lint` | Bestået, ingen fejl |
-| `npm test` | 71 testfiler, 1.543 tests, alle grønne |
+| `npm test` | 75 testfiler, 1.629 tests, alle grønne |
 | `npm run build` | Bestået |
 
 **Brug `npm run build` til typekontrol, ikke `npx tsc --noEmit`.** Roden
@@ -102,9 +102,9 @@ det samme; gør de ikke, er det Notion der gælder, og så skal filerne rettes.
 Alle elleve farver i `docs/design/TOKENS.md` stemmer nu med `:root` i
 `src/index.css`. Sidebaggrunden var den sidste, der manglede.
 
-**Der ligger tyve handoffs i kø.** Ni er bygget: Hjem, Ture, Tur-detalje,
-Pakning, Grej, Grejsæt, Folk, Mere og Steder & Statistik på PC. Resten —
-Indstillinger og de to opret-ark, plus otte mobilskærme — er ikke rørt.
+**Der ligger tyve handoffs i kø.** Ti er bygget: Hjem, Ture, Tur-detalje,
+Pakning, Grej, Grejsæt, Folk, Mere, Steder & Statistik og Indstillinger på PC.
+Resten — de to opret-ark, plus otte mobilskærme — er ikke rørt.
 Rækkefølgen er ikke besluttet.
 
 Pakning kostede mere end en farverettelse: den var **to** faner, "Pakning" og
@@ -236,6 +236,20 @@ Favoritterne i referencen — **Gem** på et sted, og *0 favoritter* i
 Mere-rækken — er ikke bygget. De kræver et nyt felt på `Sted`, og datamodellen
 er ejerens valg (`AGENTS.md`). Gensynene tælles i stedet ud af turene, så
 linjen kan være ærlig uden et felt, ingen har sagt ja til.
+
+Indstillinger var den tiende. Skærmen havde tre fyldte accenter: "Synkronisér
+nu" og de to valgte segmenter (aktivitetsniveau og pak-af-niveau). "Gem navn"
+var derimod outline — og kunne trykkes med et tomt felt, så et navn, der skal
+stå på delte ture, kunne gemmes som ingenting. Nu er "Gem navn" skærmens ene
+fyldte accent, og kun når navnet er ændret og ikke tomt (`navnestatus()` i
+`src/navnestatus.ts`). Er navnet uændret, er der ingen knap; er feltet tomt,
+står fejlen under feltet, og knappen er slukket. Sync og segmenterne er
+outline/stille. "Log ud" er en række og ikke en rød knap — den sletter
+ingenting. "Din krop" er rykket op under Konto som i referencen.
+
+Referencens Vægtenhed (g/lb), Højde, Sprog og Farezone (Ryd sync-kø, Ryd denne
+enhed, Slet konto) er **ikke** bygget. De er nye funktioner, og de to sidste er
+sletning af data, som ejeren skal sige ja til først (AGENTS.md).
 
 Tre regler fra `TOKENS.md` gælder bredere end den enkelte skærm og er ikke
 efterprøvet på det, der allerede står:
