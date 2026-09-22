@@ -280,6 +280,25 @@ button:disabled { cursor: not-allowed; }
 .empty-state { display: grid; justify-items: center; gap: 16px; padding: 36px 24px; margin: 16px 0; border: 1px dashed var(--border); border-radius: var(--runding); color: var(--tekst-dæmpet); background: var(--bg-forhoejet); }
 .empty-state > div { max-width: 42ch; }
 .empty-state-icon { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; color: var(--accent); background: var(--accent-bg); }
+/* Kom i gang — den tomme tilstand på Hjem, Ture og Grej (KomIGang.tsx).
+   Ingen fyldt flade her: skærmens ene fyldte accent ligger i headeren eller på
+   Næste eventyr. Skridtene er outline eller tekst. */
+.kom-i-gang { margin: var(--plads-4) 0; padding: var(--plads-5); border: 1px solid var(--border-svag); border-radius: var(--runding); background: var(--bg-forhoejet); }
+.kom-i-gang-titel { margin: 0 0 var(--plads-1); font-size: 1.375rem; }
+.kom-i-gang-tekst { margin: 0 0 var(--plads-4); max-width: 60ch; color: var(--tekst-dæmpet); font-size: var(--skrift-knap); }
+.kom-i-gang-liste { display: grid; gap: var(--plads-2); margin: 0; padding: 0; list-style: none; }
+.kom-i-gang-skridt { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--plads-3); padding: var(--plads-3); border: 1px solid var(--border-svag); border-radius: var(--runding-lille); background: var(--bg); }
+.kom-i-gang-maerke { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; color: var(--accent); background: var(--accent-bg); font-weight: 600; }
+.kom-i-gang-indhold { display: grid; gap: 2px; min-width: 0; }
+.kom-i-gang-skridttitel { font-weight: 600; }
+.kom-i-gang-nr { color: var(--tekst-dæmpet); font-weight: 500; }
+.kom-i-gang-detalje { color: var(--tekst-dæmpet); font-size: var(--skrift-detalje); }
+.kom-i-gang-skridt.is-gjort .kom-i-gang-skridttitel { color: var(--tekst-dæmpet); }
+@media (max-width: 599px) {
+  .kom-i-gang { padding: var(--plads-4); }
+  .kom-i-gang-skridt { grid-template-columns: auto 1fr; }
+  .kom-i-gang-skridt > .ui-button { grid-column: 1 / -1; width: 100%; }
+}
 .trip-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 24px; }
 .trip-card { display: flex; flex-direction: column; padding: 0; min-width: 0; overflow: hidden; text-align: left; border: 1px solid var(--border-svag); border-radius: var(--runding); background: var(--bg-forhoejet); box-shadow: 0 4px 12px var(--skygge); transition: box-shadow 160ms ease, border-color 160ms ease; }
 .trip-card-photo { display: block; position: relative; width: 100%; height: 180px; overflow: hidden; }

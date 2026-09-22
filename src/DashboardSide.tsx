@@ -39,6 +39,7 @@ import { useSyncfejl } from './syncfejl';
 import { laesKladde, KLADDE_NOEGLE } from './foersteTur';
 import { beloeb, gram, kilo } from './talformat';
 import { Ikon } from './Ikon';
+import { KomIGang } from './KomIGang';
 
 interface Props {
   fane: Fane;
@@ -193,7 +194,10 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
           <Knap onClick={nyTur}>+ Ny tur</Knap>
         </>
       }
-      fab={nytItem}
+      // Ingen FAB på en tom konto: på telefonen ville den være en fyldt
+      // accent nummer to ved siden af kortets "Planlæg din første tur", og
+      // grejet har sit eget skridt under Kom i gang.
+      fab={ture.length === 0 ? undefined : nytItem}
     >
       <div className="home-grid" style={{ display: 'grid', gap: '24px' }}>
         <section className={`home-next${minder[0] ? ' has-image' : ' without-image'}`}>
@@ -212,6 +216,20 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
         />
         </div>
         </section>
+
+        {/* Den tomme konto. Kortet ovenover ejer knappen til den første tur og
+            er skærmens ene fyldte accent; her står turen kun som skridt 1, så
+            grejet får sin plads ved siden af. Se komIGang.ts. */}
+        {ture.length === 0 && (
+          <KomIGang
+            overskrift="Kom i gang"
+            tekst="To ting gør Feltbogen brugbar: en tur at pakke til og noget grej at pakke med."
+            opretTur={foersteTur}
+            tilfoejGrej={nytItem}
+            fokus="grej"
+            udenKnap={['tur']}
+          />
+        )}
 
         {opgoerelse !== null && (
           <Aarskort aar={opgoerelse} aabn={() => aabnAar(opgoerelse)} />

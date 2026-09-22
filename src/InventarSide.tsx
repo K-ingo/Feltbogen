@@ -7,6 +7,7 @@ import { Skal } from './Skal';
 import type { Fane } from './Skal';
 import { useErDesktop } from './useMedie';
 import { Knap, TagChips, ListeRaekke, TomListe, Badge } from './ui';
+import { KomIGang } from './KomIGang';
 import { udlaanteItems, laanteItems } from './udlaan';
 import { forfaldne } from './vedligehold';
 import { gram, kilo } from './talformat';
@@ -18,6 +19,8 @@ interface Props {
   // Åbner opret-arket. Statussen er den fane man står på — arket kan skifte
   // den, men skal åbne med det rigtige gæt.
   nytItem: (status?: ItemStatus) => void;
+  // Den første tur, fra den tomme tilstand. Uden den fører skridtet til Ture.
+  foersteTur?: () => void;
 }
 
 // Fanerne over listen.
@@ -74,7 +77,7 @@ function iUdsnit(items: Item[], udsnit: Udsnit): Item[] {
 
 const MAKS_TAG_CHIPS = 5;
 
-function InventarSide({ fane, skift, aabnItem, nytItem }: Props) {
+function InventarSide({ fane, skift, aabnItem, nytItem, foersteTur }: Props) {
   const erDesktop = useErDesktop();
 
   const [valgtStatus, setValgtStatus] = useState<Udsnit>('ejer');
@@ -83,7 +86,11 @@ function InventarSide({ fane, skift, aabnItem, nytItem }: Props) {
   const [alleTagsVist, setAlleTagsVist] = useState(false);
   const [mobileFiltreAabne, setMobileFiltreAabne] = useState(false);
 
-  const items = useLiveQuery(() => db.items.toArray()) ?? [];
+  const indlaeste = useLiveQuery(() => db.items.toArray());
+  const items = indlaeste ?? [];
+  // Intet grej i nogen fane: kontoen er tom, ikke bare filteret. Venter på
+  // basen, så den tomme tilstand ikke blinker forbi på vej ind til listen.
+  const tomKonto = indlaeste !== undefined && indlaeste.length === 0;
   const grupper = useLiveQuery(() => db.grupper.toArray()) ?? [];
   const ture = useLiveQuery(() => db.ture.toArray()) ?? [];
 
@@ -238,7 +245,17 @@ function InventarSide({ fane, skift, aabnItem, nytItem }: Props) {
         </div>
       )}
 
-      {filtreret.length === 0 ? (
+      {tomKonto && valgtStatus === 'ejer' ? (
+        // "+ Tilføj grej" i headeren (FAB'en på telefonen) er stadig skærmens
+        // ene fyldte accent. Se komIGang.ts.
+        <KomIGang
+          overskrift="Intet grej endnu"
+          tekst="Dit næste eventyr begynder med det grej, du allerede har. Fem ting er nok til, at en pakkeliste har noget at regne på."
+          opretTur={foersteTur ?? (() => skift('ture'))}
+          tilfoejGrej={aabnArk}
+          fokus="grej"
+        />
+      ) : filtreret.length === 0 ? (
         <TomListe
           handling={iStatus.length > 0 ? 'Ryd filtre' : valgtStatus === 'ejer' || valgtStatus === 'overvejer' ? 'Tilføj grej' : 'Se dit grej'}
           onClick={iStatus.length > 0 ? nulstilFiltre : valgtStatus === 'ejer' || valgtStatus === 'overvejer' ? aabnArk : () => { setValgtStatus('ejer'); nulstilFiltre(); }}

@@ -84,7 +84,7 @@ describe('kun én fyldt accent', () => {
 
     // Den tomme tilstand skal have en tydelig vej til at tilføje grej — men
     // den må ikke lægge endnu en fyldt knap oven i headerens.
-    expect(await screen.findByRole('button', { name: 'Tilføj grej' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Tilføj 5 grej' })).toBeInTheDocument();
     expect(fyldteAccenter()).toHaveLength(1);
     expect(fyldteAccenter()[0]).toHaveTextContent('+ Tilføj grej');
   });

@@ -9,6 +9,7 @@ import { Skal } from './Skal';
 import type { Fane } from './Skal';
 import { Knap, Badge, ListeRaekke, SektionsTitel, TomListe, Segment } from './ui';
 import { Billedvisning } from './BilledSektion';
+import { KomIGang } from './KomIGang';
 import { hero } from './billeder';
 import { faseAf, FASENAVN, manglerSted } from './turfase';
 import type { Fase } from './turfase';
@@ -32,9 +33,13 @@ interface Props {
   aabnTur: (id: number, nyOprettet?: boolean) => void;
   aabnDeltTur: (id: number) => void;
   nyTur: () => void;
+  // Det guidede flow til den første tur. Uden det åbner den tomme tilstand
+  // det almindelige opret-ark.
+  foersteTur?: () => void;
+  nytItem?: () => void;
 }
 
-function TureListe({ fane, skift, aabnTur, aabnDeltTur, nyTur }: Props) {
+function TureListe({ fane, skift, aabnTur, aabnDeltTur, nyTur, foersteTur, nytItem }: Props) {
   const [soegning, setSoegning] = useState('');
   // "Gitter" og ikke "Kort": kort betyder både et kartotekskort og et
   // landkort på dansk, og en app med steder i har brug for at det andet
@@ -61,7 +66,18 @@ function TureListe({ fane, skift, aabnTur, aabnDeltTur, nyTur }: Props) {
       handlinger={<Knap variant="primaer" onClick={nyTur}>+ Ny tur</Knap>}
       fab={nyTur}
     >
-      {egne === 0 && antalDelte === 0 && <TomListe handling="Planlæg din første tur" onClick={nyTur}>Ingen ture endnu. Din første historie starter her.</TomListe>}
+      {/* Venter på basen, så den tomme tilstand ikke blinker forbi på vej ind
+          til en liste med ture. "+ Ny tur" i headeren (FAB'en på telefonen)
+          er stadig skærmens ene fyldte accent. */}
+      {ture !== undefined && delte !== undefined && egne === 0 && antalDelte === 0 && (
+        <KomIGang
+          overskrift="Ingen ture endnu"
+          tekst="Din første historie starter her. Opret turen, og skriv det grej ind, du vil pakke med."
+          opretTur={foersteTur ?? nyTur}
+          tilfoejGrej={nytItem ?? (() => skift('inventar'))}
+          fokus="tur"
+        />
+      )}
       {egne + antalDelte > 0 && <input type="search" aria-label="Søg ture" placeholder="Find en tur eller et sted…" value={soegning} onChange={e => setSoegning(e.target.value)} style={{ width: '100%', marginBottom: '24px' }} />}
       {soegning && visteTure.length + visteDelte.length === 0 && <TomListe handling="Ryd søgning" onClick={() => setSoegning('')}>Ingen ture matcher “{soegning}”. Prøv et andet navn eller sted.</TomListe>}
 
