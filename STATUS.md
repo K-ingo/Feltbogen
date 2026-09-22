@@ -27,19 +27,19 @@ kunne koste data, er begge lukket: sletninger slår igennem på tværs af enhede
 står tilbage, er arbejde vi selv vælger — ikke noget, der spærrer.
 
 Det næste stykke arbejde er ikke funktionalitet, men udseende. Designsystemet
-er låst og ligger nu i repoet sammen med en tegning af hver eneste skærm. Seks
+er låst og ligger nu i repoet sammen med en tegning af hver eneste skærm. Otte
 af tyve er bygget.
 
 ---
 
 ## Grønt lys
 
-Kørt på grenen `claude/funny-rubin-04fo98` den 22. september 2026:
+Kørt på grenen `claude/cool-davinci-ym8zou` den 22. september 2026:
 
 | Kommando | Resultat |
 |---|---|
 | `npm run lint` | Bestået, ingen fejl |
-| `npm test` | 70 testfiler, 1.521 tests, alle grønne |
+| `npm test` | 71 testfiler, 1.543 tests, alle grønne |
 | `npm run build` | Bestået |
 
 **Brug `npm run build` til typekontrol, ikke `npx tsc --noEmit`.** Roden
@@ -102,8 +102,8 @@ det samme; gør de ikke, er det Notion der gælder, og så skal filerne rettes.
 Alle elleve farver i `docs/design/TOKENS.md` stemmer nu med `:root` i
 `src/index.css`. Sidebaggrunden var den sidste, der manglede.
 
-**Der ligger tyve handoffs i kø.** Syv er bygget: Hjem, Ture, Tur-detalje,
-Pakning, Grej, Grejsæt og Folk på PC. Resten — Mere, Steder & Statistik,
+**Der ligger tyve handoffs i kø.** Otte er bygget: Hjem, Ture, Tur-detalje,
+Pakning, Grej, Grejsæt, Folk og Mere på PC. Resten — Steder & Statistik,
 Indstillinger og de to opret-ark, plus otte mobilskærme — er ikke rørt.
 Rækkefølgen er ikke besluttet.
 
@@ -159,6 +159,22 @@ synkroniseret. `opret()` i `sync.ts` venter på serveren, før den vender tilbag
 og navnet blev derfor stående i feltet, til synkroniseringen var ovre. Med en
 langsom forbindelse så det ud som om trykket ikke var registreret, og så trykker
 man igen og får personen to gange. Feltet tømmes nu først, skrivningen bagefter.
+
+Mere var den ottende, og her var det ikke en knap. Skærmen havde ingen — den er
+navigation — men sync-rækken læste kun køens længde og ikke den fejl, appen
+havde noteret om det seneste forsøg. Med en tom kø stod der "Alt er sendt op",
+også når serveren lige havde sagt nej til det, der blev sendt. Startskærmen har
+haft fejlen med hele tiden (`useSyncfejl` i `syncfejl.ts`), så de to linjer om
+den samme tilstand sagde hver sit. Rækken får nu den samme kilde, og en fejl
+står i advarselsfarven med en prik foran, så den kan ses i en kolonne af ens
+grå undertitler.
+
+Resten var form: de ni rækker lå løst under hver sektionstitel, adskilt af hver
+sin streg, og referencen samler hver sektion i ét kort — hårfin kant, 12 px
+runding, den forhøjede flade. Undertitlerne er skåret ned til referencens
+længde, og under kortene står en linje om, hvad sync-rækken lover.
+Årsopgørelsen står ikke i tegningen, fordi den kun findes i januar; den er
+blevet, som den række i historik-kortet den er.
 
 Tre regler fra `TOKENS.md` gælder bredere end den enkelte skærm og er ikke
 efterprøvet på det, der allerede står:
