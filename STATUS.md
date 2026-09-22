@@ -120,6 +120,15 @@ en stille linje øverst på fladen, der siger at krydsene gemmes på telefonen �
 og siger "Du er offline", når man er det, uden at love noget om sync. Research
 #1 (sep 2026): pakning er mobil-primær, og offline skal kunne ses.
 
+Reeds første test af linjen fejlede: den blev ved med at sige "også uden net"
+på en telefon uden net. Den lyttede kun på `navigator.onLine`, og den siger
+"online", så længe der er *et* netværk — også et wifi uden internet, eller når
+forespørgsler blokeres. Linjen spørger nu også selv (`src/forbindelse.ts`): et
+lille HEAD-kald til appens egen oprindelse, uden om cachen, hvert tiende
+sekund og ved online/offline/synlighed. Intet svar inden for fem sekunder er
+offline, og så står linjen som en advarsel på advarselsfladen.
+`useErOnline` i `useMedie.ts` er ikke ændret — Mere bruger den stadig.
+
 Pakning kostede mere end en farverettelse: den var **to** faner, "Pakning" og
 "Pakkeliste", og designet har én. Det er den samme liste to steder — man stod
 med tasken på den ene fane, mens tallet, man pakkede efter, stod på den anden.

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 vi.mock('./pb', () => import('./test/pbMock'));
@@ -355,16 +355,60 @@ describe('Pakning · mobil: knappen følger pakningen', () => {
 });
 
 describe('Pakning · mobil: offline kan ses', () => {
-  afterEach(() => { vi.restoreAllMocks(); });
+  afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
   const saetOnline = (online: boolean) =>
     vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(online);
+  // Om prøvekaldet ud kommer igennem. Uden stub ville testen banke på et
+  // rigtigt netværk.
+  const saetNet = (svarer: boolean) => vi.stubGlobal('fetch', svarer
+    ? vi.fn().mockResolvedValue(new Response(null, { status: 200 }))
+    : vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
 
   it('siger at krydset gemmes på telefonen', async () => {
     saetOnline(true);
+    saetNet(true);
     await visMobil({ pakket: 1 });
 
-    expect(await screen.findByRole('status')).toHaveTextContent('gemmes på telefonen med det samme');
+    const linje = await screen.findByRole('status');
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    expect(linje).toHaveTextContent('gemmes på telefonen med det samme');
+    expect(linje).toHaveAttribute('data-online', 'true');
+  });
+
+  it('advarer, når nettet er væk, selvom browseren siger online', async () => {
+    // Reed-testen på PR #80: `navigator.onLine` blev ved med at sige sandt,
+    // og linjen blev ved med at sige "også uden net".
+    saetOnline(true);
+    saetNet(false);
+    await visMobil({ pakket: 1 });
+
+    const linje = await screen.findByRole('status');
+    await waitFor(() => expect(linje).toHaveTextContent('Du er offline'));
+    expect(linje).toHaveAttribute('data-online', 'false');
+    expect(linje).not.toHaveTextContent('også uden net');
+  });
+
+  it('skifter til advarslen, når browseren melder offline', async () => {
+    saetOnline(true);
+    saetNet(true);
+    await visMobil({ pakket: 1 });
+    const linje = await screen.findByRole('status');
+    await waitFor(() => expect(linje).toHaveAttribute('data-online', 'true'));
+
+    act(() => { window.dispatchEvent(new Event('offline')); });
+
+    expect(linje).toHaveTextContent('Du er offline');
+    expect(linje).toHaveAttribute('data-online', 'false');
+  });
+
+  it('holder én fyldt accent, også offline', async () => {
+    saetOnline(false);
+    await visMobil({ pakket: 1 });
+
+    await screen.findByText('Du er offline.');
+    expect(fyldteAccenter()).toHaveLength(1);
+    expect(fyldteAccenter()[0]).toHaveTextContent('Pak de 2 upakkede');
   });
 
   it('siger det, når man er offline — uden at love en sync', async () => {

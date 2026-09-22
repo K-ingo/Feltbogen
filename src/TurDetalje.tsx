@@ -119,7 +119,8 @@ import { hentDeltagelser, baererePrGear, visningsnavn, deltagerbilleder } from '
 import type { Deltagelse } from './deltagelse';
 import { layout } from './layout';
 import { kilo } from './talformat';
-import { useErDesktop, useErBredskaerm, useErOnline } from './useMedie';
+import { useErDesktop, useErBredskaerm } from './useMedie';
+import { useKanNaaUd } from './forbindelse';
 import { sletTur, opdaterTur } from './sync';
 import { meldFortrydelse } from './fortryd';
 import { soltider, skumringstekst } from './soltider';
@@ -178,7 +179,9 @@ const FANEBLADE: { id: Turfane; label: string }[] = [
 
 function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
   const erDesktop = useErDesktop();
-  const online = useErOnline();
+  // Ikke `navigator.onLine` alene: den siger "online" på et wifi uden net.
+  // Se forbindelse.ts.
+  const online = useKanNaaUd();
   const erBred = useErBredskaerm();
   // Statusvælgeren ligger bag et tryk. Den var fremme hele tiden, og dens
   // valgte felt er en fyldt accent-flade — sammen med turens primære knap
@@ -1423,7 +1426,7 @@ function Offlinelinje({ online }: { online: boolean }) {
       <span className="packing-offline-prik" aria-hidden="true" />
       {online
         ? 'Hvert kryds gemmes på telefonen med det samme — også uden net.'
-        : 'Du er offline. Det, du krydser af, gemmes på telefonen.'}
+        : <span><strong>Du er offline.</strong> Det, du krydser af, gemmes på telefonen.</span>}
     </div>
   );
 }

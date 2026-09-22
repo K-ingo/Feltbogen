@@ -1168,7 +1168,16 @@ button:disabled { cursor: not-allowed; }
   background: var(--accent);
 }
 
-.packing-offline[data-online='false'] { color: var(--advarsel); font-weight: 500; }
+/* Offline er en advarsel og skal ligne én: advarselsfladen fra de låste
+   tokens (#FFF4E0 / #A06000), ikke bare en anden farve på den samme stille
+   linje. Stadig ingen fyldt accent — den hører til knappen ovenover. */
+.packing-offline[data-online='false'] {
+  padding: var(--plads-2) var(--plads-3);
+  border: 1px solid var(--advarsel-border);
+  border-radius: var(--runding-lille);
+  background: var(--advarsel-bg);
+  color: var(--advarsel);
+}
 .packing-offline[data-online='false'] .packing-offline-prik { background: var(--advarsel); }
 
 .packing-row { min-height: 56px; border-radius: 6px; padding: 10px 4px !important; column-gap: 10px !important; }
