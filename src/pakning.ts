@@ -99,3 +99,44 @@ export function kunUpakkede(afsnit: Pakkeafsnit[], afkrydsede: Set<Reference>): 
     .map((a) => ({ ...a, linjer: a.linjer.filter((l) => l.egen && l.uid !== '' && !afkrydsede.has(l.uid)) }))
     .filter((a) => a.linjer.length > 0);
 }
+
+// Den fyldte knap på telefonens Pakning — hvad den skal sige, afhænger af hvor
+// langt man er.
+//
+// Tre tilstande, som handoff'en "Ejer Pakning · mobil" tegner dem:
+//
+// - **Tom:** der er ikke valgt noget, og så er det dér, man skal begynde.
+// - **Delvis:** noget ligger stadig udenfor tasken. Knappen skærer listen ned
+//   til det og tager én derhen — man står med tasken og vil ikke lede de seks
+//   op imellem de otte.
+// - **Færdig:** der er ikke mere at pakke. Så er det turens eget næste skridt,
+//   der er det vigtigste på skærmen, og pakningen giver pladsen fra sig —
+//   derfor `null`.
+//
+// Designsystemet tillader én fyldt accent pr. skærmbillede. Den, der ikke
+// får den, bliver outline; det afgøres af den, der kalder.
+export type Pakkemaal = 'pakning' | 'pakkeliste';
+
+export interface Pakkehandling {
+  tilstand: 'tom' | 'delvis';
+  label: string;
+  // Hvor på fladen knappen tager én hen: valget af grej eller listen.
+  maal: Pakkemaal;
+  // Om listen skal skæres ned til det, der mangler, på vejen.
+  kunUpakkede: boolean;
+}
+
+export function pakkehandling(f: Pakkefremdrift): Pakkehandling | null {
+  if (f.ialt === 0) {
+    return { tilstand: 'tom', label: 'Tilføj grej', maal: 'pakning', kunUpakkede: false };
+  }
+  if (f.faerdig) return null;
+
+  const n = f.mangler.length;
+  return {
+    tilstand: 'delvis',
+    label: n === 1 ? 'Pak den sidste' : `Pak de ${n} upakkede`,
+    maal: 'pakkeliste',
+    kunUpakkede: true
+  };
+}
