@@ -725,6 +725,38 @@ browser ──https──> Caddy ──http──> pocketbase.railway.internal:8
 `Dockerfile` bygger appen og lægger den ind i et Caddy-image. Railway samler
 selv de to op.
 
+### Versionsnummeret
+
+Indstillingsskærmen viser under **Om**, hvilken udgave der kører — fx
+`version 0.2.0 · a1b2c3d`. De to halvdele svarer på hver sit spørgsmål:
+
+- **Semver'en** (`0.2.0`) kommer fra `version` i `package.json` og siger, hvor
+  meget der er sket siden sidst. Den er til mennesker.
+- **Sha'en** (`a1b2c3d`, syv tegn) er den commit, bundlen faktisk er bygget af.
+  Den er til opslag: `git show a1b2c3d` henter koden frem igen.
+
+Begge bages ind ved build gennem `define` i `vite.config.ts`. Appen læser
+altså aldrig `package.json` på et kørende system — den kan kun vise det, der
+stod der, da bundlen blev lavet. Sha'en findes i denne rækkefølge:
+`VERCEL_GIT_COMMIT_SHA`, `RAILWAY_GIT_COMMIT_SHA`, og ellers `git rev-parse
+HEAD` lokalt. I en Docker-build er `.git` ikke med i konteksten, så sha'en
+gives med udefra som build-arg (se `Dockerfile`); kommer den slet ikke, står
+der `ukendt`, og appen virker uændret.
+
+Bump sker **i hånden, i den pull request der er værd at udrulle**:
+
+```bash
+npm run bump:patch   # rettelser
+npm run bump:minor   # ny funktionalitet
+npm run bump:major   # brud på noget, folk gjorde i forvejen
+```
+
+Kommandoerne retter `package.json` og `package-lock.json` og laver hverken
+commit eller tag — bumpet følger med i den pull request, det hører til, og
+rammer `main` samtidig med det, det beskriver. En pull request, der kun rører
+dokumentation eller tests, behøver ikke et bump: sha'en siger alligevel
+præcis, hvad der kører.
+
 ### Opsætning i Railway
 
 På web-servicen sættes én variabel, som en reference til PocketBase-servicen:

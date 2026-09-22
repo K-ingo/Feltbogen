@@ -28,4 +28,14 @@ describe('udgave', () => {
     expect(typeof u.commit).toBe('string');
     expect(typeof u.bygget).toBe('string');
   });
+
+  // Versionslinjen på indstillingsskærmen er den eneste måde at sige udefra,
+  // hvad der kører — "0.2.0 · a1b2c3d". Holder formatet ikke, kan svaret
+  // ikke slås op i repoet, og så er linjen ikke til megen nytte.
+  it('holder formatet: semver fra package.json og syv tegn af sha\'en', () => {
+    const u = udgave();
+    expect(u.version).toMatch(/^\d+\.\d+\.\d+/);
+    // Uden .git — fx i en Docker-build uden sha udefra — står der "ukendt".
+    expect(u.commit).toMatch(/^([0-9a-f]{7}|ukendt)$/);
+  });
 });
