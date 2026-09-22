@@ -57,6 +57,12 @@ har `"files": []` og peger kun videre til `tsconfig.app.json` og
 `tsconfig.node.json`. Et `npx tsc --noEmit` tjekker derfor ingen filer og
 svarer grønt på alt. Kør `npm run build`.
 
+Er ændringen værd at udrulle, så **bump versionen i samme pull request** —
+`npm run bump:patch`, `bump:minor` eller `bump:major`. Versionslinjen under
+**Om** i Indstillinger er det eneste, en bruger kan oplyse om det, der kører;
+står semver'en stille, er der kun sha'en at gå efter. Dokumentation og tests
+alene behøver ikke et bump. Se README under *Udrulning → Versionsnummeret*.
+
 Implementér, test **og** dokumentér. En ændring uden test eller uden en note i
 dokumentationen er ikke færdig.
 

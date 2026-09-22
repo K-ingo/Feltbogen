@@ -20,8 +20,10 @@ function commit(): string {
   const fraRailway = process.env.RAILWAY_GIT_COMMIT_SHA
   if (fraRailway) return fraRailway.slice(0, 7)
 
+  // `--short` forkorter adaptivt og kan give flere end syv tegn. Her klippes
+  // der selv, så sha'en har samme længde uanset hvor den kom fra.
   try {
-    return execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim()
+    return execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim().slice(0, 7)
   } catch {
     return 'ukendt'
   }
