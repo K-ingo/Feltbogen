@@ -1,6 +1,6 @@
 # STATUS
 
-*Sidst opdateret: 22. september 2026. Udgangspunkt: `main` @ `33c7c57`.*
+*Sidst opdateret: 22. september 2026. Udgangspunkt: `main` @ `cdb6a6c`.*
 
 Kort svar på "hvor står vi nu?". Den skal kunne læses på to minutter og
 opdateres, hver gang noget bliver færdigt eller blokeret.
@@ -35,14 +35,14 @@ syv står tilbage.
 
 ## Grønt lys
 
-Kørt på grenen `claude/nice-cannon-fdvj9u` den 22. september 2026:
+Kørt på grenen `claude/magical-cerf-8fl008` den 22. september 2026:
 
 | Kommando | Resultat |
 |---|---|
 | `npm run lint` | Bestået, ingen fejl |
-| `npm test` | 74 testfiler, 1.622 tests, alle grønne |
+| `npm test` | 77 testfiler, 1.700 tests, alle grønne |
 | `npm run build` | Bestået |
-| `npm run preview` | Bestået — Indstillinger afprøvet på 1440 og 390 px |
+| `npm run preview` | Bestået — Statistik afprøvet på 1440 og 390 px med syntetiske ture |
 
 **Brug `npm run build` til typekontrol, ikke `npx tsc --noEmit`.** Roden
 `tsconfig.json` har `"files": []` og peger kun videre til `tsconfig.app.json`
@@ -270,6 +270,18 @@ og kaldte tallet *steder du kommer tilbage til* — men et sted, man har
 oprettet, er ikke et sted, man har været, og ét besøg er ikke et gensyn.
 "Statistik" talte grej op (*4 ting talt op*) på en skærm om ture. De siger nu
 antallet af steder og gensynene for sig, og ture og nætter.
+
+**Statistik v1 — forklarbare tal** (research §3 #3). Fanen svarer nu på fire
+ting, man kan sige i én sætning: ture, nætter, top-steder og grej brugt vs
+urørt. Top-stederne er de tre steder med flest ture i perioden, talt ud af
+stedet på hver tur (`topSteder` i `src/friluftshistorik.ts`); et gemt sted kan
+åbnes derfra. Brugt vs urørt læses *kun* af pak-af-tjekkene
+(`brugtOgUroert`): brugt er brugt mindst én gang (i stykker tæller som brugt),
+urørt er urørt hver gang, det var med. En tur uden tjek tæller hverken som
+brugt eller urørt, men afsluttede ture uden tjek nævnes. Uden et eneste tjek
+står der ingen tal, kun hvor de kommer fra; med færre end tre tjek står
+tallene, men listen over urørt grej venter — urørt på én tur er ikke en vane.
+"Mest brugte grej" er uændret og tæller stadig ture, grejet var med på.
 
 Favoritterne i referencen — **Gem** på et sted, og *0 favoritter* i
 Mere-rækken — er ikke bygget. De kræver et nyt felt på `Sted`, og datamodellen

@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import type { Item } from './db';
+import type { Stedlinje, BrugtOgUroert } from './friluftshistorik';
 import {
   turtal, gennemsnitsvaegt, bedsteGrej, daarligsteGrej, andelVurderet,
-  hyldevarer, hyldevarevaegt, skroebeligtGrej, grundlag
+  hyldevarer, hyldevarevaegt, skroebeligtGrej, grundlag, MINDST_FOR_ET_MOENSTER
 } from './laering';
 import { fordeling } from './aarsopgoerelse';
 import { etiket } from './db';
@@ -22,11 +23,14 @@ import {
   fordelingPrGruppe
 } from './statistik';
 import type { Periode } from './statistik';
-import { historiktal, saesonen } from './friluftshistorik';
+import { historiktal, saesonen, topSteder, brugtOgUroert, besoegstal } from './friluftshistorik';
 import { gennemsnit, snittekst } from './vurdering';
 
 interface Props {
   aabnItem: (id: number, nyOprettet?: boolean) => void;
+  // Et gemt sted på top-listen kan åbnes. Et sted, der kun findes som navn på
+  // en tur, kan ikke — der er ingen side at åbne.
+  aabnSted?: (id: number) => void;
 }
 
 // Statistik-fanen på Friluftshistorik.
@@ -55,8 +59,10 @@ const PERIODER: readonly Periode[] = ['i_aar', 'alt'];
 const MAANEDER = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
 
 const MAKS_MEST_BRUGTE = 5;
+const MAKS_TOP_STEDER = 3;
+const MAKS_UROERTE = 5;
 
-function StatistikPanel({ aabnItem }: Props) {
+function StatistikPanel({ aabnItem, aabnSted }: Props) {
   const erDesktop = useErDesktop();
   const [periode, setPeriode] = useState<Periode>('i_aar');
   const [viserMoenstre, setViserMoenstre] = useState(false);
@@ -64,6 +70,7 @@ function StatistikPanel({ aabnItem }: Props) {
   const items = useLiveQuery(() => db.items.toArray()) ?? [];
   const alleTure = useLiveQuery(() => db.ture.toArray()) ?? [];
   const grupper = useLiveQuery(() => db.grupper.toArray()) ?? [];
+  const steder = useLiveQuery(() => db.steder.toArray()) ?? [];
 
   const nu = new Date();
   const ture = filtrererTure(alleTure, periode);
@@ -95,6 +102,10 @@ function StatistikPanel({ aabnItem }: Props) {
   const tal = turtal(ture);
   const tiltal = historiktal(ture, items);
   const maaneder = saesonen(ture);
+  // Statistik v1: tal, man kan forklare i én sætning. Begge følger perioden —
+  // de beskriver turene i udsnittet, ikke inventaret.
+  const stederTop = topSteder(steder, ture, MAKS_TOP_STEDER);
+  const brug = brugtOgUroert(ture, items);
   const vaegt = gennemsnitsvaegt(ture, grupper, items);
   const turtyper = fordeling(ture, (t) => etiket(t.aktivitet));
 
@@ -171,6 +182,27 @@ function StatistikPanel({ aabnItem }: Props) {
           </>
         )}
       </div>
+
+      <div className="historik-kort">
+        <p className="historik-kort-titel">Top-steder</p>
+        {tal.ture === 0 ? (
+          <p className="historik-kort-tekst">Ingen ture i perioden endnu.</p>
+        ) : stederTop.length === 0 ? (
+          <p className="historik-kort-tekst">
+            Ingen af turene i perioden har et sted skrevet på. Skriv stedet på turen, så
+            står det her.
+          </p>
+        ) : (
+          <>
+            <Stedliste linjer={stederTop} aabn={aabnSted} />
+            <p className="historik-kort-tekst">
+              Talt fra stedet på hver tur i perioden. Flest ture øverst.
+            </p>
+          </>
+        )}
+      </div>
+
+      <BrugtUroertKort brug={brug} ture={tal.ture} aabnItem={aabnItem} />
 
       {topBrugt.length > 0 && (
         <div className="historik-kort">
@@ -391,6 +423,129 @@ function Talfelt({ navn, vaerdi }: { navn: string; vaerdi: string }) {
     <div className="historik-talfelt">
       <p className="historik-talfelt-etiket">{navn}</p>
       <p className="historik-talfelt-tal">{vaerdi}</p>
+    </div>
+  );
+}
+
+// Grej brugt vs urørt — kun fra pak-af-tjekkene.
+//
+// Kortet siger aldrig mere, end tjekkene kan bære. Uden tjek er der ingen tal,
+// kun en forklaring på hvor de kommer fra. Med for få tjek står tallene — de er
+// sande — men listen over urørt grej venter: urørt på én tur er ikke en vane,
+// og en liste ville opfordre til at lade det blive hjemme.
+function BrugtUroertKort({ brug, ture, aabnItem }: {
+  brug: BrugtOgUroert;
+  ture: number;
+  aabnItem: (id: number) => void;
+}) {
+  const udenTjek = brug.ture_uden_tjek > 0 && (
+    <p className="historik-kort-tekst">
+      {brug.ture_uden_tjek === 1
+        ? '1 afsluttet tur i perioden mangler pak-af-tjekket og tæller ikke med.'
+        : `${brug.ture_uden_tjek} afsluttede ture i perioden mangler pak-af-tjekket og tæller ikke med.`}
+    </p>
+  );
+
+  if (brug.ture_gjort_op === 0) {
+    return (
+      <div className="historik-kort">
+        <p className="historik-kort-titel">Grej brugt vs urørt</p>
+        <p className="historik-kort-tekst">
+          {ture === 0
+            ? 'Ingen ture i perioden endnu.'
+            : 'Ingen ture i perioden er gjort op endnu. Når du laver pak-af-tjekket efter en tur, står det her, hvad der blev brugt, og hvad der lå urørt.'}
+        </p>
+        {udenTjek}
+      </div>
+    );
+  }
+
+  const tilbage = MINDST_FOR_ET_MOENSTER - brug.ture_gjort_op;
+  const kilde = brug.ture_gjort_op === 1
+    ? 'Fra pak-af-tjekket på 1 tur.'
+    : `Fra pak-af-tjekket på ${brug.ture_gjort_op} ture.`;
+
+  return (
+    <div className="historik-kort">
+      <p className="historik-kort-titel">Grej brugt vs urørt</p>
+
+      {brug.grej === 0 ? (
+        <p className="historik-kort-tekst">Pak-af-tjekkene i perioden har intet grej på.</p>
+      ) : (
+        <>
+          <div className="historik-brugt">
+            <div>
+              <p className="historik-talfelt-etiket">Brugt</p>
+              <p className="historik-talfelt-tal">{brug.brugt}</p>
+            </div>
+            <div>
+              <p className="historik-talfelt-etiket">Urørt</p>
+              <p className="historik-talfelt-tal">{brug.uroert}</p>
+            </div>
+          </div>
+          <p className="historik-kort-tekst">
+            {kilde} Brugt er brugt mindst én gang. Urørt er urørt hver gang, det var med.
+          </p>
+
+          {tilbage > 0 ? (
+            <p className="historik-kort-tekst">
+              Urørt på {brug.ture_gjort_op === 1 ? 'én tur' : `${brug.ture_gjort_op} ture`} er ikke et mønster endnu.
+              Listen over urørt grej kommer, når {tilbage === 1 ? '1 tur mere' : `${tilbage} ture mere`} er
+              gjort op.
+            </p>
+          ) : brug.uroerte.length > 0 && (
+            <>
+              <div style={{ marginTop: 'var(--plads-3)' }}>
+                <Grejliste
+                  raekker={brug.uroerte.slice(0, MAKS_UROERTE).map((u) => ({
+                    item: u.item,
+                    hoejre: `${kilo(u.item.vaegt_g * u.item.antal, 1)} kg · urørt ${u.uroert} ${u.uroert === 1 ? 'gang' : 'gange'}`
+                  }))}
+                  aabn={aabnItem}
+                />
+              </div>
+              {brug.uroerte.length > MAKS_UROERTE && (
+                <p className="historik-kort-tekst">
+                  + {brug.uroerte.length - MAKS_UROERTE} mere urørt grej.
+                </p>
+              )}
+            </>
+          )}
+        </>
+      )}
+
+      {udenTjek}
+    </div>
+  );
+}
+
+// Top-stederne. Et gemt sted kan åbnes; et sted, der kun står som navn på en
+// tur, er en linje uden noget at trykke på.
+function Stedliste({ linjer, aabn }: { linjer: Stedlinje[]; aabn?: (id: number) => void }) {
+  return (
+    <div className="historik-grejliste">
+      {linjer.map((l, i) => {
+        const indhold = (
+          <>
+            <span style={{ display: 'flex', gap: '10px', alignItems: 'baseline', minWidth: 0 }}>
+              <span style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)' }}>{i + 1}.</span>
+              <span style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst)' }}>{l.navn}</span>
+            </span>
+            <span style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', whiteSpace: 'nowrap' }}>
+              {besoegstal(l)}
+            </span>
+          </>
+        );
+
+        const id = l.id;
+        return aabn && id !== undefined ? (
+          <button key={l.noegle} type="button" className="historik-grejrække" onClick={() => aabn(id)}>
+            {indhold}
+          </button>
+        ) : (
+          <div key={l.noegle} className="historik-grejrække historik-grejrække-stille">{indhold}</div>
+        );
+      })}
     </div>
   );
 }

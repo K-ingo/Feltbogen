@@ -86,7 +86,7 @@ function FriluftshistorikSide({ fane, skift, aabnSted, nytSted, aabnItem, aabnAa
         <StederPanel aabnSted={aabnSted} nytSted={nytSted} />
       ) : (
         <Suspense fallback={<div className="historik-henter">Henter tallene …</div>}>
-          <StatistikPanel aabnItem={aabnItem} />
+          <StatistikPanel aabnItem={aabnItem} aabnSted={aabnSted} />
         </Suspense>
       )}
     </Skal>

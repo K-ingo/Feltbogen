@@ -8,7 +8,7 @@ vi.mock('./pb', () => import('./test/pbMock'));
 import { db } from './db';
 import type { PakAfLinje, PakAfStatus } from './db';
 import StatistikPanel from './StatistikPanel';
-import { lavItem, lavTur } from './test/data';
+import { lavItem, lavSted, lavTur } from './test/data';
 import { tegn, DESKTOP } from './test/skaerm';
 
 // ─────────────────────────────────────────────
@@ -119,6 +119,112 @@ describe('nætter pr. måned', () => {
   });
 });
 
+// Kortet omkring en historik-kort-titel.
+const kort = async (titel: string) =>
+  (await screen.findByText(titel)).parentElement as HTMLElement;
+
+describe('top-steder', () => {
+  it('viser stederne med flest ture i perioden', async () => {
+    await db.steder.add(lavSted({ uid: 's-rold', navn: 'Rold Skov' }));
+    await db.ture.bulkAdd([
+      lavTur({ startdato: iAar(5), sted_uid: 's-rold', naetter: 1 }),
+      lavTur({ startdato: iAar(6), sted_uid: 's-rold', naetter: 2 }),
+      lavTur({ startdato: iAar(7), sted: 'Øhaven', naetter: 1 }),
+      // Sidste år — uden for standardperioden.
+      lavTur({ startdato: `${AAR - 1}-05-10`, sted: 'Mols', naetter: 1 })
+    ]);
+
+    vis();
+
+    const k = await kort('Top-steder');
+    const linjer = within(k).getAllByText(/^\d\.$/).map((n) => n.nextSibling?.textContent);
+    expect(linjer).toEqual(['Rold Skov', 'Øhaven']);
+    expect(within(k).getByText('2 ture · 3 nætter i alt')).toBeInTheDocument();
+    expect(within(k).queryByText('Mols')).not.toBeInTheDocument();
+  });
+
+  it('åbner et gemt sted, men ikke et der kun er et navn på en tur', async () => {
+    const id = await db.steder.add(lavSted({ uid: 's-rold', navn: 'Rold Skov' }));
+    await db.ture.bulkAdd([
+      lavTur({ startdato: iAar(5), sted_uid: 's-rold' }),
+      lavTur({ startdato: iAar(6), sted: 'Øhaven' })
+    ]);
+    const aabnSted = vi.fn();
+
+    tegn(<StatistikPanel aabnItem={vi.fn()} aabnSted={aabnSted} />, DESKTOP);
+
+    const k = await kort('Top-steder');
+    await userEvent.click(within(k).getByRole('button', { name: /Rold Skov/ }));
+    expect(aabnSted).toHaveBeenCalledWith(id);
+    expect(within(k).queryByRole('button', { name: /Øhaven/ })).not.toBeInTheDocument();
+  });
+
+  it('siger det, når ingen tur har et sted', async () => {
+    await db.ture.add(lavTur({ startdato: iAar(5), sted: '' }));
+
+    vis();
+
+    expect(await screen.findByText(/har et sted skrevet på/)).toBeInTheDocument();
+  });
+});
+
+describe('grej brugt vs urørt', () => {
+  it('forklarer, hvor tallet kommer fra, når ingen tur er gjort op', async () => {
+    await db.items.add(lavItem({ uid: 'u-1', navn: 'Økse' }));
+    await db.ture.bulkAdd([
+      lavTur({ startdato: iAar(5), status: 'afsluttet', pak_af_tjek: null, loese_item_ids: ['u-1'] }),
+      lavTur({ startdato: iAar(6), status: 'afsluttet', pak_af_tjek: null })
+    ]);
+
+    vis();
+
+    const k = await kort('Grej brugt vs urørt');
+    expect(within(k).getByText(/Ingen ture i perioden er gjort op endnu/)).toBeInTheDocument();
+    expect(within(k).getByText(/2 afsluttede ture i perioden mangler pak-af-tjekket/)).toBeInTheDocument();
+    expect(within(k).queryByText('Brugt')).not.toBeInTheDocument();
+  });
+
+  it('viser tallene, men holder listen tilbage, når grundlaget er for tyndt', async () => {
+    await db.items.bulkAdd([
+      lavItem({ uid: 'u-kniv', navn: 'Kniv' }),
+      lavItem({ uid: 'u-sav', navn: 'Sav' })
+    ]);
+    await db.ture.add(lavTur({
+      startdato: iAar(5),
+      status: 'afsluttet',
+      pak_af_tjek: tjek([['u-kniv', 'brugt'], ['u-sav', 'ubrugt']])
+    }));
+
+    vis();
+
+    const k = await kort('Grej brugt vs urørt');
+    expect(within(k).getByText('Brugt').nextSibling?.textContent).toBe('1');
+    expect(within(k).getByText('Urørt').nextSibling?.textContent).toBe('1');
+    expect(within(k).getByText(/Fra pak-af-tjekket på 1 tur\./)).toBeInTheDocument();
+    expect(within(k).getByText(/ikke et mønster endnu/)).toBeInTheDocument();
+    expect(within(k).queryByText('Sav')).not.toBeInTheDocument();
+  });
+
+  it('lister det urørte grej, når der er gjort nok ture op', async () => {
+    await db.items.bulkAdd([
+      lavItem({ uid: 'u-kniv', navn: 'Kniv' }),
+      lavItem({ uid: 'u-sav', navn: 'Sav', vaegt_g: 400 })
+    ]);
+    await db.ture.bulkAdd([1, 2, 3].map((m) => lavTur({
+      startdato: iAar(m),
+      status: 'afsluttet',
+      pak_af_tjek: tjek([['u-kniv', 'brugt'], ['u-sav', 'ubrugt']])
+    })));
+
+    vis();
+
+    const k = await kort('Grej brugt vs urørt');
+    expect(within(k).getByText(/Fra pak-af-tjekket på 3 ture\./)).toBeInTheDocument();
+    expect(within(k).getByRole('button', { name: /Sav/ })).toHaveTextContent('0,4 kg · urørt 3 gange');
+    expect(within(k).queryByText('Kniv')).not.toBeInTheDocument();
+  });
+});
+
 describe('perioden', () => {
   it('står på indeværende år og kan skifte til alle år', async () => {
     await db.items.add(lavItem({ navn: 'Økse' }));
@@ -172,7 +278,10 @@ describe('mønstrene bag folden', () => {
 
     await visMoenstre();
 
-    expect(await screen.findByText(/2 ture mere/i)).toBeInTheDocument();
+    // Kortet om brugt vs urørt siger også, hvor mange der mangler — så
+    // assertionen afgrænses til mønster-widget'en.
+    await screen.findByText('Mønstre i grejet');
+    expect(within(widget('Mønstre i grejet')).getByText(/2 ture mere/i)).toBeInTheDocument();
   });
 });
 
