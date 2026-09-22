@@ -7,7 +7,7 @@ import type { Personprofil } from './personer';
 import { opretTomPerson } from './opret';
 import { opdaterPerson, sletPerson } from './sync';
 import { meldFortrydelse } from './fortryd';
-import { Knap, Felt, Segment, Tekstomraade } from './ui';
+import { Knap, Felt, Segment, Tekstomraade, SektionsTitel } from './ui';
 import { kilo } from './talformat';
 
 // Rejseselskabet. Selve listen — skærmen omkring den er FolkSide.
@@ -42,9 +42,15 @@ function Personer() {
     const rent = navn.trim();
     if (!rent) return;
 
+    // Feltet tømmes først, og ikke bagefter. opretTomPerson() skriver lokalt
+    // med det samme, men venter derefter på synkroniseringen, før den vender
+    // tilbage — og indtil da stod navnet stadig i feltet. Med en langsom
+    // forbindelse så det ud som om trykket ikke var registreret, og så trykker
+    // man igen og får personen to gange.
+    setNytNavn('');
+
     const id = await opretTomPerson({ navn: rent });
     const oprettet = await db.personer.get(id);
-    setNytNavn('');
     if (oprettet) setAabenUid(oprettet.uid);
   };
 
@@ -62,66 +68,86 @@ function Personer() {
     if (genskab) meldFortrydelse({ slags: 'Personen', navn: person.navn, detalje, genskab });
   };
 
+  // Et navn der kun er mellemrum er ikke et navn. Det er den samme prøve,
+  // som opret() selv laver — knappen skal bare kunne stille den, før den
+  // tænder.
+  const gyldigtNavn = nytNavn.trim().length > 0;
+
   return (
     <div>
-      <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
-        <input
-          value={nytNavn}
-          onChange={(e) => setNytNavn(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') void opret(nytNavn); }}
-          placeholder="Navn"
-          style={{ flex: 1, minWidth: 0, fontSize: 'var(--skrift-knap)' }}
-        />
-        <Knap onClick={() => void opret(nytNavn)} disabled={!nytNavn.trim()}>+ Tilføj</Knap>
-      </div>
+      <section>
+        <SektionsTitel>Personer</SektionsTitel>
+
+        <div className="people-add">
+          <label>
+            {/* Etiketten står for skærmlæseren. Pladsholderen siger "Navn" og
+                gentager den — synligt ville den være en linje for meget over
+                et felt, der kun kan indeholde én ting. */}
+            <span className="sr-only">Navn</span>
+            <input
+              value={nytNavn}
+              onChange={(e) => setNytNavn(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') void opret(nytNavn); }}
+              placeholder="Navn"
+            />
+          </label>
+          {/* Skærmens eneste fyldte accent, og kun når der er noget at
+              tilføje. Er feltet tomt, er knappen slået fra og står som en
+              dæmpet outline — så har den tomme skærm ingen primær handling,
+              og det er med vilje: der er ikke noget at trykke på endnu. */}
+          <Knap
+            onClick={() => void opret(nytNavn)}
+            disabled={!gyldigtNavn}
+            variant={gyldigtNavn ? 'primaer' : 'sekundaer'}
+          >
+            + Tilføj
+          </Knap>
+        </div>
+        <div className="people-hint">
+          {gyldigtNavn ? 'Tryk Enter eller + Tilføj' : 'Skriv et navn for at tilføje'}
+        </div>
+
+        <div style={{ marginTop: 'var(--plads-4)' }}>
+          {sorteret.length === 0 ? (
+            <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-svag)', lineHeight: 1.6, maxWidth: '58ch' }}>
+              Ingen endnu. Skriv dem ind, du tager afsted med — så husker Feltbogen,
+              hvem der plejer at være med, og hvad de plejer at bære.
+            </div>
+          ) : (
+            <div className="person-list">
+              {sorteret.map((person) => (
+                <Personraekke
+                  key={person.uid}
+                  person={person}
+                  ture={antal.get(person.uid) ?? 0}
+                  profil={personprofil(person, ture, items)}
+                  aaben={aabenUid === person.uid}
+                  skiftAaben={() => setAabenUid(aabenUid === person.uid ? null : person.uid)}
+                  opdater={(a) => person.id !== undefined && void opdaterPerson(person.id, a)}
+                  fjern={() => void fjern(person)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
 
       {foreslaaede.length > 0 && (
-        <div style={{ marginBottom: '12px' }}>
-          <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginBottom: '6px' }}>
-            Navne fra dine ture der ikke er personer endnu
+        <section style={{ marginTop: 'var(--plads-6)' }}>
+          <SektionsTitel>Foreslået fra dine ture</SektionsTitel>
+          {/* Hvad et tryk gør, står før chippen og ikke efter. De ligner
+              filtre, og de er det modsatte: de skriver noget i basen. */}
+          <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', margin: '-6px 0 var(--plads-3)' }}>
+            Hurtig tilføjelse — opretter personen i din Feltbog.
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+          <div className="people-chips">
             {foreslaaede.map((navn) => (
-              <button
-                key={navn}
-                onClick={() => void opret(navn)}
-                style={{
-                  padding: '5px 10px',
-                  fontSize: 'var(--skrift-lille)',
-                  background: 'var(--bg-forhoejet)',
-                  color: 'var(--accent)',
-                  border: '1px solid var(--accent-border)',
-                  borderRadius: '14px',
-                  cursor: 'pointer'
-                }}
-              >
+              <button key={navn} className="people-chip" onClick={() => void opret(navn)}>
                 + {navn}
               </button>
             ))}
           </div>
-        </div>
-      )}
-
-      {sorteret.length === 0 ? (
-        <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-svag)' }}>
-          Ingen endnu. Skriv dem ind, du tager afsted med — så husker Feltbogen,
-          hvem der plejer at være med, og hvad de plejer at bære.
-        </div>
-      ) : (
-        <div className="person-list">
-          {sorteret.map((person) => (
-            <Personraekke
-              key={person.uid}
-              person={person}
-              ture={antal.get(person.uid) ?? 0}
-              profil={personprofil(person, ture, items)}
-              aaben={aabenUid === person.uid}
-              skiftAaben={() => setAabenUid(aabenUid === person.uid ? null : person.uid)}
-              opdater={(a) => person.id !== undefined && void opdaterPerson(person.id, a)}
-              fjern={() => void fjern(person)}
-            />
-          ))}
-        </div>
+        </section>
       )}
     </div>
   );
@@ -191,6 +217,10 @@ function Personraekke({ person, ture, profil, aaben, skiftAaben, opdater, fjern 
               })}
               formater={(o) => etiket(o)}
               kompakt
+              // Stille og ikke fyldt. Det er en oplysning om personen, ikke
+              // skærmens handling, og en fyldt accent her ville være den
+              // anden på siden ved siden af "+ Tilføj".
+              stille
             />
           </div>
 

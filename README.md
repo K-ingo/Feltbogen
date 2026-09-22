@@ -199,6 +199,15 @@ lægges ikke til to gange — `indlaesning()` i `grejsaet.ts` regner ud, hvor
 mange dubletter der merges, og hvad turen går fra og til, så det står på
 skærmen før man bekræfter. Det følger `docs/design/desktop/06-grejsaet.html`.
 
+Folk er et **kartotek** og ikke en arbejdsflade: et roligt introkort, et
+navnefelt og listen. Skærmen har ingen fyldt accent, før der står et navn i
+feltet — "+ Tilføj" er slået fra og står som en dæmpet outline, indtil der er
+noget at tilføje, og hjælpeteksten under feltet siger hvorfor. Navne, der er
+skrevet i hånden på turene og ikke svarer til nogen person, tilbydes som
+outline-chips under **Foreslået fra dine ture** (`ukendteNavne()` i
+`personer.ts`); er der ingen, er afsnittet der ikke. Det følger
+`docs/design/desktop/07-folk.html`.
+
 Skallen kender selv den sammenhæng (`HOERER_TIL` i `Skal.tsx`). Står man inde
 på en underskærm, bliver hovedfanen markeret i navigationen, og der kommer en
 "‹ Grej"-linje over titlen — begge dele udledt, så en vej tilbage ikke kan

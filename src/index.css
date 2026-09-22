@@ -391,8 +391,44 @@ button:disabled { cursor: not-allowed; }
 .home-more > summary::marker { color: var(--tekst-svag); }
 .home-more[open] > summary { margin-bottom: var(--plads-4); }
 .home-more-indhold { display: grid; gap: var(--plads-5); }
-.people-intro { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 16px; padding: 18px 20px; margin-bottom: 20px; border: 1px solid var(--accent-border); border-radius: var(--runding); background: linear-gradient(135deg, var(--accent-bg), var(--bg-forhoejet)); }
-.people-intro-icon { display: grid; place-items: center; width: 54px; height: 54px; border-radius: 50%; color: var(--accent); background: var(--bg-forhoejet); border: 1px solid var(--accent-border); }
+/* Folk · kartoteket.
+
+   Referencen er `docs/design/desktop/07-folk.html`. Skærmen er et kartotek og
+   ikke en arbejdsflade: den skal kunne bladres i uden at råbe. Derfor er alt
+   herunder enten hårfin kant på den forhøjede flade eller ren tekst — den
+   eneste fyldte accent på skærmen er "+ Tilføj", og kun når der står et navn
+   i feltet. */
+
+/* Introkortet. Det var et gradient-felt med en 54 px ikonskive og en
+   Fraunces-overskrift, og det gjorde en forklaring til skærmens tungeste
+   element. Referencen tegner et roligt kort: hårfin kant, den forhøjede
+   flade, og en overskrift på størrelse med brødteksten. */
+.people-intro { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: var(--plads-3); padding: var(--plads-4) var(--plads-5); margin-bottom: var(--plads-5); border: 1px solid var(--border-svag); border-radius: var(--runding-lille); background: var(--bg-forhoejet); }
+.people-intro-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; color: var(--accent); background: var(--accent-bg); }
+/* Overskriften er sans og ikke Fraunces med vilje: displayskriften hører til
+   sidens titel, og et kort med sin egen serif-overskrift ville læses som en
+   anden side. */
+.people-intro h2 { margin: 0; font-family: inherit; font-size: var(--skrift-detalje); font-weight: 600; letter-spacing: 0; }
+.people-intro p { margin: var(--plads-1) 0 0; max-width: 62ch; font-size: var(--skrift-lille); color: var(--tekst-dæmpet); line-height: 1.6; }
+
+/* Etiketter, der kun er til for skærmlæseren. Et felt med en pladsholder er
+   ikke mærket — pladsholderen forsvinder, så snart man skriver. */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+/* Tilføj-rækken. Feltet og knappen står i linje foroven, så hjælpeteksten kan
+   hænge under feltet uden at skubbe knappen ned. Loftet er der, fordi
+   hovedspalten er 1024 px og et navn ikke er 900 px langt: et felt, der er
+   bredere end det, man skriver i det, ser ud som om der mangler noget. */
+.people-add { display: flex; align-items: flex-start; gap: var(--plads-2); max-width: 560px; }
+.people-add > label { flex: 1; min-width: 0; display: block; }
+.people-add input { width: 100%; font-size: var(--skrift-knap); }
+.people-hint { margin-top: 6px; font-size: var(--skrift-mikro); color: var(--tekst-dæmpet); }
+
+/* Foreslået fra dine ture. Outline og ikke fyldt: det er en genvej, ikke
+   skærmens handling. */
+.people-chips { display: flex; flex-wrap: wrap; gap: var(--plads-2); }
+.people-chip { padding: 7px 12px; font-size: var(--skrift-lille); font-weight: 500; background: transparent; color: var(--accent); border: 1px solid var(--accent-border); border-radius: var(--runding-pille); cursor: pointer; }
+
 .person-list { display: grid; gap: 8px; }
 .person-card { border: 1px solid var(--border-svag); border-radius: var(--runding-lille); padding: 0 12px; background: var(--bg-forhoejet); }
 .person-avatar { display: grid; place-items: center; flex: 0 0 34px; width: 34px; height: 34px; border-radius: 50%; background: var(--accent-bg); color: var(--accent); font-weight: 700; }
@@ -778,6 +814,7 @@ label:has(> input[type='checkbox']) { min-height: 48px; }
   .ui-button:hover:not(:disabled) { filter: brightness(1.08); }
   .trip-card:hover { border-color: var(--accent-border); box-shadow: 0 8px 24px var(--skygge); }
   .set-card:hover, .turvalg:hover { border-color: var(--accent-border); }
+  .people-chip:hover { background: var(--accent-bg); }
 }
 @media (max-width: 767px) {
   .home-next { flex-direction: column; }
@@ -792,7 +829,7 @@ label:has(> input[type='checkbox']) { min-height: 48px; }
   .packing-row > span:nth-child(2) { flex-basis: calc(100% - 42px) !important; }
   .packing-row > span:last-child { margin-left: auto; }
   .trip-grid.is-compact { max-width: none; }
-  .people-intro { padding: 14px; align-items: start; }
+  .people-intro { padding: var(--plads-3); }
 }
 @media (max-width: 359px) {
   .trip-status > div { flex-wrap: nowrap !important; overflow-x: auto; scrollbar-width: none; }

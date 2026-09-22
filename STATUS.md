@@ -39,7 +39,7 @@ Kørt på grenen `claude/funny-rubin-04fo98` den 22. september 2026:
 | Kommando | Resultat |
 |---|---|
 | `npm run lint` | Bestået, ingen fejl |
-| `npm test` | 69 testfiler, 1.499 tests, alle grønne |
+| `npm test` | 70 testfiler, 1.521 tests, alle grønne |
 | `npm run build` | Bestået |
 
 **Brug `npm run build` til typekontrol, ikke `npx tsc --noEmit`.** Roden
@@ -102,8 +102,8 @@ det samme; gør de ikke, er det Notion der gælder, og så skal filerne rettes.
 Alle elleve farver i `docs/design/TOKENS.md` stemmer nu med `:root` i
 `src/index.css`. Sidebaggrunden var den sidste, der manglede.
 
-**Der ligger tyve handoffs i kø.** Seks er bygget: Hjem, Ture, Tur-detalje,
-Pakning, Grej og Grejsæt på PC. Resten — Folk, Mere, Steder & Statistik,
+**Der ligger tyve handoffs i kø.** Syv er bygget: Hjem, Ture, Tur-detalje,
+Pakning, Grej, Grejsæt og Folk på PC. Resten — Mere, Steder & Statistik,
 Indstillinger og de to opret-ark, plus otte mobilskærme — er ikke rørt.
 Rækkefølgen er ikke besluttet.
 
@@ -138,6 +138,27 @@ vælg en tur, se overblikket, og først dét tryk skriver noget. Overblikket er
 det, handoff'en beder om — grej, turen har i forvejen, lægges ikke til to
 gange, og `indlaesning()` i `src/grejsaet.ts` siger hvor mange det er, og hvad
 turen går fra og til, før man bekræfter.
+
+Folk var den syvende, og her var overtrædelsen omvendt af de andres: skærmen
+havde ingen fyldt accent overhovedet — "+ Tilføj" var outline, også når der
+stod et navn i feltet, og introkortet var et gradient-felt med en 54 px
+ikonskive, der vejede tungere end skærmens eneste handling. Referencen vender
+om på det: kortet er roligt, og den fyldte accent tændes af navnefeltet.
+Er feltet tomt, er knappen slået fra, og der er *ingen* primær handling på
+skærmen — det er med vilje, for der er ikke noget at trykke på endnu. En
+hjælpetekst under feltet siger "Skriv et navn for at tilføje", så den slukkede
+knap ikke ligner en fejl.
+
+Forslagene fra turene hed før "Navne fra dine ture der ikke er personer endnu"
+og stod som fyldte småknapper mellem feltet og listen. De er nu et eget afsnit
+nederst, **Foreslået fra dine ture**, med outline-chips og en linje om, hvad et
+tryk gør — de lignede filtre og er det modsatte: de skriver i basen.
+
+Én ting mere, som ikke var en farve: feltet blev ikke tømt, før personen var
+synkroniseret. `opret()` i `sync.ts` venter på serveren, før den vender tilbage,
+og navnet blev derfor stående i feltet, til synkroniseringen var ovre. Med en
+langsom forbindelse så det ud som om trykket ikke var registreret, og så trykker
+man igen og får personen to gange. Feltet tømmes nu først, skrivningen bagefter.
 
 Tre regler fra `TOKENS.md` gælder bredere end den enkelte skærm og er ikke
 efterprøvet på det, der allerede står:
@@ -195,16 +216,17 @@ I den rækkefølge, de sandsynligvis er værd at tage.
    eneste værn mod at de to efterlader tomme poster. Selve oprettelsen er
    dækket hele vejen fra ark til post af `opretflow.test.ts`; det er
    sammenkoblingen inde i `App.tsx`, der mangler.
-10. **De fjorten resterende skærme er ikke holdt op mod designet.** Hjem,
-    Ture, Tur-detalje, Pakning, Grej og Grejsæt på PC er gennemgået mod deres
-    HTML-reference. De øvrige kan afvige fra de låste tokens og fra reglen om
-    én fyldt knap, uden at nogen har set efter. Det er ikke en fejl, der er
-    meldt — det er en gennemgang, der ikke er foretaget.
+10. **De tretten resterende skærme er ikke holdt op mod designet.** Hjem,
+    Ture, Tur-detalje, Pakning, Grej, Grejsæt og Folk på PC er gennemgået mod
+    deres HTML-reference. De øvrige kan afvige fra de låste tokens og fra
+    reglen om én fyldt knap, uden at nogen har set efter. Det er ikke en fejl,
+    der er meldt — det er en gennemgang, der ikke er foretaget.
 
-    Fire af de seks gennemgåede havde en rigtig overtrædelse, ingen havde meldt:
+    Fem af de syv gennemgåede havde en rigtig overtrædelse, ingen havde meldt:
     Hjem havde tre fyldte accent-knapper over folden, Tur-detalje havde to,
     pakkelistens opdelingsvælger var den anden fyldte accent på Pakning, og
-    Grejs fanebladsvælger var den anden på Grej. Det er værd at regne med, at
+    Grejs fanebladsvælger var den anden på Grej. Folk brød reglen den anden
+    vej og havde ingen fyldt accent overhovedet. Det er værd at regne med, at
     de øvrige også har.
 
     **Set undervejs, ikke rettet:** Grejsæt på telefonen er stadig den liste,
@@ -266,9 +288,9 @@ står i `PLAN.md` §4 og §9.
 
 | PR | Gren | Hvad den gør |
 |---|---|---|
-| [#71](https://github.com/K-ingo/Feltbogen/pull/71) | `claude/funny-rubin-04fo98` | Grejsæt på PC: listen blev til en master-detail med Brug på tur |
+| [#72](https://github.com/K-ingo/Feltbogen/pull/72) | `claude/vigilant-volta-93teld` | Folk på PC: den fyldte accent tændes af navnefeltet |
 
-#62, #63, #64, #65, #66, #67, #68, #69 og #70 er merget.
+#62, #63, #64, #65, #66, #67, #68, #69, #70 og #71 er merget.
 
 De tre sidste blev **squash-merget**. Grenene er derfor ikke forfædre til
 `main`, og `git branch --merged` melder dem som åbne, selvom indholdet er
