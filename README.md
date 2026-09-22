@@ -71,6 +71,7 @@ appen starter.
 | Dagsplanen | `src/Dagsplan.tsx` | Dagene som en sektion under turens Overblik: opret, ret, flyt og slet |
 | Dagsplanen hos gæsten | `src/DeltTurVisning.tsx` | Ejerens dagsplan, frosset ned i snapshottet — "hvor sover vi tirsdag?" |
 | Pakning | `src/pakning.ts` | Hvad der er lagt i tasken, hvor langt man er, og snittet der kun viser det, der mangler |
+| Grejsæt | `src/grejsaet.ts` | Hvad et sæt vejer, hvornår det sidst var med, og hvad der sker med turen, hvis man lægger det på |
 | Vurdering | `src/vurdering.ts` | Stjerner på grej og ture, og hvad motoren gør ved dem |
 | Turlog | `src/feltnoter.ts` | Dagbogen fra turen, samlet pr. dag |
 | Vedligehold | `src/vedligehold.ts` | Imprægnering, slibning — intervaller der går i ring |
@@ -184,6 +185,19 @@ og de samme poster er mærket **Pas på** ude i selve listen; `forfaldne()` i
 `vedligehold.ts` er kilden til både mærket, fanetallet og Hjems
 opmærksomhedspunkter. Grejsættene har en outline-indgang øverst — skærmens
 næsthøjeste vej. Det følger `docs/design/desktop/05-grej.html`.
+
+Grejsæt er en **master-detail**: sættene til venstre, det valgte sæts indhold
+til højre. Man sammenligner to pakninger og vælger den, der passer til turen —
+med en liste alene skulle man ind i hvert sæt for at se, hvad der var i det.
+Skærmens fyldte accent er **Brug på tur**; "Nyt sæt" er outline, "Rediger" er
+tekst, og "Opret fra tur" er et link. Er der intet sæt at bruge, flytter den
+fyldte sig til "Nyt sæt", så skærmen aldrig står uden en vej frem.
+
+"Brug på tur" og "Opret fra tur" er begge ark: man vælger en tur, ser
+overblikket, og først dét tryk skriver noget. Grej, turen har i forvejen,
+lægges ikke til to gange — `indlaesning()` i `grejsaet.ts` regner ud, hvor
+mange dubletter der merges, og hvad turen går fra og til, så det står på
+skærmen før man bekræfter. Det følger `docs/design/desktop/06-grejsaet.html`.
 
 Skallen kender selv den sammenhæng (`HOERER_TIL` i `Skal.tsx`). Står man inde
 på en underskærm, bliver hovedfanen markeret i navigationen, og der kommer en

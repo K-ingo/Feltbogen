@@ -483,6 +483,175 @@ button:disabled { cursor: not-allowed; }
 .gear-navn-celle { display: flex; align-items: center; gap: var(--plads-2); flex-wrap: wrap; }
 .gear-care-note { margin: var(--plads-3) 0 0; font-size: var(--skrift-lille); color: var(--tekst-dæmpet); }
 .gear-filter-toggle { margin: -2px 0 12px; }
+
+/* ─────────────────────────────────────────────
+   Grejsæt på PC — docs/design/desktop/06-grejsaet.html
+
+   To spalter: sættene til venstre, det valgte sæts indhold til højre.
+   Referencen giver den højre lidt mere plads, fordi det er dér, rækkerne
+   står. Under `--hovedspalte` er der ikke plads til to, og så falder de
+   under hinanden.
+   ───────────────────────────────────────────── */
+.sets-intro {
+  margin: 0 0 var(--plads-5);
+  max-width: 54ch;
+  font-size: var(--skrift-detalje);
+  color: var(--tekst-dæmpet);
+}
+
+/* Kvitteringen for det, der lige skete — "sættet er lagt på Fovslet Skov".
+   Den står, hvor handlingen blev sat i gang, og ikke som en toast, der er
+   væk igen, før man har læst den. */
+.sets-kvittering {
+  margin: 0 0 var(--plads-4);
+  padding: var(--plads-3) var(--plads-4);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--runding-lille);
+  background: var(--accent-bg);
+  font-size: var(--skrift-detalje);
+  color: var(--tekst);
+}
+
+.sets-split { display: grid; grid-template-columns: 1fr 1.1fr; gap: var(--plads-5); align-items: start; }
+.sets-list { display: grid; gap: var(--plads-3); align-content: start; }
+
+/* Et sæt i listen. Det er en vælger og ikke en vej videre: man peger på
+   sættet, og indholdet står ved siden af. Derfor `aria-pressed` og ikke en
+   chevron — en chevron ville love, at man blev flyttet et andet sted hen. */
+.set-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--plads-3);
+  width: 100%;
+  padding: var(--plads-4);
+  text-align: left;
+  border: 1px solid var(--border-svag);
+  border-radius: var(--runding-lille);
+  background: var(--bg-forhoejet);
+  cursor: pointer;
+  transition: border-color 140ms ease;
+}
+
+/* Den valgte har referencens dobbelte kant. Den tegnes som en indvendig
+   skygge oven i kanten og ikke som en bredere border: så flytter kortene sig
+   ikke en pixel, hver gang man vælger et andet sæt. */
+.set-card[aria-pressed='true'] {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.set-card-tekst { min-width: 0; }
+.set-card-navn { display: block; font-size: var(--skrift-brod); font-weight: 600; color: var(--tekst); }
+.set-card-detalje { display: block; margin-top: 2px; font-size: var(--skrift-lille); color: var(--tekst-dæmpet); }
+
+.sets-tom-kort {
+  padding: var(--plads-4);
+  border: 1px dashed var(--accent-border);
+  border-radius: var(--runding-lille);
+  background: transparent;
+}
+.sets-tom-titel { margin: 0; font-size: var(--skrift-detalje); font-weight: 600; color: var(--tekst); }
+.sets-tom-tekst { margin: var(--plads-1) 0 var(--plads-3); font-size: var(--skrift-lille); color: var(--tekst-dæmpet); }
+
+.set-detail {
+  border: 1px solid var(--border-svag);
+  border-radius: var(--runding-lille);
+  background: var(--bg-forhoejet);
+  overflow: hidden;
+}
+.set-detail--tom { padding: var(--plads-5); }
+.set-detail--tom h2 { margin-bottom: var(--plads-2); }
+.set-detail--tom p { margin: 0; font-size: var(--skrift-detalje); color: var(--tekst-dæmpet); }
+
+.set-detail-hoved {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--plads-3);
+  padding: var(--plads-4) var(--plads-5);
+  border-bottom: 1px solid var(--border-svag);
+}
+.set-detail-tekst { min-width: 0; }
+.set-detail-tekst h2 { margin: 0; font-size: 24px; }
+.set-detail-maal { margin: 2px 0 0; font-size: var(--skrift-lille); color: var(--tekst-dæmpet); }
+.set-detail-knapper { display: flex; align-items: center; gap: var(--plads-2); }
+
+/* Rækkerne i sættet: navn til venstre, vægt og om det bæres for alle eller
+   kun for én til højre. Samme opdeling som pakkelisten, så et stykke grej
+   ser ens ud, hvor man end møder det. */
+.set-liste { margin: 0; padding: 0; list-style: none; }
+.set-liste > li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--plads-3);
+  padding: var(--plads-3) var(--plads-5);
+  font-size: var(--skrift-detalje);
+  border-bottom: 1px solid var(--border-svag);
+}
+.set-raekke-detalje { flex-shrink: 0; font-size: var(--skrift-lille); color: var(--tekst-dæmpet); }
+
+.set-detail-tomt {
+  margin: 0;
+  padding: var(--plads-5);
+  font-size: var(--skrift-detalje);
+  color: var(--tekst-dæmpet);
+}
+
+.set-detail-hint {
+  margin: 0;
+  padding: var(--plads-4) var(--plads-5);
+  background: var(--accent-bg);
+  font-size: var(--skrift-lille);
+  line-height: 1.55;
+  color: var(--tekst-dæmpet);
+}
+.set-detail-hint strong { font-weight: 500; color: var(--tekst); }
+
+/* Tur-valget i arkene bag "Brug på tur" og "Opret fra tur". */
+.turvalg-liste { display: grid; gap: var(--plads-2); }
+.turvalg {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--plads-3);
+  width: 100%;
+  min-height: var(--roerehoejde);
+  padding: var(--plads-2) var(--plads-3);
+  text-align: left;
+  border: 1px solid var(--border-svag);
+  border-radius: var(--runding-lille);
+  background: var(--bg-forhoejet);
+  font-size: var(--skrift-detalje);
+  cursor: pointer;
+}
+.turvalg[aria-pressed='true'] {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-weight: 500;
+}
+.turvalg-ekstra { color: var(--tekst-dæmpet); }
+.turvalg[aria-pressed='true'] .turvalg-ekstra { color: inherit; }
+.turvalg-tom, .turvalg-overblik { margin: 0; font-size: var(--skrift-detalje); color: var(--tekst-dæmpet); }
+
+/* Overblikket, før man bekræfter: hvor mange ting der er dubletter, og hvad
+   turen går fra og til. Det er skærmens vigtigste sætning — den skal ikke
+   ligne resten af den grå hjælpetekst. */
+.turvalg-overblik {
+  padding: var(--plads-3);
+  border-radius: var(--runding-lille);
+  background: var(--accent-bg);
+  color: var(--tekst);
+  line-height: 1.5;
+}
+
+@media (max-width: 1023px) {
+  .sets-split { grid-template-columns: 1fr; }
+}
 .trip-status { min-width: 0; }
 
 /* Turens fase, som noget man aflæser. Den stod før som en segmentvælger,
@@ -608,6 +777,7 @@ label:has(> input[type='checkbox']) { min-height: 48px; }
   .is-clickable:hover, .gear-table tbody tr:hover, .nav-item:hover, .gear-sets-card:hover { background: var(--accent-bg) !important; }
   .ui-button:hover:not(:disabled) { filter: brightness(1.08); }
   .trip-card:hover { border-color: var(--accent-border); box-shadow: 0 8px 24px var(--skygge); }
+  .set-card:hover, .turvalg:hover { border-color: var(--accent-border); }
 }
 @media (max-width: 767px) {
   .home-next { flex-direction: column; }
