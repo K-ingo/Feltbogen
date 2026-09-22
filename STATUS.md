@@ -226,7 +226,7 @@ står i `PLAN.md` §4 og §9.
 
 | PR | Gren | Hvad den gør |
 |---|---|---|
-| — | `claude/peaceful-shannon-wr8d8s` | Pakning på PC: Pakning og Pakkeliste blev én flade |
+| [#69](https://github.com/K-ingo/Feltbogen/pull/69) | `claude/peaceful-shannon-wr8d8s` | Pakning på PC: Pakning og Pakkeliste blev én flade |
 
 #62, #63, #64, #65, #66, #67 og #68 er merget.
 
