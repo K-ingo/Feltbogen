@@ -1,6 +1,6 @@
 # STATUS
 
-*Sidst opdateret: 22. september 2026. Udgangspunkt: `main` @ `b489d4e`.*
+*Sidst opdateret: 22. september 2026. Udgangspunkt: `main` @ `33d7c55`.*
 
 Kort svar på "hvor står vi nu?". Den skal kunne læses på to minutter og
 opdateres, hver gang noget bliver færdigt eller blokeret.
@@ -27,19 +27,19 @@ kunne koste data, er begge lukket: sletninger slår igennem på tværs af enhede
 står tilbage, er arbejde vi selv vælger — ikke noget, der spærrer.
 
 Det næste stykke arbejde er ikke funktionalitet, men udseende. Designsystemet
-er låst og ligger nu i repoet sammen med en tegning af hver eneste skærm. Én
+er låst og ligger nu i repoet sammen med en tegning af hver eneste skærm. Seks
 af tyve er bygget.
 
 ---
 
 ## Grønt lys
 
-Kørt på grenen `claude/peaceful-shannon-wr8d8s` den 22. september 2026:
+Kørt på grenen `claude/funny-rubin-04fo98` den 22. september 2026:
 
 | Kommando | Resultat |
 |---|---|
 | `npm run lint` | Bestået, ingen fejl |
-| `npm test` | 66 testfiler, 1.424 tests, alle grønne |
+| `npm test` | 69 testfiler, 1.499 tests, alle grønne |
 | `npm run build` | Bestået |
 
 **Brug `npm run build` til typekontrol, ikke `npx tsc --noEmit`.** Roden
@@ -102,8 +102,8 @@ det samme; gør de ikke, er det Notion der gælder, og så skal filerne rettes.
 Alle elleve farver i `docs/design/TOKENS.md` stemmer nu med `:root` i
 `src/index.css`. Sidebaggrunden var den sidste, der manglede.
 
-**Der ligger tyve handoffs i kø.** Fem er bygget: Hjem, Ture, Tur-detalje,
-Pakning og Grej på PC. Resten — Grejsæt, Folk, Mere, Steder & Statistik,
+**Der ligger tyve handoffs i kø.** Seks er bygget: Hjem, Ture, Tur-detalje,
+Pakning, Grej og Grejsæt på PC. Resten — Folk, Mere, Steder & Statistik,
 Indstillinger og de to opret-ark, plus otte mobilskærme — er ikke rørt.
 Rækkefølgen er ikke besluttet.
 
@@ -124,14 +124,30 @@ overskriften siger nu antal og vægt ("4 ting · 13,1 kg") og ikke antal og
 kroner; det er dét, både desktop- og mobiltegningen skriver, og den samlede
 værdi står stadig på Statistik.
 
+Grejsæt var den sjette. Her var overtrædelsen ikke det, skærmen gjorde, men
+det, den ikke gjorde: den var en almindelig liste med navn, antal og vægt,
+hvor referencen har en master-detail og en **Brug på tur** med bekræftelse.
+Sættene står nu til venstre og det valgte sæts indhold til højre, så to
+pakninger kan sammenlignes uden at gå ind og ud af dem. Referencen tegner
+både "Nyt sæt" og "Brug på tur" fyldt — det er to, og "Brug på tur" vandt:
+et sæt findes for at blive brugt. Er der intet sæt at bruge, flytter den
+fyldte sig til "Nyt sæt".
+
+"Brug på tur" og "Opret fra tur" er ark af samme slags som opret-arkene:
+vælg en tur, se overblikket, og først dét tryk skriver noget. Overblikket er
+det, handoff'en beder om — grej, turen har i forvejen, lægges ikke til to
+gange, og `indlaesning()` i `src/grejsaet.ts` siger hvor mange det er, og hvad
+turen går fra og til, før man bekræfter.
+
 Tre regler fra `TOKENS.md` gælder bredere end den enkelte skærm og er ikke
 efterprøvet på det, der allerede står:
 
 - Maks **én** fyldt accent-knap pr. skærmbillede.
 - ~~Et opret-ark må ikke oprette noget, før man trykker Opret.~~ **Indfriet.**
-  Ture og grej oprettes nu gennem et ark (`src/Ark.tsx`). Grejsæt og steder
-  opretter stadig med det samme — de har ikke fået et ark tegnet, og
-  oprydningen i `lukDetalje` dækker dem indtil da.
+  Ture og grej oprettes nu gennem et ark (`src/Ark.tsx`), og det gør "Opret
+  fra tur" på Grejsæt også. "Nyt sæt" og steder opretter stadig med det samme
+  — de har ikke fået et ark tegnet, og oprydningen i `lukDetalje` dækker dem
+  indtil da.
 - Det hedder **Afsluttet**, ikke "arkiveret". (Tjekket: ordet "arkiveret"
   findes ikke i `src/`. Den er allerede opfyldt.)
 
@@ -179,17 +195,24 @@ I den rækkefølge, de sandsynligvis er værd at tage.
    eneste værn mod at de to efterlader tomme poster. Selve oprettelsen er
    dækket hele vejen fra ark til post af `opretflow.test.ts`; det er
    sammenkoblingen inde i `App.tsx`, der mangler.
-10. **De femten resterende skærme er ikke holdt op mod designet.** Hjem,
-    Ture, Tur-detalje, Pakning og Grej på PC er gennemgået mod deres
+10. **De fjorten resterende skærme er ikke holdt op mod designet.** Hjem,
+    Ture, Tur-detalje, Pakning, Grej og Grejsæt på PC er gennemgået mod deres
     HTML-reference. De øvrige kan afvige fra de låste tokens og fra reglen om
     én fyldt knap, uden at nogen har set efter. Det er ikke en fejl, der er
     meldt — det er en gennemgang, der ikke er foretaget.
 
-    Fire af de fem gennemgåede havde en rigtig overtrædelse, ingen havde meldt:
+    Fire af de seks gennemgåede havde en rigtig overtrædelse, ingen havde meldt:
     Hjem havde tre fyldte accent-knapper over folden, Tur-detalje havde to,
     pakkelistens opdelingsvælger var den anden fyldte accent på Pakning, og
     Grejs fanebladsvælger var den anden på Grej. Det er værd at regne med, at
     de øvrige også har.
+
+    **Set undervejs, ikke rettet:** Grejsæt på telefonen er stadig den liste,
+    den altid har været — nu med referencens linje under navnet ("8 ting ·
+    6,2 kg · brugt på Fovslet Skov") og med "Opret fra tur", men uden
+    master-detail og uden "Brug på tur". Telefonen har ingen Grejsæt-handoff i
+    pakken, så der er intet at bygge efter; det er derfor udskudt og ikke
+    overset.
 
     **Set undervejs, ikke rettet:** Overblik-fanen på en tur har to fyldte
     accenter på telefonen — turens primære knap og `Se fordelingen` i
@@ -243,9 +266,9 @@ står i `PLAN.md` §4 og §9.
 
 | PR | Gren | Hvad den gør |
 |---|---|---|
-| [#70](https://github.com/K-ingo/Feltbogen/pull/70) | `claude/affectionate-ptolemy-x256ki` | Grej på PC: fanebladene var den anden fyldte accent |
+| [#71](https://github.com/K-ingo/Feltbogen/pull/71) | `claude/funny-rubin-04fo98` | Grejsæt på PC: listen blev til en master-detail med Brug på tur |
 
-#62, #63, #64, #65, #66, #67, #68 og #69 er merget.
+#62, #63, #64, #65, #66, #67, #68, #69 og #70 er merget.
 
 De tre sidste blev **squash-merget**. Grenene er derfor ikke forfædre til
 `main`, og `git branch --merged` melder dem som åbne, selvom indholdet er
