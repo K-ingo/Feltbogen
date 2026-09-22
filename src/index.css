@@ -481,6 +481,261 @@ button:disabled { cursor: not-allowed; }
   color: var(--tekst-svag);
   line-height: 1.6;
 }
+
+/* ─────────────────────────────────────────────
+   Friluftshistorik · Steder og Statistik under Mere
+
+   Efter docs/design/desktop/09-steder-statistik.html. Skærmen er journal og
+   ikke instrumentbræt: en overskrift, to faneblade og rolige tal på creme og
+   den forhøjede flade. Alt herunder er tokens — der er ikke en farve i
+   blokken, der ikke står i docs/design/TOKENS.md.
+   ───────────────────────────────────────────── */
+
+/* Fanebladene. Ét felt med en streg imellem, ikke to piller: de to faner er
+   den samme skærm læst to gange, og det skal kunne ses, at de hører sammen.
+   Den valgte er skærmens ene fyldte accent — se FriluftshistorikSide.tsx. */
+.historik-faner {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  margin-bottom: var(--plads-5);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--runding-lille);
+  overflow: hidden;
+}
+.historik-faner > button {
+  min-height: var(--roerehoejde);
+  padding: 0 var(--plads-4);
+  border: none;
+  border-radius: 0;
+  background: var(--bg-forhoejet);
+  color: var(--tekst-dæmpet);
+  font-size: var(--skrift-knap);
+  font-weight: 500;
+  cursor: pointer;
+}
+.historik-faner > button + button { border-left: 1px solid var(--accent-border); }
+.historik-faner > button[aria-pressed='true'] {
+  background: var(--accent);
+  /* Creme og aldrig hvid. Reglen står i TOKENS.md og gælder hver eneste
+     fyldte accent i appen. */
+  color: var(--accent-tekst);
+  font-weight: 600;
+}
+
+.historik-aarsknap { margin-bottom: var(--plads-4); }
+
+/* Noten over stedlisten: hvor listen kommer fra, og hvor mange man er kommet
+   tilbage til. Den er en oplysning og ikke et kort, man kan trykke på. */
+.historik-note {
+  padding: var(--plads-3) var(--plads-4);
+  margin-bottom: var(--plads-4);
+  border: 1px solid var(--border-svag);
+  border-radius: var(--runding-lille);
+  background: var(--bg-forhoejet);
+}
+.historik-note-titel {
+  margin: 0;
+  font-size: var(--skrift-mikro);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--tekst-dæmpet);
+}
+.historik-note-tekst {
+  margin: var(--plads-1) 0 0;
+  font-size: var(--skrift-detalje);
+  color: var(--tekst-dæmpet);
+}
+
+.historik-steder { display: grid; gap: var(--plads-3); }
+
+/* Et sted som et kort og ikke en listerække. Rækken var et register; kortet
+   er en indgang i en journal, hvor der er plads til de tre linjer, turene
+   har at sige om stedet. */
+.historik-sted {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--plads-4);
+  width: 100%;
+  padding: var(--plads-4);
+  text-align: left;
+  border: 1px solid var(--border-svag);
+  border-radius: var(--runding-lille);
+  background: var(--bg-forhoejet);
+  transition: box-shadow 160ms ease, border-color 160ms ease;
+}
+.historik-sted.is-clickable { cursor: pointer; }
+/* Chevronen står kun på de steder, der kan åbnes. Et sted, der bare står
+   skrevet på en tur, har ingen skærm at føre hen til — og en pil, der ikke
+   fører nogen steder hen, er en løgn. */
+.historik-sted-pil { flex-shrink: 0; color: var(--tekst-svag); font-size: 18px; }
+.historik-sted-tekst { min-width: 0; }
+.historik-sted.is-clickable:hover {
+  border-color: var(--accent-border);
+  box-shadow: 0 4px 12px var(--skygge);
+}
+.historik-sted-navn {
+  margin: 0;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: var(--skrift-brod);
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--tekst);
+}
+.historik-sted-meta {
+  margin: var(--plads-1) 0 0;
+  font-size: var(--skrift-lille);
+  color: var(--tekst-dæmpet);
+}
+.historik-sted-tal {
+  margin: var(--plads-2) 0 0;
+  font-size: var(--skrift-lille);
+  color: var(--tekst-dæmpet);
+}
+/* Kladden er et forbehold om tallet ved siden af, ikke en fejl. Advarselsfarven
+   er den samme, sync-rækken under Mere bruger. */
+.historik-kladde { color: var(--advarsel); }
+.historik-sted-fritekst { color: var(--tekst-svag); }
+
+.historik-tilfoej { margin-top: var(--plads-4); }
+
+/* De fire tal øverst på Statistik. To i bredden på telefonen, fire på PC —
+   referencens gitter. */
+.historik-tal-felter {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--plads-3);
+}
+@media (min-width: 900px) {
+  .historik-tal-felter { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+.historik-talfelt {
+  padding: var(--plads-4);
+  border: 1px solid var(--border-svag);
+  border-radius: var(--runding-lille);
+  background: var(--bg-forhoejet);
+}
+.historik-talfelt-etiket {
+  margin: 0;
+  font-size: var(--skrift-mikro);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--tekst-dæmpet);
+}
+.historik-talfelt-tal {
+  margin: var(--plads-1) 0 0;
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: var(--skrift-tal);
+  line-height: 1.1;
+  color: var(--tekst);
+}
+
+.historik-periode { margin-bottom: var(--plads-4); }
+
+.historik-kort {
+  margin-top: var(--plads-4);
+  padding: var(--plads-4);
+  border: 1px solid var(--border-svag);
+  border-radius: var(--runding-lille);
+  background: var(--bg-forhoejet);
+}
+.historik-kort-titel {
+  margin: 0 0 var(--plads-3);
+  font-size: var(--skrift-mikro);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--tekst-dæmpet);
+}
+.historik-kort-tekst {
+  margin: var(--plads-3) 0 0;
+  font-size: var(--skrift-lille);
+  color: var(--tekst-dæmpet);
+}
+
+/* Nætterne pr. måned. Vandrette bjælker, fordi tallet skal kunne læses ved
+   siden af månedens navn — og fordi en måned uden nætter skal kunne stå der
+   som en tom rille frem for som ingenting. */
+.historik-bjaelker {
+  display: grid;
+  gap: var(--plads-3);
+  /* Bjælkerne holdes smallere end spalten. En bjælke på tværs af en bred
+     skærm siger ikke mere end en på en håndsbredde — den gør bare tallet i
+     højre side svært at få øje på. */
+  max-width: 560px;
+}
+.historik-bjaelke-linje {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--plads-3);
+  margin-bottom: var(--plads-1);
+  font-size: var(--skrift-lille);
+  color: var(--tekst);
+}
+.historik-bjaelke-tal { color: var(--tekst-dæmpet); }
+.historik-bjaelke-nul { color: var(--tekst-svag); }
+.historik-bjaelke-spor {
+  height: 8px;
+  border-radius: var(--runding-pille);
+  background: var(--border-svag);
+  overflow: hidden;
+}
+.historik-bjaelke-fyld {
+  height: 100%;
+  border-radius: var(--runding-pille);
+  background: var(--accent);
+}
+
+.historik-grejliste { display: grid; gap: var(--plads-2); }
+.historik-grejrække {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--plads-3);
+  padding: 0;
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* Folden over mønstrene. Den er en linje man slår op, ikke en menu: hvad der
+   ligger bag står skrevet under knappen, så man ved det uden at trykke. */
+.historik-fold { margin-top: var(--plads-5); }
+.historik-fold-knap {
+  min-height: var(--roerehoejde);
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: var(--skrift-knap);
+  font-weight: 600;
+  color: var(--accent);
+}
+.historik-fold-tekst {
+  margin: 0 0 var(--plads-4);
+  font-size: var(--skrift-lille);
+  color: var(--tekst-dæmpet);
+}
+
+.historik-fodnote {
+  margin: var(--plads-4) 0 0;
+  max-width: 62ch;
+  font-size: var(--skrift-mikro);
+  color: var(--tekst-svag);
+  line-height: 1.6;
+}
+
+.historik-tom,
+.historik-henter {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--tekst-svag);
+  font-size: var(--skrift-knap);
+}
 /* Grej · fanebladene over listen.
 
    De stod som piller, hvor den valgte var en fyldt accent-flade — og så var

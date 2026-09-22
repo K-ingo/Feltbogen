@@ -1,6 +1,8 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import { aarsopgoerelseAtSe } from './aarsopgoerelse';
+import { stederMedBesoeg, stedtal } from './friluftshistorik';
+import { turtal } from './laering';
 import { usendtAntal } from './sync';
 import { syncstatus } from './dashboard';
 import type { Syncstatus } from './dashboard';
@@ -38,17 +40,26 @@ interface Props {
 function MereSide({ fane, skift, aabnAar, aabnIndstillinger }: Props) {
   const { erLoggetInd } = useAuth();
   const online = useErOnline();
-  // Tællinger og ikke toArray. Skærmen viser to tal, og at hente hele
-  // inventaret ned i hukommelsen for at måle længden af det er spild på en
-  // telefon med et par hundrede ting.
-  const antalSteder = useLiveQuery(() => db.steder.count(), [], 0);
-  const antalItems = useLiveQuery(() => db.items.count(), [], 0);
 
   // Turene hentes helt: årsopgørelsen skal bruge dem for at afgøre om der er
-  // noget at se. Så er antallet gratis, og en tælling ved siden af ville være
-  // den samme tabel læst to gange.
+  // noget at se, og de to historik-rækker regner deres tal af dem. Stederne
+  // hentes med, fordi en tælling af stedbogen ikke er det, rækken siger — se
+  // nedenfor. Begge tabeller er små; inventaret hentes ikke, for rækkerne
+  // taler ikke længere om det.
   const ture = useLiveQuery(() => db.ture.toArray()) ?? [];
+  const steder = useLiveQuery(() => db.steder.toArray()) ?? [];
   const opgoerelse = aarsopgoerelseAtSe(ture);
+
+  // Rækkerne siger nu det samme som skærmen, de fører hen til.
+  //
+  // "Steder" talte stedbogen op og kaldte tallet "steder du kommer tilbage
+  // til". Det var to fejl i én linje: et sted, man har oprettet, er ikke et
+  // sted, man har været, og et sted, man har været én gang, er ikke et, man
+  // kommer tilbage til. Nu er tallet stederne fra turene, og gensynene står
+  // for sig. "Statistik" talte grej op ("4 ting talt op") på en skærm, der
+  // handler om ture — den siger ture og nætter, som referencen skriver.
+  const steds = stedtal(stederMedBesoeg(steder, ture));
+  const tal = turtal(ture);
 
   // Rækken siger det samme som linjen på startskærmen, og af samme kilde.
   // Den sagde først "Alt er sendt op" ud fra antallet alene — også uden en
@@ -72,12 +83,12 @@ function MereSide({ fane, skift, aabnAar, aabnIndstillinger }: Props) {
         <div className="hub-kort">
           <ListeRaekke
             titel="Steder"
-            detalje={`${antalSteder} ${antalSteder === 1 ? 'sted' : 'steder'} du kommer tilbage til`}
+            detalje={`${steds.i_alt} ${steds.i_alt === 1 ? 'sted' : 'steder'} · ${steds.gensyn} du er kommet tilbage til`}
             onClick={() => skift('steder')}
           />
           <ListeRaekke
             titel="Statistik"
-            detalje={`${ture.length} ${ture.length === 1 ? 'tur' : 'ture'} · ${antalItems} ting talt op`}
+            detalje={`${tal.ture} ${tal.ture === 1 ? 'tur' : 'ture'} · ${tal.naetter} ${tal.naetter === 1 ? 'nat' : 'nætter'}`}
             onClick={() => skift('statistik')}
           />
           {/* Årsopgørelsen står ikke i referencen, fordi den kun findes, når

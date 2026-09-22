@@ -102,8 +102,8 @@ det samme; gør de ikke, er det Notion der gælder, og så skal filerne rettes.
 Alle elleve farver i `docs/design/TOKENS.md` stemmer nu med `:root` i
 `src/index.css`. Sidebaggrunden var den sidste, der manglede.
 
-**Der ligger tyve handoffs i kø.** Otte er bygget: Hjem, Ture, Tur-detalje,
-Pakning, Grej, Grejsæt, Folk og Mere på PC. Resten — Steder & Statistik,
+**Der ligger tyve handoffs i kø.** Ni er bygget: Hjem, Ture, Tur-detalje,
+Pakning, Grej, Grejsæt, Folk, Mere og Steder & Statistik på PC. Resten —
 Indstillinger og de to opret-ark, plus otte mobilskærme — er ikke rørt.
 Rækkefølgen er ikke besluttet.
 
@@ -175,6 +175,67 @@ runding, den forhøjede flade. Undertitlerne er skåret ned til referencens
 længde, og under kortene står en linje om, hvad sync-rækken lover.
 Årsopgørelsen står ikke i tegningen, fordi den kun findes i januar; den er
 blevet, som den række i historik-kortet den er.
+
+Steder & Statistik var den niende, og her var overtrædelsen selve opdelingen.
+Det var to skærme om det samme — hvor man har været, og hvad det blev til — og
+man kom til dem ad hver sin række under Mere.
+`docs/design/desktop/09-steder-statistik.html` tegner dem som én skærm,
+**Friluftshistorik**, med to faneblade. Det er den, der er bygget:
+`FriluftshistorikSide.tsx` er rammen, `StederPanel.tsx` og
+`StatistikPanel.tsx` er de to faner. De beholder hver sin fane-id i
+navigationen, så Mere-rækkerne kan pege hver sin vej ind, og skallen ved
+stadig, at vejen tilbage går til Mere.
+
+Steder var en flad liste over stedbogen med en fyldt "+ Nyt sted" øverst — et
+register, man selv skulle vedligeholde. Men man skriver ikke steder ind i et
+register; man skriver dem på en tur. Listen kommer nu af turene
+(`stederMedBesoeg` i `src/friluftshistorik.ts`), og hvert sted er et kort med
+det, turene siger om det: aktivitet og terræn, hvornår man sidst var der, hvor
+mange ture og nætter det blev til. En tur, der stadig er kladde, tæller med —
+man har skrevet den ned — men den står markeret i advarselsfarven, så tallet
+kan læses med det forbehold. Et sted, der kun står som fritekst på en tur, kan
+ikke åbnes, og kortet siger det frem for at se ud som en knap, der ikke virker.
+"+ Nyt sted" er blevet en tekstknap nederst: den kan stadig det, den kunne,
+men den er ikke længere skærmens forslag til, hvad man skal.
+
+Statistik var et instrumentbræt: tre perioder, et fyldt årsopgørelseskort og
+fjorten felter i et gitter, hvoraf de fleste handlede om inventaret. Øverst
+står nu de fire rolige tal, referencen tegner — ture, nætter, grej i bog, kg
+grej — nætterne fordelt på månederne i sæsonen, og det grej, man faktisk
+bruger. Mønstrene er ikke væk: hyldevarer, det der går i stykker,
+vurderingerne og inventarværdien ligger foldet sammen under én linje, man selv
+slår op. Perioden er to valg og ikke tre; året før er ikke et filter, det er
+en beretning, og den ligger i årsopgørelsen, som kan vælge et hvilket som
+helst år med ture i. Årsopgørelsen selv er flyttet op i headeren som en
+outline-knap.
+
+Knappen byggede først på `aarMedTure`, der springer kladder over — og ture
+oprettes *som* kladde (`opretTomTur`) og bliver det, til man kommer hjem. En
+tester med tre ture i bogen fik derfor ingen knap og ingen forklaring på
+hvorfor. Den står nu, så snart en tur har en dato på, kladde eller ej
+(`aaretAtGoereOp` i `src/aarsopgoerelse.ts`): er der et år, der kan gøres op,
+peger den på det, ellers på det nyeste år, der er skrevet noget ned i.
+Opgørelsen for sådan et år er tom, men den er ikke stum — den siger selv
+"Kladder tælles ikke med", og det er dét svar, den manglende knap holdt
+tilbage.
+
+Den fyldte accent er det valgte faneblad, og kun det. Referencen tegner også
+årsvælgeren fyldt, men den tegning viser begge faner på én flade "for
+one-canvas review"; i produktet står de aldrig sammen, og den låste regel om
+én fyldt accent pr. skærmbillede vejer tungere end udkastets to. Steder havde
+en FAB på telefonen — den er væk af samme grund, og fordi listen ikke længere
+er noget, man selv fylder.
+
+To rækker under Mere løj om det, de førte hen til. "Steder" talte stedbogen op
+og kaldte tallet *steder du kommer tilbage til* — men et sted, man har
+oprettet, er ikke et sted, man har været, og ét besøg er ikke et gensyn.
+"Statistik" talte grej op (*4 ting talt op*) på en skærm om ture. De siger nu
+antallet af steder og gensynene for sig, og ture og nætter.
+
+Favoritterne i referencen — **Gem** på et sted, og *0 favoritter* i
+Mere-rækken — er ikke bygget. De kræver et nyt felt på `Sted`, og datamodellen
+er ejerens valg (`AGENTS.md`). Gensynene tælles i stedet ud af turene, så
+linjen kan være ærlig uden et felt, ingen har sagt ja til.
 
 Tre regler fra `TOKENS.md` gælder bredere end den enkelte skærm og er ikke
 efterprøvet på det, der allerede står:
