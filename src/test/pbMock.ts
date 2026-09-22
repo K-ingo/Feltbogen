@@ -254,6 +254,12 @@ export function saetTestNavn(navn: string) { testNavn = navn; }
 export const erLoggetInd = () => true;
 export const fornyLogin = async () => {};
 
+// Serverens adresse og et tjek af den. Mocken har ingen server, så adressen er
+// en fast streng, og tjekket svarer ja — en skærm, der viser dem, skal kunne
+// tegnes uden at nogen får fat i et netværk.
+export const serveradresse = () => 'https://test.pb (testserver)';
+export const tjekForbindelse = async () => ({ ok: true, tekst: 'Serveren svarer.' });
+
 export const mitNavn = () => testNavn.trim();
 export const gemNavn = async (navn: string) => { testNavn = navn.trim(); };
 // vi.fn frem for en almindelig funktion, så en skærmtest kan efterprøve, at

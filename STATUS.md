@@ -27,20 +27,21 @@ kunne koste data, er begge lukket: sletninger slår igennem på tværs af enhede
 står tilbage, er arbejde vi selv vælger — ikke noget, der spærrer.
 
 Det næste stykke arbejde er ikke funktionalitet, men udseende. Designsystemet
-er låst og ligger nu i repoet sammen med en tegning af hver eneste skærm. Otte
+er låst og ligger nu i repoet sammen med en tegning af hver eneste skærm. Ti
 af tyve er bygget.
 
 ---
 
 ## Grønt lys
 
-Kørt på grenen `claude/cool-davinci-ym8zou` den 22. september 2026:
+Kørt på grenen `claude/nice-cannon-fdvj9u` den 22. september 2026:
 
 | Kommando | Resultat |
 |---|---|
 | `npm run lint` | Bestået, ingen fejl |
-| `npm test` | 71 testfiler, 1.543 tests, alle grønne |
+| `npm test` | 74 testfiler, 1.622 tests, alle grønne |
 | `npm run build` | Bestået |
+| `npm run preview` | Bestået — Indstillinger afprøvet på 1440 og 390 px |
 
 **Brug `npm run build` til typekontrol, ikke `npx tsc --noEmit`.** Roden
 `tsconfig.json` har `"files": []` og peger kun videre til `tsconfig.app.json`
@@ -102,10 +103,10 @@ det samme; gør de ikke, er det Notion der gælder, og så skal filerne rettes.
 Alle elleve farver i `docs/design/TOKENS.md` stemmer nu med `:root` i
 `src/index.css`. Sidebaggrunden var den sidste, der manglede.
 
-**Der ligger tyve handoffs i kø.** Ni er bygget: Hjem, Ture, Tur-detalje,
-Pakning, Grej, Grejsæt, Folk, Mere og Steder & Statistik på PC. Resten —
-Indstillinger og de to opret-ark, plus otte mobilskærme — er ikke rørt.
-Rækkefølgen er ikke besluttet.
+**Der ligger tyve handoffs i kø.** Ti er bygget: Hjem, Ture, Tur-detalje,
+Pakning, Grej, Grejsæt, Folk, Mere, Steder & Statistik og Indstillinger på PC.
+Resten — de to opret-ark, plus otte mobilskærme — er ikke rørt. Rækkefølgen er
+ikke besluttet.
 
 Pakning kostede mere end en farverettelse: den var **to** faner, "Pakning" og
 "Pakkeliste", og designet har én. Det er den samme liste to steder — man stod
@@ -236,6 +237,39 @@ Favoritterne i referencen — **Gem** på et sted, og *0 favoritter* i
 Mere-rækken — er ikke bygget. De kræver et nyt felt på `Sted`, og datamodellen
 er ejerens valg (`AGENTS.md`). Gensynene tælles i stedet ud af turene, så
 linjen kan være ærlig uden et felt, ingen har sagt ja til.
+
+Indstillinger var den tiende, og her var der tre fyldte accenter på én skærm:
+"Synkronisér nu" plus de to segmenter — aktivitetsniveauet og niveauet på nye
+pak-af-tjek — som tegnede det valgte i fyldt accent. Var man ikke logget ind,
+var "Log ind eller opret konto" den fjerde. Segmenterne er nu den stille
+variant: et valg, der beskriver kroppen eller en vane, er en oplysning og ikke
+skærmens handling. "Synkronisér nu" er outline, og synkroniseringen kører i
+forvejen af sig selv.
+
+Skærmens ene fyldte accent er **Gem navn**, og den tænder kun, når der er et
+rettet, gyldigt navn at gemme — resten af tiden er den slået fra, præcis som
+"+ Tilføj" under Folk. Uden en konto er det "Log ind eller opret konto", og der
+er ikke noget navnefelt at konkurrere med.
+
+Navnet kunne gemmes tomt. Man ryddede feltet, knappen tændte — teksten var jo
+en anden end den gemte — og bagefter stod man som «Uden navn» på sine egne
+ture, mens gæstesiden ikke kunne skrive, hvem turen var fra. Et tomt felt slår
+nu knappen fra, etiketten siger *må ikke være tomt*, og en linje under knappen
+siger, hvad der skal til for at tænde den. Har kontoen slet ikke noget navn,
+står der en advarsel om, hvad det betyder på de delte ture — den går væk, når
+navnet er nået op, og ikke før.
+
+Resten var etiketter og form: en undertitel under titlen, e-mailen mærket
+**Logget ind**, en linje over "Din krop" om, hvad tallene bruges til og at de
+ikke deles, og spalten venstrestillet under titlen i stedet for centreret.
+Versionslinjen under **Om** (0.2.0 · sha) er urørt og har fået en test, så en
+senere omlægning af skærmen ikke kan tabe den igen.
+
+Handoff'ens reference tegner også **Højde**, **Vægtenhed (lb)**, **Sprog** og
+en **Farezone** med *Ryd denne enhed* og *Slet konto*. De er ikke bygget: de
+kræver enten nye felter eller sletning af data, og begge dele er ejerens valg
+(`AGENTS.md`). Sync-afsnittet er blevet, hvor det er — referencen henviser til
+"Mere → Synkronisering", og det er præcis den række, der fører herind.
 
 Tre regler fra `TOKENS.md` gælder bredere end den enkelte skærm og er ikke
 efterprøvet på det, der allerede står:

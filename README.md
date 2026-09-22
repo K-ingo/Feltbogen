@@ -221,6 +221,18 @@ linjen på startskærmen — så den ikke kan stå og sige "Alt er sendt op" om 
 kø, der aldrig kom op. Er der en fejl, står den i advarselsfarven med en prik
 foran. Det følger `docs/design/desktop/08-mere.html`.
 
+Indstillinger er en **flade, man retter på**, og ikke en, man handler på: alt
+andet end navnet gemmes løbende, så der er ikke noget "Gem" at trykke på.
+Skærmens ene fyldte accent er derfor **Gem navn**, og kun når navnet både er
+rettet og ikke er tomt — et tomt navn slår knappen fra, fordi det ville sætte
+én som «Uden navn» på ens egne ture og lade gæstesiden stå uden afsender. Har
+kontoen slet ikke noget navn, siger et felt under knappen hvorfor. "Synkronisér
+nu" er outline, og de to segmenter — aktivitetsniveau og niveauet på nye
+pak-af-tjek — tegner det valgte i den stille accent: et valg, der beskriver
+kroppen eller en vane, er en oplysning og ikke skærmens handling. Uden en konto
+er den fyldte accent "Log ind eller opret konto". Det følger
+`docs/design/desktop/10-indstillinger.html`.
+
 Skallen kender selv den sammenhæng (`HOERER_TIL` i `Skal.tsx`). Står man inde
 på en underskærm, bliver hovedfanen markeret i navigationen, og der kommer en
 "‹ Grej"-linje over titlen — begge dele udledt, så en vej tilbage ikke kan
