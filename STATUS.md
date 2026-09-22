@@ -27,19 +27,19 @@ kunne koste data, er begge lukket: sletninger slår igennem på tværs af enhede
 står tilbage, er arbejde vi selv vælger — ikke noget, der spærrer.
 
 Det næste stykke arbejde er ikke funktionalitet, men udseende. Designsystemet
-er låst og ligger nu i repoet sammen med en tegning af hver eneste skærm. Otte
+er låst og ligger nu i repoet sammen med en tegning af hver eneste skærm. Ni
 af tyve er bygget.
 
 ---
 
 ## Grønt lys
 
-Kørt på grenen `claude/cool-davinci-ym8zou` den 22. september 2026:
+Kørt på grenen `claude/kind-maxwell-iznyaa` den 22. september 2026:
 
 | Kommando | Resultat |
 |---|---|
 | `npm run lint` | Bestået, ingen fejl |
-| `npm test` | 71 testfiler, 1.543 tests, alle grønne |
+| `npm test` | 72 testfiler, 1.580 tests, alle grønne |
 | `npm run build` | Bestået |
 
 **Brug `npm run build` til typekontrol, ikke `npx tsc --noEmit`.** Roden
@@ -102,8 +102,8 @@ det samme; gør de ikke, er det Notion der gælder, og så skal filerne rettes.
 Alle elleve farver i `docs/design/TOKENS.md` stemmer nu med `:root` i
 `src/index.css`. Sidebaggrunden var den sidste, der manglede.
 
-**Der ligger tyve handoffs i kø.** Otte er bygget: Hjem, Ture, Tur-detalje,
-Pakning, Grej, Grejsæt, Folk og Mere på PC. Resten — Steder & Statistik,
+**Der ligger tyve handoffs i kø.** Ni er bygget: Hjem, Ture, Tur-detalje,
+Pakning, Grej, Grejsæt, Folk, Mere og Steder & Statistik på PC. Resten —
 Indstillinger og de to opret-ark, plus otte mobilskærme — er ikke rørt.
 Rækkefølgen er ikke besluttet.
 
@@ -175,6 +175,34 @@ runding, den forhøjede flade. Undertitlerne er skåret ned til referencens
 længde, og under kortene står en linje om, hvad sync-rækken lover.
 Årsopgørelsen står ikke i tegningen, fordi den kun findes i januar; den er
 blevet, som den række i historik-kortet den er.
+
+Steder & Statistik var den niende, og her var fejlen ikke en knap, men at de
+var to skærme. De spurgte om det samme — hvor har jeg været, og hvad blev det
+til — og svarede hver for sig. De er nu ét skærmbillede, *Friluftshistorik*,
+med to faneblade, og det valgte faneblad er skærmens ene fyldte accent;
+«Årsopgørelse» er outline, og årsvælgeren er tonet.
+
+Det tungeste var, at Steder kun kendte de steder, man havde gemt. Tre ture med
+et stednavn og ingen gemte steder gav en tom skærm og en Mere-række, der sagde
+"0 steder du kommer tilbage til" — teknisk rigtigt, praktisk forkert. Stederne
+kommer nu fra turene (`stederFraTure()` i `friluftshistorik.ts`), og «Gem»
+laver stedet *og* sætter `sted_uid` på turene bag det; uden koblingen ville
+stedets detalje sige, at man aldrig havde været der. Fritekstfeltet på turen
+bliver stående. Begge Mere-rækker siger nu det samme som skærmen bag dem:
+"3 fra ture · 0 favoritter" og "4 ture · 12 nætter".
+
+Statistikken var et instrumentbræt med et dusin widgets, hvor de fire tal, man
+kom efter, lå spredt imellem dem. Referencens lag ligger nu øverst — Ture,
+Nætter, Grej i bog, Kg grej, nætterne pr. måned som liggende søjler og det mest
+brugte grej — og resten er foldet ned i *Mere fra tallene*, uden at noget er
+fjernet. Periodevælgeren (I år / Sidste år / Alt) er blevet til referencens
+årsvælger; med to år i basen står begge årstal ved siden af "Alle år", så
+"sidste år" ikke er tabt.
+
+Set undervejs, ikke rettet: «+ Nyt sted» opretter stadig et tomt sted, i det
+øjeblik man trykker. Knappen er flyttet ned og gjort til tekst, så den ikke er
+en fyldt accent mere, men opret-arket for steder er ikke tegnet endnu — det
+står på listen nedenfor sammen med "Nyt sæt".
 
 Tre regler fra `TOKENS.md` gælder bredere end den enkelte skærm og er ikke
 efterprøvet på det, der allerede står:
