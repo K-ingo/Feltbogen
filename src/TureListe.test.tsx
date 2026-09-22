@@ -53,9 +53,10 @@ describe('kun én fyldt primary', () => {
   it('er den tomme tilstands knap, når der ingen ture er', async () => {
     vis();
 
-    // Den tomme tilstand skal have en tydelig vej til Ny tur — men den må
-    // ikke lægge endnu en fyldt knap oven i headerens.
-    expect(await screen.findByRole('button', { name: 'Planlæg din første tur' })).toBeInTheDocument();
+    // Den tomme tilstand skal have en tydelig vej til den første tur — men
+    // den må ikke lægge endnu en fyldt knap oven i headerens. Se
+    // KomIGang.test.tsx.
+    expect(await screen.findByRole('button', { name: 'Opret første tur' })).toBeInTheDocument();
     expect(fyldte()).toHaveLength(1);
   });
 });

@@ -129,6 +129,23 @@ sekund og ved online/offline/synlighed. Intet svar inden for fem sekunder er
 offline, og så står linjen som en advarsel på advarselsfladen.
 `useErOnline` i `useMedie.ts` er ikke ændret — Mere bruger den stadig.
 
+**Tomme skærme på Hjem, Ture og Grej** viser nu *Kom i gang* i stedet for
+én linje og én knap (research #2, sep 2026: en tom app skal give værdi, før
+inventaret findes). To konkrete skridt, ingen rundvisning: **Opret første
+tur** (det guidede flow) og **Tilføj 5 grej** (opret-arket). Fremdriften
+regnes af basen — "2 af 5 skrevet ind" er det grej, der faktisk ligger der,
+og intet gemmes om selve listen. Logikken står i `src/komIGang.ts`, skærmen i
+`src/KomIGang.tsx`. Skridtene er aldrig fyldte: skærmens egen knap ("+ Ny
+tur", "+ Tilføj grej", Hjems "Planlæg en tur") er stadig den ene fyldte
+accent; skærmens eget skridt er outline, resten tekst. På Hjem har turskridtet
+ingen knap, fordi kortet lige ovenover har den, og FAB'en er væk på en konto
+uden ture — på telefonen ville den være fyldt accent nummer to.
+
+Et tredje skridt, **"Åbn gæstelink-demo"**, er bevidst udeladt. Gæstevisningen
+findes, men den kræver login og en rigtig delt tur. En demo ville være
+opdigtede data, og det viser Feltbogen ikke. Skal den laves, er det en
+beslutning om et demo-snapshot på serveren, ikke en UI-opgave.
+
 Pakning kostede mere end en farverettelse: den var **to** faner, "Pakning" og
 "Pakkeliste", og designet har én. Det er den samme liste to steder — man stod
 med tasken på den ene fane, mens tallet, man pakkede efter, stod på den anden.

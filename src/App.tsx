@@ -450,7 +450,7 @@ function App(): ReactElement | null {
       />
     );
     case 'grupper': return <GrupperListe fane={fane} skift={skiftFane} aabnGruppe={aabnGruppe} nyGruppe={nyGruppe} />;
-    case 'ture': return <TureListe fane={fane} skift={skiftFane} aabnTur={aabnTur} aabnDeltTur={aabnDeltTur} nyTur={nyTur} />;
+    case 'ture': return <TureListe fane={fane} skift={skiftFane} aabnTur={aabnTur} aabnDeltTur={aabnDeltTur} nyTur={nyTur} foersteTur={() => setViserFoersteTur(true)} nytItem={() => nytItem()} />;
     // Steder og Statistik er to faner på den samme skærm — Friluftshistorik.
     // De beholder hver sin fane-id, så Mere-rækkerne kan pege hver sin vej
     // ind, og så skallen ved, at vejen tilbage går til Mere.
@@ -466,7 +466,7 @@ function App(): ReactElement | null {
           aabnAar={setValgtAar}
         />
       );
-    case 'inventar': return <InventarSide fane={fane} skift={skiftFane} aabnItem={aabnItem} nytItem={nytItem} />;
+    case 'inventar': return <InventarSide fane={fane} skift={skiftFane} aabnItem={aabnItem} nytItem={nytItem} foersteTur={() => setViserFoersteTur(true)} />;
     case 'indstillinger':
       return (
         <IndstillingerSide
