@@ -107,7 +107,7 @@ describe('fanerne', () => {
 });
 
 describe('årsopgørelsen', () => {
-  it('står som en outline-knap i headeren, når der er et år at gøre op', async () => {
+  it('står som en outline-knap i headeren', async () => {
     await db.ture.add(lavTur({ startdato: `${AAR}-08-01`, status: 'afsluttet' }));
 
     vis();
@@ -116,11 +116,63 @@ describe('årsopgørelsen', () => {
     await userEvent.click(knap);
 
     expect(aabnAar).toHaveBeenCalledWith(AAR);
+    // Outline og ikke fyldt — det valgte faneblad er skærmens ene fyldte
+    // accent, og to grønne flader er én for mange.
+    expect(knap.className).toContain('ui-button--sekundaer');
     expect(knap.className).not.toContain('ui-button--primaer');
   });
 
-  // En knap, der lover en opgørelse, der ikke er der, er værre end ingen knap.
+  // Den her fandtes ikke, og det var fejlen: ture oprettes som kladde og
+  // bliver det, til man kommer hjem, så knappen forsvandt for en, der havde
+  // skrevet hele sin sæson ind. Testen brugte `status: 'afsluttet'` og så det
+  // derfor ikke — `lavTur()` laver kladder, ligesom appen selv gør.
+  it('står der også, når årets ture stadig er kladder', async () => {
+    await db.ture.bulkAdd([
+      lavTur({ sted: 'Rold Skov', sted_uid: '', startdato: `${AAR}-08-01`, naetter: 2 }),
+      lavTur({ sted: 'Rold Skov', sted_uid: '', startdato: `${AAR}-08-20`, naetter: 1 })
+    ]);
+
+    vis();
+
+    expect(await screen.findByRole('button', { name: `Årsopgørelse ${AAR}` })).toBeInTheDocument();
+  });
+
+  // Er der et år, der kan gøres op, er det dét, knappen skal føre til.
+  it('peger på det talte år frem for et nyere med kun kladder', async () => {
+    await db.ture.bulkAdd([
+      lavTur({ startdato: `${AAR - 1}-08-01`, status: 'afsluttet' }),
+      lavTur({ startdato: `${AAR}-08-01`, status: 'kladde' })
+    ]);
+
+    vis();
+
+    expect(await screen.findByRole('button', { name: `Årsopgørelse ${AAR - 1}` })).toBeInTheDocument();
+  });
+
+  it('står i headeren og ikke bag folden', async () => {
+    await db.ture.add(lavTur({ startdato: `${AAR}-08-01` }));
+
+    vis('statistik');
+
+    const knap = await screen.findByRole('button', { name: `Årsopgørelse ${AAR}` });
+    // Headeren er Skals egen handlingsrække. Ligger knappen inde i panelet,
+    // er den rullet væk, så snart tallene fylder skærmen.
+    expect(knap.closest('section')).toBeNull();
+    expect(screen.queryByText(/hvad turene har lært os/i)).toBeInTheDocument();
+  });
+
+  // Et år, ingen har skrevet en dato på, er ikke et år. Så er der heller
+  // ingen opgørelse at love.
   it('findes ikke, når der ikke er nogen ture', async () => {
+    vis();
+
+    await screen.findByRole('heading', { level: 1, name: 'Friluftshistorik' });
+    expect(screen.queryByRole('button', { name: /Årsopgørelse/ })).not.toBeInTheDocument();
+  });
+
+  it('findes ikke, når ingen tur har en dato', async () => {
+    await db.ture.add(lavTur({ navn: 'Uden dato', startdato: '', slutdato: '' }));
+
     vis();
 
     await screen.findByRole('heading', { level: 1, name: 'Friluftshistorik' });

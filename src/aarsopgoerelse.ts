@@ -44,6 +44,41 @@ export function aarMedTure(ture: Tur[]): number[] {
   return [...aar].sort((a, b) => b - a);
 }
 
+// Årene der overhovedet står en tur på, kladder iberegnet. Nyeste først.
+//
+// Forskellen på den her og `aarMedTure` er, hvad spørgsmålet er.
+// `aarMedTure` svarer på "hvilke år kan gøres op" — og en kladde er en plan,
+// man aldrig gjorde færdig, så den tælles ikke med. Den her svarer på
+// "hvilke år har brugeren skrevet noget ned i", og dér tæller kladden, fordi
+// den *er* skrevet ned.
+export function aarMedTurdata(ture: Tur[]): number[] {
+  const aar = new Set<number>();
+  for (const t of ture) {
+    const a = aarAf(t.startdato);
+    if (a !== null) aar.add(a);
+  }
+  return [...aar].sort((a, b) => b - a);
+}
+
+// Året, knappen til årsopgørelsen skal pege på — eller null, når der ikke er
+// en eneste tur med en dato på.
+//
+// Først det nyeste år, der kan gøres op. Er der ingen — fordi turene stadig
+// står som kladder, hvilket de gør, indtil man selv flytter dem, se
+// `opretTomTur` i opret.ts — peger knappen på det nyeste år, der er skrevet
+// noget ned i. Opgørelsen for det år er tom, men den er ikke stum: den siger
+// "Der står ingen ture på 2026. Kladder tælles ikke med — er der en tur der
+// mangler, står den måske stadig som kladde."
+//
+// Og det er netop svaret, man mangler. Knappen, der forsvandt, gav ingen — så
+// stod man med fire ture i bogen og en skærm, der lod som om året var tomt.
+export function aaretAtGoereOp(ture: Tur[]): number | null {
+  const talte = aarMedTure(ture);
+  if (talte.length > 0) return talte[0];
+
+  return aarMedTurdata(ture)[0] ?? null;
+}
+
 function aarAf(dato: string): number | null {
   if (!dato) return null;
   const d = new Date(dato);

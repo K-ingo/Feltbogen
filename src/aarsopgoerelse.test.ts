@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   aarMedTure,
+  aarMedTurdata,
+  aaretAtGoereOp,
   aarsopgoerelseAtSe,
   aarsoverskrift,
   aarstalFor,
@@ -81,6 +83,54 @@ describe('aarMedTure', () => {
 
   it('giver ingen år uden ture', () => {
     expect(aarMedTure([])).toEqual([]);
+  });
+});
+
+describe('aarMedTurdata', () => {
+  // Spørgsmålet er et andet end `aarMedTure`s: ikke "hvad kan gøres op", men
+  // "hvad er der skrevet noget ned i". Dér tæller kladden med.
+  it('tager kladderne med', () => {
+    const ture = [
+      tur({ startdato: '2024-05-01' }),
+      lavTur({ startdato: '2026-05-01', status: 'kladde' })
+    ];
+
+    expect(aarMedTurdata(ture)).toEqual([2026, 2024]);
+  });
+
+  it('ser bort fra ture uden brugbar dato', () => {
+    expect(aarMedTurdata([lavTur({ startdato: '' }), lavTur({ startdato: 'vrøvl' })])).toEqual([]);
+  });
+});
+
+describe('aaretAtGoereOp', () => {
+  it('peger på det nyeste år, der kan gøres op', () => {
+    const ture = [tur({ startdato: '2025-05-01' }), tur({ startdato: '2026-08-01' })];
+
+    expect(aaretAtGoereOp(ture)).toBe(2026);
+  });
+
+  // Ture oprettes som kladde og bliver det, til man kommer hjem. Knappen
+  // forsvandt derfor for en, der havde skrevet hele sin sæson ind — og
+  // opgørelsen er netop dér, hvor der står hvorfor kladder ikke tælles med.
+  it('peger på året, også når turene stadig er kladder', () => {
+    expect(aaretAtGoereOp([lavTur({ startdato: '2026-08-01', status: 'kladde' })])).toBe(2026);
+  });
+
+  // Er der et år, der kan gøres op, er det dét, knappen skal føre til — en
+  // tom opgørelse for i år er ringere end sidste års rigtige.
+  it('vælger det talte år frem for et nyere med kun kladder', () => {
+    const ture = [
+      tur({ startdato: '2025-08-01' }),
+      lavTur({ startdato: '2026-08-01', status: 'kladde' })
+    ];
+
+    expect(aaretAtGoereOp(ture)).toBe(2025);
+  });
+
+  it('giver null, når ingen tur har en dato', () => {
+    expect(aaretAtGoereOp([lavTur({ startdato: '' })])).toBeNull();
+    expect(aaretAtGoereOp([])).toBeNull();
   });
 });
 

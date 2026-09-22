@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
-import { aarMedTure } from './aarsopgoerelse';
+import { aaretAtGoereOp } from './aarsopgoerelse';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
 import { Knap } from './ui';
@@ -45,14 +45,23 @@ interface Props {
 function FriluftshistorikSide({ fane, skift, aabnSted, nytSted, aabnItem, aabnAar }: Props) {
   const erDesktop = useErDesktop();
   const ture = useLiveQuery(() => db.ture.toArray()) ?? [];
-  const aarene = aarMedTure(ture);
+  const aar = aaretAtGoereOp(ture);
   const paaSteder = fane === 'steder';
 
-  // Knappen til årsopgørelsen findes kun, når der er et år at gøre op. Et
-  // årstal uden ture bag sig fører til en tom opgørelse, og en knap, der
-  // lover noget, der ikke er der, er værre end ingen knap.
-  const aarsknap = aarene.length > 0 && (
-    <Knap onClick={() => aabnAar(aarene[0])}>Årsopgørelse {aarene[0]}</Knap>
+  // Knappen til årsopgørelsen står, så snart der er skrevet en tur ned med en
+  // dato på — også når turene stadig er kladder.
+  //
+  // Den byggede først på `aarMedTure`, der springer kladder over, fordi de
+  // ikke tælles med i en opgørelse. Men ture oprettes *som* kladde
+  // (`opretTomTur` i opret.ts), og man flytter dem først, når man kommer
+  // hjem. Så stod man med fire ture i bogen og ingen knap — og ingen
+  // forklaring på hvorfor. Opgørelsen for et år uden talte ture er tom, men
+  // den siger selv hvorfor ("Kladder tælles ikke med"), og det er dét svar,
+  // den manglende knap holdt tilbage. Se `aaretAtGoereOp`.
+  //
+  // Outline og ikke fyldt: det valgte faneblad er skærmens ene fyldte accent.
+  const aarsknap = aar !== null && (
+    <Knap onClick={() => aabnAar(aar)}>Årsopgørelse {aar}</Knap>
   );
 
   return (

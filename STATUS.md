@@ -209,6 +209,16 @@ en beretning, og den ligger i årsopgørelsen, som kan vælge et hvilket som
 helst år med ture i. Årsopgørelsen selv er flyttet op i headeren som en
 outline-knap.
 
+Knappen byggede først på `aarMedTure`, der springer kladder over — og ture
+oprettes *som* kladde (`opretTomTur`) og bliver det, til man kommer hjem. En
+tester med tre ture i bogen fik derfor ingen knap og ingen forklaring på
+hvorfor. Den står nu, så snart en tur har en dato på, kladde eller ej
+(`aaretAtGoereOp` i `src/aarsopgoerelse.ts`): er der et år, der kan gøres op,
+peger den på det, ellers på det nyeste år, der er skrevet noget ned i.
+Opgørelsen for sådan et år er tom, men den er ikke stum — den siger selv
+"Kladder tælles ikke med", og det er dét svar, den manglende knap holdt
+tilbage.
+
 Den fyldte accent er det valgte faneblad, og kun det. Referencen tegner også
 årsvælgeren fyldt, men den tegning viser begge faner på én flade "for
 one-canvas review"; i produktet står de aldrig sammen, og den låste regel om
