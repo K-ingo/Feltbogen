@@ -15,7 +15,11 @@
 // på fanen, der skal være foldet ud, når man kommer. Skærmen ruller derhen, så
 // man kan se den uden at lede.
 
-export type Turfane = 'overblik' | 'pakning' | 'pakkeliste' | 'deltagere' | 'undervejs' | 'praktisk';
+// Fanerne på turskærmen. Pakningen er *én* fane og ikke to: planen og
+// tjeklisten var før hver sin fane, og så stod man og krydsede af på den ene
+// mens tallet, man pakkede efter, stod på den anden. Designsystemet har ét
+// Pakning-blad — se docs/design/desktop/04-pakning.html.
+export type Turfane = 'overblik' | 'pakning' | 'deltagere' | 'undervejs' | 'praktisk';
 
 export type Turmaal =
   // Datoer, sted og turens parametre.
@@ -43,7 +47,10 @@ export const MAALETS_FANE: Record<Turmaal, Turfane> = {
   dage: 'overblik',
   pakning: 'pakning',
   vaegt: 'pakning',
-  pakkeliste: 'pakkeliste',
+  // Listen er ikke en fane for sig længere — den er den nederste halvdel af
+  // Pakning. Målet bliver stående, fordi det stadig er to forskellige steder
+  // at lande: valget af grej øverst, listen man krydser af nedenfor.
+  pakkeliste: 'pakning',
   deltagere: 'deltagere',
   fordeling: 'deltagere',
   afgangstjek: 'undervejs'

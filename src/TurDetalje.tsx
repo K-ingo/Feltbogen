@@ -108,8 +108,8 @@ import {
   veksl as vekslPakket,
   pakAlle,
   ryd as rydPakning,
-  fremdrift as pakkefremdrift,
-  fremdriftstekst as pakketekst
+  kunUpakkede,
+  fremdrift as pakkefremdrift
 } from './pakning';
 import type { Pakkefremdrift } from './pakning';
 import { useValg, useKropsdata, useTekst, PAK_AF_NIVEAU_VALG, AFGANGS_SKABELON } from './indstillinger';
@@ -154,17 +154,22 @@ interface Props {
 type Visning = 'alle' | 'gruppe' | 'tag' | 'person' | 'delt';
 
 // Turens faner. Rækkefølgen er turens egen: først rammerne om den, så
-// pakningen og listen man går rundt med, så selskabet, så dagene undervejs —
-// og til sidst det praktiske omkring det hele.
+// pakningen man går rundt med, så selskabet, så dagene undervejs — og til
+// sidst det praktiske omkring det hele.
 //
-// Seks faner er loftet. Skal der en syvende til, hører den sandsynligvis
-// hjemme inde i en af de seks.
+// **Pakning er én fane.** Den var to: "Pakning", hvor grejet blev valgt, og
+// "Pakkeliste", hvor det blev krydset af. Det er den samme liste to steder,
+// og man stod med tasken på den ene fane, mens tallet, man pakkede efter,
+// stod på den anden. Designsystemet har ét Pakning-blad — se
+// docs/design/desktop/04-pakning.html — og listen er både plan og tjekliste.
+//
+// Fem faner. Skal der en sjette til, hører den sandsynligvis hjemme inde i en
+// af de fem.
 //
 // Selve typen bor i turmaal.ts sammen med de steder, en henvisning kan lande.
 const FANEBLADE: { id: Turfane; label: string }[] = [
   { id: 'overblik', label: 'Overblik' },
   { id: 'pakning', label: 'Pakning' },
-  { id: 'pakkeliste', label: 'Pakkeliste' },
   { id: 'deltagere', label: 'Deltagere' },
   { id: 'undervejs', label: 'Undervejs' },
   { id: 'praktisk', label: 'Praktisk' }
@@ -180,6 +185,10 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
   // ændrer den.
   const [skifterStatus, setSkifterStatus] = useState(false);
   const [visning, setVisning] = useState<Visning>('gruppe');
+  // "Mangler" fra referencens filterrække. Det er et snit gennem listen og
+  // ikke en opdeling af den: man vil se de seks ting, der stadig ligger
+  // udenfor, uden at miste hvilket grejsæt de kom med i.
+  const [kunMangler, setKunMangler] = useState(false);
   const [pakkesoegning, setPakkesoegning] = useState('');
   // Man lander på overblikket, medmindre man er sendt hertil af et forslag
   // eller en mangel. En fane man stod på sidst ville være et gæt på hvad man
@@ -682,10 +691,17 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
         alleLinjer
       );
 
+  // Pakketilstanden. Krydset gemmes med det samme som alt andet på turen —
+  // man står med tasken i hånden og skal ikke også trykke gem.
+  const pakning = pakkefremdrift(tur, pakItems);
+  const afkrydsede = pakkede(tur);
+
   // Søgningen lægger sig oven på opdelingen og erstatter den ikke: leder man
   // efter noget bestemt, skal man stadig kunne se, hvilket grejsæt eller hvem
-  // det hører til.
-  const afsnit = filtrerAfsnit(opdelt, pakkesoegning);
+  // det hører til. Mangler-snittet gør det samme — det skærer linjer væk,
+  // ikke overskrifter.
+  const soegte = filtrerAfsnit(opdelt, pakkesoegning);
+  const afsnit = kunMangler ? kunUpakkede(soegte, afkrydsede) : soegte;
 
   // Hvor turen er, og hvad det næste skridt er. Reglerne ligger i turfase.ts;
   // her oversættes skridtet til den knap, der udfører det.
@@ -726,11 +742,6 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
     />
   );
 
-  // Pakketilstanden. Krydset gemmes med det samme som alt andet på turen —
-  // man står med tasken i hånden og skal ikke også trykke gem.
-  const pakning = pakkefremdrift(tur, pakItems);
-  const afkrydsede = pakkede(tur);
-
   const pakkeliste = (
     <Pakkeliste
       afsnit={afsnit}
@@ -739,6 +750,8 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
       setVisning={setVisning}
       soegning={pakkesoegning}
       setSoegning={setPakkesoegning}
+      kunMangler={kunMangler}
+      setKunMangler={setKunMangler}
       antal={pakItems.length}
       pakning={pakning}
       pakkede={afkrydsede}
@@ -747,6 +760,16 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
       ryd={() => void opdater({ pakkede_item_uids: rydPakning() })}
     />
   );
+
+  // Hvad der ligger bag "Vælg grej", når den er foldet sammen. En foldet
+  // sektion uden resumé er en dør uden skilt.
+  const valgteGrupper = (grupper ?? []).filter((g) => tur.gruppe_ids.includes(g.uid));
+  const valgResume = pakItems.length === 0
+    ? 'Intet grej valgt endnu'
+    : [
+        valgteGrupper.length > 0 ? `${valgteGrupper.length} grejsæt` : '',
+        `${pakItems.length} ${pakItems.length === 1 ? 'ting' : 'ting'}`
+      ].filter(Boolean).join(' · ');
 
   const valgAfIndhold = (
     <Indholdsvalg
@@ -1111,27 +1134,49 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
       </>
     ),
 
-    // Arbejdsfladen: her vælges grejet, og vægten svarer igen med det samme.
-    pakning: spalter(
-      sigte('pakning', <Infokort label="Vælg grej">{valgAfIndhold}</Infokort>),
+    // Pakningen som **én** flade. Referencen har fremdriften øverst i fuld
+    // bredde, og listen — der er både plan og tjekliste — som det, der fylder
+    // skærmen. Valget af grej og vægten står ved siden af: det er dem, der
+    // ændrer listen, men det er listen, man står med.
+    pakning: (
       <>
-        <Pakkekort pakning={pakning} tilListen={() => setFane('pakkeliste')} />
-        {vaegt}
-        {byttebesked !== '' && (
-          <Infokort label="Byttet blev ikke helt">
-            <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)', lineHeight: 1.55 }}>
-              {byttebesked}
-            </div>
-          </Infokort>
+        <Fremdriftskort
+          pakning={pakning}
+          vaegtIalt={vaegtDelt + vaegtPersonligt}
+          vaegtPrPerson={vaegtPrPerson}
+          personer={tur.personer}
+          kunMangler={kunMangler}
+          visMangler={() => setKunMangler(true)}
+        />
+        {spalter(
+          sigte('pakkeliste',
+            <Infokort label={`Pakkeliste (${pakItems.length})`}>{pakkeliste}</Infokort>
+          ),
+          <>
+            {/* Foldet ud så længe der ikke er valgt noget: på en ny tur er
+                det her, man skal begynde. Er grejet valgt, er det listen,
+                man kommer for, og så ligger valget bag ét tryk. */}
+            {sigte('pakning',
+              <Foldbar
+                titel="Vælg grej"
+                resume={valgResume}
+                aabenFra={pakItems.length === 0 || sigtet === 'pakning'}
+              >
+                {valgAfIndhold}
+              </Foldbar>
+            )}
+            {vaegt}
+            {byttebesked !== '' && (
+              <Infokort label="Byttet blev ikke helt">
+                <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-dæmpet)', lineHeight: 1.55 }}>
+                  {byttebesked}
+                </div>
+              </Infokort>
+            )}
+            {sigte('vaegt', vaegtbryderSektion)}
+          </>
         )}
-        {sigte('vaegt', vaegtbryderSektion)}
       </>
-    ),
-
-    // Listen man har fremme mens man pakker. Den skal fylde det hele — der er
-    // ikke noget andet at kigge på her.
-    pakkeliste: sigte('pakkeliste',
-      <Infokort label={`Pakkeliste (${pakItems.length})`}>{pakkeliste}</Infokort>
     ),
 
     deltagere: spalter(
@@ -1183,7 +1228,7 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
   // Tallene står i fanerækken, så man kan aflæse turen uden at åbne hver fane.
   // Nul vises ikke — en tom fane skal ikke råbe op om at være tom.
   const fanetal: Partial<Record<Turfane, number>> = {
-    pakkeliste: pakItems.length,
+    pakning: pakItems.length,
     deltagere: tur.deltagere.length
   };
 
@@ -1246,66 +1291,83 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
 // Rammer
 // ─────────────────────────────────────────────
 
-// Hvor langt pakningen er, og hvad der står tilbage.
+// Fremdriften øverst på Pakning, i fuld bredde — som i referencen.
 //
 // Tallet er derived state og gemmes ikke: det regnes ud af hvilket grej der
 // er på turen, og hvilket der er krydset af. Gemtes det også som et felt,
 // ville de to kunne komme ud af trit — og så er det feltet man tror på, mens
 // listen er den der er rigtig.
-function Pakkekort({ pakning, tilListen }: { pakning: Pakkefremdrift; tilListen: () => void }) {
+//
+// Kortet nævnte før de manglende ting ved navn og havde en knap over til
+// pakkelisten. Begge dele hørte til, da listen lå på en anden fane. Nu står
+// den lige nedenunder, og kortet gør det eneste, der er tilbage at gøre: det
+// siger hvor mange, og skærer listen ned til dem.
+function Fremdriftskort({ pakning, vaegtIalt, vaegtPrPerson, personer, kunMangler, visMangler }: {
+  pakning: Pakkefremdrift;
+  vaegtIalt: number;
+  vaegtPrPerson: number;
+  personer: number;
+  kunMangler: boolean;
+  visMangler: () => void;
+}) {
   if (pakning.ialt === 0) return null;
 
-  // Højst så mange manglende nævnes ved navn. Resten tælles — en liste over
-  // fyrre ting man ikke har pakket, er bare pakkelisten en gang til.
-  const NAEVNES = 5;
-  const foerste = pakning.mangler.slice(0, NAEVNES);
-  const resten = pakning.mangler.length - foerste.length;
-
   return (
-    <Infokort label="Pakning" fremhaevet={pakning.faerdig}>
-      <div style={{
-        fontSize: 'var(--skrift-tal)',
-        fontWeight: 500,
-        fontFamily: "'Fraunces', Georgia, serif",
-        color: pakning.faerdig ? 'var(--succes)' : 'var(--tekst)'
-      }}>
-        {pakning.faerdig ? 'Alt er pakket' : `${pakning.pakket} af ${pakning.ialt}`}
+    <div className="packing-progress">
+      <div className="packing-progress-hoved">
+        <div>
+          <span className="packing-progress-label">Pakket</span>
+          <span
+            className="packing-progress-tal"
+            style={{ color: pakning.faerdig ? 'var(--succes)' : 'var(--tekst)' }}
+          >
+            {pakning.faerdig ? 'Alt er pakket' : `${pakning.pakket} af ${pakning.ialt}`}
+          </span>
+        </div>
+        {/* Vægten står sammen med fremdriften, fordi det er de to tal, man
+            pakker efter. Gennemsnittet pr. person nævnes kun, når der er
+            nogen at dele med — ellers er det det samme tal to gange. */}
+        <span className="packing-progress-vaegt">
+          {kg(vaegtIalt)} kg{personer > 1 ? ` · ${kg(vaegtPrPerson)} kg pr. person` : ''}
+        </span>
       </div>
 
       {/* En stribe frem for en ring: den kan læses lige så hurtigt og fylder
           ikke en hel spalte i bredden. */}
-      <div style={{
-        height: '5px',
-        borderRadius: 'var(--runding-pille)',
-        background: 'var(--border-svag)',
-        overflow: 'hidden',
-        margin: 'var(--plads-2) 0'
-      }}>
+      <div
+        className="packing-progress-bane"
+        role="progressbar"
+        aria-valuenow={pakning.procent}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label="Pakket"
+      >
         <div style={{
           width: `${pakning.procent}%`,
           height: '100%',
           background: pakning.faerdig ? 'var(--succes)' : 'var(--accent)',
+          borderRadius: 'var(--runding-pille)',
           transition: 'width 0.2s'
         }} />
       </div>
 
-      {!pakning.faerdig && (
-        <>
-          <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginBottom: 'var(--plads-1)' }}>
-            Mangler i tasken
-          </div>
-          <div style={{ display: 'grid', gap: '2px', fontSize: 'var(--skrift-detalje)' }}>
-            {foerste.map((i) => <span key={i.uid}>{i.navn || 'Uden navn'}</span>)}
-            {resten > 0 && (
-              <span style={{ color: 'var(--tekst-svag)' }}>
-                + {resten} {resten === 1 ? 'ting mere' : 'ting mere'}
-              </span>
-            )}
-          </div>
-          <Knap onClick={tilListen} style={{ marginTop: 'var(--plads-3)' }}>Gå til pakkelisten</Knap>
-        </>
-      )}
-    </Infokort>
+      <div className="packing-progress-fod">
+        {pakning.faerdig ? (
+          'Alt på listen er i tasken.'
+        ) : (
+          <>
+            {pakning.mangler.length} {pakning.mangler.length === 1 ? 'ting mangler' : 'ting mangler'} i tasken.
+            {' '}
+            {/* Ét tryk fra tallet til de ting, tallet handler om. Er snittet
+                allerede slået til, siger kortet det frem for at tilbyde det
+                igen. */}
+            {kunMangler
+              ? <span style={{ color: 'var(--tekst-svag)' }}>Listen viser kun dem.</span>
+              : <Knap variant="tekst" onClick={visMangler} style={{ padding: 0, minHeight: 0 }}>Vis kun dem</Knap>}
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -1736,7 +1798,7 @@ function baerernavne(tur: Tur): Map<Reference, string> {
 
 function Pakkeliste({
   afsnit, perItem, visning, setVisning, soegning, setSoegning,
-  antal, pakning, pakkede, veksl, pakAlle, ryd
+  kunMangler, setKunMangler, antal, pakning, pakkede, veksl, pakAlle, ryd
 }: {
   afsnit: Pakkeafsnit[];
   perItem: Map<Reference, Advarsel[]>;
@@ -1744,6 +1806,8 @@ function Pakkeliste({
   setVisning: (v: Visning) => void;
   soegning: string;
   setSoegning: (v: string) => void;
+  kunMangler: boolean;
+  setKunMangler: (v: boolean) => void;
   antal: number;
   pakning: Pakkefremdrift;
   pakkede: Set<Reference>;
@@ -1764,13 +1828,34 @@ function Pakkeliste({
       <Pakkestatus pakning={pakning} pakAlle={pakAlle} ryd={ryd} />
 
       <div style={{ display: 'grid', gap: 'var(--plads-2)', marginBottom: 'var(--plads-4)' }}>
-        <Segment
-          vaerdier={VISNINGER}
-          valgt={visning}
-          vaelg={setVisning}
-          formater={(v) => VISNING_LABEL[v]}
-          kompakt
-        />
+        {/* Filterrækken fra referencen. Den er *stille*: designsystemet
+            tillader én fyldt accent-flade pr. skærmbillede, og den hører til
+            turens næste skridt oppe i titelblokken. En vælger, der sorterer en
+            liste, må nøjes med en tonet markering. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--plads-2)', flexWrap: 'wrap' }}>
+          <Segment
+            vaerdier={VISNINGER}
+            valgt={visning}
+            vaelg={setVisning}
+            formater={(v) => VISNING_LABEL[v]}
+            kompakt
+            stille
+          />
+          {/* Mangler er et snit gennem listen og ikke en opdeling af den, så
+              den står for sig og ikke inde i vælgeren. Den forsvinder, når der
+              ikke er noget at skære væk — en knap, der ikke ville ændre noget,
+              er en knap, man prøver forgæves. */}
+          {pakning.mangler.length > 0 && (
+            <button
+              type="button"
+              className="packing-filter"
+              aria-pressed={kunMangler}
+              onClick={() => setKunMangler(!kunMangler)}
+            >
+              Mangler ({pakning.mangler.length})
+            </button>
+          )}
+        </div>
 
         {/* Søgningen står ved siden af opdelingerne og ikke i stedet for dem.
             Et inventar på tres ting er ikke noget man ruller igennem for at
@@ -1793,11 +1878,14 @@ function Pakkeliste({
         </div>
       </div>
 
-      {/* En søgning uden træffere skal sige det. Ellers ligner det en tom
-          pakkeliste, og det er en påstand om turen frem for om søgningen. */}
+      {/* En søgning eller et filter uden træffere skal sige hvad der skete.
+          Ellers ligner det en tom pakkeliste, og det er en påstand om turen
+          frem for om snittet. */}
       {afsnit.length === 0 && (
         <div style={{ fontSize: 'var(--skrift-detalje)', color: 'var(--tekst-svag)', padding: 'var(--plads-3) 0' }}>
-          Ingenting på listen hedder "{soegning.trim()}" eller bæres af nogen med det navn.
+          {soegning.trim() !== ''
+            ? `Ingenting på listen hedder "${soegning.trim()}" eller bæres af nogen med det navn.`
+            : 'Ingenting mangler i det, der er valgt her.'}
         </div>
       )}
 
@@ -1833,9 +1921,13 @@ function fundne(afsnit: Pakkeafsnit[]): string {
   return `${antal} ${antal === 1 ? 'træffer' : 'træffere'}`;
 }
 
-// Status og de to knapper der gælder hele listen. Specens §8 har dem i en
-// fod; her står de i toppen, fordi det er tallet man kommer for, og fordi en
-// fod under en lang liste er et sted man skal scrolle hen for at finde.
+// Knappen der gælder hele listen. Specens §8 har den i en fod; her står den i
+// toppen, fordi en fod under en lang liste er et sted man skal scrolle hen for
+// at finde.
+//
+// Tallet stod her før. Det gør det ikke længere: fremdriftskortet står lige
+// ovenover på den samme flade, og to steder med det samme tal er to steder,
+// der kan komme til at sige hver sit.
 function Pakkestatus({ pakning, pakAlle, ryd }: {
   pakning: Pakkefremdrift;
   pakAlle: () => void;
@@ -1845,22 +1937,11 @@ function Pakkestatus({ pakning, pakAlle, ryd }: {
     <div style={{
       display: 'flex',
       alignItems: 'center',
+      justifyContent: 'flex-end',
       gap: 'var(--plads-2)',
       flexWrap: 'wrap',
-      marginBottom: 'var(--plads-3)',
-      paddingBottom: 'var(--plads-3)',
-      borderBottom: '1px solid var(--border-svag)'
+      marginBottom: 'var(--plads-3)'
     }}>
-      <span style={{
-        flex: 1,
-        minWidth: '120px',
-        fontSize: 'var(--skrift-brod)',
-        fontWeight: 500,
-        color: pakning.faerdig ? 'var(--succes)' : 'var(--tekst)'
-      }}>
-        {pakketekst(pakning)}
-      </span>
-
       {pakning.faerdig ? (
         <Knap onClick={ryd}>Ryd afkrydsning</Knap>
       ) : (

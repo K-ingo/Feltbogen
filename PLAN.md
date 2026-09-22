@@ -47,6 +47,13 @@ tur skal være et separat mode med eget layout og egne offline-krav.
 Praktisk. På tur, pak-af-tjek og feltbogen er skærme, man går ind i og ud af
 igen — ikke faner.
 
+**Rettet 22. september 2026 — fem faner.** Pakning og Pakkeliste blev én.
+Designsystemet har ét Pakning-blad (`docs/design/desktop/04-pakning.html`), og
+det var det rigtige: de to faner viste den samme liste, og man stod med tasken
+på den ene, mens tallet, man pakkede efter, stod på den anden. Listen er både
+plan og tjekliste. Gæstens fanerække (`gaestefane.ts`) er uændret — den har
+aldrig haft Pakning-fanen at slå sammen med.
+
 Specens sjette fane hedder Kort, men appen har intet kortlag — hverken Mapbox
 eller Leaflet, kun links ud til OpenStreetMap. En tom fane er værre end ingen
 fane, så pladsen gik til **Undervejs**, som samler afgangs-tjek, turlog,

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { pakkede, erPakket, veksl, pakAlle, ryd, fremdrift, fremdriftstekst } from './pakning';
+import { pakkede, erPakket, veksl, pakAlle, ryd, fremdrift, fremdriftstekst, kunUpakkede } from './pakning';
+import { linjeAfItem, linjeAfMedbragt } from './smartMotor';
 import { lavItem, lavTur } from './test/data';
 
 // Tre stykker grej på en tur, ingen pakket endnu.
@@ -114,5 +115,64 @@ describe('fremdriftstekst', () => {
     expect(fremdriftstekst(fremdrift({ ...t, pakkede_item_uids: pakAlle(grej) }, grej)))
       .toBe('Alt er pakket');
     expect(fremdriftstekst(fremdrift(t, []))).toBe('Intet grej valgt endnu');
+  });
+});
+
+// ─────────────────────────────────────────────
+// kunUpakkede — "Mangler"-snittet på Pakning-fladen.
+//
+// Pakning er én flade nu: fremdriftskortet siger "1 af 3", og filteret skærer
+// listen ned til de to, tallet handler om. Snittet skal skære linjer væk og
+// ikke overskrifter, så man stadig kan se, hvilket grejsæt en manglende ting
+// kom med i.
+// ─────────────────────────────────────────────
+
+describe('kunUpakkede', () => {
+  it('beholder kun det, der ikke er krydset af', () => {
+    const { grej, tur: t } = tur();
+    const halvt = { ...t, pakkede_item_uids: [grej[0].uid] };
+
+    const skaaret = kunUpakkede(
+      [{ titel: 'Lejr', linjer: grej.map((i) => linjeAfItem(i)) }],
+      pakkede(halvt)
+    );
+
+    expect(skaaret).toHaveLength(1);
+    expect(skaaret[0].titel).toBe('Lejr');
+    expect(skaaret[0].linjer.map((l) => l.navn)).toEqual(['Sovepose', 'Trangia']);
+  });
+
+  it('lader deltagernes eget grej falde ud', () => {
+    // Det har ingen uid i ens egen base og er ikke ens eget at krydse af. En
+    // liste over "det der mangler" må kun vise det, man selv kan gøre noget
+    // ved.
+    const { grej } = tur();
+
+    const skaaret = kunUpakkede(
+      [{
+        titel: 'Alle',
+        linjer: [linjeAfItem(grej[0]), linjeAfMedbragt('Hængekøje', 900, 'Hartvig')]
+      }],
+      new Set<string>()
+    );
+
+    expect(skaaret[0].linjer.map((l) => l.navn)).toEqual(['Telt']);
+  });
+
+  it('fjerner et afsnit, der ikke har noget tilbage', () => {
+    // Ellers bliver en gruppe, man er færdig med, stående som en overskrift
+    // uden noget under — og så ser listen længere ud, end den er.
+    const { grej, tur: t } = tur();
+    const altPakket = { ...t, pakkede_item_uids: pakAlle(grej) };
+
+    const skaaret = kunUpakkede(
+      [
+        { titel: 'Lejr', linjer: [linjeAfItem(grej[0])] },
+        { titel: 'Køkken', linjer: [linjeAfItem(grej[1])] }
+      ],
+      pakkede(altPakket)
+    );
+
+    expect(skaaret).toEqual([]);
   });
 });

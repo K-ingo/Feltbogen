@@ -289,9 +289,18 @@ interface SegmentProps<T extends string> {
   // Uden formater vises værdien direkte med stort begyndelsesbogstav.
   formater?: (v: T) => string;
   kompakt?: boolean;
+  // Den stille udgave. Det valgte felt er en tonet flade med accentfarvet
+  // tekst frem for en fyldt accent.
+  //
+  // Den findes, fordi designsystemet kun tillader én fyldt accent-flade pr.
+  // skærmbillede, og den hører til skærmens næste skridt. En vælger, der
+  // sorterer en liste, er ikke et næste skridt — men stod den som fyldt
+  // accent, brugte den pladsen alligevel. Markeringen er stadig både farve,
+  // ramme og fed skrift, så den kan aflæses uden at skelne farverne.
+  stille?: boolean;
 }
 
-export function Segment<T extends string>({ vaerdier, valgt, vaelg, formater, kompakt }: SegmentProps<T>) {
+export function Segment<T extends string>({ vaerdier, valgt, vaelg, formater, kompakt, stille }: SegmentProps<T>) {
   return (
     <div style={{ display: 'flex', gap: 'var(--plads-1)', flexWrap: 'wrap' }}>
       {vaerdier.map((v) => {
@@ -310,13 +319,13 @@ export function Segment<T extends string>({ vaerdier, valgt, vaelg, formater, ko
               alignItems: 'center',
               padding: kompakt ? '0 var(--plads-3)' : '0 var(--plads-4)',
               fontSize: kompakt ? 'var(--skrift-lille)' : 'var(--skrift-detalje)',
-              background: erAktiv ? 'var(--accent)' : 'transparent',
-              color: erAktiv ? 'var(--accent-tekst)' : 'var(--tekst-dæmpet)',
-              border: `1px solid ${erAktiv ? 'var(--accent)' : 'var(--border)'}`,
+              background: erAktiv ? (stille ? 'var(--accent-bg)' : 'var(--accent)') : 'transparent',
+              color: erAktiv ? (stille ? 'var(--accent)' : 'var(--accent-tekst)') : 'var(--tekst-dæmpet)',
+              border: `1px solid ${erAktiv ? (stille ? 'var(--accent-border)' : 'var(--accent)') : 'var(--border)'}`,
               borderRadius: 'var(--runding-pille)',
               cursor: 'pointer',
               textTransform: formater ? 'none' : 'capitalize',
-              fontWeight: 500
+              fontWeight: erAktiv && stille ? 600 : 500
             }}
           >
             {formater ? formater(v) : v}

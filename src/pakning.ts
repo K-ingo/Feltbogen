@@ -1,4 +1,5 @@
 import type { Item, Reference, Tur } from './db';
+import type { Pakkeafsnit } from './smartMotor';
 
 // Hvad der er lagt i tasken.
 //
@@ -78,4 +79,23 @@ export function fremdriftstekst(f: Pakkefremdrift): string {
   if (f.ialt === 0) return 'Intet grej valgt endnu';
   if (f.faerdig) return 'Alt er pakket';
   return `${f.pakket} af ${f.ialt} pakket`;
+}
+
+// Listen skåret ned til det, der stadig mangler i tasken.
+//
+// Den hører til pakningen som én flade: fremdriftskortet siger "8 af 14", og
+// de seks er dét, man står og vil have fat i. Før lå tallet på én fane og
+// listen på en anden, og man skulle selv lede de seks op imellem de otte.
+//
+// Deltagernes eget grej falder ud. Det har ingen uid i ens egen base, det er
+// ikke ens eget at krydse af, og en liste over "det der mangler" må kun vise
+// det, man selv kan gøre noget ved — ellers ser turen halvfærdig ud af noget,
+// der ikke er ens.
+//
+// Tomme afsnit falder ud med dem, så en gruppe, man er færdig med, ikke bliver
+// stående som en overskrift uden noget under.
+export function kunUpakkede(afsnit: Pakkeafsnit[], afkrydsede: Set<Reference>): Pakkeafsnit[] {
+  return afsnit
+    .map((a) => ({ ...a, linjer: a.linjer.filter((l) => l.egen && l.uid !== '' && !afkrydsede.has(l.uid)) }))
+    .filter((a) => a.linjer.length > 0);
 }
