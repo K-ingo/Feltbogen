@@ -432,6 +432,55 @@ button:disabled { cursor: not-allowed; }
 .person-list { display: grid; gap: 8px; }
 .person-card { border: 1px solid var(--border-svag); border-radius: var(--runding-lille); padding: 0 12px; background: var(--bg-forhoejet); }
 .person-avatar { display: grid; place-items: center; flex: 0 0 34px; width: 34px; height: 34px; border-radius: 50%; background: var(--accent-bg); color: var(--accent); font-weight: 700; }
+
+/* Mere · hub'ens række-kort.
+
+   Referencen er `docs/design/desktop/08-mere.html`. Rækkerne lå løst under
+   hver sektionstitel, adskilt af hver sin streg, og så var der ikke noget at
+   se på skærmen ud over stregerne: ni linjer i én lang kolonne, hvor
+   ingenting sagde hvor det ene afsnit holdt op og det næste begyndte.
+   Referencen samler hver sektion i ét kort — hårfin kant, 12 px runding, den
+   forhøjede flade — og lader stregerne inde i kortet skille rækkerne ad.
+
+   Ikke én knap. Mere er navigation og ikke en arbejdsflade: hver række er en
+   dør, og en fyldt accent her ville konkurrere med den navigation, skærmen
+   består af. */
+.hub-kort {
+  border: 1px solid var(--border-svag);
+  border-radius: 12px;
+  background: var(--bg-forhoejet);
+  overflow: hidden;
+}
+
+/* Rækken tegner sin egen bund- og sidepolstring som inline-stil, så kortet
+   skal overtrumfe den. Rundingen på den enkelte række hører til, når den står
+   løst; inde i kortet er det kortet, der er rundet, og et rundet hover-felt
+   inden i en lige kant ser ud som en fejl. */
+.hub-kort .list-row {
+  border-radius: 0;
+  padding-left: var(--plads-4) !important;
+  padding-right: var(--plads-4) !important;
+}
+.hub-kort .list-row:last-child { border-bottom: none !important; }
+
+/* Prikken foran sync-teksten. Den er pynt for skærmlæseren — farven siger det
+   samme som ordene, og ordene står lige ved siden af. */
+.hub-sync-prik {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--runding-pille);
+  flex-shrink: 0;
+}
+
+/* Fodnoten under kortene. Den siger hvad sync-rækken lover, så en linje, der
+   ikke siger "Alt er sendt op", kan læses som det den er. */
+.hub-fodnote {
+  margin: var(--plads-4) 0 0;
+  max-width: 62ch;
+  font-size: var(--skrift-mikro);
+  color: var(--tekst-svag);
+  line-height: 1.6;
+}
 /* Grej · fanebladene over listen.
 
    De stod som piller, hvor den valgte var en fyldt accent-flade — og så var

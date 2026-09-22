@@ -208,6 +208,15 @@ outline-chips under **Foreslået fra dine ture** (`ukendteNavne()` i
 `personer.ts`); er der ingen, er afsnittet der ikke. Det følger
 `docs/design/desktop/07-folk.html`.
 
+Mere er en **hub** og ikke en skærm, man arbejder på. De to afsnit — *Din
+friluftshistorik* og *Appen* — står hver som ét kort med rækker, og der er
+ikke én knap: hver række er en dør, og en fyldt accent ville konkurrere med
+den navigation, skærmen består af. Sync-rækken læser af `syncstatus()` i
+`dashboard.ts` med den seneste fejl fra `syncfejl.ts` — den samme kilde som
+linjen på startskærmen — så den ikke kan stå og sige "Alt er sendt op" om en
+kø, der aldrig kom op. Er der en fejl, står den i advarselsfarven med en prik
+foran. Det følger `docs/design/desktop/08-mere.html`.
+
 Skallen kender selv den sammenhæng (`HOERER_TIL` i `Skal.tsx`). Står man inde
 på en underskærm, bliver hovedfanen markeret i navigationen, og der kommer en
 "‹ Grej"-linje over titlen — begge dele udledt, så en vej tilbage ikke kan
