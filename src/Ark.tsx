@@ -1,8 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { ItemStatus } from './db';
-import { ITEM_STATUS, etiket } from './db';
-import { Felt, Feltkort, Knap, Label, Segment } from './ui';
+import { ITEM_STATUS } from './db';
+import { Felt, Knap, Label, Segment } from './ui';
 import {
   turKanOprettes, grejKanOprettes, tommeTurfelter, tommeGrejfelter
 } from './opretark';
@@ -31,11 +31,19 @@ interface ArkProps {
   hvorforSlaaetFra: string;
   opret: () => void;
   annuller: () => void;
+  // Referencerne tegner arkene i to bredder: Ny tur i 576 px, fordi datoerne
+  // står to og to, og Tilføj grej i 512 px, hvor der kun er et navn og tre
+  // korte tal.
+  smal?: boolean;
+  // Skriv grunden under knapperne, når Opret er slået fra. Opret-arkene har
+  // brug for den; arkene bag grejsæt siger det allerede i deres overblik, og
+  // der ville det stå to gange.
+  visGrund?: boolean;
   children: ReactNode;
 }
 
 export function Ark({
-  titel, forklaring, opretLabel, kanOprette, hvorforSlaaetFra, opret, annuller, children
+  titel, forklaring, opretLabel, kanOprette, hvorforSlaaetFra, opret, annuller, smal, visGrund, children
 }: ArkProps) {
   const titelId = useId();
   const panel = useRef<HTMLDivElement>(null);
@@ -71,7 +79,7 @@ export function Ark({
       // og lukke det, man er i gang med at skrive i.
       onClick={(e) => { if (e.target === e.currentTarget) annuller(); }}
     >
-      <div className="ark" role="dialog" aria-modal="true" aria-labelledby={titelId} ref={panel}>
+      <div className={smal ? 'ark ark--smal' : 'ark'} role="dialog" aria-modal="true" aria-labelledby={titelId} ref={panel}>
         <div className="ark-hoved">
           <h2 id={titelId}>{titel}</h2>
           <Knap variant="tekst" onClick={annuller} ariaLabel="Luk">✕</Knap>
@@ -83,16 +91,60 @@ export function Ark({
         </div>
 
         <div className="ark-fod">
-          <Knap variant="tekst" onClick={annuller}>Annuller</Knap>
+          <Knap variant="tekst" onClick={annuller} style={{ padding: '0 var(--plads-4)' }}>Annuller</Knap>
+          {/* Arkets ene fyldte accent. Den er 48 px høj og ikke rørehøjdens
+              44 — referencen tegner opret-knappen en tak større end Annuller,
+              så den ikke kan forveksles med vejen ud. */}
           <Knap
             variant="primaer"
             onClick={opret}
             disabled={!kanOprette}
             ariaLabel={kanOprette ? undefined : `${opretLabel} — ${hvorforSlaaetFra}`}
+            style={{ minHeight: '48px', padding: '0 22px' }}
           >
             {opretLabel}
           </Knap>
         </div>
+
+        {/* En slukket knap uden en grund ligner en fejl i appen. Grunden står
+            også i knappens navn, men det hjælper kun en skærmlæser. */}
+        {visGrund && !kanOprette && (
+          <p className="ark-hint">{forTekst(hvorforSlaaetFra)}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// "skriv en titel for at oprette" → "Skriv en titel for at oprette."
+function forTekst(grund: string): string {
+  const s = grund.trim();
+  return s.charAt(0).toUpperCase() + s.slice(1) + (s.endsWith('.') ? '' : '.');
+}
+
+// Et talfelt med enheden inde i rammen, som referencen tegner det: etiketten
+// over, "g" og "kr" efter tallet. Feltkort lægger etiketten ind i kortet, og
+// det er en anden form end resten af arkets felter.
+function Enhedsfelt({ label, enhed, value, onChange, placeholder }: {
+  label: string;
+  enhed?: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  const id = useId();
+  return (
+    <div>
+      <Label htmlFor={id}>{label}</Label>
+      <div className="ark-enhedsfelt">
+        <input
+          id={id}
+          inputMode="decimal"
+          value={value}
+          placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)}
+        />
+        {enhed && <span aria-hidden="true">{enhed}</span>}
       </div>
     </div>
   );
@@ -115,12 +167,13 @@ export function NyTurArk({ idag, sted, opret, annuller }: {
   return (
     <Ark
       titel="Ny tur"
-      forklaring="Der oprettes ingen kladde, før du trykker Opret."
+      forklaring="Der oprettes ingen kladde, før du trykker Opret — så lander der ikke en tom tur på dine andre enheder."
       opretLabel="Opret tur"
       kanOprette={kan}
       hvorforSlaaetFra="skriv en titel for at oprette"
       opret={() => kan && opret(felter)}
       annuller={annuller}
+      visGrund
     >
       <Felt
         label="Titel"
@@ -168,12 +221,14 @@ export function NytGrejArk({ status, opret, annuller }: {
   return (
     <Ark
       titel="Tilføj grej"
-      forklaring="Gemmes først, når du trykker Opret."
+      forklaring="Gemmes først, når du trykker Opret — intet oprettes bare ved at åbne."
       opretLabel="Opret grej"
       kanOprette={kan}
       hvorforSlaaetFra="skriv et navn for at oprette"
       opret={() => kan && opret(felter)}
       annuller={annuller}
+      smal
+      visGrund
     >
       <Felt
         label="Navn"
@@ -188,15 +243,21 @@ export function NytGrejArk({ status, opret, annuller }: {
           vaerdier={ITEM_STATUS}
           valgt={felter.status}
           vaelg={(v) => skriv({ status: v })}
-          formater={etiket}
+          // Ikke `etiket()`: den kender ikke grejets statusser og gav dem
+          // tilbage med småt ("ejer"). Referencen skriver "Ejer".
+          formater={(v) => v.charAt(0).toUpperCase() + v.slice(1)}
           kompakt
+          // Stille og ikke fyldt: Opret grej er arkets ene fyldte accent.
+          // Referencen tegner "Ejer" fyldt, men så stod der to grønne flader
+          // i samme ark, så snart navnet var skrevet.
+          stille
         />
       </div>
 
       <div className="ark-tre-felter">
-        <Feltkort label="Vægt" enhed="g" value={felter.vaegt} onChange={(v) => skriv({ vaegt: v })} placeholder="0" />
-        <Feltkort label="Pris" enhed="kr" value={felter.pris} onChange={(v) => skriv({ pris: v })} placeholder="0" />
-        <Feltkort label="Antal" value={felter.antal} onChange={(v) => skriv({ antal: v })} />
+        <Enhedsfelt label="Vægt" enhed="g" value={felter.vaegt} onChange={(v) => skriv({ vaegt: v })} placeholder="0" />
+        <Enhedsfelt label="Pris" enhed="kr" value={felter.pris} onChange={(v) => skriv({ pris: v })} placeholder="0" />
+        <Enhedsfelt label="Antal" value={felter.antal} onChange={(v) => skriv({ antal: v })} />
       </div>
     </Ark>
   );

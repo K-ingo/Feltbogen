@@ -1,6 +1,6 @@
 # STATUS
 
-*Sidst opdateret: 22. september 2026. Udgangspunkt: `main` @ `33d7c55`.*
+*Sidst opdateret: 22. september 2026. Udgangspunkt: `main` @ `33c7c57`.*
 
 Kort svar på "hvor står vi nu?". Den skal kunne læses på to minutter og
 opdateres, hver gang noget bliver færdigt eller blokeret.
@@ -27,8 +27,8 @@ kunne koste data, er begge lukket: sletninger slår igennem på tværs af enhede
 står tilbage, er arbejde vi selv vælger — ikke noget, der spærrer.
 
 Det næste stykke arbejde er ikke funktionalitet, men udseende. Designsystemet
-er låst og ligger nu i repoet sammen med en tegning af hver eneste skærm. Ti
-af tyve er bygget.
+er låst og ligger nu i repoet sammen med en tegning af hver eneste skærm. Alle
+tolv PC-tegninger er bygget; de otte til telefonen står tilbage.
 
 ---
 
@@ -103,10 +103,10 @@ det samme; gør de ikke, er det Notion der gælder, og så skal filerne rettes.
 Alle elleve farver i `docs/design/TOKENS.md` stemmer nu med `:root` i
 `src/index.css`. Sidebaggrunden var den sidste, der manglede.
 
-**Der ligger tyve handoffs i kø.** Ti er bygget: Hjem, Ture, Tur-detalje,
-Pakning, Grej, Grejsæt, Folk, Mere, Steder & Statistik og Indstillinger på PC.
-Resten — de to opret-ark, plus otte mobilskærme — er ikke rørt. Rækkefølgen er
-ikke besluttet.
+**Der ligger tyve handoffs i kø.** Tolv er bygget — hele PC-køen: Hjem, Ture,
+Tur-detalje, Pakning, Grej, Grejsæt, Folk, Mere, Steder & Statistik,
+Indstillinger og de to opret-ark, Ny tur og Tilføj grej. De otte mobilskærme
+er ikke rørt. Rækkefølgen er ikke besluttet.
 
 Pakning kostede mere end en farverettelse: den var **to** faner, "Pakning" og
 "Pakkeliste", og designet har én. Det er den samme liste to steder — man stod
@@ -271,10 +271,39 @@ kræver enten nye felter eller sletning af data, og begge dele er ejerens valg
 (`AGENTS.md`). Sync-afsnittet er blevet, hvor det er — referencen henviser til
 "Mere → Synkronisering", og det er præcis den række, der fører herind.
 
+De to opret-ark var den sidste blok i PC-køen. Selve arkene fandtes: de blev
+bygget, da create-before-confirm blev lukket, og den del af handoff'en var
+indfriet — intet oprettes ved åbning, Opret er slået fra uden en titel eller et
+navn, og Annuller, Escape og et klik ved siden af lukker uden at skrive noget.
+Det, der manglede, var at holde dem op mod `11-sheet-ny-tur.html` og
+`12-sheet-tilfoej-grej.html`:
+
+- Statusvælgeren i Tilføj grej tegnede det valgte i fyldt accent. Så snart
+  navnet var skrevet, var der to fyldte flader i arket. Den er nu den stille
+  variant — referencen tegner "Ejer" fyldt, men reglen vejer tungere, som på
+  Grej og Indstillinger. Den skrev desuden statusserne med småt ("ejer"),
+  fordi `etiket()` ikke kender dem.
+- En slukket Opret uden en grund ligner en fejl. Under knapperne står nu,
+  hvad der skal til ("Skriv en titel for at oprette."), som referencens linje
+  under foden. Linjen er kun slået til på de to opret-ark; arkene bag
+  grejsæt siger det allerede i deres overblik.
+- Titlen i Fraunces 24 px, Opret 48 px høj, Tilføj grej i det smalle ark
+  (512 px), og vægt og pris med enheden inde i feltet og etiketten over — før
+  lå etiketten inde i et kort, i en anden form end arkets øvrige felter.
+- Forklaringen under titlen siger nu hvorfor, som referencen gør: *så lander
+  der ikke en tom tur på dine andre enheder* og *intet oprettes bare ved at
+  åbne*.
+
+**Ikke bygget:** "Flere detaljer" (Ny tur) og "Avanceret" (Tilføj grej).
+Referencerne tegner linket, men ikke hvad der ligger bag det, og handoff'en
+siger "nye features der ikke er i preview" er uden for scope. Alt, man kunne
+skrive der, kan skrives inde på turen eller grejet bagefter.
+
 Tre regler fra `TOKENS.md` gælder bredere end den enkelte skærm og er ikke
 efterprøvet på det, der allerede står:
 
-- Maks **én** fyldt accent-knap pr. skærmbillede.
+- Maks **én** fyldt accent-knap pr. skærmbillede. **Gennemgået på PC** —
+  se pkt. 10.
 - ~~Et opret-ark må ikke oprette noget, før man trykker Opret.~~ **Indfriet.**
   Ture og grej oprettes nu gennem et ark (`src/Ark.tsx`), og det gør "Opret
   fra tur" på Grejsæt også. "Nyt sæt" og steder opretter stadig med det samme
@@ -327,11 +356,11 @@ I den rækkefølge, de sandsynligvis er værd at tage.
    eneste værn mod at de to efterlader tomme poster. Selve oprettelsen er
    dækket hele vejen fra ark til post af `opretflow.test.ts`; det er
    sammenkoblingen inde i `App.tsx`, der mangler.
-10. **De tretten resterende skærme er ikke holdt op mod designet.** Hjem,
-    Ture, Tur-detalje, Pakning, Grej, Grejsæt og Folk på PC er gennemgået mod
-    deres HTML-reference. De øvrige kan afvige fra de låste tokens og fra
-    reglen om én fyldt knap, uden at nogen har set efter. Det er ikke en fejl,
-    der er meldt — det er en gennemgang, der ikke er foretaget.
+10. **Reglen om én fyldt accent er gennemgået på PC — ikke på telefonen.**
+    De tolv PC-skærme med en handoff er holdt op mod deres HTML-reference, og
+    resten af PC-skærmene har fået et CTA-pas (nedenfor). Telefonens skærme
+    kan stadig afvige fra de låste tokens og fra reglen, uden at nogen har set
+    efter; de har deres egne handoffs, og ingen af dem er bygget.
 
     Fem af de syv gennemgåede havde en rigtig overtrædelse, ingen havde meldt:
     Hjem havde tre fyldte accent-knapper over folden, Tur-detalje havde to,
@@ -339,6 +368,31 @@ I den rækkefølge, de sandsynligvis er værd at tage.
     Grejs fanebladsvælger var den anden på Grej. Folk brød reglen den anden
     vej og havde ingen fyldt accent overhovedet. Det er værd at regne med, at
     de øvrige også har.
+
+    **CTA-passet på de øvrige PC-skærme er lavet** (sammen med opret-arkene).
+    Fem brød reglen, og ingen havde meldt det — alle med noget, der ikke er
+    en knap af den primære slags:
+
+    - **Ture:** Gitter/Liste-vælgeren var fyldt ved siden af "+ Ny tur".
+      Referencen tegner den sådan; den er nu stille.
+    - **Sted-detalje:** "Find" (koordinat-opslaget) var fyldt ved siden af
+      "Opret tur her". Den er nu outline.
+    - **Årsopgørelse:** det valgte år var en fyldt knap ved siden af "Årets
+      feltbog". Årene er nu en stille segment, som perioderne på Statistik.
+    - **Pak-af-tjek:** niveauvælgeren og en vælger *på hver eneste række*
+      tegnede det valgte fyldt — med tyve ting på turen var det over tyve
+      fyldte flader. De er stille, og "Færdig" er den ene.
+    - **Første tur:** hvert svar (sted, dato, nætter, aktivitet …) blev fyldt,
+      når man valgte det, ved siden af "Videre". Nu tonet, som den stille
+      segment.
+
+    Testene står i `src/ctaPas.test.tsx` og tæller alt, man kan trykke på,
+    der er malet i accenten — ikke kun `.ui-button--primaer`. Streger og
+    diagramsøjler tæller ikke.
+
+    **Set undervejs, ikke rettet:** Grej-detaljens statusvælger er stadig
+    fyldt. Den er den eneste fyldte flade på skærmen, så den bryder ikke
+    reglen, men den ser anderledes ud end den samme vælger i Tilføj grej.
 
     **Set undervejs, ikke rettet:** Grejsæt på telefonen er stadig den liste,
     den altid har været — nu med referencens linje under navnet ("8 ting ·

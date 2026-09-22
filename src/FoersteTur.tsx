@@ -511,6 +511,10 @@ function Besked({ children }: { children: ReactNode }) {
 
 // Et valg man kan trykke på. Den samme knap bruges til steder, datoer,
 // aktiviteter og antal — det er det samme, man gør, og så skal det se ens ud.
+//
+// Det valgte er tonet og ikke fyldt, som den stille Segment i ui.tsx. Fyldt
+// var hvert svar en accent-flade ved siden af "Videre", og på PC kunne der
+// stå tre-fire af dem i samme billede. Den fyldte accent er trinnets knap.
 function valgknap(aktiv: boolean) {
   return {
     minHeight: 'var(--roerehoejde)',
@@ -518,9 +522,10 @@ function valgknap(aktiv: boolean) {
     borderRadius: 'var(--runding-lille)',
     cursor: 'pointer',
     fontSize: 'var(--skrift-detalje)',
-    border: `1px solid ${aktiv ? 'var(--accent)' : 'var(--border)'}`,
-    background: aktiv ? 'var(--accent)' : 'transparent',
-    color: aktiv ? 'var(--accent-tekst)' : 'var(--tekst)'
+    border: `1px solid ${aktiv ? 'var(--accent-border)' : 'var(--border)'}`,
+    background: aktiv ? 'var(--accent-bg)' : 'transparent',
+    color: aktiv ? 'var(--accent)' : 'var(--tekst)',
+    fontWeight: aktiv ? 600 : 400
   };
 }
 

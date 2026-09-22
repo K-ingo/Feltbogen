@@ -142,6 +142,7 @@ function PakAfTjekSide({ tur, tjek, pakItems, grupper, gem, tilbage }: Props) {
             valgt={tjek.niveau}
             vaelg={(n: PakAfNiveau) => gem(saetNiveau(tjek, n))}
             kompakt
+            stille
           />
         </div>
         <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', lineHeight: 1.5 }}>
@@ -272,6 +273,7 @@ function Itemraekke({ item, status, noter, grundig, saetStatus, saetNoter, saetV
         vaelg={saetStatus}
         formater={(v) => etiket(v)}
         kompakt
+        stille
       />
       {/* Kun på det grundige niveau. Et let tjek skal kunne klares på
           bagsædet på vej hjem; skal man tage stilling til fyrre stjerner,
@@ -325,6 +327,7 @@ function Kategorikort({ kategori, vurdering, noter, saet }: {
         vaelg={(v) => saet({ vurdering: v })}
         formater={(v) => etiket(v)}
         kompakt
+        stille
       />
       <Tekstomraade
         label="Noter"

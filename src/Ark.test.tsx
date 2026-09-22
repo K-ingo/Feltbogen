@@ -168,6 +168,84 @@ describe('vejene ud', () => {
   });
 });
 
+// ─────────────────────────────────────────────
+// Designet: docs/design/desktop/11-sheet-ny-tur.html og 12-sheet-tilfoej-grej.html
+// ─────────────────────────────────────────────
+
+// Knapper og alt andet, man kan trykke på, der har malet accenten på.
+const fyldteAccenter = () => Array.from(document.querySelectorAll<HTMLElement>('button, a, [role="button"]'))
+  .filter((el) => el.classList.contains('ui-button--primaer') || el.style.background === 'var(--accent)');
+
+describe('kun én fyldt accent', () => {
+  it('er Opret tur på Ny tur', async () => {
+    turArk();
+
+    await userEvent.type(await screen.findByLabelText('Titel'), 'Fovslet');
+    expect(fyldteAccenter()).toHaveLength(1);
+    expect(fyldteAccenter()[0]).toHaveTextContent('Opret tur');
+  });
+
+  it('er Opret grej på Tilføj grej — statusvælgeren er stille', async () => {
+    grejArk();
+
+    await userEvent.type(await screen.findByLabelText('Navn'), 'Telt');
+    expect(fyldteAccenter()).toHaveLength(1);
+    expect(fyldteAccenter()[0]).toHaveTextContent('Opret grej');
+    // Det valgte er stadig til at se — bare ikke som en fyldt flade.
+    expect(screen.getByRole('button', { name: 'Ejer' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('har creme og ikke hvid tekst på den fyldte knap', async () => {
+    turArk();
+    expect(await screen.findByRole('button', { name: /Opret tur/ })).toHaveStyle({ color: 'var(--accent-tekst)' });
+  });
+});
+
+describe('arket siger, hvad der mangler', () => {
+  it('skriver under knapperne, hvorfor Opret er slået fra', async () => {
+    turArk();
+    expect(await screen.findByText('Skriv en titel for at oprette.')).toBeInTheDocument();
+  });
+
+  it('fjerner linjen, når titlen er skrevet', async () => {
+    turArk();
+
+    await userEvent.type(await screen.findByLabelText('Titel'), 'Fovslet');
+    expect(screen.queryByText('Skriv en titel for at oprette.')).not.toBeInTheDocument();
+  });
+
+  it('siger på begge ark, at der først oprettes ved Opret', async () => {
+    turArk();
+    expect(await screen.findByText(/ingen kladde, før du trykker Opret/)).toBeInTheDocument();
+  });
+
+  it('siger på grej-arket, at der først gemmes ved Opret', async () => {
+    grejArk();
+    expect(await screen.findByText(/Gemmes først, når du trykker Opret/)).toBeInTheDocument();
+  });
+});
+
+describe('grej-arkets felter', () => {
+  it('rækker vægt, pris og antal videre med navnet', async () => {
+    const { opret } = grejArk();
+
+    await userEvent.type(await screen.findByLabelText('Navn'), 'Telt');
+    await userEvent.type(screen.getByLabelText('Vægt'), '1200');
+    await userEvent.type(screen.getByLabelText('Pris'), '1500');
+    await userEvent.click(screen.getByRole('button', { name: 'Overvejer' }));
+    await userEvent.click(screen.getByRole('button', { name: /Opret grej/ }));
+
+    expect(opret).toHaveBeenCalledWith(expect.objectContaining({
+      navn: 'Telt', vaegt: '1200', pris: '1500', antal: '1', status: 'overvejer'
+    }));
+  });
+
+  it('er det smalle ark, som referencen tegner det', async () => {
+    grejArk();
+    expect(await screen.findByRole('dialog')).toHaveClass('ark--smal');
+  });
+});
+
 describe('tilgængelighed', () => {
   it('er en dialog med en titel', async () => {
     turArk();
