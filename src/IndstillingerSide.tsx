@@ -175,23 +175,40 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
   };
 
   return (
-    <Skal fane={fane} skift={skift} titel="Indstillinger">
-      <div className="settings-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '24px', maxWidth: '720px', margin: '0 auto' }}>
+    <Skal
+      fane={fane}
+      skift={skift}
+      titel="Indstillinger"
+      // Samme sætning som rækken under Mere fører ind med, så man kan se, at
+      // man er landet der, hvor man trykkede hen. Referencen skriver den
+      // også ud under titlen.
+      undertitel="Konto, din krop og det der gælder hele appen"
+    >
+      {/* Afsnittene står i én spalte under titlen. Loftet er smallere end
+          hovedspalten, fordi en indstillingsrække skal kunne læses fra etiket
+          til værdi i ét blik — men den er venstrestillet og ikke centreret:
+          centreret lå kortene en tomme inde under deres egen overskrift. */}
+      <div className="settings-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '24px', maxWidth: '720px' }}>
 
         <section ref={sigte('konto')}>
           <SektionsTitel>Konto</SektionsTitel>
           <Kort>
             {bruger ? (
               <>
-                <Raekke label="Logget ind som" vaerdi={bruger.email} />
+                <Raekke label="E-mail" vaerdi={bruger.email} maerke="Logget ind" />
                 <Navnefelt
                   start={bruger.name ?? ''}
+                  // Svaret siger, om navnet nåede op. Feltet skal vide det:
+                  // først når serveren har taget imod, er det gemte navn et
+                  // andet — og først der må advarslen om det tomme navn gå væk.
                   gem={async (v) => {
                     try {
                       await gemNavn(v);
                       setNavnBesked({ slags: 'ok', tekst: 'Navnet er gemt.' });
+                      return true;
                     } catch {
                       setNavnBesked({ slags: 'fejl', tekst: 'Kunne ikke gemme navnet.' });
+                      return false;
                     }
                   }}
                 />
@@ -237,7 +254,13 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
             <Raekke label="Server" vaerdi={serveradresse()} />
 
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
-              <Knap variant="primaer" onClick={synkroniser} disabled={arbejder !== null}>
+              {/* Outline og ikke fyldt accent. Skærmens ene fyldte knap er
+                  "Gem navn", og den tænder kun, når der er et rettet navn at
+                  gemme — stod sync'en fyldt, ville der være to i samme
+                  skærmbillede i præcis det øjeblik, man havde rettet noget.
+                  Knappen er stadig den første af de tre og gør det samme;
+                  synkroniseringen kører i forvejen af sig selv. */}
+              <Knap onClick={synkroniser} disabled={arbejder !== null}>
                 {arbejder === 'sync' ? 'Synkroniserer…' : 'Synkronisér nu'}
               </Knap>
               <Knap onClick={tjekServer} disabled={arbejder !== null}>
@@ -301,7 +324,11 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
         </section>
 
         <section>
-          <SektionsTitel>Kroppen</SektionsTitel>
+          <SektionsTitel>Din krop</SektionsTitel>
+          <Afsnitstekst>
+            Bruges til at foreslå vægt og forbrug på turene. Tallene bliver på denne
+            enhed og deles aldrig med gæster på dine ture.
+          </Afsnitstekst>
           <Kort>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
               <Felt
@@ -324,11 +351,16 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
               <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginBottom: '8px' }}>
                 Aktivitetsniveau
               </div>
+              {/* Stille: det valgte tegnes på accent-fladen og ikke i den
+                  fyldte accent. Det er en oplysning om kroppen — den skal
+                  kunne ses, men den er ikke det, man er kommet for at trykke
+                  på. Samme rettelse som "Sover typisk i" under Folk. */}
               <Segment
                 vaerdier={AKTIVITETSNIVEAU}
                 valgt={krop.aktivitetsniveau ?? 'middel'}
                 vaelg={(n) => void saet(AKTIVITETSNIVEAU_VALG, n)}
                 formater={(n) => etiket(n)}
+                stille
               />
             </div>
 
@@ -336,8 +368,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
               Bruges til at regne vand og mad ud på turene. Uden dem regner motoren med
               en person på 75 kg — en 65-kilos vandrer og en 95-kilos bushcrafter med
               bålmad drikker ikke det samme. Skriver du et kaloriebehov ind, bruges det
-              i stedet for skønnet over maden. Tallene bliver på denne enhed og deles
-              aldrig med gæster på dine ture.
+              i stedet for skønnet over maden.
             </Hjaelp>
           </Kort>
         </section>
@@ -368,6 +399,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
               vaerdier={PAK_AF_NIVEAU}
               valgt={pakAfNiveau}
               vaelg={(n) => void saet(PAK_AF_NIVEAU_VALG, n)}
+              stille
             />
             <Hjaelp>
               Let er tre knapper pr. stykke grej — brugt, ubrugt, gik i stykker. Grundig
@@ -446,9 +478,36 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
 // Navnet er det de andre ser på en delt tur — og det, startskærmen hilser med
 // om morgenen. Det gemmes med en knap og ikke pr. tastetryk: hvert gem er et
 // kald til serveren.
-function Navnefelt({ start, gem }: { start: string; gem: (v: string) => Promise<void> }) {
+//
+// Knappen er skærmens eneste fyldte accent, og den er det kun, når der er
+// noget at gemme: et navn, der både er rettet og ikke er tomt. Resten af
+// tiden står den som en slukket outline. Reglen står i docs/design/TOKENS.md
+// og i handoff'en "Ejer Indstillinger · desktop" — én fyldt primary pr.
+// skærmbillede, og den skal betyde noget.
+//
+// Tomt er ikke en gyldig værdi. Feltet kunne gemmes tomt: man ryddede det,
+// knappen tændte — teksten var jo en anden end den gemte — og bagefter stod
+// man som «Uden navn» på sine egne ture, mens gæstesiden ikke kunne skrive,
+// hvem turen var fra. Nu slår et tomt felt knappen fra og siger hvorfor.
+function Navnefelt({ start, gem }: { start: string; gem: (v: string) => Promise<boolean> }) {
+  // Det navn, serveren har. Det er ikke det samme som feltets indhold, og det
+  // er det, advarslen og "er der rettet noget?" skal måles imod.
+  const [gemt, setGemt] = useState(start.trim());
   const [navn, setNavn] = useState(start);
   const [gemmer, setGemmer] = useState(false);
+
+  const vaerdi = navn.trim();
+  const tomt = vaerdi === '';
+  const rettet = vaerdi !== gemt;
+  const klar = rettet && !tomt && !gemmer;
+
+  const gemNu = async () => {
+    setGemmer(true);
+    // Først når det nåede op, er det gemte navn et andet. Gik det galt, står
+    // feltet som man skrev det, og knappen er der stadig at trykke på igen.
+    if (await gem(vaerdi)) setGemt(vaerdi);
+    setGemmer(false);
+  };
 
   return (
     <div style={{ marginTop: '14px' }}>
@@ -457,16 +516,31 @@ function Navnefelt({ start, gem }: { start: string; gem: (v: string) => Promise<
         value={navn}
         onChange={setNavn}
         placeholder="Fx Emil"
-        hjaelp="vises på forsiden og for de andre på delte ture"
+        {...(tomt
+          ? { fejl: 'må ikke være tomt' }
+          : { hjaelp: 'står på dine ture og hos dem du deler med' })}
       />
       <div style={{ marginTop: '8px' }}>
-        <Knap
-          onClick={() => { setGemmer(true); void gem(navn).finally(() => setGemmer(false)); }}
-          disabled={gemmer || navn.trim() === start.trim()}
-        >
+        <Knap variant={klar ? 'primaer' : 'sekundaer'} onClick={() => void gemNu()} disabled={!klar}>
           {gemmer ? 'Gemmer…' : 'Gem navn'}
         </Knap>
       </div>
+      {/* En slukket knap uden en grund ligner en fejl i appen. Linjen her
+          siger, hvad der skal til for at tænde den — eller at der ikke er
+          noget at gemme lige nu. */}
+      <div style={{ fontSize: 'var(--skrift-mikro)', color: 'var(--tekst-svag)', marginTop: '6px' }}>
+        {tomt
+          ? 'Skriv et navn for at gemme.'
+          : rettet
+            ? 'Gem for at sende det nye navn op.'
+            : 'Navnet er gemt. Ret det for at gemme igen.'}
+      </div>
+      {gemt === '' && (
+        <Advarsel>
+          Din konto har ikke noget navn endnu. På en delt tur står du som «Uden navn»,
+          og gæstesiden kan ikke skrive, hvem turen er fra.
+        </Advarsel>
+      )}
     </div>
   );
 }
@@ -544,7 +618,13 @@ function Kort({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Raekke({ label, vaerdi, fremhaev }: { label: string; vaerdi: string; fremhaev?: boolean }) {
+function Raekke({ label, vaerdi, fremhaev, maerke }: {
+  label: string;
+  vaerdi: string;
+  fremhaev?: boolean;
+  // Tilstanden ved siden af værdien, fx "Logget ind" ud for e-mailen.
+  maerke?: string;
+}) {
   return (
     <div style={{
       display: 'flex',
@@ -557,8 +637,50 @@ function Raekke({ label, vaerdi, fremhaev }: { label: string; vaerdi: string; fr
       <span style={{ flex: '0 0 40%', color: 'var(--tekst-dæmpet)' }}>{label}</span>
       <span style={{ minWidth: 0, overflowWrap: 'anywhere', color: fremhaev ? 'var(--advarsel)' : 'var(--tekst)', fontWeight: fremhaev ? 600 : 400, textAlign: 'right' }}>
         {vaerdi}
+        {maerke && <Maerke>{maerke}</Maerke>}
       </span>
     </div>
+  );
+}
+
+// Mærkaten ved siden af en værdi. Den står på accent-fladen og ikke i den
+// fyldte accent: en tilstand, man ikke kan trykke på, må ikke se ud som
+// skærmens handling.
+function Maerke({ children }: { children: React.ReactNode }) {
+  return (
+    <span style={{
+      marginLeft: '8px',
+      display: 'inline-flex',
+      alignItems: 'center',
+      padding: '1px 8px',
+      borderRadius: 'var(--runding-pille)',
+      background: 'var(--accent-bg)',
+      color: 'var(--accent)',
+      border: '1px solid var(--accent-border)',
+      fontSize: 'var(--skrift-mikro)',
+      fontWeight: 600,
+      letterSpacing: '0.4px',
+      whiteSpace: 'nowrap',
+      verticalAlign: 'middle'
+    }}>
+      {children}
+    </span>
+  );
+}
+
+// Linjen mellem en sektionstitel og dens kort. Den forklarer, hvad afsnittet
+// bruges til, før man står i felterne — som referencen gør det over "Din krop".
+function Afsnitstekst({ children }: { children: React.ReactNode }) {
+  return (
+    <p style={{
+      margin: '-4px 0 12px',
+      fontSize: 'var(--skrift-lille)',
+      color: 'var(--tekst-dæmpet)',
+      lineHeight: 1.5,
+      maxWidth: '68ch'
+    }}>
+      {children}
+    </p>
   );
 }
 
