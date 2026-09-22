@@ -427,6 +427,90 @@ button:disabled { cursor: not-allowed; }
   border-radius: 50%;
   background: var(--accent);
 }
+/* Fremdriften øverst på Pakning. Referencen har den i fuld bredde over
+   listen: Pakket · 8 af 14 til venstre, vægten til højre, striben under.
+   docs/design/desktop/04-pakning.html. */
+.packing-progress {
+  margin-bottom: var(--plads-4);
+  padding: var(--plads-4);
+  border: 1px solid var(--border-svag);
+  border-radius: var(--runding-lille);
+  background: var(--bg-forhoejet);
+  box-shadow: 0 1px 2px var(--skygge);
+}
+
+.packing-progress-hoved {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--plads-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--plads-2);
+}
+
+.packing-progress-label {
+  display: block;
+  font-size: var(--skrift-mikro);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--tekst-dæmpet);
+}
+
+.packing-progress-tal {
+  display: block;
+  margin-top: 2px;
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: var(--skrift-tal);
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.packing-progress-vaegt { font-size: var(--skrift-detalje); color: var(--tekst-dæmpet); }
+
+.packing-progress-bane {
+  height: 8px;
+  border-radius: var(--runding-pille);
+  background: var(--border-svag);
+  overflow: hidden;
+}
+
+.packing-progress-fod {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--plads-1);
+  margin-top: var(--plads-2);
+  font-size: var(--skrift-lille);
+  color: var(--tekst-dæmpet);
+}
+
+/* "Mangler (6)" fra referencens filterrække. Et snit gennem listen og ikke
+   en opdeling af den — derfor en knap for sig og ikke et felt i vælgeren.
+   Slået til er den tonet og ikke fyldt: den fyldte accent er turens næste
+   skridt, og der er kun plads til én. */
+.packing-filter {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--roerehoejde);
+  padding: 0 var(--plads-3);
+  border: 1px solid var(--border);
+  border-radius: var(--runding-pille);
+  background: transparent;
+  color: var(--tekst-dæmpet);
+  font-size: var(--skrift-lille);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.packing-filter[aria-pressed='true'] {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .packing-row { min-height: 56px; border-radius: 6px; padding: 10px 4px !important; column-gap: 10px !important; }
 input[type='checkbox'] { accent-color: var(--accent); width: 22px !important; height: 22px; min-height: 22px; padding: 0; margin: 0 4px 0 0; flex-shrink: 0; cursor: pointer; }
 input[type='checkbox']:checked { animation: check-in 160ms ease-out; }

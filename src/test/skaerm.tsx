@@ -38,6 +38,13 @@ export function saetBredde(px: number): void {
   }) as typeof window.matchMedia;
 }
 
+// jsdom har heller ingen `scrollIntoView`. Skærme, der er sendt et sted hen
+// af et forslag eller en mangel, ruller derhen ved montering — og uden en stub
+// falder de på et kald, der ikke er andet end en bevægelse.
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {};
+}
+
 // Tegner en skærm i en given bredde. Returnerer det samme som `render`.
 export function tegn(ui: ReactElement, bredde: number = MOBIL) {
   saetBredde(bredde);

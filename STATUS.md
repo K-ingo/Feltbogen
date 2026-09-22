@@ -1,6 +1,6 @@
 # STATUS
 
-*Sidst opdateret: 19. september 2026. Udgangspunkt: `main` @ `bc40465`.*
+*Sidst opdateret: 22. september 2026. Udgangspunkt: `main` @ `b489d4e`.*
 
 Kort svar på "hvor står vi nu?". Den skal kunne læses på to minutter og
 opdateres, hver gang noget bliver færdigt eller blokeret.
@@ -34,12 +34,12 @@ af tyve er bygget.
 
 ## Grønt lys
 
-Kørt på grenen `claude/tur-detalje-handoff` den 19. september 2026:
+Kørt på grenen `claude/peaceful-shannon-wr8d8s` den 22. september 2026:
 
 | Kommando | Resultat |
 |---|---|
 | `npm run lint` | Bestået, ingen fejl |
-| `npm test` | 65 testfiler, 1.402 tests, alle grønne |
+| `npm test` | 66 testfiler, 1.424 tests, alle grønne |
 | `npm run build` | Bestået |
 
 **Brug `npm run build` til typekontrol, ikke `npx tsc --noEmit`.** Roden
@@ -102,11 +102,15 @@ det samme; gør de ikke, er det Notion der gælder, og så skal filerne rettes.
 Alle elleve farver i `docs/design/TOKENS.md` stemmer nu med `:root` i
 `src/index.css`. Sidebaggrunden var den sidste, der manglede.
 
-**Der ligger tyve handoffs i kø.** Hjem på PC er den eneste, der er bygget,
-og den var udtrykkeligt tænkt som en prøve på formatet. Resten — Ture,
-Tur-detalje, Pakning, Grej, Grejsæt, Folk, Mere, Steder & Statistik,
+**Der ligger tyve handoffs i kø.** Fire er bygget: Hjem, Ture, Tur-detalje og
+Pakning på PC. Resten — Grej, Grejsæt, Folk, Mere, Steder & Statistik,
 Indstillinger og de to opret-ark, plus otte mobilskærme — er ikke rørt.
 Rækkefølgen er ikke besluttet.
+
+Pakning kostede mere end en farverettelse: den var **to** faner, "Pakning" og
+"Pakkeliste", og designet har én. Det er den samme liste to steder — man stod
+med tasken på den ene fane, mens tallet, man pakkede efter, stod på den anden.
+De to er nu én flade med fremdriften øverst.
 
 Tre regler fra `TOKENS.md` gælder bredere end den enkelte skærm og er ikke
 efterprøvet på det, der allerede står:
@@ -163,15 +167,21 @@ I den rækkefølge, de sandsynligvis er værd at tage.
    eneste værn mod at de to efterlader tomme poster. Selve oprettelsen er
    dækket hele vejen fra ark til post af `opretflow.test.ts`; det er
    sammenkoblingen inde i `App.tsx`, der mangler.
-10. **De sytten resterende skærme er ikke holdt op mod designet.** Hjem, Ture
-    og Tur-detalje på PC er gennemgået mod deres HTML-reference. De øvrige
-    kan afvige fra de låste tokens og fra reglen om én fyldt knap, uden at
-    nogen har set efter. Det er ikke en fejl, der er meldt — det er en
+10. **De seksten resterende skærme er ikke holdt op mod designet.** Hjem,
+    Ture, Tur-detalje og Pakning på PC er gennemgået mod deres HTML-reference.
+    De øvrige kan afvige fra de låste tokens og fra reglen om én fyldt knap,
+    uden at nogen har set efter. Det er ikke en fejl, der er meldt — det er en
     gennemgang, der ikke er foretaget.
 
-    To af de tre gennemgåede havde en rigtig overtrædelse, ingen havde meldt:
-    Hjem havde tre fyldte accent-knapper over folden, Tur-detalje havde to.
-    Det er værd at regne med, at de øvrige også har.
+    Tre af de fire gennemgåede havde en rigtig overtrædelse, ingen havde meldt:
+    Hjem havde tre fyldte accent-knapper over folden, Tur-detalje havde to, og
+    pakkelistens opdelingsvælger var den anden fyldte accent på Pakning. Det er
+    værd at regne med, at de øvrige også har.
+
+    **Set undervejs, ikke rettet:** Overblik-fanen på en tur har to fyldte
+    accenter på telefonen — turens primære knap og `Se fordelingen` i
+    forslagskortet. Det hører til Tur-detalje · mobil og ikke til denne
+    skærm.
 
 ### Funktioner, der venter
 
@@ -216,9 +226,9 @@ står i `PLAN.md` §4 og §9.
 
 | PR | Gren | Hvad den gør |
 |---|---|---|
-| [#68](https://github.com/K-ingo/Feltbogen/pull/68) | `claude/tur-detalje-handoff` | Tur-detalje på PC: status som pille, `Find` gjort outline |
+| [#69](https://github.com/K-ingo/Feltbogen/pull/69) | `claude/peaceful-shannon-wr8d8s` | Pakning på PC: Pakning og Pakkeliste blev én flade |
 
-#62, #64, #65, #66 og #67 er merget.
+#62, #63, #64, #65, #66, #67 og #68 er merget.
 
 De tre sidste blev **squash-merget**. Grenene er derfor ikke forfædre til
 `main`, og `git branch --merged` melder dem som åbne, selvom indholdet er

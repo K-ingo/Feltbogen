@@ -70,7 +70,7 @@ appen starter.
 | Dagene på turen | `src/turdag.ts` | Flerdagesturens dage: nummer, aktivitet, overnatning og destination — datoen udledes |
 | Dagsplanen | `src/Dagsplan.tsx` | Dagene som en sektion under turens Overblik: opret, ret, flyt og slet |
 | Dagsplanen hos gæsten | `src/DeltTurVisning.tsx` | Ejerens dagsplan, frosset ned i snapshottet — "hvor sover vi tirsdag?" |
-| Pakning | `src/pakning.ts` | Hvad der er lagt i tasken, og hvor langt man er |
+| Pakning | `src/pakning.ts` | Hvad der er lagt i tasken, hvor langt man er, og snittet der kun viser det, der mangler |
 | Vurdering | `src/vurdering.ts` | Stjerner på grej og ture, og hvad motoren gør ved dem |
 | Turlog | `src/feltnoter.ts` | Dagbogen fra turen, samlet pr. dag |
 | Vedligehold | `src/vedligehold.ts` | Imprægnering, slibning — intervaller der går i ring |
@@ -167,6 +167,13 @@ Navigationen har fem faner: **Hjem, Ture, Grej, Folk** og **Mere**. Grejsæt
 ligger under Grej, fordi et sæt er en måde at samle sit grej på og ikke et
 sted man arbejder; Steder, Statistik og Indstillinger ligger under Mere, fordi
 de bruges sjældnere end ture og grej og ellers ville fylde lige så meget.
+
+Turen har fem faner: **Overblik · Pakning · Deltagere · Undervejs ·
+Praktisk** (`FANEBLADE` i `TurDetalje.tsx`, typen i `turmaal.ts`). Pakning er
+*én* fane: planen — hvilket grej der er med — og tjeklisten, man krydser af,
+er den samme liste, og de lå før på hver sin fane. Fremdriften står øverst i
+fuld bredde, listen fylder resten, og "Mangler" skærer den ned til det, der
+stadig ligger udenfor. Det følger `docs/design/desktop/04-pakning.html`.
 
 Skallen kender selv den sammenhæng (`HOERER_TIL` i `Skal.tsx`). Står man inde
 på en underskærm, bliver hovedfanen markeret i navigationen, og der kommer en
