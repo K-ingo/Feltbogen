@@ -396,9 +396,92 @@ button:disabled { cursor: not-allowed; }
 .person-list { display: grid; gap: 8px; }
 .person-card { border: 1px solid var(--border-svag); border-radius: var(--runding-lille); padding: 0 12px; background: var(--bg-forhoejet); }
 .person-avatar { display: grid; place-items: center; flex: 0 0 34px; width: 34px; height: 34px; border-radius: 50%; background: var(--accent-bg); color: var(--accent); font-weight: 700; }
-.gear-status-tabs { scrollbar-width: none; }
-.gear-status-tabs > button { flex-shrink: 0; white-space: nowrap; }
+/* Grej · fanebladene over listen.
+
+   De stod som piller, hvor den valgte var en fyldt accent-flade — og så var
+   der to fyldte accenter i det samme skærmbillede som "+ Tilføj grej", hvor
+   designsystemet tillader én. docs/design/desktop/05-grej.html tegner dem som
+   faneblade med en streg under det valgte. Markeringen kan stadig aflæses
+   uden at lægge endnu en grøn flade på skærmen. */
+.gear-status-tabs {
+  display: flex;
+  gap: 2px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  margin: var(--plads-4) 0 var(--plads-3);
+  border-bottom: 1px solid var(--border-svag);
+  scrollbar-width: none;
+}
 .gear-status-tabs::-webkit-scrollbar { display: none; }
+.gear-status-tabs > button {
+  flex-shrink: 0;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--plads-1);
+  padding: 0 var(--plads-4);
+  background: transparent;
+  border: none;
+  /* Stregen findes også på de fravalgte, bare gennemsigtig — ellers flytter
+     teksten sig to pixels, hver gang man skifter fane. */
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--tekst-dæmpet);
+  font-size: var(--skrift-detalje);
+  font-weight: 500;
+  cursor: pointer;
+}
+.gear-status-tabs > button[aria-pressed='true'] {
+  border-bottom-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+/* Tallet på Vedligehold er et varsel og ikke en optælling som de andre. */
+.gear-tab-tal--advarsel {
+  padding: 1px var(--plads-2);
+  border-radius: var(--runding-pille);
+  background: var(--advarsel-bg);
+  color: var(--advarsel);
+  font-weight: 600;
+}
+
+/* Grejsæt-indgangen øverst på Grej.
+
+   Den var en listerække med en chevron og lignede et stykke grej i listen
+   nedenunder. Referencen tegner den som et kort med en outline-knap: skærmens
+   næsthøjeste vej, tydeligt en anden slags end den fyldte "+ Tilføj grej". */
+.gear-sets-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--plads-4);
+  width: 100%;
+  padding: var(--plads-3) var(--plads-4);
+  margin-bottom: var(--plads-4);
+  text-align: left;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--runding-lille);
+  background: var(--bg-forhoejet);
+  cursor: pointer;
+  transition: background 140ms ease;
+}
+.gear-sets-tekst { min-width: 0; }
+.gear-sets-titel { display: block; font-size: var(--skrift-detalje); font-weight: 600; color: var(--tekst); }
+.gear-sets-detalje { display: block; margin-top: 2px; font-size: var(--skrift-lille); color: var(--tekst-dæmpet); }
+.gear-sets-aabn {
+  flex-shrink: 0;
+  padding: 6px var(--plads-3);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--runding-lille);
+  font-size: var(--skrift-lille);
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* Navnet og dets mærke deler cellen, og mærket må gerne falde ned under
+   navnet frem for at presse kolonnen bredere. */
+.gear-navn-celle { display: flex; align-items: center; gap: var(--plads-2); flex-wrap: wrap; }
+.gear-care-note { margin: var(--plads-3) 0 0; font-size: var(--skrift-lille); color: var(--tekst-dæmpet); }
 .gear-filter-toggle { margin: -2px 0 12px; }
 .trip-status { min-width: 0; }
 
@@ -522,7 +605,7 @@ label:has(> input[type='checkbox']) { min-height: 48px; }
 @keyframes check-in { from { transform: scale(.85); } to { transform: scale(1); } }
 @keyframes breathe { from { opacity: .45; } to { opacity: .9; } }
 @media (hover: hover) {
-  .is-clickable:hover, .gear-table tbody tr:hover, .nav-item:hover { background: var(--accent-bg) !important; }
+  .is-clickable:hover, .gear-table tbody tr:hover, .nav-item:hover, .gear-sets-card:hover { background: var(--accent-bg) !important; }
   .ui-button:hover:not(:disabled) { filter: brightness(1.08); }
   .trip-card:hover { border-color: var(--accent-border); box-shadow: 0 8px 24px var(--skygge); }
 }
@@ -540,7 +623,6 @@ label:has(> input[type='checkbox']) { min-height: 48px; }
   .packing-row > span:last-child { margin-left: auto; }
   .trip-grid.is-compact { max-width: none; }
   .people-intro { padding: 14px; align-items: start; }
-  .gear-status-tabs { flex-wrap: nowrap !important; overflow-x: auto; padding-bottom: 4px; }
 }
 @media (max-width: 359px) {
   .trip-status > div { flex-wrap: nowrap !important; overflow-x: auto; scrollbar-width: none; }

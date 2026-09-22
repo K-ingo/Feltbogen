@@ -175,6 +175,16 @@ er den samme liste, og de lå før på hver sin fane. Fremdriften står øverst 
 fuld bredde, listen fylder resten, og "Mangler" skærer den ned til det, der
 stadig ligger udenfor. Det følger `docs/design/desktop/04-pakning.html`.
 
+Grej har fem faneblade: **Ejer · Indkøb · Solgt · Lån · Vedligehold**
+(`FANEBLADE` i `InventarSide.tsx`). De tre første er statusser, de to sidste
+tværgående udsnit af det, man ejer. De tegnes som faneblade med en streg under
+det valgte og ikke som fyldte piller — den fyldte accent er "+ Tilføj grej"s
+alene. Vedligehold-tallet står i advarselsfarven, når der er noget forfaldent,
+og de samme poster er mærket **Pas på** ude i selve listen; `forfaldne()` i
+`vedligehold.ts` er kilden til både mærket, fanetallet og Hjems
+opmærksomhedspunkter. Grejsættene har en outline-indgang øverst — skærmens
+næsthøjeste vej. Det følger `docs/design/desktop/05-grej.html`.
+
 Skallen kender selv den sammenhæng (`HOERER_TIL` i `Skal.tsx`). Står man inde
 på en underskærm, bliver hovedfanen markeret i navigationen, og der kommer en
 "‹ Grej"-linje over titlen — begge dele udledt, så en vej tilbage ikke kan
