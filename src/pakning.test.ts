@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { pakkede, erPakket, veksl, pakAlle, ryd, fremdrift, fremdriftstekst, kunUpakkede } from './pakning';
+import { pakkede, erPakket, veksl, pakAlle, ryd, fremdrift, fremdriftstekst, kunUpakkede, pakkehandling } from './pakning';
 import { linjeAfItem, linjeAfMedbragt } from './smartMotor';
 import { lavItem, lavTur } from './test/data';
 
@@ -174,5 +174,32 @@ describe('kunUpakkede', () => {
     );
 
     expect(skaaret).toEqual([]);
+  });
+});
+
+describe('pakkehandling', () => {
+  const grej = [lavItem({ uid: 'a' }), lavItem({ uid: 'b' }), lavItem({ uid: 'c' })];
+  const med = (pakket: string[], paaTuren = grej) =>
+    pakkehandling(fremdrift(lavTur({ pakkede_item_uids: pakket }), paaTuren));
+
+  it('beder om grej, når der ikke er valgt noget', () => {
+    expect(med([], [])).toEqual({ tilstand: 'tom', label: 'Tilføj grej', maal: 'pakning', kunUpakkede: false });
+  });
+
+  it('tager én til de upakkede, når noget stadig mangler', () => {
+    expect(med(['a'])).toEqual({ tilstand: 'delvis', label: 'Pak de 2 upakkede', maal: 'pakkeliste', kunUpakkede: true });
+  });
+
+  it('siger den sidste, når der kun er én tilbage', () => {
+    expect(med(['a', 'b'])?.label).toBe('Pak den sidste');
+  });
+
+  it('giver pladsen fra sig, når alt er pakket', () => {
+    expect(med(['a', 'b', 'c'])).toBeNull();
+  });
+
+  it('tæller ikke et kryds på grej, der ikke længere er på turen', () => {
+    // Ærlig fremdrift: et gammelt kryds må ikke gøre turen færdigpakket.
+    expect(med(['a', 'b', 'x'])?.label).toBe('Pak den sidste');
   });
 });

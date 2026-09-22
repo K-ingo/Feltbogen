@@ -1147,6 +1147,30 @@ button:disabled { cursor: not-allowed; }
   font-weight: 600;
 }
 
+/* Offline-linjen øverst på telefonens Pakning. Stille med vilje: den er en
+   oplysning og ikke en advarsel, og den må ikke konkurrere med den fyldte
+   knap. Offline skifter prikken til advarselsfarven — ordlyden skifter også,
+   så det kan aflæses uden at skelne farverne. */
+.packing-offline {
+  display: flex;
+  align-items: center;
+  gap: var(--plads-2);
+  margin-bottom: var(--plads-3);
+  font-size: var(--skrift-lille);
+  color: var(--tekst-dæmpet);
+}
+
+.packing-offline-prik {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.packing-offline[data-online='false'] { color: var(--advarsel); font-weight: 500; }
+.packing-offline[data-online='false'] .packing-offline-prik { background: var(--advarsel); }
+
 .packing-row { min-height: 56px; border-radius: 6px; padding: 10px 4px !important; column-gap: 10px !important; }
 input[type='checkbox'] { accent-color: var(--accent); width: 22px !important; height: 22px; min-height: 22px; padding: 0; margin: 0 4px 0 0; flex-shrink: 0; cursor: pointer; }
 input[type='checkbox']:checked { animation: check-in 160ms ease-out; }

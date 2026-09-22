@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -9,7 +9,7 @@ import { db } from './db';
 import type { Item, Tur } from './db';
 import TurDetalje from './TurDetalje';
 import { lavItem, lavGruppe, lavTur } from './test/data';
-import { tegn, DESKTOP } from './test/skaerm';
+import { tegn, DESKTOP, MOBIL } from './test/skaerm';
 
 // ─────────────────────────────────────────────
 // Pakning · desktop
@@ -44,7 +44,7 @@ const GREJ = [
 ];
 
 const visPakning = async (
-  { pakket = 0, grej = GREJ, ...felter }: Partial<Tur> & { pakket?: number; grej?: Partial<Item>[] } = {}
+  { pakket = 0, grej = GREJ, bredde = DESKTOP, ...felter }: Partial<Tur> & { pakket?: number; grej?: Partial<Item>[]; bredde?: number } = {}
 ) => {
   await db.items.bulkAdd(grej.map((g) => lavItem(g)));
   const uids = grej.map((g) => g.uid as string);
@@ -56,7 +56,7 @@ const visPakning = async (
     ...felter
   }));
 
-  tegn(<TurDetalje turId={id as number} tilbage={vi.fn()} />, DESKTOP);
+  tegn(<TurDetalje turId={id as number} tilbage={vi.fn()} />, bredde);
 
   // Fanerækken tegnes først, når turen er hentet.
   await userEvent.click(await screen.findByRole('tab', { name: /^Pakning/ }));
@@ -258,5 +258,128 @@ describe('Mangler-filteret', () => {
     expect(screen.queryByRole('checkbox', { name: /Telt/ })).not.toBeInTheDocument();
     // Overskriften over det, der er tilbage.
     expect(screen.getByText('Lejr')).toBeInTheDocument();
+  });
+});
+
+// ─────────────────────────────────────────────
+// Pakning · mobil
+//
+// Fra handoff'en "Ejer Pakning (mobil)" og docs/design/mobile/06-pakning.html,
+// med research-forslag #1: pakningen er mobil-primær — store trykflader,
+// ærlig fremdrift, "kun upakkede", og offline synligt i fladen.
+//
+// Det nye i forhold til PC er knappen: den fyldte accent følger pakningen.
+// Tom → Tilføj grej. Delvis → Pak de n upakkede. Færdig → turens eget næste
+// skridt. Den der ikke har den, er outline — aldrig to fyldte.
+// ─────────────────────────────────────────────
+
+const visMobil = (felter: Parameters<typeof visPakning>[0] = {}) =>
+  visPakning({ bredde: MOBIL, ...felter });
+
+describe('Pakning · mobil: knappen følger pakningen', () => {
+  it('er Tilføj grej, når der ikke er valgt noget — og turens skridt er outline', async () => {
+    await visMobil({ grej: [] });
+
+    const primaer = await screen.findByRole('button', { name: 'Tilføj grej' });
+    expect(fyldteAccenter()).toEqual([primaer]);
+    expect(screen.getByRole('button', { name: 'Start tur' })).toHaveClass('ui-button--sekundaer');
+  });
+
+  it('er Pak de n upakkede, mens noget stadig ligger udenfor', async () => {
+    await visMobil({ pakket: 1 });
+
+    const primaer = await screen.findByRole('button', { name: 'Pak de 2 upakkede' });
+    expect(fyldteAccenter()).toEqual([primaer]);
+    expect(screen.getByRole('button', { name: 'Start tur' })).toHaveClass('ui-button--sekundaer');
+  });
+
+  it('skærer listen ned til de upakkede, når man trykker', async () => {
+    await visMobil({ pakket: 1 });
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Pak de 2 upakkede' }));
+
+    expect(screen.getByRole('button', { name: 'Mangler (2)' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByRole('checkbox', { name: /Telt/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /Sovepose/ })).toBeInTheDocument();
+  });
+
+  it('skifter, mens man krydser af', async () => {
+    await visMobil({ pakket: 1 });
+
+    await userEvent.click(await screen.findByRole('checkbox', { name: /Sovepose/ }));
+
+    expect(await screen.findByRole('button', { name: 'Pak den sidste' })).toHaveClass('ui-button--primaer');
+  });
+
+  it('giver pladsen til turens næste skridt, når alt er pakket', async () => {
+    await visMobil({ pakket: 3 });
+
+    await screen.findByText('Alt er pakket');
+    expect(fyldteAccenter()).toHaveLength(1);
+    expect(fyldteAccenter()[0]).toHaveTextContent('Start tur');
+    expect(screen.queryByRole('button', { name: /upakkede|Pak den sidste/ })).not.toBeInTheDocument();
+  });
+
+  it('skriver creme på accent', async () => {
+    await visMobil({ pakket: 1 });
+
+    expect(await screen.findByRole('button', { name: 'Pak de 2 upakkede' }))
+      .toHaveStyle({ color: 'var(--accent-tekst)', background: 'var(--accent)' });
+  });
+
+  it('holder én fyldt, også med filteret slået til', async () => {
+    await visMobil({ pakket: 1 });
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Mangler (2)' }));
+
+    expect(fyldteAccenter()).toHaveLength(1);
+  });
+
+  it('rører ikke knapperne på en aktiv tur — dér er det på-tur-skærmen', async () => {
+    await visMobil({ pakket: 1, status: 'aktiv' });
+
+    await screen.findByText('1 af 3');
+    expect(fyldteAccenter()).toHaveLength(1);
+    expect(fyldteAccenter()[0]).toHaveTextContent('Åbn på-tur-skærmen');
+  });
+
+  it('rører ikke de andre faner', async () => {
+    await visMobil({ pakket: 1 });
+    await screen.findByRole('button', { name: 'Pak de 2 upakkede' });
+
+    await userEvent.click(screen.getByRole('tab', { name: /^Overblik/ }));
+
+    expect(screen.queryByRole('button', { name: 'Pak de 2 upakkede' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start tur' })).toHaveClass('ui-button--primaer');
+  });
+});
+
+describe('Pakning · mobil: offline kan ses', () => {
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  const saetOnline = (online: boolean) =>
+    vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(online);
+
+  it('siger at krydset gemmes på telefonen', async () => {
+    saetOnline(true);
+    await visMobil({ pakket: 1 });
+
+    expect(await screen.findByRole('status')).toHaveTextContent('gemmes på telefonen med det samme');
+  });
+
+  it('siger det, når man er offline — uden at love en sync', async () => {
+    saetOnline(false);
+    await visMobil({ pakket: 1 });
+
+    const linje = await screen.findByRole('status');
+    expect(linje).toHaveTextContent('Du er offline');
+    expect(linje).toHaveAttribute('data-online', 'false');
+    expect(linje.textContent).not.toMatch(/synk|sendt/i);
+  });
+
+  it('står også på en tom tur, før der er noget at krydse af', async () => {
+    await visMobil({ grej: [] });
+
+    expect(await screen.findByRole('status')).toBeInTheDocument();
   });
 });

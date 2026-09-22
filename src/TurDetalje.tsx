@@ -109,7 +109,8 @@ import {
   pakAlle,
   ryd as rydPakning,
   kunUpakkede,
-  fremdrift as pakkefremdrift
+  fremdrift as pakkefremdrift,
+  pakkehandling
 } from './pakning';
 import type { Pakkefremdrift } from './pakning';
 import { useValg, useKropsdata, useTekst, PAK_AF_NIVEAU_VALG, AFGANGS_SKABELON } from './indstillinger';
@@ -118,7 +119,7 @@ import { hentDeltagelser, baererePrGear, visningsnavn, deltagerbilleder } from '
 import type { Deltagelse } from './deltagelse';
 import { layout } from './layout';
 import { kilo } from './talformat';
-import { useErDesktop, useErBredskaerm } from './useMedie';
+import { useErDesktop, useErBredskaerm, useErOnline } from './useMedie';
 import { sletTur, opdaterTur } from './sync';
 import { meldFortrydelse } from './fortryd';
 import { soltider, skumringstekst } from './soltider';
@@ -177,6 +178,7 @@ const FANEBLADE: { id: Turfane; label: string }[] = [
 
 function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
   const erDesktop = useErDesktop();
+  const online = useErOnline();
   const erBred = useErBredskaerm();
   // Statusvælgeren ligger bag et tryk. Den var fremme hele tiden, og dens
   // valgte felt er en fyldt accent-flade — sammen med turens primære knap
@@ -1140,6 +1142,10 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
     // ændrer listen, men det er listen, man står med.
     pakning: (
       <>
+        {/* Offline først, og det skal kunne ses. På telefonen står man i
+            kælderen eller skoven med tasken — dér skal man vide, at krydset
+            holder, før man stoler på listen. */}
+        {!erDesktop && <Offlinelinje online={online} />}
         <Fremdriftskort
           pakning={pakning}
           vaegtIalt={vaegtDelt + vaegtPersonligt}
@@ -1232,6 +1238,20 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
     deltagere: tur.deltagere.length
   };
 
+  // Telefonens Pakning har sin egen fyldte knap, og den følger pakningen:
+  // tom → Tilføj grej, delvis → Pak de n upakkede, færdig → turens næste
+  // skridt igen. Se `pakkehandling` i pakning.ts.
+  //
+  // Kun før afgang. På en aktiv tur er det på-tur-skærmen, man skal have fat
+  // i, og efter turen er der ikke noget at pakke — dér står knapperne, som de
+  // står på de andre faner. Og først når grejet er hentet: indtil da ville
+  // knappen sige "Tilføj grej" om en tur, der har grej.
+  const pakkeknap = fane === 'pakning'
+    && (tur.status === 'kladde' || tur.status === 'klar')
+    && items !== undefined && grupper !== undefined
+    ? pakkehandling(pakning)
+    : null;
+
   return (
     <div style={erDesktop ? undefined : layout.container}>
       <DetaljeHeader tilbage={tilbage} sletLabel="Slet tur" slet={slet} />
@@ -1242,7 +1262,27 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
           ikke plads ved siden af titlen, så de står for sig — og på en aktiv
           tur er på-tur-skærmen den man skal have fat i, ikke knappen der
           afslutter turen. */}
-      {!erDesktop && (
+      {!erDesktop && pakkeknap && (
+        <>
+          <Knap
+            variant="primaer"
+            onClick={() => {
+              if (pakkeknap.kunUpakkede) setKunMangler(true);
+              gaaTilMaal(pakkeknap.maal);
+            }}
+            style={{ width: '100%', marginTop: '14px', padding: '11px' }}
+          >
+            {pakkeknap.label}
+          </Knap>
+          <Knap
+            onClick={handling.gaa}
+            style={{ width: '100%', marginTop: '8px', padding: '11px' }}
+          >
+            {handling.label}
+          </Knap>
+        </>
+      )}
+      {!erDesktop && !pakkeknap && (
         <>
           {tur.status === 'aktiv' && (
             <Knap
@@ -1367,6 +1407,23 @@ function Fremdriftskort({ pakning, vaegtIalt, vaegtPrPerson, personer, kunMangle
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+// Om krydsene holder uden net — sagt på pakkefladen, hvor man bruger dem.
+//
+// Ærlig og ikke beroligende: alt skrives til telefonen først, så det er sandt
+// at et kryds er gemt, også uden forbindelse. Om det kommer op på serveren,
+// siges der ikke noget om her — en bruger uden konto synkroniserer aldrig, og
+// sync-status hører til under Mere, hvor den kan sige det præcist.
+function Offlinelinje({ online }: { online: boolean }) {
+  return (
+    <div className="packing-offline" role="status" data-online={online}>
+      <span className="packing-offline-prik" aria-hidden="true" />
+      {online
+        ? 'Hvert kryds gemmes på telefonen med det samme — også uden net.'
+        : 'Du er offline. Det, du krydser af, gemmes på telefonen.'}
     </div>
   );
 }

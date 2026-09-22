@@ -28,7 +28,8 @@ står tilbage, er arbejde vi selv vælger — ikke noget, der spærrer.
 
 Det næste stykke arbejde er ikke funktionalitet, men udseende. Designsystemet
 er låst og ligger nu i repoet sammen med en tegning af hver eneste skærm. Alle
-tolv PC-tegninger er bygget; de otte til telefonen står tilbage.
+tolv PC-tegninger er bygget, og af de otte til telefonen er Pakning bygget;
+syv står tilbage.
 
 ---
 
@@ -105,8 +106,19 @@ Alle elleve farver i `docs/design/TOKENS.md` stemmer nu med `:root` i
 
 **Der ligger tyve handoffs i kø.** Tolv er bygget — hele PC-køen: Hjem, Ture,
 Tur-detalje, Pakning, Grej, Grejsæt, Folk, Mere, Steder & Statistik,
-Indstillinger og de to opret-ark, Ny tur og Tilføj grej. De otte mobilskærme
-er ikke rørt. Rækkefølgen er ikke besluttet.
+Indstillinger og de to opret-ark, Ny tur og Tilføj grej. Af de otte
+mobilskærme er Pakning bygget; de syv andre er ikke rørt. Rækkefølgen er ikke
+besluttet.
+
+**Pakning på telefonen** fik det, PC-udgaven ikke havde brug for: en fyldt
+knap, der følger pakningen. Tom tur → **Tilføj grej**, delvist pakket → **Pak
+de n upakkede** (skærer listen ned til dem og ruller derhen), alt pakket →
+turens eget næste skridt. Den, der ikke har den fyldte accent, er outline.
+Reglen står i `pakkehandling` i `src/pakning.ts`. Kun før afgang (kladde og
+klar); på en aktiv tur er det stadig på-tur-skærmen, der er den fyldte. Dertil
+en stille linje øverst på fladen, der siger at krydsene gemmes på telefonen —
+og siger "Du er offline", når man er det, uden at love noget om sync. Research
+#1 (sep 2026): pakning er mobil-primær, og offline skal kunne ses.
 
 Pakning kostede mere end en farverettelse: den var **to** faner, "Pakning" og
 "Pakkeliste", og designet har én. Det er den samme liste to steder — man stod
@@ -360,7 +372,9 @@ I den rækkefølge, de sandsynligvis er værd at tage.
     De tolv PC-skærme med en handoff er holdt op mod deres HTML-reference, og
     resten af PC-skærmene har fået et CTA-pas (nedenfor). Telefonens skærme
     kan stadig afvige fra de låste tokens og fra reglen, uden at nogen har set
-    efter; de har deres egne handoffs, og ingen af dem er bygget.
+    efter; de har deres egne handoffs, og kun Pakning er bygget — dens
+    Pakning-fane er testet for én fyldt accent i alle tre tilstande
+    (`Pakning.test.tsx`).
 
     Fem af de syv gennemgåede havde en rigtig overtrædelse, ingen havde meldt:
     Hjem havde tre fyldte accent-knapper over folden, Tur-detalje havde to,
@@ -405,6 +419,12 @@ I den rækkefølge, de sandsynligvis er værd at tage.
     accenter på telefonen — turens primære knap og `Se fordelingen` i
     forslagskortet. Det hører til Tur-detalje · mobil og ikke til denne
     skærm.
+
+    **Set undervejs, ikke rettet (Pakning · mobil):** referencen
+    `docs/design/mobile/06-pakning.html` tegner turens titel på en fyldt
+    accent-flade og har "Fælles"/"Dig" som filtre. Titlen er Tur-detalje ·
+    mobil's (Turhero), og filtrene er de eksisterende opdelinger (Alle,
+    Grejsæt, Tag, Person, Fælles) — ingen af dem er ændret her.
 
     **Set undervejs, ikke rettet:** `docs/design/mobile/03-grej.html` sætter
     også **Pas på** på rækkerne i telefonens grejliste. Mærket er kun lagt i
