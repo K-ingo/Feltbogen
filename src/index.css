@@ -1220,7 +1220,7 @@ label:has(> input[type='checkbox']) { min-height: 48px; }
 @keyframes check-in { from { transform: scale(.85); } to { transform: scale(1); } }
 @keyframes breathe { from { opacity: .45; } to { opacity: .9; } }
 @media (hover: hover) {
-  .is-clickable:hover, .gear-table tbody tr:hover, .nav-item:hover, .gear-sets-card:hover { background: var(--accent-bg) !important; }
+  .is-clickable:hover, .gear-table tbody tr:hover, .nav-item:hover, .gear-sets-card:hover, .grej-mobil-kort:hover { background: var(--accent-bg) !important; }
   .ui-button:hover:not(:disabled) { filter: brightness(1.08); }
   .trip-card:hover { border-color: var(--accent-border); box-shadow: 0 8px 24px var(--skygge); }
   .set-card:hover, .turvalg:hover { border-color: var(--accent-border); }
@@ -1387,3 +1387,19 @@ label:has(> input[type='checkbox']) { min-height: 48px; }
 .trip-grid--mobil.is-compact .trip-card { align-items: stretch; }
 .trip-grid--mobil.is-compact .trip-card-baand { width: 6px; height: auto; padding: 0; font-size: 0; flex-shrink: 0; }
 .trip-grid--mobil.is-compact .trip-card-baand svg { display: none; }
+
+/* Grej på telefonen. Efter docs/design/mobile/03-grej.html: titel, antal og
+   vægt og "+ Tilføj" på én linje som på Ture, og hver ting som sit eget stille
+   kort med "Pas på" i hjørnet. Kun låste tokens. */
+.grej-mobil-hoved { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--plads-3); padding-top: var(--plads-3); margin-bottom: var(--plads-3); }
+.grej-mobil-hoved > div { min-width: 0; }
+.grej-mobil-hoved h1 { margin: 0; font-family: 'Fraunces', Georgia, serif; font-size: 28px; font-weight: 400; line-height: 1.2; color: var(--tekst); }
+.grej-mobil-hoved p { margin: 2px 0 0; font-size: var(--skrift-lille); color: var(--tekst-dæmpet); }
+.grej-mobil-hoved .ui-button { flex-shrink: 0; }
+.grej-mobil-liste { display: flex; flex-direction: column; gap: var(--plads-2); }
+.grej-mobil-kort { display: block; min-height: var(--roerehoejde); padding: var(--plads-3) var(--plads-4); border: 1px solid var(--border-svag); border-radius: 12px; background: var(--bg-forhoejet); cursor: pointer; transition: background 140ms ease; }
+.grej-mobil-kort-top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--plads-2); }
+.grej-mobil-kort-top > span + span { flex-shrink: 0; text-transform: uppercase; letter-spacing: .04em; }
+.grej-mobil-kort-navn { min-width: 0; font-size: var(--skrift-detalje); font-weight: 500; color: var(--tekst); overflow-wrap: anywhere; }
+.grej-mobil-kort-detalje { display: block; margin-top: 2px; font-size: var(--skrift-mikro); color: var(--tekst-dæmpet); }
+.grej-mobil-kort > div { font-size: var(--skrift-mikro); }

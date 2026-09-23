@@ -161,8 +161,9 @@ describe.each([['PC', DESKTOP], ['telefon', MOBIL]] as const)('Grej · tom konto
     expect(within(sektion).getByRole('button', { name: 'Tilføj 5 grej' })).toHaveClass('ui-button--sekundaer');
     expect(within(sektion).getByRole('button', { name: 'Opret første tur' })).toHaveClass('ui-button--tekst');
     expect(fyldteAccenter()).toHaveLength(1);
-    if (bredde === DESKTOP) expect(fyldteAccenter()[0]).toHaveTextContent('+ Tilføj grej');
-    else expect(fyldteAccenter()[0]).toHaveAccessibleName('Tilføj');
+    // På telefonen står "+ Tilføj" i headeren som i
+    // docs/design/mobile/03-grej.html, og FAB'en er væk.
+    expect(fyldteAccenter()[0]).toHaveTextContent(bredde === DESKTOP ? '+ Tilføj grej' : '+ Tilføj');
   });
 
   it('markerer turen gjort, når der findes en — uden at opfinde noget', async () => {
