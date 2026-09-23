@@ -11,6 +11,7 @@ import { Knap, Badge, ListeRaekke, SektionsTitel, TomListe, Segment } from './ui
 import { Billedvisning } from './BilledSektion';
 import { KomIGang } from './KomIGang';
 import { hero } from './billeder';
+import { useErDesktop } from './useMedie';
 import { faseAf, FASENAVN, manglerSted } from './turfase';
 import type { Fase } from './turfase';
 
@@ -40,6 +41,7 @@ interface Props {
 }
 
 function TureListe({ fane, skift, aabnTur, aabnDeltTur, nyTur, foersteTur, nytItem }: Props) {
+  const erDesktop = useErDesktop();
   const [soegning, setSoegning] = useState('');
   // "Gitter" og ikke "Kort": kort betyder både et kartotekskort og et
   // landkort på dansk, og en app med steder i har brug for at det andet
@@ -58,17 +60,28 @@ function TureListe({ fane, skift, aabnTur, aabnDeltTur, nyTur, foersteTur, nytIt
   const visteDelte = delte?.filter(d => matcher(d.snapshot.navn, d.snapshot.sted)) ?? [];
 
   return (
+    // Telefonen har sin egen header efter docs/design/mobile/02-ture.html:
+    // titel, antal og "+ Ny tur" på samme linje. Knappen er skærmens ene
+    // fyldte accent, og derfor ingen FAB — den ville være nummer to.
     <Skal
       fane={fane}
       skift={skift}
-      titel="Ture"
-      undertitel={undertitel(egne, antalDelte)}
+      titel={erDesktop ? 'Ture' : undefined}
+      undertitel={erDesktop ? undertitel(egne, antalDelte) : undefined}
       handlinger={<Knap variant="primaer" onClick={nyTur}>+ Ny tur</Knap>}
-      fab={nyTur}
     >
+      {!erDesktop && (
+        <header className="ture-mobil-hoved">
+          <div>
+            <h1>Ture</h1>
+            <p>{undertitel(egne, antalDelte)}</p>
+          </div>
+          <Knap variant="primaer" onClick={nyTur}>+ Ny tur</Knap>
+        </header>
+      )}
       {/* Venter på basen, så den tomme tilstand ikke blinker forbi på vej ind
-          til en liste med ture. "+ Ny tur" i headeren (FAB'en på telefonen)
-          er stadig skærmens ene fyldte accent. */}
+          til en liste med ture. "+ Ny tur" i headeren er stadig skærmens ene
+          fyldte accent. */}
       {ture !== undefined && delte !== undefined && egne === 0 && antalDelte === 0 && (
         <KomIGang
           overskrift="Ingen ture endnu"
@@ -78,24 +91,33 @@ function TureListe({ fane, skift, aabnTur, aabnDeltTur, nyTur, foersteTur, nytIt
           fokus="tur"
         />
       )}
-      {egne + antalDelte > 0 && <input type="search" aria-label="Søg ture" placeholder="Find en tur eller et sted…" value={soegning} onChange={e => setSoegning(e.target.value)} style={{ width: '100%', marginBottom: '24px' }} />}
+      {egne + antalDelte > 0 && <input type="search" aria-label="Søg ture" placeholder={erDesktop ? 'Find en tur eller et sted…' : 'Søg efter tur eller sted…'} value={soegning} onChange={e => setSoegning(e.target.value)} style={{ width: '100%', marginBottom: erDesktop ? '24px' : '12px' }} />}
       {soegning && visteTure.length + visteDelte.length === 0 && <TomListe handling="Ryd søgning" onClick={() => setSoegning('')}>Ingen ture matcher “{soegning}”. Prøv et andet navn eller sted.</TomListe>}
 
-      {egne + antalDelte > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
-        <span style={{ color: 'var(--tekst-dæmpet)', fontSize: 'var(--skrift-detalje)' }}>{soegning ? `${visteTure.length + visteDelte.length} af ${egne + antalDelte} ture` : 'Dine ture'}</span>
+      {egne + antalDelte > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: erDesktop ? '16px' : '12px', flexWrap: 'wrap' }}>
+        {/* På telefonen er "Dine ture" en overskrift over kortene, som i
+            tegningen; på PC'en er den en stille linje. */}
+        <span style={erDesktop
+          ? { color: 'var(--tekst-dæmpet)', fontSize: 'var(--skrift-detalje)' }
+          : { color: 'var(--tekst)', fontSize: 'var(--skrift-detalje)', fontWeight: 600 }}>{soegning ? `${visteTure.length + visteDelte.length} af ${egne + antalDelte} ture` : 'Dine ture'}</span>
         {/* Stille og ikke fyldt: "+ Ny tur" er skærmens ene fyldte accent.
             Referencen tegner "Gitter" fyldt, men en vælger, der ændrer
             visningen, er ikke skærmens næste skridt. */}
         <Segment vaerdier={['Gitter', 'Liste'] as const} valgt={visning} vaelg={setVisning} stille />
       </div>}
-      <div className={`trip-grid${visning === 'Liste' ? ' is-compact' : ''}`}>
+      <div className={`trip-grid${visning === 'Liste' ? ' is-compact' : ''}${erDesktop ? '' : ' trip-grid--mobil'}`}>
       {visteTure.map((t) => (
         <button
           className="trip-card"
           key={t.uid}
           onClick={() => t.id !== undefined && aabnTur(t.id)}
         >
-          <Forsidebillede tur={t} billeder={billeder} />
+          {/* På telefonen er toppen et smalt accent-bånd med turens
+              kategori, som i tegningen — et billede på 160 px gav plads til
+              halvandet kort på skærmen. PC'en beholder forsidebilledet. */}
+          {erDesktop
+            ? <Forsidebillede tur={t} billeder={billeder} />
+            : <span className="trip-card-baand"><Ikon navn="kompas" size={14} />{etiket(t.aktivitet)}</span>}
           <span className="trip-card-body">
             <span className="trip-card-maerker">
               <Badge niveau={FASE_NIVEAU[faseAf(t)]}>{FASENAVN[faseAf(t)]}</Badge>

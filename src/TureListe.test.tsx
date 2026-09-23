@@ -8,7 +8,7 @@ vi.mock('./pb', () => import('./test/pbMock'));
 import { db } from './db';
 import TureListe from './TureListe';
 import { lavTur } from './test/data';
-import { tegn, DESKTOP } from './test/skaerm';
+import { tegn, DESKTOP, MOBIL } from './test/skaerm';
 
 // ─────────────────────────────────────────────
 // Ture · desktop
@@ -150,5 +150,69 @@ describe('visningen kan skiftes', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Liste' }));
     expect(document.querySelector('.trip-grid')).toHaveClass('is-compact');
+  });
+});
+
+// ─────────────────────────────────────────────
+// Ture · mobil
+//
+// Efter `docs/design/mobile/02-ture.html`: titel, antal og "+ Ny tur" på én
+// linje, søgefeltet, "Dine ture" med Gitter | Liste, og kort med et accent-bånd
+// i toppen. "+ Ny tur" er skærmens ene fyldte accent — derfor ingen FAB.
+// ─────────────────────────────────────────────
+
+const visMobil = () => tegn(
+  <TureListe
+    fane="ture" skift={vi.fn()} aabnTur={vi.fn()} aabnDeltTur={vi.fn()} nyTur={vi.fn()}
+  />,
+  MOBIL
+);
+
+describe('Ture på telefonen', () => {
+  it('har titel, antal og + Ny tur i headeren — og ingen FAB', async () => {
+    await db.ture.bulkAdd([
+      lavTur({ navn: 'Fovslet Skov', sted: 'Fovslet' }),
+      lavTur({ navn: 'Øhaven', sted: 'Øhaven' })
+    ]);
+    visMobil();
+
+    await screen.findByText('Fovslet Skov');
+    const hoved = document.querySelector('.ture-mobil-hoved') as HTMLElement;
+    expect(within(hoved).getByRole('heading', { name: 'Ture' })).toBeInTheDocument();
+    expect(within(hoved).getByText('2 ture')).toBeInTheDocument();
+    expect(within(hoved).getByRole('button', { name: '+ Ny tur' })).toHaveClass('ui-button--primaer');
+
+    expect(fyldte()).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: 'Tilføj' })).not.toBeInTheDocument();
+  });
+
+  it('har søgefeltet og Dine ture med Gitter valgt', async () => {
+    await db.ture.add(lavTur({ navn: 'Fovslet Skov', sted: 'Fovslet' }));
+    visMobil();
+
+    await screen.findByText('Fovslet Skov');
+    expect(screen.getByPlaceholderText('Søg efter tur eller sted…')).toBeInTheDocument();
+    expect(screen.getByText('Dine ture')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Gitter' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('giver kortet et accent-bånd med kategorien frem for et billede', async () => {
+    await db.ture.add(lavTur({ navn: 'Reed testtur', sted: '', status: 'kladde' }));
+    visMobil();
+
+    await screen.findByText('Reed testtur');
+    const k = kort('Reed testtur');
+    expect(k.querySelector('.trip-card-baand')).toBeInTheDocument();
+    expect(k.querySelector('.trip-card-photo')).not.toBeInTheDocument();
+    expect(within(k).getByText('Kladde')).toBeInTheDocument();
+    expect(within(k).getByText('Mangler sted')).toBeInTheDocument();
+  });
+
+  it('beholder den tomme tilstand fra Kom i gang med kun én fyldt knap', async () => {
+    visMobil();
+
+    expect(await screen.findByRole('button', { name: 'Opret første tur' })).toBeInTheDocument();
+    expect(fyldte()).toHaveLength(1);
+    expect(fyldte()[0]).toHaveTextContent('Ny tur');
   });
 });

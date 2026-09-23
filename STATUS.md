@@ -1,6 +1,6 @@
 # STATUS
 
-*Sidst opdateret: 23. september 2026. Udgangspunkt: `main` @ `b0f219e`.*
+*Sidst opdateret: 23. september 2026. Udgangspunkt: `main` @ `b1ef718`.*
 
 Kort svar på "hvor står vi nu?". Den skal kunne læses på to minutter og
 opdateres, hver gang noget bliver færdigt eller blokeret.
@@ -28,21 +28,21 @@ står tilbage, er arbejde vi selv vælger — ikke noget, der spærrer.
 
 Det næste stykke arbejde er ikke funktionalitet, men udseende. Designsystemet
 er låst og ligger nu i repoet sammen med en tegning af hver eneste skærm. Alle
-tolv PC-tegninger er bygget, og af de otte til telefonen er Pakning og Hjem
-bygget; seks står tilbage.
+tolv PC-tegninger er bygget, og af de otte til telefonen er Pakning, Hjem og
+Ture bygget; fem står tilbage.
 
 ---
 
 ## Grønt lys
 
-Kørt på grenen `claude/ecstatic-volta-gu3hu4` den 23. september 2026:
+Kørt på grenen `claude/busy-pasteur-iarmb9` den 23. september 2026:
 
 | Kommando | Resultat |
 |---|---|
 | `npm run lint` | Bestået, ingen fejl |
-| `npm test` | 78 testfiler, 1.739 tests, alle grønne |
+| `npm test` | 78 testfiler, 1.743 tests, alle grønne |
 | `npm run build` | Bestået |
-| `npm run preview` | Hjem på telefonen set i Chromium ved 390 px, lyst og mørkt tema, tom konto og med ture |
+| `npm run preview` | Ture på telefonen set i Chromium ved 390 px, lyst og mørkt tema, Gitter og Liste |
 
 **Brug `npm run build` til typekontrol, ikke `npx tsc --noEmit`.** Roden
 `tsconfig.json` har `"files": []` og peger kun videre til `tsconfig.app.json`
@@ -107,8 +107,17 @@ Alle elleve farver i `docs/design/TOKENS.md` stemmer nu med `:root` i
 **Der ligger tyve handoffs i kø.** Tolv er bygget — hele PC-køen: Hjem, Ture,
 Tur-detalje, Pakning, Grej, Grejsæt, Folk, Mere, Steder & Statistik,
 Indstillinger og de to opret-ark, Ny tur og Tilføj grej. Af de otte
-mobilskærme er Pakning og Hjem bygget; de seks andre er ikke rørt. Køen er
-Ture → Grej → Folk → Mere (`02`–`05`).
+mobilskærme er Pakning, Hjem og Ture bygget; de fem andre er ikke rørt. Køen
+er Grej → Folk → Mere (`03`–`05`).
+
+**Ture på telefonen** følger `docs/design/mobile/02-ture.html`: "Ture", antal
+og **+ Ny tur** på én linje i indholdet (ingen topbar), søgefeltet ("Søg efter
+tur eller sted…"), "Dine ture" med Gitter | Liste, og kort med et 56 px
+accent-bånd med turens kategori i stedet for forsidebilledet. "+ Ny tur" er
+skærmens ene fyldte; FAB'en er væk, den var nummer to. Gitter | Liste er
+stadig stille, som på PC — tegningen fylder "Gitter", men så var der to
+grønne flader. I Liste bliver båndet en smal stribe i kanten. Tom liste og
+Kom i gang fra #81 er uændret. PC-Ture er ikke rørt.
 
 **Hjem på telefonen** følger `docs/design/mobile/01-hjem.html`: dagen og
 "Hej {navn}" øverst i indholdet (ingen topbar), **Næste eventyr** som et
