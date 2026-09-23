@@ -6,7 +6,7 @@ import { sidstBrugtPrItem, grupperPrItem, turePrItem } from './statistik';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
 import { useErDesktop } from './useMedie';
-import { Knap, TagChips, ListeRaekke, TomListe, Badge } from './ui';
+import { Knap, TagChips, TomListe, Badge } from './ui';
 import { KomIGang } from './KomIGang';
 import { udlaanteItems, laanteItems } from './udlaan';
 import { forfaldne } from './vedligehold';
@@ -141,15 +141,29 @@ function InventarSide({ fane, skift, aabnItem, nytItem, foersteTur }: Props) {
     valgtStatus === 'laan' || valgtStatus === 'vedligehold' ? 'ejer' : valgtStatus
   );
 
+  const antalOgVaegt = `${iStatus.length} ting · ${kilo(vaegtIStatus, 1)} kg`;
+
   return (
+    // Telefonen har sin egen header efter docs/design/mobile/03-grej.html:
+    // titel, antal og vægt og "+ Tilføj" på samme linje, som Ture. Knappen er
+    // skærmens ene fyldte accent, og derfor ingen FAB — den ville være
+    // nummer to.
     <Skal
       fane={fane}
       skift={skift}
-      titel="Grej"
-      undertitel={`${iStatus.length} ting · ${kilo(vaegtIStatus, 1)} kg`}
+      titel={erDesktop ? 'Grej' : undefined}
+      undertitel={erDesktop ? antalOgVaegt : undefined}
       handlinger={<Knap variant="primaer" onClick={aabnArk}>+ Tilføj grej</Knap>}
-      fab={aabnArk}
     >
+      {!erDesktop && (
+        <header className="grej-mobil-hoved">
+          <div>
+            <h1>Grej</h1>
+            <p>{antalOgVaegt}</p>
+          </div>
+          <Knap variant="primaer" onClick={aabnArk}>+ Tilføj</Knap>
+        </header>
+      )}
       {/* Grejsættene stod før som deres egen fane i bunden. De hører til her:
           et sæt er en måde at samle sit grej på, ikke et sted man arbejder.
           Indgangen står øverst, så den er det første man ser — ikke gemt under
@@ -246,8 +260,8 @@ function InventarSide({ fane, skift, aabnItem, nytItem, foersteTur }: Props) {
       )}
 
       {tomKonto && valgtStatus === 'ejer' ? (
-        // "+ Tilføj grej" i headeren (FAB'en på telefonen) er stadig skærmens
-        // ene fyldte accent. Se komIGang.ts.
+        // "+ Tilføj grej" i headeren ("+ Tilføj" på telefonen) er stadig
+        // skærmens ene fyldte accent. Se komIGang.ts.
         <KomIGang
           overskrift="Intet grej endnu"
           tekst="Dit næste eventyr begynder med det grej, du allerede har. Fem ting er nok til, at en pakkeliste har noget at regne på."
@@ -283,7 +297,7 @@ function InventarSide({ fane, skift, aabnItem, nytItem, foersteTur }: Props) {
           )}
         </>
       ) : (
-        <Mobilliste items={filtreret} ture={ture} grupper={grupper} aabn={aabnItem} />
+        <Mobilliste items={filtreret} ture={ture} grupper={grupper} passPaa={passPaa} aabn={aabnItem} />
       )}
     </Skal>
   );
@@ -300,33 +314,49 @@ function InventarSide({ fane, skift, aabnItem, nytItem, foersteTur }: Props) {
 // Har gearet aldrig været med på en tur, står der ingenting. "Aldrig brugt" er
 // en dom over noget, man måske lige har købt — og de ubrugte ting har deres
 // eget udsnit under Statistik, hvor det er sagt med vilje.
-function Mobilliste({ items, ture, grupper, aabn }: {
+function Mobilliste({ items, ture, grupper, passPaa, aabn }: {
   items: Item[];
   ture: Tur[];
   grupper: Gruppe[];
+  passPaa: Set<string>;
   aabn: (id: number) => void;
 }) {
   const brugt = turePrItem(ture, grupper);
 
+  // Hver ting er sit eget stille kort, som i docs/design/mobile/03-grej.html,
+  // og "Pas på" står i hjørnet på det grej, der venter på vedligehold — det
+  // samme mærke som i tabellen på PC, så telefonen ikke er det sted, hvor man
+  // ikke kan se det.
   return (
-    <div>
+    <div className="grej-mobil-liste">
       {items.map((item) => (
-        <ListeRaekke
+        // En div med knap-rolle og ikke en <button>: brugslinjen og tag-chipsene
+        // er blokke, og dem må en knap ikke indeholde. Tastaturet er det
+        // samme som på ListeRaekke.
+        <div
+          role="button"
+          tabIndex={0}
           key={item.uid}
-          titel={item.navn}
-          detalje={
-            <>
-              <div>
-                {gram(item.vaegt_g)} g · {item.delt ? 'delt' : `${item.pris_kr.toLocaleString('da-DK')} kr`}
-                {item.antal > 1 && ` · ${item.antal} stk`}
-              </div>
-              <Brugslinje ture={brugt.get(item.uid) ?? []} />
-            </>
-          }
+          className="grej-mobil-kort"
           onClick={() => item.id !== undefined && aabn(item.id)}
+          onKeyDown={(e) => {
+            if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ') && item.id !== undefined) {
+              e.preventDefault();
+              aabn(item.id);
+            }
+          }}
         >
+          <span className="grej-mobil-kort-top">
+            <span className="grej-mobil-kort-navn">{item.navn}</span>
+            {passPaa.has(item.uid) && <Badge niveau="advarsel">Pas på</Badge>}
+          </span>
+          <span className="grej-mobil-kort-detalje">
+            {gram(item.vaegt_g)} g · {item.delt ? 'delt' : `${item.pris_kr.toLocaleString('da-DK')} kr`}
+            {item.antal > 1 && ` · ${item.antal} stk`}
+          </span>
+          <Brugslinje ture={brugt.get(item.uid) ?? []} />
           <TagChips tags={item.tags} />
-        </ListeRaekke>
+        </div>
       ))}
     </div>
   );

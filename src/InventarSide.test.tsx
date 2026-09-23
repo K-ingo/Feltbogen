@@ -9,7 +9,7 @@ import { db } from './db';
 import InventarSide from './InventarSide';
 import { NytGrejArk } from './Ark';
 import { lavItem, lavGruppe } from './test/data';
-import { tegn, DESKTOP } from './test/skaerm';
+import { tegn, DESKTOP, MOBIL } from './test/skaerm';
 
 // ─────────────────────────────────────────────
 // Grej · desktop
@@ -262,5 +262,83 @@ describe('linjen under overskriften', () => {
 
     await screen.findByText('Teltpløk');
     expect(screen.getByText('1 ting · 2 kg')).toBeInTheDocument();
+  });
+});
+
+// ─────────────────────────────────────────────
+// Grej · mobil
+//
+// Efter `docs/design/mobile/03-grej.html`: titel, antal og vægt og "+ Tilføj"
+// på én linje, Grejsæt-kortet, søgefeltet, og hver ting som sit eget kort med
+// "Pas på" på det grej, der venter på vedligehold. "+ Tilføj" er skærmens ene
+// fyldte accent — derfor ingen FAB.
+// ─────────────────────────────────────────────
+
+const visMobil = (aabnItem = vi.fn()) => tegn(
+  <InventarSide fane="inventar" skift={vi.fn()} aabnItem={aabnItem} nytItem={vi.fn()} />,
+  MOBIL
+);
+
+const mobilKort = (navn: string) => screen.getByText(navn).closest('.grej-mobil-kort') as HTMLElement;
+
+describe('Grej på telefonen', () => {
+  it('har titel, antal og vægt og + Tilføj i headeren — og ingen FAB', async () => {
+    await db.items.bulkAdd([
+      lavItem({ navn: 'Tarp', vaegt_g: 500 }),
+      lavItem({ navn: 'Sovepose', vaegt_g: 1000 })
+    ]);
+    visMobil();
+
+    await screen.findByText('Tarp');
+    const hoved = document.querySelector('.grej-mobil-hoved') as HTMLElement;
+    expect(within(hoved).getByRole('heading', { name: 'Grej' })).toBeInTheDocument();
+    expect(within(hoved).getByText('2 ting · 1,5 kg')).toBeInTheDocument();
+    expect(within(hoved).getByRole('button', { name: '+ Tilføj' })).toHaveClass('ui-button--primaer');
+
+    expect(fyldteAccenter()).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: 'Tilføj' })).not.toBeInTheDocument();
+  });
+
+  it('har Grejsæt-kortet og søgefeltet', async () => {
+    await db.items.add(lavItem({ navn: 'Tarp' }));
+    visMobil();
+
+    await screen.findByText('Tarp');
+    expect(screen.getByRole('button', { name: /^Grejsæt/ })).toHaveClass('gear-sets-card');
+    expect(screen.getByPlaceholderText('Søg grej eller tags…')).toBeInTheDocument();
+  });
+
+  it('mærker kortet med Pas på, når noget er forfaldent', async () => {
+    await db.items.bulkAdd([
+      lavItem({ navn: 'Tarp', vedligehold: FORFALDENT }),
+      lavItem({ navn: 'Sovepose' })
+    ]);
+    visMobil();
+
+    await screen.findByText('Tarp');
+    expect(within(mobilKort('Tarp')).getByText('Pas på')).toBeInTheDocument();
+    expect(within(mobilKort('Sovepose')).queryByText('Pas på')).not.toBeInTheDocument();
+  });
+
+  it('viser vægt og pris på kortet', async () => {
+    await db.items.add(lavItem({ navn: 'Sovepose', vaegt_g: 1500, pris_kr: 1000 }));
+    visMobil();
+
+    await screen.findByText('Sovepose');
+    expect(within(mobilKort('Sovepose')).getByText(/1\.500 g · 1\.000 kr/)).toBeInTheDocument();
+  });
+
+  it('åbner grejet ved tryk og med Enter', async () => {
+    const aabnItem = vi.fn();
+    const id = await db.items.add(lavItem({ navn: 'Tarp' }));
+    visMobil(aabnItem);
+
+    await screen.findByText('Tarp');
+    await userEvent.click(mobilKort('Tarp'));
+    expect(aabnItem).toHaveBeenCalledWith(id);
+
+    mobilKort('Tarp').focus();
+    await userEvent.keyboard('{Enter}');
+    expect(aabnItem).toHaveBeenCalledTimes(2);
   });
 });
