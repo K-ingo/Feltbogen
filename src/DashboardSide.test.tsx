@@ -7,7 +7,7 @@ vi.mock('./pb', () => import('./test/pbMock'));
 import { db } from './db';
 import DashboardSide from './DashboardSide';
 import { lavItem, lavTur, lavBillede } from './test/data';
-import { tegn, DESKTOP } from './test/skaerm';
+import { tegn, DESKTOP, MOBIL } from './test/skaerm';
 
 // ─────────────────────────────────────────────
 // Hjem · desktop · CTA-hierarkiet
@@ -195,5 +195,94 @@ describe('sync-footeren', () => {
     vis();
 
     expect(await screen.findByText('Alt er sendt op')).toBeInTheDocument();
+  });
+});
+
+// ─────────────────────────────────────────────
+// Hjem · mobil · docs/design/mobile/01-hjem.html
+//
+// Hilsen, Næste eventyr som fyldt kort, Opmærksomhed og Seneste. Kortets knap
+// er den ene fyldte accent — også på telefonen, hvor FAB'en ellers ville være
+// nummer to.
+// ─────────────────────────────────────────────
+
+describe('Hjem på telefonen', () => {
+  const skift = vi.fn();
+  const aabnTur = vi.fn();
+  const visMobil = () => tegn(
+    <DashboardSide
+      fane="dashboard" skift={skift} aabnItem={vi.fn()} aabnTur={aabnTur}
+      aabnAar={vi.fn()} nytItem={vi.fn()} nyTur={vi.fn()} foersteTur={vi.fn()}
+      tilLogin={vi.fn()}
+    />,
+    MOBIL
+  );
+
+  beforeEach(() => { skift.mockReset(); aabnTur.mockReset(); });
+
+  it('hilser med "Hej" og dagen over', async () => {
+    await turMedGrej();
+    visMobil();
+
+    expect(await screen.findByRole('heading', { level: 1, name: /^Hej/ })).toBeInTheDocument();
+  });
+
+  it('Næste eventyr har én fyldt knap og "+ Ny tur" som outline', async () => {
+    await turMedGrej();
+    visMobil();
+
+    const kort = await screen.findByRole('region', { name: 'Næste eventyr' });
+    expect(await within(kort).findByText('Møn')).toBeInTheDocument();
+    expect(within(kort).getByRole('button', { name: 'Fortsæt pakning' })).toHaveClass('ui-button--primaer');
+    expect(within(kort).getByRole('button', { name: '+ Ny tur' })).toHaveClass('ui-button--sekundaer');
+    expect(fyldte()).toHaveLength(1);
+  });
+
+  it('har ingen FAB og ingen "Tilføj grej" ved siden af kortet', async () => {
+    await turMedGrej();
+    visMobil();
+
+    await screen.findByRole('region', { name: 'Næste eventyr' });
+    expect(screen.queryByRole('button', { name: /Tilføj grej/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Tilføj' })).not.toBeInTheDocument();
+  });
+
+  it('Seneste viser de andre ture, og "Se mere" fører til Statistik', async () => {
+    await turMedGrej();
+    await db.ture.add(lavTur({
+      uid: 'tur-gammel', navn: 'Øhavet uge 32', status: 'afsluttet',
+      startdato: omDage(-40), slutdato: omDage(-38)
+    }));
+    visMobil();
+
+    const seneste = await screen.findByRole('region', { name: 'Seneste' });
+    const raekke = await within(seneste).findByRole('button', { name: /Øhavet uge 32/ });
+    expect(raekke).toHaveTextContent('Afsluttet');
+    // Kortets tur står ikke to gange.
+    expect(within(seneste).queryByText('Møn')).not.toBeInTheDocument();
+
+    within(seneste).getByRole('button', { name: 'Se mere' }).click();
+    expect(skift).toHaveBeenCalledWith('statistik');
+  });
+
+  it('en tom konto: kortet ejer den fyldte, Kom i gang står under, ingen Seneste', async () => {
+    visMobil();
+
+    expect(await screen.findByText(/Hvor går din næste tur hen/)).toBeInTheDocument();
+    expect(screen.getByText('Kom i gang')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Seneste' })).not.toBeInTheDocument();
+    expect(fyldte()).toHaveLength(1);
+  });
+
+  it('pakket færdig: ingen fyldt knap på skærmen', async () => {
+    await db.items.add(lavItem({ uid: 'u-telt', navn: 'Telt' }));
+    await db.ture.add(lavTur({
+      navn: 'Klar', status: 'klar', ...kommende,
+      loese_item_ids: ['u-telt'], pakkede_item_uids: ['u-telt']
+    }));
+    visMobil();
+
+    expect(await screen.findByRole('button', { name: 'Se turen' })).toHaveClass('ui-button--sekundaer');
+    expect(fyldte()).toHaveLength(0);
   });
 });

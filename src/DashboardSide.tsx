@@ -8,7 +8,9 @@ import {
   handlinger,
   syncstatus,
   friluftsliv,
-  sidstTilfoejede
+  sidstTilfoejede,
+  senesteTure,
+  naarBegynder
 } from './dashboard';
 import { aarsopgoerelseAtSe } from './aarsopgoerelse';
 import { hovedhandling } from './dashboard';
@@ -40,6 +42,8 @@ import { laesKladde, KLADDE_NOEGLE } from './foersteTur';
 import { beloeb, gram, kilo } from './talformat';
 import { Ikon } from './Ikon';
 import { KomIGang } from './KomIGang';
+import { formatterPeriode, ugedagOgDato } from './datotekst';
+import { faseAf, FASENAVN } from './turfase';
 
 interface Props {
   fane: Fane;
@@ -64,6 +68,9 @@ const MAKS_SIDST_TILFOEJET = 5;
 // gøre startskærmen til et galleri — og et galleri er der allerede et af,
 // inde på hver tur.
 const MAKS_MINDER = 6;
+// Rækkerne under "Seneste" på telefonen. Tre er nok til at genkende sine
+// egne ture; resten står under Ture.
+const MAKS_SENESTE = 3;
 
 // Fast rækkefølge, og den er specens: næste tur, hvad der kræver
 // opmærksomhed, hvad Feltbogen foreslår, hvordan man står — og til sidst om
@@ -176,6 +183,157 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
     if (item?.id !== undefined) aabnItem(item.id);
   };
 
+  // Sektionerne, som telefonen og PC'en deler. Rækkefølgen og rammen omkring
+  // dem er det, der er forskelligt.
+  const komIGang = ture.length === 0 && (
+    <KomIGang
+      overskrift="Kom i gang"
+      tekst="To ting gør Feltbogen brugbar: en tur at pakke til og noget grej at pakke med."
+      opretTur={foersteTur}
+      tilfoejGrej={nytItem}
+      fokus="grej"
+      udenKnap={['tur']}
+    />
+  );
+
+  const aarskort = opgoerelse !== null && (
+    <Aarskort aar={opgoerelse} aabn={() => aabnAar(opgoerelse)} />
+  );
+
+  const handlingskort = (
+    <>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: erDesktop ? 'repeat(auto-fit, minmax(230px, 1fr))' : '1fr',
+        gap: '8px'
+      }}>
+        {alleHandlinger.slice(0, visAlleHandlinger ? undefined : MAKS_HANDLINGER).map((h) => (
+          <HandlingsKort
+            key={`${h.type}-${h.maal.slags}-${h.maal.uid}`}
+            handling={h}
+            aabn={() => aabnHandling(h)}
+          />
+        ))}
+      </div>
+      {alleHandlinger.length > MAKS_HANDLINGER && (
+        <button
+          className="home-care-more"
+          onClick={() => setVisAlleHandlinger(!visAlleHandlinger)}
+          aria-expanded={visAlleHandlinger}
+        >
+          {visAlleHandlinger ? 'Vis kun de vigtigste' : `Se alle ${alleHandlinger.length}`}
+        </button>
+      )}
+    </>
+  );
+
+  const forslagSektion = forslag.length > 0 && (
+    <section>
+      <SektionsTitel>Feltbogen foreslår</SektionsTitel>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: erDesktop ? 'repeat(auto-fit, minmax(230px, 1fr))' : '1fr',
+        gap: 'var(--plads-2)'
+      }}>
+        {forslag.map((f) => (
+          <Forslagskort
+            key={f.id}
+            forslag={f}
+            // Outline og ikke fyldt: den fyldte accent er optaget af
+            // Næste Eventyr. Inde på turen er kortet stadig det fyldte.
+            staerk={false}
+            aabn={() => tur?.id !== undefined && aabnTur(tur.id)}
+            tagImod={() => void tagImod(f)}
+            afvis={() => void afvis(f)}
+          />
+        ))}
+      </div>
+    </section>
+  );
+
+  // Billederne ligger allerede i basen — de har bare aldrig været andre steder
+  // end inde på turen, de blev taget på. Her står de, hvor man kommer forbi
+  // hver gang, og fører tilbage til historien om dem.
+  const minderSektion = minder.length > 0 && (
+    <section>
+      <SektionsTitel>Seneste minder</SektionsTitel>
+      <Mindestribe
+        minder={minder}
+        aabn={(m) => m.tur.id !== undefined && aabnTur(m.tur.id)}
+      />
+    </section>
+  );
+
+  // Telefonen. Efter docs/design/mobile/01-hjem.html: dagen og en hilsen,
+  // Næste eventyr som et fyldt kort, så Opmærksomhed og Seneste.
+  //
+  // Kortets knap er skærmens ene fyldte accent — creme på det grønne kort, så
+  // den står frem på fladen og ikke forsvinder i den. Derfor ingen FAB og
+  // ingen "+ Tilføj grej" her: FAB'en er fyldt accent nummer to, og grejet
+  // har sin egen fane (og sit eget skridt under Kom i gang på en tom konto).
+  //
+  // Tallene, der på PC'en er foldet under "Se mere", står ikke her. "Se mere"
+  // over Seneste fører til Statistik, hvor de hører hjemme.
+  if (!erDesktop) {
+    const seneste = senesteTure(ture, tur?.uid, MAKS_SENESTE);
+
+    return (
+      <Skal fane={fane} skift={skift}>
+        <div className="home-mobil">
+          <header className="home-mobil-hoved">
+            <p>{ugedagOgDato()}</p>
+            <h1>{hej(bruger?.name ?? '')}</h1>
+          </header>
+
+          <Heltekort
+            situation={situation}
+            items={items}
+            grupper={grupper}
+            aabn={(maal) => situation.tur?.id !== undefined && aabnTur(situation.tur.id, false, maal)}
+            opret={nyTur}
+            foersteTur={foersteTur}
+            harKladde={kladde !== null}
+          />
+
+          {komIGang}
+          {aarskort}
+
+          {alleHandlinger.length > 0 && (
+            <section aria-label="Opmærksomhed">
+              <SektionsTitel>Opmærksomhed</SektionsTitel>
+              {handlingskort}
+            </section>
+          )}
+
+          {forslagSektion}
+
+          {/* Ingen andre ture end kortets — så er der ikke noget "seneste",
+              og en tom overskrift med "Se mere" ville pege på ingenting. */}
+          {seneste.length > 0 && (
+            <section aria-label="Seneste">
+              <div className="home-mobil-sektionshoved">
+                <SektionsTitel>Seneste</SektionsTitel>
+                <button className="home-mobil-link" onClick={() => skift('statistik')}>Se mere</button>
+              </div>
+              <div className="home-mobil-raekker">
+                {seneste.map((t) => (
+                  <button key={t.uid} onClick={() => t.id !== undefined && aabnTur(t.id)}>
+                    <span>{t.navn || 'Uden navn'}</span>
+                    <span>{FASENAVN[faseAf(t)]}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {minderSektion}
+
+          <Synclinje status={sync} tilLogin={tilLogin} />
+        </div>
+      </Skal>
+    );
+  }
+
   return (
     <Skal
       fane={fane}
@@ -194,10 +352,6 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
           <Knap onClick={nyTur}>+ Ny tur</Knap>
         </>
       }
-      // Ingen FAB på en tom konto: på telefonen ville den være en fyldt
-      // accent nummer to ved siden af kortets "Planlæg din første tur", og
-      // grejet har sit eget skridt under Kom i gang.
-      fab={ture.length === 0 ? undefined : nytItem}
     >
       <div className="home-grid" style={{ display: 'grid', gap: '24px' }}>
         <section className={`home-next${minder[0] ? ' has-image' : ' without-image'}`}>
@@ -220,85 +374,20 @@ function DashboardSide({ fane, skift, aabnItem, aabnTur, aabnAar, nytItem, nyTur
         {/* Den tomme konto. Kortet ovenover ejer knappen til den første tur og
             er skærmens ene fyldte accent; her står turen kun som skridt 1, så
             grejet får sin plads ved siden af. Se komIGang.ts. */}
-        {ture.length === 0 && (
-          <KomIGang
-            overskrift="Kom i gang"
-            tekst="To ting gør Feltbogen brugbar: en tur at pakke til og noget grej at pakke med."
-            opretTur={foersteTur}
-            tilfoejGrej={nytItem}
-            fokus="grej"
-            udenKnap={['tur']}
-          />
-        )}
+        {komIGang}
 
-        {opgoerelse !== null && (
-          <Aarskort aar={opgoerelse} aabn={() => aabnAar(opgoerelse)} />
-        )}
+        {aarskort}
 
         {alleHandlinger.length > 0 && (
           <details className="home-care" open={alleHandlinger.some(h => h.haster)}>
             <summary>Pas på dit grej <span>{alleHandlinger.length} opmærksomhedspunkter</span></summary>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: erDesktop ? 'repeat(auto-fit, minmax(230px, 1fr))' : '1fr',
-              gap: '8px'
-            }}>
-              {alleHandlinger.slice(0, visAlleHandlinger ? undefined : MAKS_HANDLINGER).map((h) => (
-                <HandlingsKort
-                  key={`${h.type}-${h.maal.slags}-${h.maal.uid}`}
-                  handling={h}
-                  aabn={() => aabnHandling(h)}
-                />
-              ))}
-            </div>
-            {alleHandlinger.length > MAKS_HANDLINGER && (
-              <button
-                className="home-care-more"
-                onClick={() => setVisAlleHandlinger(!visAlleHandlinger)}
-                aria-expanded={visAlleHandlinger}
-              >
-                {visAlleHandlinger ? 'Vis kun de vigtigste' : `Se alle ${alleHandlinger.length}`}
-              </button>
-            )}
+            {handlingskort}
           </details>
         )}
 
-        {forslag.length > 0 && (
-          <section>
-            <SektionsTitel>Feltbogen foreslår</SektionsTitel>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: erDesktop ? 'repeat(auto-fit, minmax(230px, 1fr))' : '1fr',
-              gap: 'var(--plads-2)'
-            }}>
-              {forslag.map((f) => (
-                <Forslagskort
-                  key={f.id}
-                  forslag={f}
-                  // Outline og ikke fyldt: den fyldte accent er optaget af
-                  // Næste Eventyr. Inde på turen er kortet stadig det fyldte.
-                  staerk={false}
-                  aabn={() => tur?.id !== undefined && aabnTur(tur.id)}
-                  tagImod={() => void tagImod(f)}
-                  afvis={() => void afvis(f)}
-                />
-              ))}
-            </div>
-          </section>
-        )}
+        {forslagSektion}
 
-        {/* Billederne ligger allerede i basen — de har bare aldrig været andre
-            steder end inde på turen, de blev taget på. Her står de, hvor man
-            kommer forbi hver gang, og fører tilbage til historien om dem. */}
-        {minder.length > 0 && (
-          <section>
-            <SektionsTitel>Seneste minder</SektionsTitel>
-            <Mindestribe
-              minder={minder}
-              aabn={(m) => m.tur.id !== undefined && aabnTur(m.tur.id)}
-            />
-          </section>
-        )}
+        {minderSektion}
 
         {/* Tallene og skabet står ikke i det første skærmbillede.
             Hilsenen og næste tur skal have pladsen; det her er noget, man
@@ -510,6 +599,109 @@ function Situationskort({ situation, items, grupper, aabn, opret, foersteTur, ha
   );
 }
 
+// Næste eventyr på telefonen: et fyldt accent-kort med turen og én handling.
+//
+// Reglerne er de samme som Situationskortets — `hovedhandling` afgør, hvad
+// knappen hedder, og om den er fyldt. Forskellen er fladen: kortet er selv
+// grønt, så den fyldte knap er creme på grønt, og outline er en lys kant.
+// Pakket færdig er knappen outline, og så er der ingen fyldt på skærmen.
+function Heltekort({ situation, items, grupper, aabn, opret, foersteTur, harKladde }: {
+  situation: Hjemsituation;
+  items: Item[];
+  grupper: Gruppe[];
+  aabn: (maal?: Turmaal) => void;
+  opret: () => void;
+  foersteTur: () => void;
+  harKladde: boolean;
+}) {
+  const tur = situation.tur;
+
+  if (!tur) {
+    const tomHandling = hovedhandling(situation, {
+      pakket: 0, ialt: 0, procent: 0, faerdig: false, mangler: []
+    });
+
+    return (
+      <section className="home-hero" aria-label="Næste eventyr">
+        <p className="home-hero-label">Næste eventyr</p>
+        <h2>Hvor går din næste tur hen?</h2>
+        <p className="home-hero-meta">
+          {harKladde
+            ? 'Du er begyndt på en tur. Den ligger her på enheden og venter.'
+            : 'En nat i skoven eller en weekend ved vandet. Find en dato, og lad pakningen begynde.'}
+        </p>
+        <div className="home-hero-knapper">
+          <Knap variant="primaer" onClick={foersteTur} style={PAA_ACCENT.primaer}>
+            {harKladde ? 'Fortsæt hvor du slap' : tomHandling.tekst}
+          </Knap>
+          <Knap onClick={opret} style={PAA_ACCENT.sekundaer}>+ Ny tur</Knap>
+        </div>
+      </section>
+    );
+  }
+
+  const paaTuren = itemsPaaTur(tur, grupper, items);
+  const advarsler = findAdvarsler(paaTuren);
+  const pakning = pakkefremdrift(tur, paaTuren);
+  const handling = hovedhandling(situation, pakning);
+  const hjemme = situation.situation === 'gjort_op_mangler';
+
+  // "Næste eventyr" som i tegningen, når turen ligger forude. På tur og
+  // hjemme fra siger situationen selv, hvad kortet handler om.
+  const forude = situation.situation === 'kladde' || situation.situation === 'klar' || situation.situation === 'snart';
+  const label = forude && tur.startdato ? `Næste eventyr · ${naarBegynder(tur)}` : situation.overskrift;
+
+  const meta = [
+    formatterPeriode(tur.startdato, tur.slutdato),
+    FASENAVN[faseAf(tur)],
+    `${tur.personer} ${tur.personer === 1 ? 'deltager' : 'deltagere'}`
+  ].filter(Boolean).join(' · ');
+
+  const status = hjemme
+    ? 'Ikke gjort op endnu'
+    : [pakketekst(pakning), advarsler.length > 0 && `⚠ ${advarsler.length} ${advarsler.length === 1 ? 'advarsel' : 'advarsler'}`]
+        .filter(Boolean).join(' · ');
+
+  return (
+    <section className="home-hero" aria-label="Næste eventyr">
+      <p className="home-hero-label">{label}</p>
+      <h2>{tur.navn || 'Uden navn'}</h2>
+      <p className="home-hero-meta">{meta}</p>
+      <p className="home-hero-meta">{status}</p>
+      <div className="home-hero-knapper">
+        <Knap
+          variant={handling.fremhaevet ? 'primaer' : 'sekundaer'}
+          onClick={() => aabn(handling.maal)}
+          style={handling.fremhaevet ? PAA_ACCENT.primaer : PAA_ACCENT.sekundaer}
+        >
+          {handling.tekst}
+        </Knap>
+        <Knap onClick={opret} style={PAA_ACCENT.sekundaer}>+ Ny tur</Knap>
+      </div>
+    </section>
+  );
+}
+
+// Knapperne på det fyldte kort. Kun låste tokens: den fyldte er
+// --accent-tekst som flade og --accent som tekst — samme par som en
+// almindelig fyldt knap, bare vendt om — og outline er en kant i
+// kortets egen tekstfarve.
+const PAA_ACCENT = {
+  primaer: {
+    background: 'var(--accent-tekst)',
+    color: 'var(--accent)',
+    border: '1px solid var(--accent-tekst)',
+    width: '100%',
+    minHeight: '48px'
+  },
+  sekundaer: {
+    background: 'transparent',
+    color: 'var(--accent-tekst)',
+    border: '1px solid color-mix(in srgb, var(--accent-tekst) 45%, transparent)',
+    width: '100%'
+  }
+} as const;
+
 // Statuslinjen nederst på startskærmen.
 //
 // Den må ikke ligne en fejl, når den ikke er en: ændringer der ligger og
@@ -710,6 +902,13 @@ function hilsen(navn: string): string {
 
   const rent = navn.trim();
   return rent ? `${tid}, ${rent}` : tid;
+}
+
+// "Hej Emil" på telefonen, som i tegningen. Klokken står ikke her — dagen
+// står lige over. Samme regel som `hilsen`: navnet gættes aldrig.
+function hej(navn: string): string {
+  const rent = navn.trim();
+  return rent ? `Hej ${rent}` : 'Hej';
 }
 
 // Tilbageblikket i januar. Det er ikke en handling og hører derfor ikke til

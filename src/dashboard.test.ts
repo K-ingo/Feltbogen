@@ -9,7 +9,8 @@ import {
   tureIAar,
   sidstTilfoejede,
   friluftsliv,
-  hovedhandling
+  hovedhandling,
+  senesteTure
 } from './dashboard';
 import { lavItem, lavGruppe, lavTur } from './test/data';
 
@@ -910,5 +911,19 @@ describe('sync-footeren er ærlig', () => {
 
     expect(s.tilstand).toBe('fejl');
     expect(s.tekst).not.toContain('Alt er sendt op');
+  });
+});
+
+describe('senesteTure', () => {
+  const a = lavTur({ uid: 'a', startdato: '2026-08-01', status: 'afsluttet' });
+  const b = lavTur({ uid: 'b', startdato: '2026-09-01', status: 'klar' });
+  const c = lavTur({ uid: 'c', startdato: '', status: 'kladde' });
+
+  it('nyeste først, uden dato til sidst', () => {
+    expect(senesteTure([c, a, b], undefined, 5).map((t) => t.uid)).toEqual(['b', 'a', 'c']);
+  });
+
+  it('udelader kortets tur og holder loftet', () => {
+    expect(senesteTure([c, a, b], 'b', 1).map((t) => t.uid)).toEqual(['a']);
   });
 });
