@@ -130,8 +130,9 @@ describe.each([['PC', DESKTOP], ['telefon', MOBIL]] as const)('Ture · tom liste
     expect(within(sektion).getByRole('button', { name: 'Opret første tur' })).toHaveClass('ui-button--sekundaer');
     expect(within(sektion).getByRole('button', { name: 'Tilføj 5 grej' })).toHaveClass('ui-button--tekst');
     expect(fyldteAccenter()).toHaveLength(1);
-    if (bredde === DESKTOP) expect(fyldteAccenter()[0]).toHaveTextContent('+ Ny tur');
-    else expect(fyldteAccenter()[0]).toHaveAccessibleName('Tilføj');
+    // Også på telefonen: headeren har "+ Ny tur" som i
+    // docs/design/mobile/02-ture.html, og FAB'en er væk.
+    expect(fyldteAccenter()[0]).toHaveTextContent('+ Ny tur');
   });
 
   it('fører første tur til det guidede flow og grejet til opret-arket', async () => {

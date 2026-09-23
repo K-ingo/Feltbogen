@@ -1367,3 +1367,23 @@ label:has(> input[type='checkbox']) { min-height: 48px; }
 .home-mobil-raekker > button:last-child { border-bottom: 0; }
 .home-mobil-raekker > button > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .home-mobil-raekker > button > span:last-child { flex-shrink: 0; color: var(--tekst-dæmpet); font-size: var(--skrift-lille); }
+
+/* Ture på telefonen. Efter docs/design/mobile/02-ture.html: titel, antal og
+   "+ Ny tur" på én linje, og kort med et smalt accent-bånd i toppen frem for
+   et billede. Kun låste tokens. */
+.ture-mobil-hoved { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--plads-3); padding-top: var(--plads-3); margin-bottom: var(--plads-3); }
+.ture-mobil-hoved > div { min-width: 0; }
+.ture-mobil-hoved h1 { margin: 0; font-family: 'Fraunces', Georgia, serif; font-size: 28px; font-weight: 400; line-height: 1.2; color: var(--tekst); }
+.ture-mobil-hoved p { margin: 2px 0 0; font-size: var(--skrift-lille); color: var(--tekst-dæmpet); }
+.ture-mobil-hoved .ui-button { flex-shrink: 0; }
+.trip-grid--mobil { gap: var(--plads-3); }
+.trip-grid--mobil .trip-card { border-radius: 12px; box-shadow: none; }
+.trip-card-baand { display: flex; align-items: center; gap: 6px; height: 56px; padding: 0 var(--plads-3); background: var(--accent); color: var(--accent-tekst); font-size: var(--skrift-mikro); font-weight: 500; letter-spacing: .08em; text-transform: uppercase; }
+.trip-grid--mobil .trip-card-body { gap: 6px; padding: var(--plads-3); }
+.trip-grid--mobil .trip-card-title { font-size: 1.25rem; }
+.trip-grid--mobil .trip-card-meta { font-size: var(--skrift-mikro); }
+/* Listen: båndet bliver en smal stribe i kanten, så kategorien stadig kan ses
+   som farve, men rækken ikke bliver højere end sit indhold. */
+.trip-grid--mobil.is-compact .trip-card { align-items: stretch; }
+.trip-grid--mobil.is-compact .trip-card-baand { width: 6px; height: auto; padding: 0; font-size: 0; flex-shrink: 0; }
+.trip-grid--mobil.is-compact .trip-card-baand svg { display: none; }
