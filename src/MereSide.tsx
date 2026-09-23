@@ -8,7 +8,7 @@ import { syncstatus } from './dashboard';
 import type { Syncstatus } from './dashboard';
 import { useSyncfejl } from './syncfejl';
 import { useAuth } from './useAuth';
-import { useErOnline } from './useMedie';
+import { useErDesktop, useErOnline } from './useMedie';
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
 import { ListeRaekke, SektionsTitel } from './ui';
@@ -40,6 +40,7 @@ interface Props {
 function MereSide({ fane, skift, aabnAar, aabnIndstillinger }: Props) {
   const { erLoggetInd } = useAuth();
   const online = useErOnline();
+  const erDesktop = useErDesktop();
 
   // Turene hentes helt: årsopgørelsen skal bruge dem for at afgøre om der er
   // noget at se, og de to historik-rækker regner deres tal af dem. Stederne
@@ -77,8 +78,16 @@ function MereSide({ fane, skift, aabnAar, aabnIndstillinger }: Props) {
   const sync = syncstatus(usendt, online, erLoggetInd, syncfejl);
 
   return (
-    <Skal fane={fane} skift={skift} titel="Mere">
-      <section>
+    // Telefonen har sin egen header efter docs/design/mobile/05-mere.html:
+    // "Mere" i indholdet som på Ture, Grej og Folk, ingen topbar, ingen knap
+    // og ingen FAB. Rækkerne er skærmens eneste handlinger.
+    <Skal fane={fane} skift={skift} titel={erDesktop ? 'Mere' : undefined}>
+      {!erDesktop && (
+        <header className="mere-mobil-hoved">
+          <h1>Mere</h1>
+        </header>
+      )}
+      <section className="mere-sektion">
         <SektionsTitel>Din friluftshistorik</SektionsTitel>
         <div className="hub-kort">
           <ListeRaekke
@@ -109,7 +118,7 @@ function MereSide({ fane, skift, aabnAar, aabnIndstillinger }: Props) {
           at hovedfunktioner ikke må gemmes bag andre hovedfunktioner. De lå
           alle sammen som afsnit inde i Indstillinger — man skulle vide, de var
           der. Nu står de fremme, og hver række lander i sit eget afsnit. */}
-      <section style={{ marginTop: 'var(--plads-6)' }}>
+      <section className="mere-sektion" style={{ marginTop: 'var(--plads-6)' }}>
         <SektionsTitel>Appen</SektionsTitel>
         <div className="hub-kort">
           <ListeRaekke
@@ -140,10 +149,13 @@ function MereSide({ fane, skift, aabnAar, aabnIndstillinger }: Props) {
         </div>
       </section>
 
-      <p className="hub-fodnote">
-        Sync-rækken siger, hvad der faktisk skete. Er der noget, der ikke kom op,
-        står det dér — i stedet for «Alt er sendt op».
-      </p>
+      {/* Telefonens tegning har ikke fodnoten: der er sync-rækken selv nok. */}
+      {erDesktop && (
+        <p className="hub-fodnote">
+          Sync-rækken siger, hvad der faktisk skete. Er der noget, der ikke kom op,
+          står det dér — i stedet for «Alt er sendt op».
+        </p>
+      )}
     </Skal>
   );
 }
