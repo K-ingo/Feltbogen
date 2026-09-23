@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatterPeriode, kortDag, datoTekst, maanedsnavn, siden } from './datotekst';
+import { formatterPeriode, kortDag, datoTekst, maanedsnavn, siden, ugedagOgDato } from './datotekst';
 
 describe('formatterPeriode', () => {
   it('skriver måneden én gang inden for samme måned', () => {
@@ -104,5 +104,12 @@ describe('siden', () => {
   it('siger ingenting om det der ikke er en dato', () => {
     expect(siden('', NU)).toBe('');
     expect(siden('ikke en dato', NU)).toBe('');
+  });
+});
+
+describe('ugedagOgDato', () => {
+  it('skriver ugedagen ud og forkorter måneden', () => {
+    expect(ugedagOgDato(new Date(2026, 8, 9))).toBe('Onsdag 9. sep');
+    expect(ugedagOgDato(new Date(2026, 11, 20))).toBe('Søndag 20. dec');
   });
 });

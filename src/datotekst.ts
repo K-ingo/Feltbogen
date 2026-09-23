@@ -83,3 +83,12 @@ export function siden(dato: string, nu: Date = new Date()): string {
   const aar = Math.floor(dage / 365);
   return aar <= 1 ? 'for et år siden' : `for ${aar} år siden`;
 }
+
+const UGEDAGE = ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag'];
+
+// "Onsdag 23. sep" — linjen over hilsenen på telefonens Hjem. Måneden er
+// forkortet, fordi linjen står i versaler og skal kunne være på én linje.
+export function ugedagOgDato(nu: Date = new Date()): string {
+  const dag = UGEDAGE[nu.getDay()];
+  return `${dag[0].toUpperCase()}${dag.slice(1)} ${nu.getDate()}. ${MAANEDER[nu.getMonth()].slice(0, 3)}`;
+}

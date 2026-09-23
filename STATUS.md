@@ -1,6 +1,6 @@
 # STATUS
 
-*Sidst opdateret: 23. september 2026. Udgangspunkt: `main` @ `6511675`.*
+*Sidst opdateret: 23. september 2026. Udgangspunkt: `main` @ `b0f219e`.*
 
 Kort svar på "hvor står vi nu?". Den skal kunne læses på to minutter og
 opdateres, hver gang noget bliver færdigt eller blokeret.
@@ -28,21 +28,21 @@ står tilbage, er arbejde vi selv vælger — ikke noget, der spærrer.
 
 Det næste stykke arbejde er ikke funktionalitet, men udseende. Designsystemet
 er låst og ligger nu i repoet sammen med en tegning af hver eneste skærm. Alle
-tolv PC-tegninger er bygget, og af de otte til telefonen er Pakning bygget;
-syv står tilbage.
+tolv PC-tegninger er bygget, og af de otte til telefonen er Pakning og Hjem
+bygget; seks står tilbage.
 
 ---
 
 ## Grønt lys
 
-Kørt på grenen `claude/focused-euler-lft843` den 23. september 2026:
+Kørt på grenen `claude/ecstatic-volta-gu3hu4` den 23. september 2026:
 
 | Kommando | Resultat |
 |---|---|
 | `npm run lint` | Bestået, ingen fejl |
-| `npm test` | 78 testfiler, 1.730 tests, alle grønne |
+| `npm test` | 78 testfiler, 1.739 tests, alle grønne |
 | `npm run build` | Bestået |
-| `npm run preview` | Ikke kørt. De fire spande i Indstillinger er afprøvet i jsdom-skærmtests, ikke klikket igennem i en browser |
+| `npm run preview` | Hjem på telefonen set i Chromium ved 390 px, lyst og mørkt tema, tom konto og med ture |
 
 **Brug `npm run build` til typekontrol, ikke `npx tsc --noEmit`.** Roden
 `tsconfig.json` har `"files": []` og peger kun videre til `tsconfig.app.json`
@@ -107,8 +107,20 @@ Alle elleve farver i `docs/design/TOKENS.md` stemmer nu med `:root` i
 **Der ligger tyve handoffs i kø.** Tolv er bygget — hele PC-køen: Hjem, Ture,
 Tur-detalje, Pakning, Grej, Grejsæt, Folk, Mere, Steder & Statistik,
 Indstillinger og de to opret-ark, Ny tur og Tilføj grej. Af de otte
-mobilskærme er Pakning bygget; de syv andre er ikke rørt. Rækkefølgen er ikke
-besluttet.
+mobilskærme er Pakning og Hjem bygget; de seks andre er ikke rørt. Køen er
+Ture → Grej → Folk → Mere (`02`–`05`).
+
+**Hjem på telefonen** følger `docs/design/mobile/01-hjem.html`: dagen og
+"Hej {navn}" øverst i indholdet (ingen topbar), **Næste eventyr** som et
+fyldt accent-kort, så **Opmærksomhed** og **Seneste**. Kortets knap er
+skærmens ene fyldte — creme på grønt — og teksten afgøres stadig af
+`hovedhandling`; er turen pakket færdig, er den outline, og så er der ingen
+fyldt. "+ Ny tur" er outline på kortet. FAB'en og "+ Tilføj grej" er væk fra
+telefonens Hjem: FAB'en var fyldt accent nummer to, og grejet har sin fane og
+sit skridt under Kom i gang. Seneste er de andre ture, nyeste først, højst tre
+(`senesteTure` i `dashboard.ts`), og "Se mere" fører til Statistik — tallene,
+PC'en folder under "Se mere", står ikke på telefonen. Er der ingen andre ture,
+står Seneste der ikke. Tom konto er uændret fra #81. PC-Hjem er ikke rørt.
 
 **Pakning på telefonen** fik det, PC-udgaven ikke havde brug for: en fyldt
 knap, der følger pakningen. Tom tur → **Tilføj grej**, delvist pakket → **Pak

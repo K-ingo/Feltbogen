@@ -39,6 +39,21 @@ export function naarBegynder(tur: Tur, nu: Date = new Date()): string {
   return 'i gang';
 }
 
+// Turene under "Seneste" på telefonens Hjem.
+//
+// Kortet øverst ejer sin tur, så den står ikke her igen. Resten sorteres med
+// den nyeste dato først; en kladde uden dato har ingen plads i tiden og står
+// derfor sidst frem for at blive gættet ind et sted.
+export function senesteTure(ture: Tur[], udenUid: string | undefined, maks: number): Tur[] {
+  return ture
+    .filter((t) => t.uid !== udenUid)
+    .sort((a, b) => {
+      if (!a.startdato || !b.startdato) return a.startdato ? -1 : b.startdato ? 1 : 0;
+      return b.startdato.localeCompare(a.startdato);
+    })
+    .slice(0, maks);
+}
+
 // ─────────────────────────────────────────────
 // Situationen
 //

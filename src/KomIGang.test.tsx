@@ -105,8 +105,12 @@ describe.each([['PC', DESKTOP], ['telefon', MOBIL]] as const)('Hjem · tom konto
     vis();
     // Hjem tegner først med en tom liste og skifter, når turen er læst.
     await waitFor(() => expect(screen.queryByRole('region', { name: 'Kom i gang' })).not.toBeInTheDocument());
-    // FAB'en er tilbage på telefonen, når kontoen ikke længere er tom.
-    if (bredde === MOBIL) expect(await screen.findByRole('button', { name: 'Tilføj' })).toBeInTheDocument();
+    // Heller ikke med en tur er der en FAB på telefonens Hjem: kortets knap er
+    // den fyldte accent, og FAB'en ville være nummer to. Se mobile/01-hjem.html.
+    if (bredde === MOBIL) {
+      expect(await screen.findByText('Møn')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Tilføj' })).not.toBeInTheDocument();
+    }
   });
 });
 

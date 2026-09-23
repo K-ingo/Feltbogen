@@ -1346,3 +1346,24 @@ label:has(> input[type='checkbox']) { min-height: 48px; }
     break-inside: avoid;
   }
 }
+
+/* Hjem på telefonen · docs/design/mobile/01-hjem.html.
+   Kortet øverst er selv fyldt accent, så teksten på det er --accent-tekst,
+   og det dæmpede er den samme farve med lavere opacitet — ikke en ny farve. */
+.home-mobil { display: grid; gap: var(--plads-5); min-width: 0; }
+.home-mobil > * { min-width: 0; }
+.home-mobil-hoved { padding-top: var(--plads-3); }
+.home-mobil-hoved p { margin: 0; font-size: var(--skrift-mikro); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--tekst-dæmpet); }
+.home-mobil-hoved h1 { margin: var(--plads-1) 0 0; font-family: 'Fraunces', Georgia, serif; font-size: 28px; font-weight: 400; line-height: 1.2; color: var(--tekst); }
+.home-hero { padding: 20px; border-radius: 12px; background: var(--accent); color: var(--accent-tekst); box-shadow: 0 2px 6px var(--skygge); }
+.home-hero-label { margin: 0; font-size: var(--skrift-mikro); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; opacity: .8; }
+.home-hero h2 { margin: var(--plads-1) 0 0; font-family: 'Fraunces', Georgia, serif; font-size: 1.5rem; font-weight: 400; line-height: 1.25; color: var(--accent-tekst); overflow-wrap: anywhere; }
+.home-hero-meta { margin: var(--plads-1) 0 0; font-size: var(--skrift-detalje); opacity: .8; }
+.home-hero-knapper { display: grid; gap: var(--plads-2); margin-top: var(--plads-4); }
+.home-mobil-sektionshoved { display: flex; align-items: baseline; justify-content: space-between; gap: var(--plads-3); }
+.home-mobil-link { min-height: var(--roerehoejde); padding: 0 var(--plads-1); margin-top: calc(-1 * var(--plads-3)); color: var(--accent); font-size: var(--skrift-lille); font-weight: 600; }
+.home-mobil-raekker { overflow: hidden; border: 1px solid var(--border-svag); border-radius: 12px; background: var(--bg-forhoejet); }
+.home-mobil-raekker > button { display: flex; width: 100%; min-height: var(--roerehoejde); align-items: center; justify-content: space-between; gap: var(--plads-3); padding: var(--plads-3) var(--plads-4); border: 0; border-bottom: 1px solid var(--border-svag); background: transparent; color: var(--tekst); font-size: var(--skrift-detalje); text-align: left; cursor: pointer; }
+.home-mobil-raekker > button:last-child { border-bottom: 0; }
+.home-mobil-raekker > button > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-mobil-raekker > button > span:last-child { flex-shrink: 0; color: var(--tekst-dæmpet); font-size: var(--skrift-lille); }
