@@ -1,6 +1,6 @@
 # STATUS
 
-*Sidst opdateret: 22. september 2026. Udgangspunkt: `main` @ `cdb6a6c`.*
+*Sidst opdateret: 22. september 2026. Udgangspunkt: `main` @ `d24e083`.*
 
 Kort svar på "hvor står vi nu?". Den skal kunne læses på to minutter og
 opdateres, hver gang noget bliver færdigt eller blokeret.
@@ -35,14 +35,14 @@ syv står tilbage.
 
 ## Grønt lys
 
-Kørt på grenen `claude/magical-cerf-8fl008` den 22. september 2026:
+Kørt på grenen `claude/jolly-gates-ieoqy2` den 22. september 2026:
 
 | Kommando | Resultat |
 |---|---|
 | `npm run lint` | Bestået, ingen fejl |
-| `npm test` | 77 testfiler, 1.700 tests, alle grønne |
+| `npm test` | 78 testfiler, 1.726 tests, alle grønne |
 | `npm run build` | Bestået |
-| `npm run preview` | Bestået — Statistik afprøvet på 1440 og 390 px med syntetiske ture |
+| `npm run preview` | Starter og serverer appen. Noter fra sidst er afprøvet i jsdom-skærmtests, ikke klikket igennem i en browser |
 
 **Brug `npm run build` til typekontrol, ikke `npx tsc --noEmit`.** Roden
 `tsconfig.json` har `"files": []` og peger kun videre til `tsconfig.app.json`
@@ -287,6 +287,25 @@ Favoritterne i referencen — **Gem** på et sted, og *0 favoritter* i
 Mere-rækken — er ikke bygget. De kræver et nyt felt på `Sted`, og datamodellen
 er ejerens valg (`AGENTS.md`). Gensynene tælles i stedet ud af turene, så
 linjen kan være ærlig uden et felt, ingen har sagt ja til.
+
+**Steder med noter fra sidst + genbesøg** (research §3 #4, v0.2.7). Et sted
+husker nu det, man skrev sidst. På turen står det gemte steds boks med
+*Første gang her* eller *Været her 2 gange før* — turen selv tæller aldrig
+med — og under den noten fra forrige besøg: den nyeste indgang i turlogen,
+ellers turens noter. Kun det ene forrige besøg: skrev man intet sidst, står
+der *Ingen note fra sidste besøg.*, og der hentes ikke en ældre note frem.
+Første gang står der ingenting om noter. Sted-kortet siger det samme om
+seneste besøg, og *Når du har været her, står noten fra turen her.* om et
+sted, man ikke har været.
+
+Et besøg er en tur, der er i gang eller afsluttet (`erBesoeg` i
+`src/steder.ts`). Kladder og klare ture er planer og tæller ikke længere som
+*Været her* — heller ikke i sted-forslagene på turen. Listen *Ture hertil*
+viser stadig alle ture. Statistikkens gensyn (`friluftshistorik.ts`) er
+urørt. Der er ingen nye felter: alt er udledt af `sted_uid`, `status`,
+`feltnoter` og `noter`. Opbevaringssted (hjem/hytte/bil) findes ikke i
+datamodellen og er ikke rørt — et tursted er kun turens kobling til et gemt
+sted, aldrig fritekst.
 
 Indstillinger var den tiende, og her var der tre fyldte accenter på én skærm:
 "Synkronisér nu" plus de to segmenter — aktivitetsniveauet og niveauet på nye

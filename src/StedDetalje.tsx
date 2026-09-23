@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import type { Sted } from './db';
 import TagsInput from './TagsInput';
-import { besoegstekst, turePaaSted } from './steder';
+import { besoegPaaSted, besoegstekst, noteFraBesoeg, turePaaSted } from './steder';
 import { heroForSted } from './billeder';
 import { Billedvisning } from './BilledSektion';
 import { soegSted } from './smartMotor';
@@ -128,7 +128,11 @@ function StedDetalje({ stedId, tilbage, aabnTur, opretTurHer, nyOprettet }: Prop
 
   if (!sted) return <Indlaeser />;
 
-  const besoegte = turePaaSted(ture, sted.uid);
+  // Listen længere nede har alle turene hertil, også dem, man planlægger.
+  // Tælleren og "fra sidst" har kun besøgene: en plan er ikke et besøg.
+  const hertil = turePaaSted(ture, sted.uid);
+  const besoegte = besoegPaaSted(ture, sted.uid);
+  const fraSidst = besoegte[0] ? noteFraBesoeg(besoegte[0]) : null;
   const stedbillede = heroForSted(billeder, ture, sted.uid);
 
   return (
@@ -171,6 +175,22 @@ function StedDetalje({ stedId, tilbage, aabnTur, opretTurHer, nyOprettet }: Prop
                 .filter(Boolean).join(' · ')}
             </div>
           )}
+          {/* Det man skrev sidst, man var her — kun det seneste besøg. Står
+              der ingenting, siges det; der hentes ikke en ældre note frem. */}
+          <div style={{ marginTop: 'var(--plads-2)', fontSize: 'var(--skrift-detalje)', lineHeight: 1.5 }}>
+            {besoegte.length === 0 ? (
+              <span style={{ color: 'var(--tekst-svag)' }}>
+                Når du har været her, står noten fra turen her.
+              </span>
+            ) : fraSidst ? (
+              <>
+                <div style={{ color: 'var(--tekst-dæmpet)', fontWeight: 500 }}>Note fra sidst</div>
+                <div style={{ color: 'var(--tekst)', whiteSpace: 'pre-line' }}>{fraSidst.tekst}</div>
+              </>
+            ) : (
+              <span style={{ color: 'var(--tekst-svag)' }}>Ingen note fra sidste besøg.</span>
+            )}
+          </div>
         </Kort>
 
         <Felt
@@ -263,12 +283,12 @@ function StedDetalje({ stedId, tilbage, aabnTur, opretTurHer, nyOprettet }: Prop
       </div>
 
       <SektionsTitel>Ture hertil</SektionsTitel>
-      {besoegte.length === 0 ? (
+      {hertil.length === 0 ? (
         <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-svag)', padding: '4px 0' }}>
           Ingen ture er knyttet til stedet endnu. Vælg det under "Sted" på en tur.
         </div>
       ) : (
-        besoegte.map((tur) => (
+        hertil.map((tur) => (
           <ListeRaekke
             key={tur.uid}
             titel={tur.navn || 'Uden navn'}

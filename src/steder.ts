@@ -1,4 +1,5 @@
 import type { Sted, Tur, Reference } from './db';
+import { nyesteFoerst } from './feltnoter';
 
 // Steder som genbrugsressource. Et sted er ikke en egenskab ved én tur — man
 // kommer tilbage til det, og det man lærte sidst skal stå der næste gang.
@@ -21,13 +22,69 @@ export function turePaaSted(ture: Tur[], stedUid: Reference): Tur[] {
     .sort((a, b) => (b.startdato || '').localeCompare(a.startdato || ''));
 }
 
+// Et besøg er en tur, der er sket — eller er i gang. En kladde eller en klar
+// tur er en plan: man har ikke været der endnu, og "Været her 1 gang" om den
+// tur, man sidder og planlægger, ville være løgn.
+export function erBesoeg(tur: Tur): boolean {
+  return tur.status === 'aktiv' || tur.status === 'afsluttet';
+}
+
+// Besøgene på et sted, nyeste først. Kun turens kobling til stedet tæller —
+// aldrig fritekst, og aldrig hvor grejet står derhjemme.
+export function besoegPaaSted(ture: Tur[], stedUid: Reference): Tur[] {
+  if (!stedUid) return [];
+  return turePaaSted(ture, stedUid).filter(erBesoeg);
+}
+
+// Besøgene på turens sted fra før denne tur, nyeste først. Turen selv tæller
+// aldrig med — heller ikke når den er i gang — og en tur, der ligger efter
+// den, man kigger på, er ikke "sidst".
+export function tidligereBesoeg(ture: Tur[], tur: Tur): Tur[] {
+  return besoegPaaSted(ture, tur.sted_uid).filter(
+    (t) =>
+      t.uid !== tur.uid &&
+      (!tur.startdato || !t.startdato || t.startdato <= tur.startdato)
+  );
+}
+
+export interface NoteFraSidst {
+  // Besøget noten er fra.
+  tur: Tur;
+  tekst: string;
+}
+
+// Det sidste, man skrev om stedet på ét besøg: den nyeste indgang i turlogen,
+// ellers turens egne noter. Tom, når man ikke skrev noget — så er der ingen
+// note, og der skal ikke stå en.
+export function noteFraBesoeg(besoeg: Tur): NoteFraSidst | null {
+  const felt = nyesteFoerst(besoeg.feltnoter ?? []).find((n) => n.tekst.trim());
+  const tekst = felt?.tekst.trim() || (besoeg.noter ?? '').trim();
+  return tekst ? { tur: besoeg, tekst } : null;
+}
+
+// Noten fra forrige besøg — kun det ene. Skrev man intet sidst, er svaret
+// ingenting, også selvom der står noget fra en tur for tre år siden: "fra
+// sidst" skal betyde fra sidst.
+export function noteFraSidst(ture: Tur[], tur: Tur): NoteFraSidst | null {
+  const forrige = tidligereBesoeg(ture, tur)[0];
+  return forrige ? noteFraBesoeg(forrige) : null;
+}
+
+// "Første gang her" eller "Været her 2 gange før" — til turen, hvor denne
+// tur ikke selv tæller.
+export function genbesoegstekst(tidligere: number): string {
+  if (tidligere <= 0) return 'Første gang her';
+  if (tidligere === 1) return 'Været her 1 gang før';
+  return `Været her ${tidligere} gange før`;
+}
+
 // Antal besøg pr. sted. Kun ture der faktisk er knyttet til et sted tæller —
-// fritekst siger ingenting om hvor man var.
+// fritekst siger ingenting om hvor man var — og kun ture, der er sket.
 export function besoegPrSted(ture: Tur[]): Map<Reference, number> {
   const antal = new Map<Reference, number>();
 
   ture.forEach((t) => {
-    if (!t.sted_uid) return;
+    if (!t.sted_uid || !erBesoeg(t)) return;
     antal.set(t.sted_uid, (antal.get(t.sted_uid) ?? 0) + 1);
   });
 
