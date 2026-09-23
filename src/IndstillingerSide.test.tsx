@@ -245,3 +245,64 @@ describe('versionslinjen', () => {
     expect(screen.getByText(/^version \d+\.\d+\.\d+ · (?:[0-9a-f]{7}|ukendt)$/)).toBeInTheDocument();
   });
 });
+
+// ─────────────────────────────────────────────
+// Fire spande
+//
+// Skærmen var syv afsnit lange. Nu er den fire: Konto, Din krop, Tjeklister og
+// Data og om — som referencen. Det sjældne er foldet væk, men ikke fjernet:
+// alt, der kunne gøres før, kan stadig gøres her.
+// ─────────────────────────────────────────────
+
+describe('fire spande', () => {
+  it('har de fire spande som sektionstitler', async () => {
+    vis();
+    await klar();
+
+    for (const titel of ['Konto', 'Din krop', 'Tjeklister', 'Data og om']) {
+      expect(screen.getByText(titel)).toBeInTheDocument();
+    }
+    // De gamle afsnit er gået op i spandene.
+    expect(screen.queryByText('Pak-af-tjek')).not.toBeInTheDocument();
+    expect(screen.queryByText('Data')).not.toBeInTheDocument();
+  });
+
+  it('beholder sync, eksport, import og krop fremme', async () => {
+    vis();
+    await klar();
+
+    expect(screen.getByRole('button', { name: 'Synkronisér nu' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Gem en kopi' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Læs en kopi ind' })).toBeInTheDocument();
+    expect(screen.getByLabelText(/Din vægt/)).toBeInTheDocument();
+  });
+
+  it('folder fejlfinding og afgangs-tjekket væk, uden at de forsvinder', async () => {
+    vis();
+    await klar();
+
+    const fejlfinding = screen.getByText('Fejlfinding').closest('details');
+    expect(fejlfinding).not.toHaveAttribute('open');
+    expect(fejlfinding).toContainElement(screen.getByRole('button', { name: 'Tjek forbindelsen' }));
+
+    const afgang = screen.getByText(/^Afgangs-tjek · \d+ punkt/).closest('details');
+    expect(afgang).not.toHaveAttribute('open');
+    expect(afgang).toContainElement(screen.getByRole('button', { name: 'Nulstil til standard' }));
+  });
+
+  it('åbner afgangs-tjekket, når man kommer fra Mere → Skabeloner', async () => {
+    tegn(
+      <IndstillingerSide
+        fane="indstillinger"
+        skift={vi.fn()}
+        tilLogin={vi.fn()}
+        seRundvisning={vi.fn()}
+        maal="skabeloner"
+      />,
+      DESKTOP
+    );
+    await klar();
+
+    expect(screen.getByText(/^Afgangs-tjek · \d+ punkt/).closest('details')).toHaveAttribute('open');
+  });
+});

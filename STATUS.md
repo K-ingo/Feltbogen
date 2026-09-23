@@ -1,6 +1,6 @@
 # STATUS
 
-*Sidst opdateret: 22. september 2026. Udgangspunkt: `main` @ `d24e083`.*
+*Sidst opdateret: 23. september 2026. Udgangspunkt: `main` @ `6511675`.*
 
 Kort svar på "hvor står vi nu?". Den skal kunne læses på to minutter og
 opdateres, hver gang noget bliver færdigt eller blokeret.
@@ -35,14 +35,14 @@ syv står tilbage.
 
 ## Grønt lys
 
-Kørt på grenen `claude/jolly-gates-ieoqy2` den 22. september 2026:
+Kørt på grenen `claude/focused-euler-lft843` den 23. september 2026:
 
 | Kommando | Resultat |
 |---|---|
 | `npm run lint` | Bestået, ingen fejl |
-| `npm test` | 78 testfiler, 1.726 tests, alle grønne |
+| `npm test` | 78 testfiler, 1.730 tests, alle grønne |
 | `npm run build` | Bestået |
-| `npm run preview` | Starter og serverer appen. Noter fra sidst er afprøvet i jsdom-skærmtests, ikke klikket igennem i en browser |
+| `npm run preview` | Ikke kørt. De fire spande i Indstillinger er afprøvet i jsdom-skærmtests, ikke klikket igennem i en browser |
 
 **Brug `npm run build` til typekontrol, ikke `npx tsc --noEmit`.** Roden
 `tsconfig.json` har `"files": []` og peger kun videre til `tsconfig.app.json`
@@ -306,6 +306,18 @@ urørt. Der er ingen nye felter: alt er udledt af `sted_uid`, `status`,
 `feltnoter` og `noter`. Opbevaringssted (hjem/hytte/bil) findes ikke i
 datamodellen og er ikke rørt — et tursted er kun turens kobling til et gemt
 sted, aldrig fritekst.
+
+**Indstillinger er blevet tynde: fire spande i stedet for syv afsnit.**
+Konto, Din krop, Tjeklister og Data og om — de fire, referencen tegner.
+Synkronisering er gået ind under Konto, afgangs-tjek og pak-af-tjek er én
+spand (Tjeklister), og Om står under Data. Det sjældne er foldet væk, ikke
+fjernet: serveradresse, *Tjek forbindelsen* og *Ryd dubletter* ligger under
+*Fejlfinding*, som står åben af sig selv, når der er en sync-fejl. Selve
+fejlen står altid fremme. Afgangs-tjekkets liste er foldet og åbner, når man
+kommer fra Mere → Skabeloner. Login, *Synkronisér nu*, *Gem en kopi*, *Læs en
+kopi ind* og kroppens tal står fremme som før. Ingen nye farver eller knapper;
+stadig kun én fyldt accent. Rækkerne under Mere lander i de samme afsnit som
+før.
 
 Indstillinger var den tiende, og her var der tre fyldte accenter på én skærm:
 "Synkronisér nu" plus de to segmenter — aktivitetsniveauet og niveauet på nye
