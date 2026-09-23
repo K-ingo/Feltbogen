@@ -4,6 +4,7 @@ import type { Fane } from './Skal';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import { Ikon } from './Ikon';
+import { useErDesktop } from './useMedie';
 
 interface Props {
   fane: Fane;
@@ -27,14 +28,26 @@ interface Props {
 // står et navn i feltet. Alt andet er outline eller tekst.
 function FolkSide({ fane, skift }: Props) {
   const personer = useLiveQuery(() => db.personer.toArray()) ?? [];
+  const erDesktop = useErDesktop();
+  const antal = `${personer.length} ${personer.length === 1 ? 'person' : 'personer'}`;
 
   return (
+    // Telefonen har sin egen header efter docs/design/mobile/04-folk.html:
+    // titel og antal i indholdet, ingen topbar, som på Ture og Grej. Der er
+    // ingen knap i den — "+ Tilføj" ved navnefeltet er skærmens eneste, og den
+    // er slået fra, til der står et navn.
     <Skal
       fane={fane}
       skift={skift}
-      titel="Folk"
-      undertitel={`${personer.length} ${personer.length === 1 ? 'person' : 'personer'}`}
+      titel={erDesktop ? 'Folk' : undefined}
+      undertitel={erDesktop ? antal : undefined}
     >
+      {!erDesktop && (
+        <header className="folk-mobil-hoved">
+          <h1>Folk</h1>
+          <p>{antal}</p>
+        </header>
+      )}
       <section className="people-intro">
         <div className="people-intro-icon" aria-hidden="true"><Ikon navn="folk" size={20} /></div>
         <div>
