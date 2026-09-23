@@ -1419,3 +1419,17 @@ label:has(> input[type='checkbox']) { min-height: 48px; }
   .people-add .ui-button { height: 48px; flex-shrink: 0; }
   .people-chip { font-size: var(--skrift-mikro); padding: 6px 12px; }
 }
+
+/* Mere på telefonen. Efter docs/design/mobile/05-mere.html: "Mere" i
+   indholdet som på Ture, Grej og Folk, to sektioner med hvert sit hvide kort
+   (12 px runding, blød kant) og rækker med undertekst og chevron. Ingen knap,
+   ingen FAB. Kun låste tokens. */
+.mere-mobil-hoved { padding-top: var(--plads-3); margin-bottom: var(--plads-4); }
+.mere-mobil-hoved h1 { margin: 0; font-family: 'Fraunces', Georgia, serif; font-size: 28px; font-weight: 400; line-height: 1.2; color: var(--tekst); }
+/* Samme grænse som useErDesktop (900 px), så PC-Mere ikke røres. */
+@media (max-width: 899px) {
+  .mere-sektion > div:first-child { font-size: 11px !important; margin-bottom: var(--plads-2) !important; }
+  .mere-sektion .list-row { padding-top: 14px !important; padding-bottom: 14px !important; }
+  .mere-sektion .list-row > div:first-child > div:first-child { font-size: var(--skrift-detalje) !important; }
+  .mere-sektion .list-row > div:first-child > div:nth-child(2) { font-size: var(--skrift-mikro) !important; }
+}

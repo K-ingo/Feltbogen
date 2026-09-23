@@ -10,7 +10,7 @@ import MereSide from './MereSide';
 import { saet } from './indstillinger';
 import { SYNCFEJL_NOEGLE } from './syncfejl';
 import { lavItem, lavSted, lavTur } from './test/data';
-import { tegn, DESKTOP } from './test/skaerm';
+import { tegn, DESKTOP, MOBIL } from './test/skaerm';
 
 // ─────────────────────────────────────────────
 // Mere · desktop
@@ -248,7 +248,9 @@ describe('sync-rækken er ærlig', () => {
   });
 
   it('kalder det ikke en fejl, når der bare ikke er dækning', async () => {
-    const oprindelig = Object.getOwnPropertyDescriptor(Navigator.prototype, 'onLine');
+    // Stubben sættes på instansen og fjernes igen derfra. Før blev den
+    // "genskabt" på prototypen, og så blev instansens false stående og gjorde
+    // resten af filen offline.
     Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false });
     try {
       await db.ture.add(lavTur({ navn: 'Sensommer' }));
@@ -257,8 +259,7 @@ describe('sync-rækken er ærlig', () => {
       const tekst = await screen.findByText('1 ændring venter på dækning');
       expect(tekst).not.toHaveStyle({ color: 'var(--advarsel)' });
     } finally {
-      if (oprindelig) Object.defineProperty(Navigator.prototype, 'onLine', oprindelig);
-      else Reflect.deleteProperty(navigator, 'onLine');
+      Reflect.deleteProperty(navigator, 'onLine');
     }
   });
 
@@ -329,5 +330,73 @@ describe('ingen fyldt primær handling', () => {
 
     await screen.findByText('Sådan gik 2026');
     expect(fyldteAccenter()).toHaveLength(0);
+  });
+});
+
+// ─────────────────────────────────────────────
+// Mere · telefon
+//
+// Efter `docs/design/mobile/05-mere.html`: "Mere" i indholdet (ingen topbar),
+// de samme to kort med rækker, bundnavigation med Mere aktiv. Ingen knap,
+// ingen FAB, ingen fyldt accent.
+// ─────────────────────────────────────────────
+
+const visMobil = () => tegn(
+  <MereSide fane="mere" skift={skift} aabnAar={aabnAar} aabnIndstillinger={aabnIndstillinger} />,
+  MOBIL
+);
+
+describe('Mere på telefonen', () => {
+  it('har titlen i sin egen header og ingen topbar', async () => {
+    visMobil();
+
+    await screen.findByText('Steder');
+    const hoved = document.querySelector('.mere-mobil-hoved') as HTMLElement;
+    expect(within(hoved).getByRole('heading', { level: 1, name: 'Mere' })).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+  });
+
+  it('har de to kort med syv rækker og chevron', async () => {
+    visMobil();
+
+    expect(await screen.findByText('Din friluftshistorik')).toBeInTheDocument();
+    expect(screen.getByText('Appen')).toBeInTheDocument();
+    expect(kort()).toHaveLength(2);
+    const alle = kort().flatMap(raekker);
+    expect(alle).toHaveLength(7);
+    for (const r of alle) expect(r.textContent).toContain('›');
+  });
+
+  it('har ingen knap, ingen FAB og ingen fyldt accent', async () => {
+    visMobil();
+
+    await screen.findByText('Steder');
+    expect(fyldteAccenter()).toHaveLength(0);
+    expect(screen.queryByRole('button', { name: 'Tilføj' })).not.toBeInTheDocument();
+  });
+
+  it('markerer Mere i bundnavigationen', async () => {
+    visMobil();
+
+    await screen.findByText('Steder');
+    const nav = screen.getByRole('navigation', { name: 'Hovednavigation' });
+    expect(nav).toHaveClass('bottom-nav');
+    expect(within(nav).getByRole('button', { name: 'Mere' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('viser fejlen i sync-rækken med advarselsprik', async () => {
+    await noterFejl();
+    visMobil();
+
+    const tekst = await screen.findByText('Sync fejlede');
+    expect(tekst).toHaveStyle({ color: 'var(--advarsel)' });
+    expect(syncprik()).toHaveStyle({ background: 'var(--advarsel)' });
+  });
+
+  it('lader fodnoten blive på PC', async () => {
+    visMobil();
+
+    await screen.findByText('Steder');
+    expect(document.querySelector('.hub-fodnote')).toBeNull();
   });
 });
