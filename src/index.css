@@ -1403,3 +1403,19 @@ label:has(> input[type='checkbox']) { min-height: 48px; }
 .grej-mobil-kort-navn { min-width: 0; font-size: var(--skrift-detalje); font-weight: 500; color: var(--tekst); overflow-wrap: anywhere; }
 .grej-mobil-kort-detalje { display: block; margin-top: 2px; font-size: var(--skrift-mikro); color: var(--tekst-dæmpet); }
 .grej-mobil-kort > div { font-size: var(--skrift-mikro); }
+
+/* Folk på telefonen. Efter docs/design/mobile/04-folk.html: "Folk" og antal i
+   indholdet som på Ture og Grej, et roligt turhold-kort, navnefeltet med en
+   stille "+ Tilføj" i samme højde, og forslagene som outline-chips. Kun låste
+   tokens. */
+.folk-mobil-hoved { padding-top: var(--plads-3); margin-bottom: var(--plads-4); }
+.folk-mobil-hoved h1 { margin: 0; font-family: 'Fraunces', Georgia, serif; font-size: 28px; font-weight: 400; line-height: 1.2; color: var(--tekst); }
+.folk-mobil-hoved p { margin: 2px 0 0; font-size: var(--skrift-lille); color: var(--tekst-dæmpet); }
+/* Samme grænse som useErDesktop (900 px), så PC-Folk ikke røres. */
+@media (max-width: 899px) {
+  .people-intro { border-radius: 12px; margin-bottom: var(--plads-6); }
+  .people-intro-icon { width: 36px; height: 36px; }
+  .people-add input { height: 48px; border-radius: 12px; }
+  .people-add .ui-button { height: 48px; flex-shrink: 0; }
+  .people-chip { font-size: var(--skrift-mikro); padding: 6px 12px; }
+}

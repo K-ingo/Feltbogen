@@ -8,7 +8,7 @@ vi.mock('./pb', () => import('./test/pbMock'));
 import { db } from './db';
 import FolkSide from './FolkSide';
 import { lavPerson, lavTur } from './test/data';
-import { tegn, DESKTOP } from './test/skaerm';
+import { tegn, DESKTOP, MOBIL } from './test/skaerm';
 
 // ─────────────────────────────────────────────
 // Folk · desktop
@@ -289,5 +289,80 @@ describe('Folk er den aktive fane', () => {
     await screen.findByText('0 personer');
     const sidebar = document.querySelector('nav.sidebar') as HTMLElement;
     expect(within(sidebar).getByRole('button', { name: 'Folk' })).toHaveAttribute('aria-current', 'page');
+  });
+});
+
+// ─────────────────────────────────────────────
+// Folk · telefon
+//
+// Efter `docs/design/mobile/04-folk.html`: "Folk" og antal i indholdet (ingen
+// topbar), turhold-kortet, navnefeltet med en stille "+ Tilføj", og
+// "Foreslået fra dine ture" som outline-chips. Ingen FAB, og højst én fyldt
+// accent — og ingen, før der står et navn.
+// ─────────────────────────────────────────────
+
+const visMobil = () => tegn(<FolkSide fane="folk" skift={vi.fn()} />, MOBIL);
+
+describe('Folk på telefonen', () => {
+  it('har titel og antal i sin egen header og ingen topbar', async () => {
+    await db.personer.bulkAdd([lavPerson({ navn: 'Emil' }), lavPerson({ navn: 'Jakob' })]);
+    visMobil();
+
+    await screen.findByText('2 personer');
+    const hoved = document.querySelector('.folk-mobil-hoved') as HTMLElement;
+    expect(within(hoved).getByRole('heading', { level: 1, name: 'Folk' })).toBeInTheDocument();
+    expect(within(hoved).getByText('2 personer')).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+  });
+
+  it('har turhold-kortet', async () => {
+    visMobil();
+
+    await screen.findByText('0 personer');
+    const kort = document.querySelector('.people-intro') as HTMLElement;
+    expect(within(kort).getByRole('heading', { name: 'Dit turhold' })).toBeInTheDocument();
+  });
+
+  it('har ingen fyldt accent og ingen FAB på den tomme skærm', async () => {
+    visMobil();
+
+    await screen.findByText('0 personer');
+    expect(tilfoej()).toBeDisabled();
+    expect(tilfoej()).toHaveClass('ui-button--sekundaer');
+    expect(screen.getByText('Skriv et navn for at tilføje')).toBeInTheDocument();
+    expect(fyldteAccenter()).toHaveLength(0);
+    expect(screen.queryByRole('button', { name: 'Tilføj' })).not.toBeInTheDocument();
+  });
+
+  it('tænder + Tilføj som den eneste fyldte, når der står et navn', async () => {
+    visMobil();
+
+    await userEvent.type(navnefelt(), 'Mikkel');
+    expect(tilfoej()).toBeEnabled();
+    expect(fyldteAccenter()).toEqual([tilfoej()]);
+  });
+
+  it('viser forslag fra turene som outline-chips, der opretter personen', async () => {
+    await db.ture.add(lavTur({
+      deltagere: [{
+        id: 'd1', navn: 'Jakob', overnatning: null,
+        personligt_gear_ids: [], baerer_delt_ids: [], person_uid: ''
+      }]
+    }));
+    visMobil();
+
+    expect(await screen.findByText('Foreslået fra dine ture')).toBeInTheDocument();
+    const chip = screen.getByRole('button', { name: '+ Jakob' });
+    expect(chip).toHaveClass('people-chip');
+    expect(fyldteAccenter()).toHaveLength(0);
+
+    await userEvent.click(chip);
+    expect(await screen.findByText('1 person')).toBeInTheDocument();
+  });
+
+  it('beholder den tomme tekst uden at kræve noget', async () => {
+    visMobil();
+
+    expect(await screen.findByText(/Ingen endnu/)).toBeInTheDocument();
   });
 });

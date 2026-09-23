@@ -1,6 +1,6 @@
 # STATUS
 
-*Sidst opdateret: 23. september 2026. Udgangspunkt: `main` @ `40eaef4`.*
+*Sidst opdateret: 23. september 2026. Udgangspunkt: `main` @ `f1a15b0`.*
 
 Kort svar på "hvor står vi nu?". Den skal kunne læses på to minutter og
 opdateres, hver gang noget bliver færdigt eller blokeret.
@@ -29,20 +29,20 @@ står tilbage, er arbejde vi selv vælger — ikke noget, der spærrer.
 Det næste stykke arbejde er ikke funktionalitet, men udseende. Designsystemet
 er låst og ligger nu i repoet sammen med en tegning af hver eneste skærm. Alle
 tolv PC-tegninger er bygget, og af de otte til telefonen er Pakning, Hjem,
-Ture og Grej bygget; fire står tilbage.
+Ture, Grej og Folk bygget; tre står tilbage.
 
 ---
 
 ## Grønt lys
 
-Kørt på grenen `claude/charming-lamport-0o6ect` den 23. september 2026:
+Kørt på grenen `claude/magical-noether-jdjfaf` den 23. september 2026:
 
 | Kommando | Resultat |
 |---|---|
 | `npm run lint` | Bestået, ingen fejl |
-| `npm test` | 78 testfiler, 1.748 tests, alle grønne |
+| `npm test` | 78 testfiler, 1.754 tests, alle grønne |
 | `npm run build` | Bestået |
-| `npm run preview` | Grej på telefonen set i Chromium ved 390 px, lyst og mørkt tema, med grej der er mærket Pas på |
+| `npm run preview` | Folk på telefonen set i Chromium ved 390 px, lyst og mørkt tema |
 
 **Brug `npm run build` til typekontrol, ikke `npx tsc --noEmit`.** Roden
 `tsconfig.json` har `"files": []` og peger kun videre til `tsconfig.app.json`
@@ -107,8 +107,15 @@ Alle elleve farver i `docs/design/TOKENS.md` stemmer nu med `:root` i
 **Der ligger tyve handoffs i kø.** Tolv er bygget — hele PC-køen: Hjem, Ture,
 Tur-detalje, Pakning, Grej, Grejsæt, Folk, Mere, Steder & Statistik,
 Indstillinger og de to opret-ark, Ny tur og Tilføj grej. Af de otte
-mobilskærme er Pakning, Hjem, Ture og Grej bygget; de fire andre er ikke
-rørt. Køen er Folk → Mere (`04`–`05`).
+mobilskærme er Pakning, Hjem, Ture, Grej og Folk bygget; de tre andre er ikke
+rørt. Næste i køen er Mere (`05`).
+
+**Folk på telefonen** følger `docs/design/mobile/04-folk.html`: "Folk" og
+antal i indholdet (ingen topbar), som på Ture og Grej, men uden knap i
+headeren. Turhold-kortet, navnefeltet med **+ Tilføj** i samme højde (48 px),
+og "Foreslået fra dine ture" som outline-chips. "+ Tilføj" er slået fra og
+stille, til der står et navn — så er den skærmens eneste fyldte. Ingen FAB.
+Den tomme tekst er uændret. PC-Folk er ikke rørt.
 
 **Grej på telefonen** følger `docs/design/mobile/03-grej.html`: "Grej", antal
 og vægt og **+ Tilføj** på én linje i indholdet (ingen topbar), som på Ture.
