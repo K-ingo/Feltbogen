@@ -184,7 +184,15 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
       // også ud under titlen.
       undertitel="Konto, din krop og det der gælder hele appen"
     >
-      {/* Afsnittene står i én spalte under titlen. Loftet er smallere end
+      {/* Fire spande og ikke syv afsnit: Konto, Din krop, Tjeklister og Data
+          og om — de samme fire, som referencen tegner (Konto, Din krop, App,
+          Farezone), med Farezonens knapper der hvor appen faktisk har dem.
+          Synkroniseringen er kontoens: uden konto er der intet at sende op.
+          Det, der kun skal bruges når noget driller (serveradressen, tjek af
+          forbindelsen, dubletter), og de lange forklaringer, ligger foldet
+          væk. Fejl står stadig fremme, så snart der er en.
+
+          Afsnittene står i én spalte under titlen. Loftet er smallere end
           hovedspalten, fordi en indstillingsrække skal kunne læses fra etiket
           til værdi i ét blik — men den er venstrestillet og ikke centreret:
           centreret lå kortene en tomme inde under deres egen overskrift. */}
@@ -217,8 +225,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
                   <Knap variant="fare" onClick={logUd}>Log ud</Knap>
                 </div>
                 <Hjaelp>
-                  Data bliver liggende på denne enhed når du logger ud. Log ind igen for at
-                  synkronisere videre.
+                  Data bliver liggende på denne enhed, når du logger ud.
                 </Hjaelp>
               </>
             ) : (
@@ -231,96 +238,104 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
                 </div>
                 <Hjaelp>
                   Med en konto kan du synkronisere mellem enheder, dele ture med gæster og
-                  få dine data igen hvis enheden bliver væk. Det du allerede har lavet,
-                  bliver sendt op når du logger ind.
+                  få dine data igen, hvis enheden bliver væk.
                 </Hjaelp>
               </>
             )}
           </Kort>
-        </section>
 
-        <section ref={sigte('synkronisering')}>
-          <SektionsTitel>Synkronisering</SektionsTitel>
-          <Kort>
-            <Raekke
-              label="Venter på at blive sendt"
-              vaerdi={usendt === 0 ? 'Intet' : `${usendt} ${usendt === 1 ? 'ændring' : 'ændringer'}`}
-              fremhaev={usendt > 0}
-            />
-            {/* Adressen står her, fordi en forkert værdi ellers er usynlig:
-                appen opfører sig ens, den ringer bare til den forkerte server.
-                En .env på maskinen eller en variabel i udrulningen kan sætte
-                den, og så er det her, det kan ses. */}
-            <Raekke label="Server" vaerdi={serveradresse()} />
+          {/* Mere → Synkronisering lander her. Et underafsnit og ikke en spand
+              for sig: det er kontoens data, der sendes op. */}
+          <section ref={sigte('synkronisering')} style={{ marginTop: '12px' }}>
+            <Kort>
+              <Undertitel>Synkronisering</Undertitel>
+              <Raekke
+                label="Venter på at blive sendt"
+                vaerdi={usendt === 0 ? 'Intet' : `${usendt} ${usendt === 1 ? 'ændring' : 'ændringer'}`}
+                fremhaev={usendt > 0}
+              />
 
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
-              {/* Outline og ikke fyldt accent. Skærmens ene fyldte knap er
-                  "Gem navn", og den tænder kun, når der er et rettet navn at
-                  gemme — stod sync'en fyldt, ville der være to i samme
-                  skærmbillede i præcis det øjeblik, man havde rettet noget.
-                  Knappen er stadig den første af de tre og gør det samme;
-                  synkroniseringen kører i forvejen af sig selv. */}
-              <Knap onClick={synkroniser} disabled={arbejder !== null}>
-                {arbejder === 'sync' ? 'Synkroniserer…' : 'Synkronisér nu'}
-              </Knap>
-              <Knap onClick={tjekServer} disabled={arbejder !== null}>
-                {arbejder === 'tjek' ? 'Tjekker…' : 'Tjek forbindelsen'}
-              </Knap>
-              <Knap onClick={rydDubletter} disabled={arbejder !== null}>
-                {arbejder === 'dubletter' ? 'Rydder op…' : 'Ryd dubletter'}
-              </Knap>
-            </div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
+                {/* Outline og ikke fyldt accent. Skærmens ene fyldte knap er
+                    "Gem navn", og den tænder kun, når der er et rettet navn at
+                    gemme — stod sync'en fyldt, ville der være to i samme
+                    skærmbillede i præcis det øjeblik, man havde rettet noget.
+                    Synkroniseringen kører i forvejen af sig selv. */}
+                <Knap onClick={synkroniser} disabled={arbejder !== null}>
+                  {arbejder === 'sync' ? 'Synkroniserer…' : 'Synkronisér nu'}
+                </Knap>
+              </div>
 
-            <Kvittering besked={syncBesked} />
+              <Kvittering besked={syncBesked} />
 
-            {/* Den seneste fejl, hvis der var en. Baggrundssync fangede sine
-                fejl og skrev dem i konsollen — hvor ingen kigger. Se
-                syncfejl.ts. */}
-            {syncfejl && (
-              <Advarsel>
-                {fejltekst(syncfejl.art, online)}
-                {/* Hvilken post og hvilken samling. Uden den her siger
-                    advarslen at noget blev afvist, og ikke hvad — og så er der
-                    ikke noget at gå efter i PocketBase. Se syncfejl.ts. */}
-                {syncfejl.hvor && (
-                  <div style={{ marginTop: '6px', opacity: 0.8 }}>
-                    Det gik galt under {syncfejl.hvor}.
-                  </div>
-                )}
-                {syncfejl.detalje && (
-                  <div style={{ marginTop: '6px', opacity: 0.8 }}>
-                    Serveren sagde: {syncfejl.detalje}
-                  </div>
-                )}
-                {/* Feltet serveren pegede på. Det er den ene linje, der siger
-                    hvad der mangler i skemaet. */}
-                {syncfejl.felter && (
-                  <div style={{ marginTop: '6px', opacity: 0.8 }}>
-                    Felter: {syncfejl.felter}
-                  </div>
-                )}
-                {syncfejl.hvornaar && (
-                  <div style={{ marginTop: '6px', opacity: 0.8 }}>
-                    Sidst forsøgt {datoTekst(syncfejl.hvornaar)}
-                  </div>
-                )}
-              </Advarsel>
-            )}
+              {/* Den seneste fejl, hvis der var en. Baggrundssync fangede sine
+                  fejl og skrev dem i konsollen — hvor ingen kigger. Se
+                  syncfejl.ts. Den står uden for foldningen: en fejl må ikke
+                  kræve et klik for at blive set. */}
+              {syncfejl && (
+                <Advarsel>
+                  {fejltekst(syncfejl.art, online)}
+                  {/* Hvilken post og hvilken samling. Uden den her siger
+                      advarslen at noget blev afvist, og ikke hvad — og så er der
+                      ikke noget at gå efter i PocketBase. Se syncfejl.ts. */}
+                  {syncfejl.hvor && (
+                    <div style={{ marginTop: '6px', opacity: 0.8 }}>
+                      Det gik galt under {syncfejl.hvor}.
+                    </div>
+                  )}
+                  {syncfejl.detalje && (
+                    <div style={{ marginTop: '6px', opacity: 0.8 }}>
+                      Serveren sagde: {syncfejl.detalje}
+                    </div>
+                  )}
+                  {/* Feltet serveren pegede på. Det er den ene linje, der siger
+                      hvad der mangler i skemaet. */}
+                  {syncfejl.felter && (
+                    <div style={{ marginTop: '6px', opacity: 0.8 }}>
+                      Felter: {syncfejl.felter}
+                    </div>
+                  )}
+                  {syncfejl.hvornaar && (
+                    <div style={{ marginTop: '6px', opacity: 0.8 }}>
+                      Sidst forsøgt {datoTekst(syncfejl.hvornaar)}
+                    </div>
+                  )}
+                </Advarsel>
+              )}
 
-            {uidFeltMangler() && (
-              <Advarsel>
-                PocketBase gemmer ikke feltet <code>uid</code>. Tilføj et tekstfelt ved navn
-                <code> uid</code> til samlingerne <code>items</code>, <code>grupper</code> og
-                <code> ture</code>. Uden det kan to enheder ikke blive enige om hvilken post
-                der er hvilken, og grej bliver hentet ned igen som dubletter.
-              </Advarsel>
-            )}
+              {uidFeltMangler() && (
+                <Advarsel>
+                  PocketBase gemmer ikke feltet <code>uid</code>. Tilføj et tekstfelt ved navn
+                  <code> uid</code> til samlingerne <code>items</code>, <code>grupper</code> og
+                  <code> ture</code>. Uden det kan to enheder ikke blive enige om hvilken post
+                  der er hvilken, og grej bliver hentet ned igen som dubletter.
+                </Advarsel>
+              )}
 
-            <Hjaelp>
-              Alt gemmes først på enheden og sendes derefter op. Er du uden dækning, bliver
-              ændringerne liggende og går op af sig selv når forbindelsen er tilbage.
-            </Hjaelp>
-          </Kort>
+              {/* Fejlfinding. Står åben, når der er en fejl at finde: så er
+                  serveradressen og "Tjek forbindelsen" det næste, man skal
+                  bruge. */}
+              <Fold titel="Fejlfinding" aaben={syncfejl !== null}>
+                {/* Adressen står her, fordi en forkert værdi ellers er usynlig:
+                    appen opfører sig ens, den ringer bare til den forkerte server.
+                    En .env på maskinen eller en variabel i udrulningen kan sætte
+                    den, og så er det her, det kan ses. */}
+                <Raekke label="Server" vaerdi={serveradresse()} />
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '10px' }}>
+                  <Knap onClick={tjekServer} disabled={arbejder !== null}>
+                    {arbejder === 'tjek' ? 'Tjekker…' : 'Tjek forbindelsen'}
+                  </Knap>
+                  <Knap onClick={rydDubletter} disabled={arbejder !== null}>
+                    {arbejder === 'dubletter' ? 'Rydder op…' : 'Ryd dubletter'}
+                  </Knap>
+                </div>
+                <Hjaelp>
+                  Alt gemmes først på enheden og sendes derefter op. Er du uden dækning, bliver
+                  ændringerne liggende og går op af sig selv, når forbindelsen er tilbage.
+                </Hjaelp>
+              </Fold>
+            </Kort>
+          </section>
         </section>
 
         <section>
@@ -364,36 +379,24 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
               />
             </div>
 
-            <Hjaelp>
-              Bruges til at regne vand og mad ud på turene. Uden dem regner motoren med
-              en person på 75 kg — en 65-kilos vandrer og en 95-kilos bushcrafter med
-              bålmad drikker ikke det samme. Skriver du et kaloriebehov ind, bruges det
-              i stedet for skønnet over maden.
-            </Hjaelp>
+            <Fold titel="Sådan bruges tallene">
+              <Hjaelp>
+                Uden dem regner motoren med en person på 75 kg — en 65-kilos vandrer og en
+                95-kilos bushcrafter med bålmad drikker ikke det samme. Skriver du et
+                kaloriebehov ind, bruges det i stedet for skønnet over maden.
+              </Hjaelp>
+            </Fold>
           </Kort>
         </section>
 
+        {/* Afgangs-tjek og pak-af-tjek var to afsnit. De er det samme slags
+            valg — hvad en ny tur starter med — og Mere kalder dem allerede
+            under ét: Skabeloner. */}
         <section ref={sigte('skabeloner')}>
-          <SektionsTitel>Afgangs-tjek</SektionsTitel>
-          <Kort>
-            <Skabelon
-              linjer={afgangsSkabelon}
-              gem={(l) => void saet(AFGANGS_SKABELON, skrivSkabelon(l))}
-              nulstil={() => void saet(AFGANGS_SKABELON, skrivSkabelon([...STANDARD_SKABELON]))}
-            />
-            <Hjaelp>
-              Skabelonen bruges når du laver et afgangs-tjek på en tur. Retter du den
-              bagefter, flettes de nye punkter ind på turene uden at røre det du allerede
-              har krydset af — og uden at fjerne det du selv har skrevet på turen.
-            </Hjaelp>
-          </Kort>
-        </section>
-
-        <section>
-          <SektionsTitel>Pak-af-tjek</SektionsTitel>
+          <SektionsTitel>Tjeklister</SektionsTitel>
           <Kort>
             <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-dæmpet)', marginBottom: '8px' }}>
-              Niveau på nye tjek
+              Pak-af-tjek på nye ture
             </div>
             <Segment
               vaerdier={PAK_AF_NIVEAU}
@@ -401,25 +404,41 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
               vaelg={(n) => void saet(PAK_AF_NIVEAU_VALG, n)}
               stille
             />
-            <Hjaelp>
-              Let er tre knapper pr. stykke grej — brugt, ubrugt, gik i stykker. Grundig
-              lægger en note pr. item oveni, plus en vurdering af om der var for meget
-              eller for lidt med i hver kategori. Niveauet kan skiftes undervejs på den
-              enkelte tur.
-            </Hjaelp>
+            <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', marginTop: '8px', lineHeight: 1.5 }}>
+              Let: brugt, ubrugt eller gik i stykker. Grundig: også noter og en vurdering
+              pr. kategori. Kan skiftes på den enkelte tur.
+            </div>
+
+            {/* Listen er lang og redigeres sjældent. Kommer man fra Mere →
+                Skabeloner, står den åben: så er det den, man er kommet for. */}
+            <Fold
+              titel={`Afgangs-tjek · ${afgangsSkabelon.length} ${afgangsSkabelon.length === 1 ? 'punkt' : 'punkter'}`}
+              aaben={maal === 'skabeloner'}
+            >
+              <Skabelon
+                linjer={afgangsSkabelon}
+                gem={(l) => void saet(AFGANGS_SKABELON, skrivSkabelon(l))}
+                nulstil={() => void saet(AFGANGS_SKABELON, skrivSkabelon([...STANDARD_SKABELON]))}
+              />
+              <Hjaelp>
+                Retter du skabelonen, flettes de nye punkter ind på turene uden at røre det,
+                du allerede har krydset af eller selv skrevet.
+              </Hjaelp>
+            </Fold>
           </Kort>
         </section>
 
         <section ref={sigte('data')}>
-          <SektionsTitel>Data</SektionsTitel>
+          <SektionsTitel>Data og om</SektionsTitel>
           <Kort>
-            <Raekke label="Grej" vaerdi={`${items.length}`} />
-            <Raekke label="Grupper" vaerdi={`${grupper.length}`} />
-            <Raekke label="Ture" vaerdi={`${ture.length}`} />
-            <Raekke label="Steder" vaerdi={`${steder.length}`} />
-            <Raekke label="Personer" vaerdi={`${personerIBasen.length}`} />
+            <Undertitel>Backup</Undertitel>
+            {/* Tallene på én linje: de er en kvittering for, hvad en kopi
+                rummer, og ikke fem indstillinger. */}
+            <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-dæmpet)', lineHeight: 1.5 }}>
+              {items.length} grej · {grupper.length} grupper · {ture.length} ture · {steder.length} steder · {personerIBasen.length} personer
+            </div>
 
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '14px' }}>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
               <Knap onClick={eksporter}>Gem en kopi</Knap>
               <Knap onClick={() => filvaelger.current?.click()} disabled={arbejder !== null}>
                 {arbejder === 'import' ? 'Læser…' : 'Læs en kopi ind'}
@@ -442,28 +461,25 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
             <Kvittering besked={dataBesked} />
 
             <Hjaelp>
-              Kopien er en JSON-fil med dit grej, dine grupper, ture, steder og personer.
-              Billedfiler er ikke med. Når du læser en kopi ind, bliver der kun lagt til —
-              poster du allerede har, bliver ikke rørt.
+              En JSON-fil uden billeder. Læser du en kopi ind, bliver der kun lagt til.
             </Hjaelp>
           </Kort>
-        </section>
 
-        <section ref={sigte('om')}>
-          <SektionsTitel>Om</SektionsTitel>
-          <Kort>
-            <Raekke label="Feltbogen" vaerdi={`version ${__APP_VERSION__} · ${__APP_COMMIT__}`} />
-            <Raekke label="Denne udgave er bygget" vaerdi={byggetekst()} />
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
-              <Knap onClick={seRundvisning}>Se rundvisningen igen</Knap>
-              <Knap onClick={() => void hentNyesteUdgave()}>Hent nyeste udgave</Knap>
-            </div>
-            <Hjaelp>
-              Appen ligger i cache, så den kan startes uden dækning. En ny
-              udgave slår derfor først igennem ved en senere indlæsning — her
-              kan du hente den med det samme.
-            </Hjaelp>
-          </Kort>
+          <section ref={sigte('om')} style={{ marginTop: '12px' }}>
+            <Kort>
+              <Undertitel>Om</Undertitel>
+              <Raekke label="Feltbogen" vaerdi={`version ${__APP_VERSION__} · ${__APP_COMMIT__}`} />
+              <Raekke label="Denne udgave er bygget" vaerdi={byggetekst()} />
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
+                <Knap onClick={seRundvisning}>Se rundvisningen igen</Knap>
+                <Knap onClick={() => void hentNyesteUdgave()}>Hent nyeste udgave</Knap>
+              </div>
+              <Hjaelp>
+                En ny udgave slår først igennem ved en senere indlæsning — her kan du hente
+                den med det samme.
+              </Hjaelp>
+            </Kort>
+          </section>
         </section>
 
       </div>
@@ -681,6 +697,34 @@ function Afsnitstekst({ children }: { children: React.ReactNode }) {
     }}>
       {children}
     </p>
+  );
+}
+
+// Overskriften på et underafsnit inde i en spand — Synkronisering under
+// Konto, Om under Data. Mindre end sektionstitlen, så de fire spande stadig er
+// det, øjet deler skærmen op efter.
+function Undertitel({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      marginBottom: '6px',
+      fontSize: 'var(--skrift-knap)',
+      fontWeight: 600,
+      color: 'var(--tekst)'
+    }}>
+      {children}
+    </div>
+  );
+}
+
+// Det, der sjældent skal bruges, foldet væk under en stille linje. Stille og
+// ikke fremhævet: det er en vej videre, ikke en handling — samme regel som
+// "Se mere" på startskærmen.
+function Fold({ titel, aaben, children }: { titel: string; aaben?: boolean; children: React.ReactNode }) {
+  return (
+    <details className="settings-fold" open={aaben}>
+      <summary>{titel}</summary>
+      {children}
+    </details>
   );
 }
 
