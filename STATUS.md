@@ -1,6 +1,6 @@
 # STATUS
 
-*Sidst opdateret: 23. september 2026. Udgangspunkt: `main` @ `0f519ea`.*
+*Sidst opdateret: 29. oktober 2026. Udgangspunkt: `main` @ `98e462e`.*
 
 Kort svar på "hvor står vi nu?". Den skal kunne læses på to minutter og
 opdateres, hver gang noget bliver færdigt eller blokeret.
@@ -28,21 +28,21 @@ står tilbage, er arbejde vi selv vælger — ikke noget, der spærrer.
 
 Det næste stykke arbejde er ikke funktionalitet, men udseende. Designsystemet
 er låst og ligger nu i repoet sammen med en tegning af hver eneste skærm. Alle
-tolv PC-tegninger er bygget, og af de otte til telefonen er Pakning, Hjem,
-Ture, Grej, Folk og Mere bygget; to står tilbage.
+tolv PC-tegninger er bygget, og alle otte til telefonen er nu også bygget:
+Pakning, Hjem, Ture, Grej, Folk, Mere og de to opret-ark.
 
 ---
 
 ## Grønt lys
 
-Kørt på grenen `claude/charming-mayer-usynqw` den 23. september 2026:
+Kørt på grenen `claude/gifted-cannon-nkv4bp` den 29. oktober 2026:
 
 | Kommando | Resultat |
 |---|---|
 | `npm run lint` | Bestået, ingen fejl |
-| `npm test` | 78 testfiler, 1.760 tests, alle grønne |
+| `npm test` | 78 testfiler, 1.767 tests, alle grønne |
 | `npm run build` | Bestået |
-| `npm run preview` | Mere på telefonen set i Chromium ved 390 px, lyst og mørkt tema |
+| `npm run preview` | Ny tur og Tilføj grej set i Chromium ved 390 px (lyst og mørkt tema) og Ny tur ved 1280 px (uændret) |
 
 **Brug `npm run build` til typekontrol, ikke `npx tsc --noEmit`.** Roden
 `tsconfig.json` har `"files": []` og peger kun videre til `tsconfig.app.json`
@@ -104,11 +104,23 @@ det samme; gør de ikke, er det Notion der gælder, og så skal filerne rettes.
 Alle elleve farver i `docs/design/TOKENS.md` stemmer nu med `:root` i
 `src/index.css`. Sidebaggrunden var den sidste, der manglede.
 
-**Der ligger tyve handoffs i kø.** Tolv er bygget — hele PC-køen: Hjem, Ture,
+**Der lå tyve handoffs i kø, og alle er bygget.** Tolv er hele PC-køen: Hjem, Ture,
 Tur-detalje, Pakning, Grej, Grejsæt, Folk, Mere, Steder & Statistik,
 Indstillinger og de to opret-ark, Ny tur og Tilføj grej. Af de otte
-mobilskærme er Pakning, Hjem, Ture, Grej, Folk og Mere bygget; de to andre
-(opret-arkene `07` og `08`) er ikke rørt.
+mobilskærme er alle otte bygget: Pakning, Hjem, Ture, Grej, Folk, Mere og
+opret-arkene `07` og `08`.
+
+**Opret-arkene på telefonen** følger `docs/design/mobile/07-sheet-ny-tur.html`
+og `08-sheet-tilfoej-grej.html`. Det er de samme ark som på PC (`Ark.tsx`,
+samme felter, samme regler) — under 900 px (useErDesktop) står de bare som
+et ark nedefra: greb øverst, afrundede topkanter, etiketterne med småt, titel-
+og navnefeltet en tak højere, vægt/pris/antal på én linje og to lige brede
+knapper i foden. Annuller har en stille kant; **Opret** er arkets eneste
+fyldte og er slået fra, til der står en titel/et navn. Grunden står over
+knapperne. Statusvælgeren i Tilføj grej er stadig stille (tegningen fylder
+"Ejer", men så stod der to fyldte flader). Tegningernes "Flere detaljer" og
+"Avanceret" er ikke bygget — der er ingen felter at folde ud endnu. Arkene
+bag grejsæt er ikke rørt. PC-arkene er ikke rørt.
 
 **Mere på telefonen** følger `docs/design/mobile/05-mere.html`: "Mere" i
 indholdet (ingen topbar), ingen knap og ingen FAB. De to sektioner står i

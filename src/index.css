@@ -432,6 +432,40 @@ button:disabled { cursor: not-allowed; }
   .ark-tre-felter { grid-template-columns: 1fr 1fr; }
 }
 
+/* Opret-arkene på telefonen. Efter docs/design/mobile/07-sheet-ny-tur.html og
+   08-sheet-tilfoej-grej.html: et ark nedefra med greb, afrundede topkanter,
+   etiketterne med småt over felterne og to lige brede knapper i foden.
+   Klasserne sættes kun under useErDesktop (900 px), så PC-arket ikke røres.
+   Kun låste tokens. */
+.ark-baggrund--bund { align-items: flex-end; padding: 0; }
+.ark--bund {
+  max-width: none;
+  max-height: 92vh;
+  border-bottom: none;
+  border-radius: 20px 20px 0 0;
+}
+.ark-greb { display: flex; justify-content: center; padding: var(--plads-2) 0 var(--plads-1); }
+.ark-greb span { width: 40px; height: 4px; border-radius: var(--runding-pille); background: var(--accent-border); }
+.ark--bund .ark-hoved { padding: 0 var(--plads-4) var(--plads-3) 20px; }
+.ark--bund .ark-indhold { gap: var(--plads-4); padding: var(--plads-4) 20px; }
+.ark--bund .ark-forklaring { font-size: var(--skrift-mikro); }
+.ark--bund .ark-indhold label { font-size: 11px !important; letter-spacing: .06em !important; margin-bottom: 6px !important; }
+.ark--bund .ark-indhold input:not([type='checkbox']) { min-height: 44px; border-radius: 12px; }
+/* Titel og navn står først og er en tak højere, som på tegningen. */
+.ark--bund .ark-indhold > div:nth-child(2) input { min-height: 48px; }
+.ark--bund .ark-enhedsfelt { border-radius: 12px; }
+.ark--bund .ark-enhedsfelt input { min-height: 0; border-radius: 0; }
+/* Tegningen har plads til vægt, pris og antal på én linje ved 390 px. */
+.ark--bund .ark-tre-felter { grid-template-columns: 1fr 1fr 1fr; gap: var(--plads-2); }
+.ark--bund .ark-fod {
+  gap: var(--plads-2);
+  padding: var(--plads-4) 20px calc(var(--plads-5) + env(safe-area-inset-bottom, 0px));
+}
+.ark--bund .ark-hint {
+  padding: var(--plads-2) 20px 0;
+  text-align: center;
+}
+
 /* En tur kan bære mere end ét mærke — fasen, og at der mangler et sted. De
    skal kunne brydes til to linjer på et smalt kort frem for at presse
    kortets bredde ud. */

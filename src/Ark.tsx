@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import type { ItemStatus } from './db';
 import { ITEM_STATUS } from './db';
 import { Felt, Knap, Label, Segment } from './ui';
+import { useErDesktop } from './useMedie';
 import {
   turKanOprettes, grejKanOprettes, tommeTurfelter, tommeGrejfelter
 } from './opretark';
@@ -39,14 +40,27 @@ interface ArkProps {
   // brug for den; arkene bag grejsæt siger det allerede i deres overblik, og
   // der ville det stå to gange.
   visGrund?: boolean;
+  // På telefonen står opret-arkene som et ark nedefra, efter
+  // docs/design/mobile/07-sheet-ny-tur.html og 08-sheet-tilfoej-grej.html.
+  // Kun opret-arkene: arkene bag grejsæt har ingen mobiltegning endnu og
+  // bliver stående, som de er. På PC (useErDesktop, 900 px) ændrer det intet.
+  bundark?: boolean;
   children: ReactNode;
 }
 
 export function Ark({
-  titel, forklaring, opretLabel, kanOprette, hvorforSlaaetFra, opret, annuller, smal, visGrund, children
+  titel, forklaring, opretLabel, kanOprette, hvorforSlaaetFra, opret, annuller, smal, visGrund, bundark, children
 }: ArkProps) {
   const titelId = useId();
+  const erDesktop = useErDesktop();
+  const bund = !!bundark && !erDesktop;
   const panel = useRef<HTMLDivElement>(null);
+
+  // En slukket knap uden en grund ligner en fejl i appen. Grunden står også i
+  // knappens navn, men det hjælper kun en skærmlæser.
+  const grund = visGrund && !kanOprette
+    ? <p className="ark-hint">{forTekst(hvorforSlaaetFra)}</p>
+    : null;
 
   // Escape lukker uden at oprette. Det er den samme vej ud som Annuller, og
   // den forventer man af et lag, der ligger over noget andet.
@@ -74,12 +88,21 @@ export function Ark({
 
   return (
     <div
-      className="ark-baggrund"
+      className={bund ? 'ark-baggrund ark-baggrund--bund' : 'ark-baggrund'}
       // Et klik ved siden af lukker. Klik inde i selve arket må ikke boble op
       // og lukke det, man er i gang med at skrive i.
       onClick={(e) => { if (e.target === e.currentTarget) annuller(); }}
     >
-      <div className={smal ? 'ark ark--smal' : 'ark'} role="dialog" aria-modal="true" aria-labelledby={titelId} ref={panel}>
+      <div
+        className={['ark', smal && 'ark--smal', bund && 'ark--bund'].filter(Boolean).join(' ')}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titelId}
+        ref={panel}
+      >
+        {/* Grebet øverst siger "det her er et ark", som tegningen viser det.
+            Det er pynt og ikke en knap: Annuller og krydset lukker. */}
+        {bund && <div className="ark-greb" aria-hidden="true"><span /></div>}
         <div className="ark-hoved">
           <h2 id={titelId}>{titel}</h2>
           <Knap variant="tekst" onClick={annuller} ariaLabel="Luk">✕</Knap>
@@ -90,8 +113,23 @@ export function Ark({
           {children}
         </div>
 
+        {/* På telefonen står grunden over knapperne: under dem er der kun
+            plads til hjemmeknappens luft. */}
+        {bund && grund}
+
         <div className="ark-fod">
-          <Knap variant="tekst" onClick={annuller} style={{ padding: '0 var(--plads-4)' }}>Annuller</Knap>
+          {/* På telefonen står de to knapper lige brede som på tegningen, og
+              Annuller får en stille kant, så den kan rammes som en knap. Opret
+              er stadig den eneste fyldte. */}
+          <Knap
+            variant={bund ? 'sekundaer' : 'tekst'}
+            onClick={annuller}
+            style={bund
+              ? { flex: 1, minHeight: '48px', color: 'var(--tekst-dæmpet)', border: '1px solid var(--border-svag)' }
+              : { padding: '0 var(--plads-4)' }}
+          >
+            Annuller
+          </Knap>
           {/* Arkets ene fyldte accent. Den er 48 px høj og ikke rørehøjdens
               44 — referencen tegner opret-knappen en tak større end Annuller,
               så den ikke kan forveksles med vejen ud. */}
@@ -100,17 +138,13 @@ export function Ark({
             onClick={opret}
             disabled={!kanOprette}
             ariaLabel={kanOprette ? undefined : `${opretLabel} — ${hvorforSlaaetFra}`}
-            style={{ minHeight: '48px', padding: '0 22px' }}
+            style={bund ? { flex: 1, minHeight: '48px' } : { minHeight: '48px', padding: '0 22px' }}
           >
             {opretLabel}
           </Knap>
         </div>
 
-        {/* En slukket knap uden en grund ligner en fejl i appen. Grunden står
-            også i knappens navn, men det hjælper kun en skærmlæser. */}
-        {visGrund && !kanOprette && (
-          <p className="ark-hint">{forTekst(hvorforSlaaetFra)}</p>
-        )}
+        {!bund && grund}
       </div>
     </div>
   );
@@ -174,6 +208,7 @@ export function NyTurArk({ idag, sted, opret, annuller }: {
       opret={() => kan && opret(felter)}
       annuller={annuller}
       visGrund
+      bundark
     >
       <Felt
         label="Titel"
@@ -229,6 +264,7 @@ export function NytGrejArk({ status, opret, annuller }: {
       annuller={annuller}
       smal
       visGrund
+      bundark
     >
       <Felt
         label="Navn"
