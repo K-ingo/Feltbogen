@@ -7,7 +7,7 @@ vi.mock('./pb', () => import('./test/pbMock'));
 
 import { db } from './db';
 import { NyTurArk, NytGrejArk } from './Ark';
-import { tegn, DESKTOP } from './test/skaerm';
+import { tegn, DESKTOP, MOBIL } from './test/skaerm';
 
 // ─────────────────────────────────────────────
 // Opret-arkene
@@ -261,5 +261,87 @@ describe('tilgængelighed', () => {
     // Uden det bliver fokus stående bag laget, og den der bruger tastatur
     // skal tabbe sig gennem hele skærmen for at nå et felt, der er synligt.
     expect(await screen.findByLabelText('Titel')).toHaveFocus();
+  });
+});
+
+// ─────────────────────────────────────────────
+// På telefonen
+//
+// Efter docs/design/mobile/07-sheet-ny-tur.html og 08-sheet-tilfoej-grej.html:
+// samme ark og samme regler, men nedefra med greb og to lige brede knapper.
+// PC-arket er det samme som før — grænsen er useErDesktop (900 px).
+// ─────────────────────────────────────────────
+
+describe('på telefonen', () => {
+  const turArkMobil = (opret = vi.fn(), annuller = vi.fn()) => {
+    tegn(<NyTurArk idag="2026-09-19" opret={opret} annuller={annuller} />, MOBIL);
+    return { opret, annuller };
+  };
+  const grejArkMobil = (opret = vi.fn(), annuller = vi.fn()) => {
+    tegn(<NytGrejArk opret={opret} annuller={annuller} />, MOBIL);
+    return { opret, annuller };
+  };
+
+  it('står Ny tur som et ark nedefra med greb', async () => {
+    turArkMobil();
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveClass('ark--bund');
+    expect(dialog.parentElement).toHaveClass('ark-baggrund--bund');
+    expect(dialog.querySelector('.ark-greb')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('står Tilføj grej også nedefra', async () => {
+    grejArkMobil();
+    expect(await screen.findByRole('dialog')).toHaveClass('ark--bund');
+  });
+
+  it('rører ikke PC-arket', async () => {
+    turArk();
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).not.toHaveClass('ark--bund');
+    expect(dialog.querySelector('.ark-greb')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Annuller' })).toHaveClass('ui-button--tekst');
+  });
+
+  it('opretter stadig ingenting ved åbning eller annuller', async () => {
+    const { annuller } = turArkMobil();
+
+    await userEvent.type(await screen.findByLabelText('Titel'), 'Fovslet Skov');
+    await userEvent.click(screen.getByRole('button', { name: 'Annuller' }));
+
+    expect(annuller).toHaveBeenCalled();
+    expect(await db.ture.count()).toBe(0);
+  });
+
+  it('har Opret slået fra, indtil der står en titel', async () => {
+    const { opret } = turArkMobil();
+
+    expect(await screen.findByRole('button', { name: /Opret tur/ })).toBeDisabled();
+    await userEvent.type(screen.getByLabelText('Titel'), 'Fovslet');
+    await userEvent.click(screen.getByRole('button', { name: /Opret tur/ }));
+    expect(opret).toHaveBeenCalledWith(expect.objectContaining({ titel: 'Fovslet' }));
+  });
+
+  it('har to lige brede knapper, og Opret er den eneste fyldte', async () => {
+    grejArkMobil();
+
+    await userEvent.type(await screen.findByLabelText('Navn'), 'Telt');
+    const annuller = screen.getByRole('button', { name: 'Annuller' });
+    const opret = screen.getByRole('button', { name: /Opret grej/ });
+    expect(annuller).toHaveClass('ui-button--sekundaer');
+    expect(annuller).toHaveStyle({ flex: '1' });
+    expect(opret).toHaveStyle({ flex: '1', color: 'var(--accent-tekst)' });
+    expect(fyldteAccenter()).toHaveLength(1);
+    expect(fyldteAccenter()[0]).toHaveTextContent('Opret grej');
+  });
+
+  it('siger over knapperne, hvorfor Opret er slået fra', async () => {
+    turArkMobil();
+
+    const hint = await screen.findByText('Skriv en titel for at oprette.');
+    const fod = document.querySelector('.ark-fod');
+    expect(hint.compareDocumentPosition(fod!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
