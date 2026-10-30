@@ -58,14 +58,17 @@ export function Talinput({ value, onChange, placeholder, style, id }: {
 }
 
 // Fælles stilarter der bruges af flere komponenter herunder.
+// Størrelse, spatiering og luft læses fra `--etiket-*`, når en flade sætter
+// dem — opret-arket på telefonen skriver etiketterne mindre. Inline-stil kan
+// ellers kun overtrumfes med !important.
 const labelStil: CSSProperties = {
   display: 'block',
-  fontSize: 'var(--skrift-lille)',
+  fontSize: 'var(--etiket-skrift, var(--skrift-lille))',
   color: 'var(--tekst-dæmpet)',
-  marginBottom: 'var(--plads-1)',
+  marginBottom: 'var(--etiket-luft, var(--plads-1))',
   fontWeight: 500,
   textTransform: 'uppercase',
-  letterSpacing: '0.5px'
+  letterSpacing: 'var(--etiket-spatiering, 0.5px)'
 };
 
 // Hjælpetekst og fejl står i forlængelse af labelen, men uden dens versaler.
