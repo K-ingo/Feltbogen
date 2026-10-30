@@ -1,6 +1,6 @@
 # STATUS
 
-*Sidst opdateret: 29. oktober 2026. Udgangspunkt: `main` @ `98e462e`.*
+*Sidst opdateret: 30. oktober 2026. Udgangspunkt: `main` @ `253cc30`.*
 
 Kort svar på "hvor står vi nu?". Den skal kunne læses på to minutter og
 opdateres, hver gang noget bliver færdigt eller blokeret.
@@ -35,14 +35,14 @@ Pakning, Hjem, Ture, Grej, Folk, Mere og de to opret-ark.
 
 ## Grønt lys
 
-Kørt på grenen `claude/gifted-cannon-nkv4bp` den 29. oktober 2026:
+Kørt på grenen `claude/sleepy-noether-479g10` den 30. oktober 2026:
 
 | Kommando | Resultat |
 |---|---|
 | `npm run lint` | Bestået, ingen fejl |
-| `npm test` | 78 testfiler, 1.767 tests, alle grønne |
+| `npm test` | 78 testfiler, 1.773 tests, alle grønne |
 | `npm run build` | Bestået |
-| `npm run preview` | Ny tur og Tilføj grej set i Chromium ved 390 px (lyst og mørkt tema) og Ny tur ved 1280 px (uændret) |
+| `npm run preview` | Ny tur set i Chromium som iPhone 13 (390 px), også i et 380 px lavt vindue som stedfortræder for tastaturet. Ikke prøvet på en rigtig iPhone |
 
 **Brug `npm run build` til typekontrol, ikke `npx tsc --noEmit`.** Roden
 `tsconfig.json` har `"files": []` og peger kun videre til `tsconfig.app.json`
@@ -121,6 +121,20 @@ knapperne. Statusvælgeren i Tilføj grej er stadig stille (tegningen fylder
 "Ejer", men så stod der to fyldte flader). Tegningernes "Flere detaljer" og
 "Avanceret" er ikke bygget — der er ingen felter at folde ud endnu. Arkene
 bag grejsæt er ikke rørt. PC-arkene er ikke rørt.
+
+*Polish i 0.2.15 (Noors noter):* arket rundes 12 (`--runding-ark`) og
+felterne 10 (`--runding-lille`) efter `TOKENS.md` — tegningens 20 og 12 ligger
+uden for den låste skala. Titel/navn findes på klassen `ark-hovedfelt` og ikke
+på en `nth-child`. Etiketterne gøres små gennem `--etiket-*`, som `Label` selv
+læser, så `!important` er væk. `92vh` er `92dvh`. **Tastaturet:** på
+telefonen lægges laget efter `visualViewport` (`useSynligtFelt` i
+`useMedie.ts`), så arkets bund står på tastaturets overkant, indholdet ruller
+mellem hoved og fod, og feltet man står i rulles frem. Med tastaturet fremme
+spares hjemmeknappens luft (`env(safe-area-inset-bottom)`), ellers står den.
+Datofelterne skubbede før gitteret bredere end arket, så alle felter løb ud
+over højre kant ved 390 px; det er rettet med `minmax(0, 1fr)`. Opførslen med
+iOS-tastaturet er kun testet med en falsk `visualViewport` og et lavt vindue i
+Chromium — ikke på en rigtig iPhone.
 
 **Mere på telefonen** følger `docs/design/mobile/05-mere.html`: "Mere" i
 indholdet (ingen topbar), ingen knap og ingen FAB. De to sektioner står i

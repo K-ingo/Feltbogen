@@ -74,6 +74,67 @@ export function useSynligHoejde(): number | null {
   return hoejde;
 }
 
+// Det synlige felt — højde og hvor langt det er skubbet ned — til et lag der
+// skal stå over tastaturet.
+//
+// Et `position: fixed`-lag hænger på layout-viewporten. Når iOS-tastaturet
+// kommer frem, bliver den ikke mindre: Safari skubber i stedet det synlige
+// felt ned over siden, og et ark nedefra bliver liggende bag tastaturet med
+// det felt, man skriver i. `visualViewport` kender både højden og
+// forskydningen, og lægges laget præcis dér, står arkets bund på tastaturets
+// overkant. `tastatur` er sand, når der er skåret mere end en adresselinje af
+// — så er hjemmeknappen gemt bag tastaturet, og dens luft kan spares.
+export interface SynligtFelt {
+  top: number;
+  hoejde: number;
+  tastatur: boolean;
+}
+
+export function useSynligtFelt(): SynligtFelt | null {
+  const [felt, setFelt] = useState<SynligtFelt | null>(() => maalFelt());
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    const opdater = () => setFelt((foer) => {
+      const nu = maalFelt();
+      // Samme mål giver samme objekt, så et scroll uden ændring ikke tegner
+      // arket om.
+      return foer && nu && foer.top === nu.top && foer.hoejde === nu.hoejde
+        && foer.tastatur === nu.tastatur ? foer : nu;
+    });
+
+    opdater();
+    window.addEventListener('resize', opdater);
+    vv?.addEventListener('resize', opdater);
+    // Safari flytter det synlige felt uden at ændre højden, når fokus skifter
+    // mellem to felter med tastaturet fremme.
+    vv?.addEventListener('scroll', opdater);
+
+    return () => {
+      window.removeEventListener('resize', opdater);
+      vv?.removeEventListener('resize', opdater);
+      vv?.removeEventListener('scroll', opdater);
+    };
+  }, []);
+
+  return felt;
+}
+
+// Mere end det her skåret af bunden er et tastatur og ikke en adresselinje,
+// der folder sig ud.
+const TASTATUR_FRA = 120;
+
+function maalFelt(): SynligtFelt | null {
+  if (typeof window === 'undefined' || !window.visualViewport) return null;
+  const vv = window.visualViewport;
+  const hoejde = Math.round(vv.height);
+  return {
+    top: Math.round(vv.offsetTop),
+    hoejde,
+    tastatur: window.innerHeight - hoejde > TASTATUR_FRA
+  };
+}
+
 function maal(): number | null {
   if (typeof window === 'undefined') return null;
   // Afrundet, så en brøkdel af en pixel ikke sender React en ny værdi ved

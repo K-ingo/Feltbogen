@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import type { ItemStatus } from './db';
 import { ITEM_STATUS } from './db';
 import { Felt, Knap, Label, Segment } from './ui';
-import { useErDesktop } from './useMedie';
+import { useErDesktop, useSynligtFelt } from './useMedie';
 import {
   turKanOprettes, grejKanOprettes, tommeTurfelter, tommeGrejfelter
 } from './opretark';
@@ -55,6 +55,8 @@ export function Ark({
   const erDesktop = useErDesktop();
   const bund = !!bundark && !erDesktop;
   const panel = useRef<HTMLDivElement>(null);
+  const felt = useSynligtFelt();
+  const tastatur = bund && !!felt?.tastatur;
 
   // En slukket knap uden en grund ligner en fejl i appen. Grunden står også i
   // knappens navn, men det hjælper kun en skærmlæser.
@@ -86,15 +88,30 @@ export function Ark({
     foerste?.focus();
   }, []);
 
+  // Når tastaturet skubber arket op, bliver indholdet lavere, og feltet man
+  // står i kan havne under kanten af det, der ruller. Så rulles det frem igen.
+  // `nearest` flytter kun, hvis det er nødvendigt.
+  const synligHoejde = felt?.hoejde;
+  useEffect(() => {
+    if (!bund) return;
+    const aktivt = document.activeElement;
+    if (aktivt instanceof HTMLElement && panel.current?.contains(aktivt)) {
+      aktivt.scrollIntoView?.({ block: 'nearest' });
+    }
+  }, [bund, synligHoejde]);
+
   return (
     <div
       className={bund ? 'ark-baggrund ark-baggrund--bund' : 'ark-baggrund'}
+      // På telefonen står laget over det synlige felt og ikke over hele
+      // vinduet, så arkets bund følger tastaturets overkant. Se useSynligtFelt.
+      style={bund && felt ? { top: `${felt.top}px`, bottom: 'auto', height: `${felt.hoejde}px` } : undefined}
       // Et klik ved siden af lukker. Klik inde i selve arket må ikke boble op
       // og lukke det, man er i gang med at skrive i.
       onClick={(e) => { if (e.target === e.currentTarget) annuller(); }}
     >
       <div
-        className={['ark', smal && 'ark--smal', bund && 'ark--bund'].filter(Boolean).join(' ')}
+        className={['ark', smal && 'ark--smal', bund && 'ark--bund', tastatur && 'ark--tastatur'].filter(Boolean).join(' ')}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titelId}
@@ -210,12 +227,15 @@ export function NyTurArk({ idag, sted, opret, annuller }: {
       visGrund
       bundark
     >
-      <Felt
-        label="Titel"
-        value={felter.titel}
-        onChange={(v) => skriv({ titel: v })}
-        placeholder="Fx Fovslet Skov"
-      />
+      {/* Titlen står først og en tak højere, som på tegningen. */}
+      <div className="ark-hovedfelt">
+        <Felt
+          label="Titel"
+          value={felter.titel}
+          onChange={(v) => skriv({ titel: v })}
+          placeholder="Fx Fovslet Skov"
+        />
+      </div>
 
       <div className="ark-to-felter">
         <Felt label="Fra" type="date" value={felter.fra} onChange={(v) => skriv({ fra: v })} />
@@ -266,12 +286,14 @@ export function NytGrejArk({ status, opret, annuller }: {
       visGrund
       bundark
     >
-      <Felt
-        label="Navn"
-        value={felter.navn}
-        onChange={(v) => skriv({ navn: v })}
-        placeholder="Navn på grej"
-      />
+      <div className="ark-hovedfelt">
+        <Felt
+          label="Navn"
+          value={felter.navn}
+          onChange={(v) => skriv({ navn: v })}
+          placeholder="Navn på grej"
+        />
+      </div>
 
       <div>
         <Label>Status</Label>
