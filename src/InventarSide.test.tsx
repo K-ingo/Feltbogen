@@ -342,3 +342,88 @@ describe('Grej på telefonen', () => {
     expect(aabnItem).toHaveBeenCalledTimes(2);
   });
 });
+
+// ─────────────────────────────────────────────
+// Lagersted
+//
+// Ét felt og et filter: hvor står grejet mellem turene? Filteret står der
+// kun, når noget grej har et lagersted — den, der ikke bruger feltet, skal
+// ikke have en række chips mere. På telefonen ligger det under Filtre, som
+// tags gør.
+// ─────────────────────────────────────────────
+
+const lagerstedGruppe = () => screen.getByRole('group', { name: 'Lagersted' });
+
+describe('filter efter lagersted', () => {
+  it('står der ikke, når intet grej har et lagersted', async () => {
+    await db.items.add(lavItem({ navn: 'Sovepose' }));
+    vis();
+
+    await screen.findByText('Sovepose');
+    expect(screen.queryByRole('group', { name: 'Lagersted' })).not.toBeInTheDocument();
+  });
+
+  it('viser kun grejet på det valgte sted på PC', async () => {
+    await db.items.bulkAdd([
+      lavItem({ navn: 'Økse', lagersted: 'hytte' }),
+      lavItem({ navn: 'Gryde', lagersted: 'hjem' }),
+      lavItem({ navn: 'Snor' })
+    ]);
+    vis();
+
+    await screen.findByText('Økse');
+    const gruppe = lagerstedGruppe();
+    // Kun de brugte steder, og Ikke sat fordi Snor mangler et.
+    expect(within(gruppe).getAllByRole('button').map((b) => b.textContent))
+      .toEqual(['Alle steder', 'Hjem', 'Hytte', 'Ikke sat']);
+
+    await userEvent.click(within(gruppe).getByRole('button', { name: 'Hytte' }));
+    expect(screen.getByText('Økse')).toBeInTheDocument();
+    expect(screen.queryByText('Gryde')).not.toBeInTheDocument();
+    expect(screen.queryByText('Snor')).not.toBeInTheDocument();
+
+    await userEvent.click(within(gruppe).getByRole('button', { name: 'Ikke sat' }));
+    expect(screen.getByText('Snor')).toBeInTheDocument();
+    expect(screen.queryByText('Økse')).not.toBeInTheDocument();
+
+    await userEvent.click(within(gruppe).getByRole('button', { name: 'Alle steder' }));
+    expect(screen.getByText('Gryde')).toBeInTheDocument();
+  });
+
+  it('holder + Tilføj grej som den eneste fyldte accent med et sted valgt', async () => {
+    await db.items.add(lavItem({ navn: 'Økse', lagersted: 'hytte' }));
+    vis();
+
+    await screen.findByText('Økse');
+    await userEvent.click(within(lagerstedGruppe()).getByRole('button', { name: 'Hytte' }));
+
+    expect(fyldteAccenter()).toHaveLength(1);
+    expect(fyldteAccenter()[0]).toHaveTextContent('Tilføj grej');
+  });
+
+  it('ligger under Filtre på telefonen og tælles med', async () => {
+    await db.items.bulkAdd([
+      lavItem({ navn: 'Økse', lagersted: 'bil' }),
+      lavItem({ navn: 'Gryde', lagersted: 'hjem' })
+    ]);
+    visMobil();
+
+    await screen.findByText('Økse');
+    expect(screen.queryByRole('group', { name: 'Lagersted' })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Filtre' }));
+    await userEvent.click(within(lagerstedGruppe()).getByRole('button', { name: 'Bil' }));
+    expect(screen.queryByText('Gryde')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Skjul filtre' }));
+    expect(screen.getByRole('button', { name: 'Filtre (1)' })).toBeInTheDocument();
+  });
+
+  it('skriver lagerstedet på kortet på telefonen', async () => {
+    await db.items.add(lavItem({ navn: 'Økse', vaegt_g: 900, pris_kr: 400, lagersted: 'hytte' }));
+    visMobil();
+
+    await screen.findByText('Økse');
+    expect(mobilKort('Økse')).toHaveTextContent('900 g · 400 kr · Hytte');
+  });
+});

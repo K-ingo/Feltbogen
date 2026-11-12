@@ -504,6 +504,24 @@ describe('hentFraPocketBase', () => {
     expect(item.garanti).toBeNull();
   });
 
+  // Lagerstedet er Plain text på serveren. Tom streng, et ukendt ord og et
+  // manglende felt er alle "ikke sat" — aldrig et fjerde sted.
+  it('læser lagerstedet og gør alt ukendt til ikke sat', async () => {
+    pbMock.seed('items', 'pb1', { uid: 'u1', navn: 'I hytten', lagersted: 'hytte' });
+    pbMock.seed('items', 'pb2', { uid: 'u2', navn: 'Tom', lagersted: '' });
+    pbMock.seed('items', 'pb3', { uid: 'u3', navn: 'Ukendt', lagersted: 'kælder' });
+    pbMock.seed('items', 'pb4', { uid: 'u4', navn: 'Gammel' });
+
+    await hentFraPocketBase();
+
+    const items = await db.items.toArray();
+    const sted = (navn: string) => items.find((i) => i.navn === navn)?.lagersted;
+    expect(sted('I hytten')).toBe('hytte');
+    expect(sted('Tom')).toBeNull();
+    expect(sted('Ukendt')).toBeNull();
+    expect(sted('Gammel')).toBeNull();
+  });
+
   it('lader lokale data være i fred når serveren ikke svarer', async () => {
     await opretItem(lavItem({ navn: 'Min ting' }));
     pbMock.offline = true;
@@ -615,6 +633,15 @@ describe('alle felter kommer med op', () => {
     const sendt = pbMock.records.get('items')?.get('pb1');
     const glemte = Object.keys(item).filter((felt) => !KUN_LOKALT.includes(felt) && !(felt in sendt!));
     expect(glemte).toEqual([]);
+  });
+
+  it('sender lagerstedet som tekst, og ikke sat som tom streng', async () => {
+    await opretItem(lavItem({ navn: 'I bilen', lagersted: 'bil' }));
+    await opretItem(lavItem({ navn: 'Ingen steder' }));
+
+    const sendte = [...(pbMock.records.get('items')?.values() ?? [])];
+    expect(sendte.find((r) => r.navn === 'I bilen')?.lagersted).toBe('bil');
+    expect(sendte.find((r) => r.navn === 'Ingen steder')?.lagersted).toBe('');
   });
 
   it('sender hvert felt på et grejsæt', async () => {

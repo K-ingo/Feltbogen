@@ -4,6 +4,7 @@ import type { ItemStatus } from './db';
 import { ITEM_STATUS } from './db';
 import { Felt, Knap, Label, Segment } from './ui';
 import { useErDesktop, useSynligtFelt } from './useMedie';
+import { LagerstedValg } from './LagerstedValg';
 import {
   turKanOprettes, grejKanOprettes, tommeTurfelter, tommeGrejfelter
 } from './opretark';
@@ -316,6 +317,11 @@ export function NytGrejArk({ status, opret, annuller }: {
         <Enhedsfelt label="Vægt" enhed="g" value={felter.vaegt} onChange={(v) => skriv({ vaegt: v })} placeholder="0" />
         <Enhedsfelt label="Pris" enhed="kr" value={felter.pris} onChange={(v) => skriv({ pris: v })} placeholder="0" />
         <Enhedsfelt label="Antal" value={felter.antal} onChange={(v) => skriv({ antal: v })} />
+      </div>
+
+      <div>
+        <Label>Lagersted</Label>
+        <LagerstedValg valgt={felter.lagersted} vaelg={(v) => skriv({ lagersted: v })} />
       </div>
     </Ark>
   );

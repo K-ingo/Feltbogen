@@ -1,4 +1,5 @@
 import type { Deltager, Item, ItemStatus, Tur } from './db';
+import type { Lagersted } from './lagersted';
 
 // Felterne i opret-arkene, og reglerne for hvornår de er nok til at oprette
 // noget.
@@ -29,6 +30,8 @@ export interface NytGrejFelter {
   vaegt: string;
   pris: string;
   antal: string;
+  // null er "Ikke sat" — det arket åbner med. Se lagersted.ts.
+  lagersted: Lagersted | null;
 }
 
 export function tommeTurfelter(idag: string): NyTurFelter {
@@ -36,7 +39,7 @@ export function tommeTurfelter(idag: string): NyTurFelter {
 }
 
 export function tommeGrejfelter(status: ItemStatus = 'ejer'): NytGrejFelter {
-  return { navn: '', status, vaegt: '', pris: '', antal: '1' };
+  return { navn: '', status, vaegt: '', pris: '', antal: '1', lagersted: null };
 }
 
 // Kun titlen afgør, om der kan oprettes. Resten må gerne være tomt — en tur
@@ -123,6 +126,7 @@ export function grejFraArk(felter: NytGrejFelter): Partial<Item> {
     status: felter.status,
     vaegt_g: Math.round(tal(felter.vaegt)),
     pris_kr: tal(felter.pris),
-    antal: Math.max(1, Math.round(tal(felter.antal, 1)))
+    antal: Math.max(1, Math.round(tal(felter.antal, 1))),
+    lagersted: felter.lagersted
   };
 }

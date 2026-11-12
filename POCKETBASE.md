@@ -94,7 +94,7 @@ Tryk **Create**.
 
 ---
 
-## Trin 3 — Tilføj fire felter til `items`
+## Trin 3 — Tilføj fem felter til `items`
 
 Åbn den eksisterende `items`-samling → **Fields** → tilføj:
 
@@ -104,6 +104,7 @@ Tryk **Create**.
 | `laant_af` | JSON |
 | `vedligehold` | JSON |
 | `vurdering` | Number |
+| `lagersted` | Plain text |
 
 > `vurdering` er nyt: 1–5 stjerner. Det skal være **Number** og ikke Text —
 > appen afviser værdier den ikke kan læse som et helt tal mellem 1 og 5, så en
@@ -112,6 +113,13 @@ Tryk **Create**.
 > og der kommer ingen fejl.
 >
 > Det samme felt findes på `steder` (trin 1). Et sted vurderes også.
+
+> `lagersted` er nyt i 0.2.16: hvor grejet står mellem turene. Appen sender
+> `hjem`, `hytte`, `bil` eller en tom streng (ikke sat). **Plain text**, ikke
+> Select — så kan en senere version tilføje et sted uden at skemaet skal
+> røres, og appen læser alt den ikke kender som "ikke sat". Mangler feltet,
+> virker appen, men lagerstedet bliver på den enhed, det blev sat på. Det har
+> intet med samlingen `steder` at gøre — det er turens sted, ikke grejets.
 
 Reglerne på `items` skal ikke røres — de skal være `user = @request.auth.id`
 på alle fem, som de formentlig allerede er.
@@ -508,7 +516,7 @@ står herunder.
 `antal` number · `delt` bool · `status` text · `tags` json · `kraever` json ·
 `komplementer` json · `koebt_hos` text · `koebsdato` text · `koebslink` text ·
 `ordrenummer` text · `garanti` json · `udlaan` json · `laant_af` json ·
-`vedligehold` json · `vurdering` number · `noter` text
+`vedligehold` json · `vurdering` number · `lagersted` text · `noter` text
 
 ### `grupper`
 
