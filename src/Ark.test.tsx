@@ -345,3 +345,69 @@ describe('på telefonen', () => {
     expect(hint.compareDocumentPosition(fod!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
+
+// ─────────────────────────────────────────────
+// Telefonens tastatur og hjemmeknap
+//
+// På iOS bliver layout-viewporten ikke mindre, når tastaturet kommer frem —
+// det synlige felt gør. Arket lægger sit lag efter `visualViewport`, så dets
+// bund står på tastaturets overkant og ikke bag tastaturet.
+// ─────────────────────────────────────────────
+
+describe('med tastaturet fremme', () => {
+  type FalskViewport = { height: number; offsetTop: number; addEventListener: () => void; removeEventListener: () => void };
+  const saetViewport = (vv: FalskViewport | undefined) => {
+    Object.defineProperty(window, 'visualViewport', { value: vv, configurable: true });
+  };
+  const viewport = (height: number, offsetTop = 0): FalskViewport => ({
+    height, offsetTop, addEventListener: () => {}, removeEventListener: () => {}
+  });
+
+  beforeEach(() => {
+    window.innerHeight = 844;
+    return () => saetViewport(undefined);
+  });
+
+  it('lægger laget over det synlige felt, så arket står over tastaturet', async () => {
+    saetViewport(viewport(508, 120));
+    tegn(<NyTurArk idag="2026-09-19" opret={vi.fn()} annuller={vi.fn()} />, MOBIL);
+
+    const baggrund = (await screen.findByRole('dialog')).parentElement!;
+    expect(baggrund).toHaveStyle({ top: '120px', height: '508px' });
+  });
+
+  it('sparer hjemmeknappens luft, når tastaturet dækker den', async () => {
+    saetViewport(viewport(508));
+    tegn(<NyTurArk idag="2026-09-19" opret={vi.fn()} annuller={vi.fn()} />, MOBIL);
+    expect(await screen.findByRole('dialog')).toHaveClass('ark--tastatur');
+  });
+
+  it('holder luften til hjemmeknappen uden tastatur', async () => {
+    saetViewport(viewport(800));
+    tegn(<NyTurArk idag="2026-09-19" opret={vi.fn()} annuller={vi.fn()} />, MOBIL);
+    expect(await screen.findByRole('dialog')).not.toHaveClass('ark--tastatur');
+  });
+
+  it('rører ikke PC-arket', async () => {
+    saetViewport(viewport(508, 120));
+    tegn(<NyTurArk idag="2026-09-19" opret={vi.fn()} annuller={vi.fn()} />, DESKTOP);
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).not.toHaveClass('ark--tastatur');
+    expect(dialog.parentElement!.style.top).toBe('');
+  });
+});
+
+describe('arkets felter på telefonen', () => {
+  it('finder titlen og navnet på en klasse og ikke på deres plads', async () => {
+    tegn(<NyTurArk idag="2026-09-19" opret={vi.fn()} annuller={vi.fn()} />, MOBIL);
+    expect((await screen.findByLabelText('Titel')).closest('.ark-hovedfelt')).not.toBeNull();
+    expect(screen.getByLabelText('Sted').closest('.ark-hovedfelt')).toBeNull();
+  });
+
+  it('lader arket sætte etikettens størrelse uden !important', async () => {
+    tegn(<NytGrejArk opret={vi.fn()} annuller={vi.fn()} />, MOBIL);
+    const etiket = (await screen.findByText('Navn')).closest('label')!;
+    expect(etiket.style.fontSize).toBe('var(--etiket-skrift, var(--skrift-lille))');
+  });
+});
