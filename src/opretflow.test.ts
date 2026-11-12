@@ -36,7 +36,7 @@ const turfelter = (over: Partial<NyTurFelter> = {}): NyTurFelter => ({
 });
 
 const grejfelter = (over: Partial<NytGrejFelter> = {}): NytGrejFelter => ({
-  navn: 'Telt', status: 'ejer', vaegt: '2000', pris: '3499', antal: '1', ...over
+  navn: 'Telt', status: 'ejer', vaegt: '2000', pris: '3499', antal: '1', lagersted: null, ...over
 });
 
 describe('turen, som den lander i basen', () => {
@@ -137,13 +137,21 @@ describe('grejet, som det lander i basen', () => {
     expect((await db.items.get(id))?.status).toBe('overvejer');
   });
 
+  it('har lagerstedet med fra arket, og op på serveren', async () => {
+    const id = await opretTomtItem('ejer', grejFraArk(grejfelter({ lagersted: 'hytte' })));
+    const item = await db.items.get(id);
+
+    expect(item?.lagersted).toBe('hytte');
+    expect(pbMock.records.get('items')?.get(item?.pb_id ?? '')?.lagersted).toBe('hytte');
+  });
+
   it('har standardværdierne med for resten', async () => {
     const id = await opretTomtItem('ejer', grejFraArk(grejfelter()));
     const item = await db.items.get(id);
 
     expect(item).toMatchObject({
       delt: false, tags: [], kraever: [], komplementer: [],
-      vedligehold: [], vurdering: null, udlaan: null, noter: ''
+      vedligehold: [], vurdering: null, lagersted: null, udlaan: null, noter: ''
     });
   });
 

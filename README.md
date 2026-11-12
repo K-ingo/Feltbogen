@@ -72,6 +72,7 @@ appen starter.
 | Dagsplanen hos gæsten | `src/DeltTurVisning.tsx` | Ejerens dagsplan, frosset ned i snapshottet — "hvor sover vi tirsdag?" |
 | Pakning | `src/pakning.ts` | Hvad der er lagt i tasken, hvor langt man er, og snittet der kun viser det, der mangler |
 | Grejsæt | `src/grejsaet.ts` | Hvad et sæt vejer, hvornår det sidst var med, og hvad der sker med turen, hvis man lægger det på |
+| Lagersted | `src/lagersted.ts` | Hvor grejet står mellem turene (hjem, hytte, bil) og filteret på Grej-listen. Ikke et tursted |
 | Vurdering | `src/vurdering.ts` | Stjerner på grej og ture, og hvad motoren gør ved dem |
 | Turlog | `src/feltnoter.ts` | Dagbogen fra turen, samlet pr. dag |
 | Vedligehold | `src/vedligehold.ts` | Imprægnering, slibning — intervaller der går i ring |

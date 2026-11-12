@@ -65,7 +65,7 @@ beforeAll(async () => {
     pris_kr: 0, dimensioner: '', antal: 1, status: 'ejer' as const,
     kraever: [], komplementer: [], koebt_hos: '', koebsdato: '', koebslink: '',
     ordrenummer: '', garanti: null, udlaan: null, laant_af: null,
-    vedligehold: [], vurdering: null, noter: '', oprettet: nu, aendret: nu
+    vedligehold: [], vurdering: null, lagersted: null, noter: '', oprettet: nu, aendret: nu
   };
 
   // Grejet oprettes gennem det rigtige API, så uid'erne er dem, appen selv
