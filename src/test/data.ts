@@ -27,6 +27,7 @@ export function lavItem(felter: Partial<Item> = {}): Item {
     laant_af: null,
     vedligehold: [],
     vurdering: null,
+    lagersted: null,
     noter: '',
     oprettet: nu,
     aendret: nu,

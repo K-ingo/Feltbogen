@@ -11,6 +11,8 @@ import { KomIGang } from './KomIGang';
 import { udlaanteItems, laanteItems } from './udlaan';
 import { forfaldne } from './vedligehold';
 import { gram, kilo } from './talformat';
+import { iLagersted, lagerstedNavn, lagerstedTekst, lagerstedValg } from './lagersted';
+import type { LagerstedFilter } from './lagersted';
 
 interface Props {
   fane: Fane;
@@ -83,6 +85,7 @@ function InventarSide({ fane, skift, aabnItem, nytItem, foersteTur }: Props) {
   const [valgtStatus, setValgtStatus] = useState<Udsnit>('ejer');
   const [soegning, setSoegning] = useState('');
   const [valgtTag, setValgtTag] = useState<string | null>(null);
+  const [valgtLagersted, setValgtLagersted] = useState<LagerstedFilter>('alle');
   const [alleTagsVist, setAlleTagsVist] = useState(false);
   const [mobileFiltreAabne, setMobileFiltreAabne] = useState(false);
 
@@ -103,8 +106,17 @@ function InventarSide({ fane, skift, aabnItem, nytItem, foersteTur }: Props) {
   const tags = [...tagOptaelling.entries()].sort((a, b) => b[1] - a[1]).map(([t]) => t);
   const synligeTags = alleTagsVist ? tags : tags.slice(0, MAKS_TAG_CHIPS);
 
+  // Lagerstederne bygges på samme måde: kun dem, der har grej i fanen. Bruger
+  // man slet ikke feltet, er listen tom, og filteret står der ikke.
+  const lagersteder = lagerstedValg(iStatus);
+  // Et valgt sted, der ikke længere har grej i fanen, filtrerer ikke. Ellers
+  // stod listen tom bag et filter, man ikke kan se.
+  const lagerstedFilter: LagerstedFilter =
+    valgtLagersted !== 'alle' && lagersteder.includes(valgtLagersted) ? valgtLagersted : 'alle';
+  const aktiveFiltre = (valgtTag ? 1 : 0) + (lagerstedFilter !== 'alle' ? 1 : 0);
+
   const q = soegning.trim().toLowerCase();
-  const filtreret = iStatus.filter((i) => {
+  const filtreret = iLagersted(iStatus, lagerstedFilter).filter((i) => {
     const matcherSoegning = q === '' ||
       i.navn.toLowerCase().includes(q) ||
       i.tags.some((t) => t.toLowerCase().includes(q));
@@ -131,6 +143,7 @@ function InventarSide({ fane, skift, aabnItem, nytItem, foersteTur }: Props) {
   const nulstilFiltre = () => {
     setSoegning('');
     setValgtTag(null);
+    setValgtLagersted('alle');
     setAlleTagsVist(false);
   };
 
@@ -221,14 +234,33 @@ function InventarSide({ fane, skift, aabnItem, nytItem, foersteTur }: Props) {
         style={{ width: '100%', marginBottom: '12px' }}
       />
 
-      {!erDesktop && tags.length > 0 && (
+      {!erDesktop && (tags.length > 0 || lagersteder.length > 0) && (
         <div className="gear-filter-toggle">
           <Knap
             onClick={() => setMobileFiltreAabne(!mobileFiltreAabne)}
             ariaExpanded={mobileFiltreAabne}
           >
-            {mobileFiltreAabne ? 'Skjul filtre' : `Filtre${valgtTag ? ' (1)' : ''}`}
+            {mobileFiltreAabne ? 'Skjul filtre' : `Filtre${aktiveFiltre > 0 ? ` (${aktiveFiltre})` : ''}`}
           </Knap>
+        </div>
+      )}
+
+      {/* Lagerstedet står over tag-chipsene: det er det grove snit ("hvad
+          står i hytten?"), tags er det fine. Samme stille chips som tags, så
+          der ikke kommer en ny slags knap på skærmen — og "Alle steder" frem
+          for "Alle", så de to rækker ikke kan forveksles. */}
+      {lagersteder.length > 0 && (erDesktop || mobileFiltreAabne) && (
+        <div role="group" aria-label="Lagersted" style={{ display: 'flex', gap: 'var(--plads-1)', marginBottom: 'var(--plads-2)', flexWrap: 'wrap' }}>
+          <FilterChip aktiv={lagerstedFilter === 'alle'} vaelg={() => setValgtLagersted('alle')}>Alle steder</FilterChip>
+          {lagersteder.map((sted) => (
+            <FilterChip
+              key={sted}
+              aktiv={lagerstedFilter === sted}
+              vaelg={() => setValgtLagersted(lagerstedFilter === sted ? 'alle' : sted)}
+            >
+              {lagerstedNavn(sted)}
+            </FilterChip>
+          ))}
         </div>
       )}
 
@@ -276,7 +308,7 @@ function InventarSide({ fane, skift, aabnItem, nytItem, foersteTur }: Props) {
         >
           {iStatus.length === 0
             ? ({ ejer: 'Dit næste eventyr begynder med det grej, du allerede har. Tilføj den første ting.', overvejer: 'Plads til det grej, du drømmer om at tage med.', solgt: 'Intet solgt grej endnu. Din turhistorik bliver bevaret, når noget får en ny ejer.', laan: 'Ingen aktive lån. Dit grej er klar til næste tur.', vedligehold: 'Ingen vedligeholdelse på listen lige nu. Klar til mere tid ude.' })[valgtStatus]
-            : 'Ingen matcher. Prøv en anden søgning eller et andet tag.'}
+            : 'Ingen matcher. Prøv en anden søgning, et andet tag eller et andet lagersted.'}
         </TomListe>
       ) : erDesktop ? (
         <>
@@ -353,6 +385,7 @@ function Mobilliste({ items, ture, grupper, passPaa, aabn }: {
           <span className="grej-mobil-kort-detalje">
             {gram(item.vaegt_g)} g · {item.delt ? 'delt' : `${item.pris_kr.toLocaleString('da-DK')} kr`}
             {item.antal > 1 && ` · ${item.antal} stk`}
+            {lagerstedTekst(item) && ` · ${lagerstedTekst(item)}`}
           </span>
           <Brugslinje ture={brugt.get(item.uid) ?? []} />
           <TagChips tags={item.tags} />

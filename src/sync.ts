@@ -16,6 +16,7 @@ import { pb, nuvaerendeBruger } from './pb';
 import { fejlDetaljer } from './pbFejl';
 import { noterFejl, rydFejl } from './syncfejl';
 import { gyldig as gyldigVurdering } from './vurdering';
+import { gyldigtLagersted } from './lagersted';
 import { rydAfvisninger } from './afviste';
 import { kontostatus, adopterBase } from './konto';
 import type {
@@ -362,6 +363,8 @@ const itemSamling: Samling<Item> = {
     laant_af: i.laant_af ?? null,
     vedligehold: i.vedligehold ?? [],
     vurdering: i.vurdering ?? null,
+    // Tom streng og ikke null: feltet er Plain text i PocketBase.
+    lagersted: i.lagersted ?? '',
     noter: i.noter
   }),
   fraPb: (r) => ({
@@ -383,6 +386,7 @@ const itemSamling: Samling<Item> = {
     laant_af: laantAf(r.laant_af),
     vedligehold: vedligehold(r.vedligehold),
     vurdering: gyldigVurdering(r.vurdering),
+    lagersted: gyldigtLagersted(r.lagersted),
     koebslink: tekst(r.koebslink),
     ordrenummer: tekst(r.ordrenummer),
     garanti: garanti(r.garanti),

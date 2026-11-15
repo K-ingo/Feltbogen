@@ -32,6 +32,7 @@ export function opretTomtItem(status: ItemStatus = 'ejer', start: Partial<Item> 
     laant_af: null,
     vedligehold: [],
     vurdering: null,
+    lagersted: null,
     noter: '',
     oprettet: nu,
     aendret: nu,

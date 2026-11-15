@@ -1,8 +1,9 @@
 import Dexie from 'dexie';
 import type { Table, Transaction } from 'dexie';
-// Kun typen. Den er erased ved build, så den gensidige import mellem db og
-// gaest findes ikke i det der køres.
+// Kun typerne. De er erased ved build, så de gensidige importer mellem db og
+// gaest/lagersted findes ikke i det der køres.
 import type { Gaestesnapshot } from './gaest';
+import type { Lagersted } from './lagersted';
 
 // Værdilisterne er kilden til både typerne og de knapper/dropdowns der viser
 // dem, så en ny mulighed kun skal tilføjes ét sted.
@@ -131,6 +132,10 @@ export interface Item extends Synkroniserbar {
   // appen ved, om man kan lide sit grej — resten af det den ved, er tal og
   // datoer. Ældre poster har feltet slet ikke; se vurdering.ts.
   vurdering: number | null;
+  // Hvor grejet står mellem turene: hjem, hytte eller bil — null når det ikke
+  // er sat. Ikke et tursted; se lagersted.ts. Ældre poster har feltet slet
+  // ikke — læs det altid med lagerstedFor().
+  lagersted: Lagersted | null;
   noter: string;
   oprettet: Date;
   aendret: Date;

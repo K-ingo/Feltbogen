@@ -411,3 +411,51 @@ describe('arkets felter på telefonen', () => {
     expect(etiket.style.fontSize).toBe('var(--etiket-skrift, var(--skrift-lille))');
   });
 });
+
+// Lagerstedet: hvor grejet står mellem turene. Arket gætter ikke — det åbner
+// på Ikke sat — og vælgeren er stille, så Opret grej forbliver arkets ene
+// fyldte accent.
+describe('lagersted på Tilføj grej', () => {
+  it('åbner på Ikke sat og giver et valgt sted med', async () => {
+    const { opret } = grejArk();
+
+    expect(screen.getByRole('button', { name: 'Ikke sat' })).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.type(screen.getByLabelText('Navn'), 'Økse');
+    await userEvent.click(screen.getByRole('button', { name: 'Hytte' }));
+    await userEvent.click(screen.getByRole('button', { name: /Opret grej/ }));
+
+    expect(opret).toHaveBeenCalledWith(expect.objectContaining({ navn: 'Økse', lagersted: 'hytte' }));
+  });
+
+  it('giver null med, når man ikke vælger noget', async () => {
+    const { opret } = grejArk();
+
+    await userEvent.type(screen.getByLabelText('Navn'), 'Økse');
+    await userEvent.click(screen.getByRole('button', { name: /Opret grej/ }));
+
+    expect(opret).toHaveBeenCalledWith(expect.objectContaining({ lagersted: null }));
+  });
+
+  it('kan sættes tilbage til Ikke sat', async () => {
+    const { opret } = grejArk();
+
+    await userEvent.type(screen.getByLabelText('Navn'), 'Økse');
+    await userEvent.click(screen.getByRole('button', { name: 'Bil' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Ikke sat' }));
+    await userEvent.click(screen.getByRole('button', { name: /Opret grej/ }));
+
+    expect(opret).toHaveBeenCalledWith(expect.objectContaining({ lagersted: null }));
+  });
+
+  it('holder Opret grej som den eneste fyldte accent, også med et sted valgt', async () => {
+    grejArk();
+
+    await userEvent.type(screen.getByLabelText('Navn'), 'Økse');
+    await userEvent.click(screen.getByRole('button', { name: 'Hytte' }));
+
+    const fyldte = Array.from(document.querySelectorAll<HTMLElement>('*'))
+      .filter((el) => el.classList.contains('ui-button--primaer') || el.style.background === 'var(--accent)');
+    expect(fyldte).toHaveLength(1);
+    expect(fyldte[0]).toHaveTextContent('Opret grej');
+  });
+});

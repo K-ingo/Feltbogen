@@ -1,6 +1,6 @@
 # STATUS
 
-*Sidst opdateret: 30. oktober 2026. Udgangspunkt: `main` @ `253cc30`.*
+*Sidst opdateret: 12. november 2026. Udgangspunkt: `main` @ `1ef48e2`.*
 
 Kort svar på "hvor står vi nu?". Den skal kunne læses på to minutter og
 opdateres, hver gang noget bliver færdigt eller blokeret.
@@ -35,14 +35,14 @@ Pakning, Hjem, Ture, Grej, Folk, Mere og de to opret-ark.
 
 ## Grønt lys
 
-Kørt på grenen `claude/sleepy-noether-479g10` den 30. oktober 2026:
+Kørt på grenen `claude/keen-darwin-7vomgn` den 12. november 2026:
 
 | Kommando | Resultat |
 |---|---|
 | `npm run lint` | Bestået, ingen fejl |
-| `npm test` | 78 testfiler, 1.773 tests, alle grønne |
+| `npm test` | 79 testfiler, 1.797 tests, alle grønne |
 | `npm run build` | Bestået |
-| `npm run preview` | Ny tur set i Chromium som iPhone 13 (390 px), også i et 380 px lavt vindue som stedfortræder for tastaturet. Ikke prøvet på en rigtig iPhone |
+| `npm run preview` | Tilføj grej-arket og grejet set i Chromium som iPhone 13 med et lagersted valgt. Ikke prøvet på en rigtig iPhone |
 
 **Brug `npm run build` til typekontrol, ikke `npx tsc --noEmit`.** Roden
 `tsconfig.json` har `"files": []` og peger kun videre til `tsconfig.app.json`
@@ -76,6 +76,10 @@ redigering opretter en slettet post på ny og gør sletningen om for alle. Se
 `POCKETBASE.md` trin 7 og afsnittet "Gravsten" i `README.md`.
 
 Begge dele er bekræftet af ejeren i drift, ikke kun mod testmocken.
+
+**Feltet `lagersted` på `items` mangler** (fra 0.2.16) — Plain text, se
+`POCKETBASE.md` trin 3. Uden det virker appen, men lagerstedet kommer ikke op
+og bliver på den enhed, det blev sat på.
 
 **Samlingen `tur_dage` mangler.** Den kom til med flerdagesturenes fundament —
 se `POCKETBASE.md` trin 8. Springes den over, virker appen, men dagene bliver
@@ -357,6 +361,24 @@ Mere-rækken — er ikke bygget. De kræver et nyt felt på `Sted`, og datamodel
 er ejerens valg (`AGENTS.md`). Gensynene tælles i stedet ud af turene, så
 linjen kan være ærlig uden et felt, ingen har sagt ja til.
 
+**Lagersted på grej** (Wren #6, v0.2.16). Ét nyt felt på `Item`,
+`lagersted`: `hjem`, `hytte`, `bil` eller ikke sat (`null` lokalt, tom streng
+i PocketBase). Det vælges i arket *Tilføj grej* (åbner på *Ikke sat*) og inde
+på grejet under Dimensioner — samme stille vælger begge steder
+(`src/LagerstedValg.tsx`). Grej-listen kan filtreres på det: på PC som en
+række chips over tag-chipsene, på telefonen under *Filtre*, som tæller det
+med. Filteret står der kun, når mindst ét stykke grej i fanen har et
+lagersted, og viser kun de steder, der bruges (+ *Ikke sat*, når noget
+mangler). Telefonens grejkort skriver stedet efter pris; PC-tabellen har
+ingen ny kolonne. Reglerne ligger i `src/lagersted.ts`.
+
+*Bevidst ikke:* flere inventarer, flyt mellem skabe, mængder pr. sted,
+egne steder ud over de tre. Har man ét stykke grej to steder, oprettes det to
+gange. **Lagersted er ikke et tursted** — det deler hverken tabel, felt eller
+ord med Steder. Kræver feltet `lagersted` (Plain text) på `items`
+(`POCKETBASE.md` trin 3); mangler det, bliver stedet på den enhed, det blev
+sat på.
+
 **Steder med noter fra sidst + genbesøg** (research §3 #4, v0.2.7). Et sted
 husker nu det, man skrev sidst. På turen står det gemte steds boks med
 *Første gang her* eller *Været her 2 gange før* — turen selv tæller aldrig
@@ -372,9 +394,9 @@ Et besøg er en tur, der er i gang eller afsluttet (`erBesoeg` i
 *Været her* — heller ikke i sted-forslagene på turen. Listen *Ture hertil*
 viser stadig alle ture. Statistikkens gensyn (`friluftshistorik.ts`) er
 urørt. Der er ingen nye felter: alt er udledt af `sted_uid`, `status`,
-`feltnoter` og `noter`. Opbevaringssted (hjem/hytte/bil) findes ikke i
-datamodellen og er ikke rørt — et tursted er kun turens kobling til et gemt
-sted, aldrig fritekst.
+`feltnoter` og `noter`. Et tursted er kun turens kobling til et gemt sted,
+aldrig fritekst. Opbevaringsstedet (hjem/hytte/bil) er et andet begreb og har
+sit eget felt — se *Lagersted på grej* herunder.
 
 **Indstillinger er blevet tynde: fire spande i stedet for syv afsnit.**
 Konto, Din krop, Tjeklister og Data og om — de fire, referencen tegner.

@@ -24,7 +24,7 @@ describe('hvornår der kan oprettes', () => {
   });
 
   it('kræver kun navnet på grejet — resten må være tomt', () => {
-    expect(grejKanOprettes({ navn: 'Telt', status: 'ejer', vaegt: '', pris: '', antal: '' })).toBe(true);
+    expect(grejKanOprettes({ navn: 'Telt', status: 'ejer', vaegt: '', pris: '', antal: '', lagersted: null })).toBe(true);
   });
 
   it('kræver ikke sted eller datoer på turen', () => {
@@ -137,21 +137,28 @@ describe('turen der bliver til', () => {
 
 describe('grejet der bliver til', () => {
   it('læser vægt, pris og antal', () => {
-    const item = grejFraArk({ navn: 'Telt', status: 'ejer', vaegt: '2000', pris: '3499', antal: '2' });
+    const item = grejFraArk({ navn: 'Telt', status: 'ejer', vaegt: '2000', pris: '3499', antal: '2', lagersted: null });
     expect(item).toMatchObject({ navn: 'Telt', status: 'ejer', vaegt_g: 2000, pris_kr: 3499, antal: 2 });
   });
 
   it('runder vægten til hele gram', () => {
-    expect(grejFraArk({ navn: 'Snor', status: 'ejer', vaegt: '12,4', pris: '', antal: '' }).vaegt_g).toBe(12);
+    expect(grejFraArk({ navn: 'Snor', status: 'ejer', vaegt: '12,4', pris: '', antal: '', lagersted: null }).vaegt_g).toBe(12);
   });
 
   it('er aldrig mindre end ét stykke', () => {
     // Sletter man tallet i antalsfeltet, mente man ikke 0 stk.
-    expect(grejFraArk({ navn: 'Telt', status: 'ejer', vaegt: '', pris: '', antal: '' }).antal).toBe(1);
-    expect(grejFraArk({ navn: 'Telt', status: 'ejer', vaegt: '', pris: '', antal: '0' }).antal).toBe(1);
+    expect(grejFraArk({ navn: 'Telt', status: 'ejer', vaegt: '', pris: '', antal: '', lagersted: null }).antal).toBe(1);
+    expect(grejFraArk({ navn: 'Telt', status: 'ejer', vaegt: '', pris: '', antal: '0', lagersted: null }).antal).toBe(1);
   });
 
   it('bærer statussen med over', () => {
     expect(grejFraArk({ ...tommeGrejfelter('overvejer'), navn: 'Økse' }).status).toBe('overvejer');
+  });
+
+  it('åbner uden lagersted og bærer et valgt sted med over', () => {
+    // Arket gætter ikke på, hvor grejet står. Ikke sat er null, ikke 'hjem'.
+    expect(tommeGrejfelter().lagersted).toBeNull();
+    expect(grejFraArk({ ...tommeGrejfelter(), navn: 'Økse' }).lagersted).toBeNull();
+    expect(grejFraArk({ ...tommeGrejfelter(), navn: 'Økse', lagersted: 'hytte' }).lagersted).toBe('hytte');
   });
 });

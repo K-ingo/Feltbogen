@@ -29,6 +29,7 @@ import {
   Infokort,
   Knap,
   Kort,
+  Label,
   Segment,
   SektionsTitel,
   Stjerner,
@@ -39,6 +40,8 @@ import { layout } from './layout';
 import { sletItem, opdaterItem } from './sync';
 import { meldFortrydelse } from './fortryd';
 import { useRedigerbar } from './useRedigerbar';
+import { LagerstedValg } from './LagerstedValg';
+import { lagerstedFor } from './lagersted';
 
 interface Props {
   itemId: number;
@@ -59,7 +62,8 @@ function medStandardfelter(item: Item): Item {
     garanti: item.garanti ?? null,
     udlaan: item.udlaan ?? null,
     laant_af: item.laant_af ?? null,
-    vedligehold: item.vedligehold ?? []
+    vedligehold: item.vedligehold ?? [],
+    lagersted: lagerstedFor(item)
   };
 }
 
@@ -138,6 +142,12 @@ function ItemDetalje({ itemId, tilbage, nyOprettet }: Props) {
         </div>
 
         <Feltkort label="Dimensioner" value={item.dimensioner} onChange={(v) => opdater({ dimensioner: v })} placeholder="ø 33 × 15 cm" />
+
+        {/* Hvor grejet står mellem turene. Ikke et tursted — se lagersted.ts. */}
+        <div>
+          <Label>Lagersted</Label>
+          <LagerstedValg valgt={item.lagersted ?? null} vaelg={(v) => void opdater({ lagersted: v })} />
+        </div>
 
         <Brugsstatistik ture={turePaaItem} brug={brug} historik={brugshistorik(item.uid, turePaaItem)} />
 
