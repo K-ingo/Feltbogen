@@ -592,6 +592,7 @@ function Skabelon({ linjer, gem, nulstil }: {
         {linjer.map((linje, n) => (
           <div key={`${linje}-${n}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0' }}>
             <input
+              aria-label={`Punkt ${n + 1}`}
               value={linje}
               onChange={(e) => gem(linjer.map((l, i) => (i === n ? e.target.value : l)))}
               style={{ flex: 1, minWidth: 0, fontSize: 'var(--skrift-knap)', border: 'none', background: 'transparent', padding: '2px 0' }}
@@ -603,6 +604,7 @@ function Skabelon({ linjer, gem, nulstil }: {
 
       <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
         <input
+          aria-label="Nyt punkt"
           value={ny}
           onChange={(e) => setNy(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') tilfoej(); }}

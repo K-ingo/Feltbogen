@@ -85,6 +85,7 @@ function GruppeDetalje({ gruppeId, tilbage, nyOprettet }: Props) {
       <SektionsTitel>Items i gruppen</SektionsTitel>
 
       <input
+        aria-label="Søg items"
         placeholder="Søg items..."
         value={soegning}
         onChange={(e) => setSoegning(e.target.value)}

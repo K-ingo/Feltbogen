@@ -280,6 +280,7 @@ function Billedpanel({ billede, erHero, saetHero, fjern, luk }: {
       </div>
 
       <input
+        aria-label="Beskrivelse af billedet"
         value={billede.beskrivelse}
         onChange={(e) => billede.id !== undefined && void opdaterBillede(billede.id, { beskrivelse: e.target.value })}
         placeholder="Hvad ser man?"

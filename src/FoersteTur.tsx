@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, AKTIVITET, OVERNATNING, etiket } from './db';
@@ -268,6 +268,7 @@ function Hvor({ kladde, ret, steder, ture }: {
         value={kladde.sted}
         onChange={(v) => ret({ sted: v, sted_uid: '' })}
         placeholder="Rold Skov"
+        ariaLabel="Sted"
         autoFokus
       />
       {traf.length > 0 && (
@@ -288,6 +289,7 @@ function Hvor({ kladde, ret, steder, ture }: {
 }
 
 function Hvornaar({ kladde, ret }: { kladde: Kladde; ret: (a: Partial<Kladde>) => void }) {
+  const datoId = useId();
   const periode = kladde.startdato
     ? formatterPeriode(kladde.startdato, slutdatoFor(kladde.startdato, kladde.naetter))
     : '';
@@ -295,8 +297,9 @@ function Hvornaar({ kladde, ret }: { kladde: Kladde; ret: (a: Partial<Kladde>) =
   return (
     <div style={{ display: 'grid', gap: 'var(--plads-5)' }}>
       <div>
-        <Label>Første dag</Label>
+        <Label htmlFor={datoId}>Første dag</Label>
         <input
+          id={datoId}
           type="date"
           value={kladde.startdato}
           onChange={(e) => ret({ startdato: e.target.value })}
@@ -319,7 +322,7 @@ function Hvornaar({ kladde, ret }: { kladde: Kladde; ret: (a: Partial<Kladde>) =
               {n === 0 ? 'Dagstur' : `${n}`}
             </button>
           ))}
-          <Talinput value={kladde.naetter} onChange={(v) => ret({ naetter: Number(v) || 0 })} style={{ width: '72px' }} />
+          <Talinput ariaLabel="Antal nætter" value={kladde.naetter} onChange={(v) => ret({ naetter: Number(v) || 0 })} style={{ width: '72px' }} />
         </div>
       </div>
 
@@ -369,6 +372,7 @@ function Hvad({ kladde, ret }: { kladde: Kladde; ret: (a: Partial<Kladde>) => vo
 
 function Hvem({ kladde, ret }: { kladde: Kladde; ret: (a: Partial<Kladde>) => void }) {
   const [navn, setNavn] = useState('');
+  const navnId = useId();
 
   const tilfoej = () => {
     const rent = navn.trim();
@@ -397,6 +401,7 @@ function Hvem({ kladde, ret }: { kladde: Kladde; ret: (a: Partial<Kladde>) => vo
             </button>
           ))}
           <Talinput
+            ariaLabel="Antal personer i alt"
             value={kladde.personer}
             onChange={(v) => ret({ personer: Math.max(Number(v) || 1, 1 + kladde.medrejsende.length) })}
             style={{ width: '72px' }}
@@ -408,9 +413,10 @@ function Hvem({ kladde, ret }: { kladde: Kladde; ret: (a: Partial<Kladde>) => vo
         {/* Navnene er frivillige. Man kan sagtens vide, at man er fire, uden
             at vide hvem den fjerde er — og de, der skrives, bliver til
             deltagere på turen, så det fælles grej kan fordeles. */}
-        <Label hjaelp="valgfrit">Hvem er de andre</Label>
+        <Label hjaelp="valgfrit" htmlFor={navnId}>Hvem er de andre</Label>
         <div style={{ display: 'flex', gap: 'var(--plads-2)' }}>
           <input
+            id={navnId}
             value={navn}
             onChange={(e) => setNavn(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') tilfoej(); }}

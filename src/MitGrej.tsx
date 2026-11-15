@@ -186,6 +186,7 @@ function VaelgMitGrej({ valgt, saet }: {
       )}
 
       <input
+        aria-label="Søg i dit grej"
         value={soeg}
         onChange={(e) => setSoeg(e.target.value)}
         placeholder="Søg i dit grej"

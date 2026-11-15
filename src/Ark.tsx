@@ -4,6 +4,7 @@ import type { ItemStatus } from './db';
 import { ITEM_STATUS } from './db';
 import { Felt, Knap, Label, Segment } from './ui';
 import { useErDesktop, useSynligtFelt } from './useMedie';
+import { useDialogFokus } from './dialogFokus';
 import { LagerstedValg } from './LagerstedValg';
 import {
   turKanOprettes, grejKanOprettes, tommeTurfelter, tommeGrejfelter
@@ -65,29 +66,13 @@ export function Ark({
     ? <p className="ark-hint">{forTekst(hvorforSlaaetFra)}</p>
     : null;
 
-  // Escape lukker uden at oprette. Det er den samme vej ud som Annuller, og
-  // den forventer man af et lag, der ligger over noget andet.
-  useEffect(() => {
-    const paaTast = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') annuller();
-    };
-    document.addEventListener('keydown', paaTast);
-    return () => document.removeEventListener('keydown', paaTast);
-  }, [annuller]);
-
-  // Fokus ind i arket, når det åbner. Uden det bliver fokus stående bag
-  // laget, og den der bruger tastatur skal tabbe sig gennem hele skærmen for
-  // at nå frem til et felt, der allerede er synligt.
+  // Fokus ind i arket, når det åbner, fanget i det, mens det er åbent, og
+  // tilbage til knappen, der åbnede det, når det lukker. Escape lukker uden at
+  // oprette — det er den samme vej ud som Annuller. Se dialogFokus.ts.
   //
-  // Feltet og ikke en knap: luk-krydset står først i dokumentet, og lander
-  // fokus dér, er det første tastetryk tæt på at lukke arket igen.
-  useEffect(() => {
-    const ark = panel.current;
-    if (!ark) return;
-    const foerste = ark.querySelector<HTMLElement>('input, textarea, select')
-      ?? ark.querySelector<HTMLElement>('button');
-    foerste?.focus();
-  }, []);
+  // Det første felt og ikke en knap: luk-krydset står først i dokumentet, og
+  // lander fokus dér, er det første tastetryk tæt på at lukke arket igen.
+  useDialogFokus(panel, annuller);
 
   // Når tastaturet skubber arket op, bliver indholdet lavere, og feltet man
   // står i kan havne under kanten af det, der ruller. Så rulles det frem igen.
