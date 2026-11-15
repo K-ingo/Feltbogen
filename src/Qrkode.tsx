@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useDialogFokus } from './dialogFokus';
 import QRCode from 'qrcode';
 
 interface Props {
@@ -72,14 +73,19 @@ export function Qrkode({ vaerdi, storrelse = 180 }: Props) {
 // QR i fuld skærm. På mobil er kortet for lille til at en anden telefon kan
 // fange det på tværs af et bål — her fylder den hele skærmen.
 export function Qrfuldskaerm({ vaerdi, luk }: { vaerdi: string; luk: () => void }) {
-  useEffect(() => {
-    const paaTast = (e: KeyboardEvent) => { if (e.key === 'Escape') luk(); };
-    window.addEventListener('keydown', paaTast);
-    return () => window.removeEventListener('keydown', paaTast);
-  }, [luk]);
+  // Escape lukker, og fokus står på laget, mens det er åbent, og går tilbage
+  // til knappen bagefter. Der er intet at tabbe til herinde — hele fladen er
+  // knappen.
+  const rod = useRef<HTMLDivElement>(null);
+  useDialogFokus(rod, luk, { foerst: 'rod' });
 
   return (
     <div
+      ref={rod}
+      role="dialog"
+      aria-modal="true"
+      aria-label="QR-kode i fuld skærm"
+      tabIndex={-1}
       onClick={luk}
       style={{
         position: 'fixed',
@@ -94,7 +100,10 @@ export function Qrfuldskaerm({ vaerdi, luk }: { vaerdi: string; luk: () => void 
         justifyContent: 'center',
         gap: '20px',
         padding: '24px',
-        cursor: 'pointer'
+        cursor: 'pointer',
+        // Laget får fokus for tastaturets skyld, men en ring om hele
+        // skærmen siger ikke noget.
+        outline: 'none'
       }}
     >
       <Qrkode vaerdi={vaerdi} storrelse={280} />

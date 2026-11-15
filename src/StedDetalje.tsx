@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import type { Sted } from './db';
@@ -53,6 +53,7 @@ function StedDetalje({ stedId, tilbage, aabnTur, opretTurHer, nyOprettet }: Prop
   const [koordinatFejl, setKoordinatFejl] = useState('');
   const [forslag, setForslag] = useState<StedForslag[]>([]);
   const [soeger, setSoeger] = useState(false);
+  const koordinatId = useId();
 
   const ture = useLiveQuery(() => db.ture.toArray()) ?? [];
   const billeder = useLiveQuery(() => db.billeder.toArray()) ?? [];
@@ -201,9 +202,10 @@ function StedDetalje({ stedId, tilbage, aabnTur, opretTurHer, nyOprettet }: Prop
         />
 
         <div>
-          <Label fejl={koordinatFejl || undefined}>Koordinater</Label>
+          <Label fejl={koordinatFejl || undefined} htmlFor={koordinatId}>Koordinater</Label>
           <div style={{ display: 'flex', gap: '6px' }}>
             <input
+              id={koordinatId}
               value={koordinatTekst}
               onChange={(e) => void opdaterKoordinater(e.target.value)}
               placeholder="55.66, 10.05"

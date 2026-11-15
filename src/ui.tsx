@@ -35,8 +35,10 @@ function useTalvisning(vaerdi: string | number): [string, (v: string) => void] {
 }
 
 // Et bart talfelt, til de steder hvor der ikke er plads til en etiket.
-export function Talinput({ value, onChange, placeholder, style, id }: {
+export function Talinput({ value, onChange, placeholder, style, id, ariaLabel }: {
   id?: string;
+  // Navnet til skærmlæseren, hvor der ikke står en etiket med `for` på.
+  ariaLabel?: string;
   value: number;
   onChange: (v: string) => void;
   placeholder?: string;
@@ -47,6 +49,7 @@ export function Talinput({ value, onChange, placeholder, style, id }: {
   return (
     <input
       id={id}
+      aria-label={ariaLabel}
       type="number"
       inputMode="numeric"
       value={tekst}
@@ -706,15 +709,22 @@ interface TitelInputProps {
   // farve, men et valg mellem to: skærmen ved hvad titlen står på, og
   // komponenten ved hvad der kan læses ovenpå det.
   lys?: boolean;
+  // Feltets navn til skærmlæseren, når pladsholderen er et eksempel og ikke
+  // et navn ("Rold Skov"). Uden den bruges pladsholderen.
+  ariaLabel?: string;
 }
 
 // Navnet på en post, redigerbart direkte i overskriften.
-export function TitelInput({ value, onChange, placeholder, autoFokus, lys }: TitelInputProps) {
+export function TitelInput({ value, onChange, placeholder, autoFokus, lys, ariaLabel }: TitelInputProps) {
   return (
     <input
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
+      // Titlen har ingen synlig etiket — den *er* overskriften. Pladsholderen
+      // forsvinder, så snart der står et navn, så navnet til skærmlæseren
+      // står for sig.
+      aria-label={ariaLabel ?? (placeholder || 'Navn')}
       autoFocus={autoFokus}
       // Klassen findes kun for ::placeholder, som en inline-style ikke kan
       // ramme. Se index.css — det er den samme grund som printreglerne har.

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useId, useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import { Chip, Label } from './ui';
@@ -15,6 +15,7 @@ function TagsInput({ tags, onChange, label, hjaelpetekst, farve = 'default' }: P
   const visLabel = label ?? 'Tags';
   const [input, setInput] = useState('');
   const [fokuseret, setFokuseret] = useState(false);
+  const feltId = useId();
 
   const alleItems = useLiveQuery(() => db.items.toArray());
 
@@ -69,7 +70,7 @@ function TagsInput({ tags, onChange, label, hjaelpetekst, farve = 'default' }: P
 
   return (
     <div>
-      <Label hjaelp={hjaelpetekst}>{visLabel}</Label>
+      <Label hjaelp={hjaelpetekst} htmlFor={feltId}>{visLabel}</Label>
       <div style={{
         display: 'flex',
         flexWrap: 'wrap',
@@ -85,6 +86,7 @@ function TagsInput({ tags, onChange, label, hjaelpetekst, farve = 'default' }: P
           <Chip key={tag} farve={farve} onFjern={() => fjern(tag)}>{tag}</Chip>
         ))}
         <input
+          id={feltId}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}

@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useId, useRef, useState } from 'react';
+import { useDialogFokus } from './dialogFokus';
 import type { Feltnote, Tur } from './db';
 import type { VejrData } from './smartMotor';
 import { vejrIkonKode } from './smartMotor';
@@ -33,12 +34,12 @@ const ACCENT = '#c8a55b';
 function PaaTurTilstand({ tur, vejr, skrivNote, luk }: Props) {
   const [udkast, setUdkast] = useState('');
   // Escape lukker. En skærm uden anden vej ud end en knap i et hjørne er
-  // ubehagelig, og man kan komme til at åbne den.
-  useEffect(() => {
-    const paaTast = (e: KeyboardEvent) => { if (e.key === 'Escape') luk(); };
-    window.addEventListener('keydown', paaTast);
-    return () => window.removeEventListener('keydown', paaTast);
-  }, [luk]);
+  // ubehagelig, og man kan komme til at åbne den. Fokus står på selve skærmen,
+  // når den åbner — turloggens felt står langt nede, og fokus dér ville rulle
+  // vejret væk — og går tilbage til knappen, der åbnede den, når den lukker.
+  const rod = useRef<HTMLDivElement>(null);
+  const titelId = useId();
+  useDialogFokus(rod, luk, { foerst: 'rod' });
 
   const idag = new Date();
   const dagIdag = vejrForDag(vejr, idag);
@@ -54,17 +55,25 @@ function PaaTurTilstand({ tur, vejr, skrivNote, luk }: Props) {
   };
 
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      zIndex: 40,
-      background: BAGGRUND,
-      color: TEKST,
-      overflowY: 'auto',
-      // Ingen overgange og ingen bevægelse: en skærm der bevæger sig er en
-      // skærm man kigger på, og det er ikke meningen.
-      transition: 'none'
-    }}>
+    <div
+      ref={rod}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titelId}
+      tabIndex={-1}
+      style={{
+        outline: 'none',
+        position: 'fixed',
+        inset: 0,
+        zIndex: 40,
+        background: BAGGRUND,
+        color: TEKST,
+        overflowY: 'auto',
+        // Ingen overgange og ingen bevægelse: en skærm der bevæger sig er en
+        // skærm man kigger på, og det er ikke meningen.
+        transition: 'none'
+      }}
+    >
       <div style={{
         maxWidth: '520px',
         margin: '0 auto',
@@ -90,7 +99,7 @@ function PaaTurTilstand({ tur, vejr, skrivNote, luk }: Props) {
           </button>
         </div>
 
-        <h1 style={{
+        <h1 id={titelId} style={{
           fontFamily: "'Fraunces', Georgia, serif",
           fontSize: '28px',
           margin: '0 0 4px',
@@ -142,6 +151,7 @@ function PaaTurTilstand({ tur, vejr, skrivNote, luk }: Props) {
 
         <Blok titel="Turlog">
           <textarea
+            aria-label="Ny indgang i turloggen"
             value={udkast}
             onChange={(e) => setUdkast(e.target.value)}
             rows={5}

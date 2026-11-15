@@ -683,6 +683,7 @@ function Vedligeholdsraekke({ handling, saet, fjern }: {
     }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
         <input
+          aria-label="Hvad skal gøres"
           value={handling.navn}
           onChange={(e) => saet({ navn: e.target.value })}
           placeholder="Hvad skal gøres"

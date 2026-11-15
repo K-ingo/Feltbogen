@@ -239,6 +239,22 @@ på en underskærm, bliver hovedfanen markeret i navigationen, og der kommer en
 "‹ Grej"-linje over titlen — begge dele udledt, så en vej tilbage ikke kan
 blive glemt ét sted. En ny skærm skal derfor kun skrives ind i den ene tabel.
 
+### Dialoger og fokus
+
+Alle lag over skærmen — opret-arkene og grejsæt-arkene (`Ark.tsx`), QR i fuld
+skærm (`Qrkode.tsx`) og På tur-skærmen (`PaaTurTilstand.tsx`) — bruger den
+samme hook, `useDialogFokus` i `src/dialogFokus.ts`. Den gør tre ting:
+
+1. flytter fokus ind, når laget åbner (det første felt, eller selve laget,
+   hvor det første felt står langt nede), og tilbage til knappen, der åbnede
+   det, når det lukker;
+2. fanger Tab og Shift+Tab inde i laget;
+3. lukker på Escape — kun det øverste, hvis flere er åbne.
+
+Et nyt lag skal bruge hooken og have `role="dialog"`, `aria-modal` og et navn
+(`aria-labelledby` eller `aria-label`). Reglerne er testet i
+`dialogFokus.test.tsx`.
+
 ### Højst én fyldt knap
 
 Designsystemet har en hård regel: **højst én fyldt accent-knap i det første

@@ -75,7 +75,7 @@ Mobilvisning er en desktopbrowser med ændret viewport, ikke en fysisk iPhone/An
 ## Senere anbefalinger, prioriteret
 
 1. **P1 — Fysisk feltprøve.** Test lys/mørk tilstand ude, stor systemtekst, 200 % zoom og pakning med én hånd. Kontroller kontrast også på badges, fotos og disabled states.
-2. **P1 — Dialog- og tilgængelighedspas.** Inventér samtlige modaler, delings-/QR-flow, native bekræftelser og fejltilstande. Kontroller fokusfælde, retur-fokus, Escape, labels og tabpanelrelationer. De fælles rettelser erstatter ikke dette.
+2. **P1 — Dialog- og tilgængelighedspas.** *Delvist gjort i 0.2.17.* Alle tre lag i appen — opret-/grejsæt-arkene (`Ark.tsx`), QR i fuld skærm og På tur-skærmen — bruger nu `useDialogFokus` (`src/dialogFokus.ts`): fokus ind ved åbning, fanget mens laget er åbent, tilbage til udløseren ved luk, og Escape lukker kun det øverste lag. Felter og ikon-knapper uden synlig tekst har fået `aria-label` eller `label for`. Native bekræftelser (`confirm()`) håndterer browseren selv. *Står tilbage:* fejltilstande og tabpanelrelationer er ikke gennemgået, og intet er prøvet med en rigtig skærmlæser.
 3. **P1 — Grejfiltre på små skærme.** Saml sjældent brugte filtre i en tilgængelig filterdialog med aktivt antal, hvis feltprøven bekræfter for meget vertikal plads. Bevar hurtige statusvalg.
 4. **P2 — Indstillinger i kortere kapitler.** Del konto, synkronisering og skabeloner visuelt; læg teknisk forklaring bag «Sådan virker det». Bevar adgang til fejlinformation.
 5. **P2 — Tomme tilstande med variation.** Behold fælles kompas som grundform; giv tur, sted og grejsæt hver sin diskrete kodebaserede naturillustration. Undgå samme store illustration gentaget gennem et helt arkiv.

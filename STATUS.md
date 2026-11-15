@@ -1,6 +1,6 @@
 # STATUS
 
-*Sidst opdateret: 12. november 2026. Udgangspunkt: `main` @ `1ef48e2`.*
+*Sidst opdateret: 15. november 2026. Udgangspunkt: `main` @ `0c43901`.*
 
 Kort svar på "hvor står vi nu?". Den skal kunne læses på to minutter og
 opdateres, hver gang noget bliver færdigt eller blokeret.
@@ -514,9 +514,12 @@ I den rækkefølge, de sandsynligvis er værd at tage.
    klik — men en test kan ikke sige, om skærmen er *til at forstå*, når man
    møder den uventet. Prøv den med to konti på localhost; den base er adskilt
    fra produktionens.
-6. **Tilgængelighedspas på dialoger.** Modaler, delings-/QR-flow og
-   fejltilstande er ikke gennemgået for fokusfælde, retur-fokus, Escape og
-   labels. (`UI_REVIEW.md` P1)
+6. **Tilgængelighedspas på dialoger — delvist gjort (0.2.17).** Alle lag
+   (arkene, QR i fuld skærm, På tur) flytter fokus ind, fanger det, giver det
+   tilbage til udløseren og lukker på Escape — samlet i `src/dialogFokus.ts`
+   og dækket af `dialogFokus.test.tsx`. Felter og ikon-knapper uden synlig
+   tekst har fået et navn. Tilbage: fejltilstande, tabpanelrelationer og en
+   prøve med en rigtig skærmlæser (VoiceOver/TalkBack). (`UI_REVIEW.md` P1)
 7. **Fysisk feltprøve.** Lys/mørk tilstand udendørs, stor systemtekst, 200 %
    zoom, én hånd, handsker. Alt er hidtil afprøvet i en desktopbrowser med
    ændret viewport. (`UI_REVIEW.md` P1)

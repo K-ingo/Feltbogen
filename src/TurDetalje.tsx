@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useId, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, etiket, TUR_STATUS, OVERNATNING, AKTIVITET, TERRAEN, ERFARING, PAK_AF_NIVEAU } from './db';
@@ -1688,14 +1688,17 @@ function Turparametre({
 }) {
   // Skriver man sig frem, står træfferne; ellers kan hele listen slås op.
   const [viserAlleSteder, setViserAlleSteder] = useState(false);
+  const stedId = useId();
+  const koordinatId = useId();
   const gemteSteder = viserAlleSteder ? alleSteder : gemteForslag;
 
   return (
     <div style={{ display: 'grid', gap: '12px' }}>
       <div>
-        <Label>Sted</Label>
+        <Label htmlFor={stedId}>Sted</Label>
         <div style={{ display: 'flex', gap: '6px' }}>
           <input
+            id={stedId}
             value={tur.sted}
             onChange={(e) => opdater({ sted: e.target.value, sted_uid: '' })}
             placeholder="fx Palnatokesvej 22, Odense"
@@ -1830,8 +1833,9 @@ function Turparametre({
       </div>
 
       <div>
-        <Label fejl={koordinatFejl || undefined}>Koordinater</Label>
+        <Label fejl={koordinatFejl || undefined} htmlFor={koordinatId}>Koordinater</Label>
         <input
+          id={koordinatId}
           type="text"
           value={koordinatTekst}
           onChange={(e) => opdaterKoordinater(e.target.value)}
@@ -2271,6 +2275,7 @@ function Deltagere({ deltagere, turensOvernatning, personer, ture, tilfoejPerson
               </span>
 
               <select
+                aria-label={`Overnatning for ${d.navn || 'deltager'}`}
                 value={d.overnatning ?? ''}
                 onChange={(e) => saetOvernatning(d.id, (e.target.value || null) as Overnatning | null)}
                 style={{ padding: '4px 6px', fontSize: 'var(--skrift-lille)', textTransform: 'capitalize', width: 'auto' }}
@@ -2325,6 +2330,7 @@ function Deltagervaelger({ personer, ture, alleredePaaTuren, vaelgPerson, vaelgN
     <div style={{ display: 'grid', gap: '8px' }}>
       <div style={{ display: 'flex', gap: '6px' }}>
         <input
+          aria-label="Navn på deltager"
           value={tekst}
           onChange={(e) => setTekst(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') void tilfoej(); }}
@@ -2385,15 +2391,15 @@ function Budget({ linjer, tilfoej, opdater, fjern }: {
       {linjer.map((l) => (
         <div key={l.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--border-svag)', display: 'grid', gap: '6px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '6px' }}>
-            <select value={l.kategori} onChange={(e) => opdater(l.id, { kategori: e.target.value })} style={{ padding: '6px', fontSize: 'var(--skrift-detalje)', textTransform: 'capitalize' }}>
+            <select aria-label="Kategori" value={l.kategori} onChange={(e) => opdater(l.id, { kategori: e.target.value })} style={{ padding: '6px', fontSize: 'var(--skrift-detalje)', textTransform: 'capitalize' }}>
               {BUDGET_KATEGORIER.map((k) => <option key={k} value={k}>{k}</option>)}
             </select>
-            <input placeholder="Beskrivelse" value={l.beskrivelse} onChange={(e) => opdater(l.id, { beskrivelse: e.target.value })} style={{ padding: '6px', fontSize: 'var(--skrift-detalje)', minWidth: 0 }} />
+            <input aria-label="Beskrivelse" placeholder="Beskrivelse" value={l.beskrivelse} onChange={(e) => opdater(l.id, { beskrivelse: e.target.value })} style={{ padding: '6px', fontSize: 'var(--skrift-detalje)', minWidth: 0 }} />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) auto', gap: '6px', alignItems: 'center' }}>
-            <Talinput placeholder="Forventet" value={l.forventet_kr} onChange={(v) => opdater(l.id, { forventet_kr: Number(v) || 0 })} style={{ padding: '6px', fontSize: 'var(--skrift-detalje)', minWidth: 0 }} />
-            <Talinput placeholder="Faktisk" value={l.faktisk_kr} onChange={(v) => opdater(l.id, { faktisk_kr: Number(v) || 0 })} style={{ padding: '6px', fontSize: 'var(--skrift-detalje)', minWidth: 0 }} />
-            <button onClick={() => fjern(l.id)} style={{ background: 'transparent', border: 'none', color: 'var(--fejl)', cursor: 'pointer', fontSize: 'var(--skrift-brod)', padding: '0 6px' }}>
+            <Talinput ariaLabel="Forventet beløb" placeholder="Forventet" value={l.forventet_kr} onChange={(v) => opdater(l.id, { forventet_kr: Number(v) || 0 })} style={{ padding: '6px', fontSize: 'var(--skrift-detalje)', minWidth: 0 }} />
+            <Talinput ariaLabel="Faktisk beløb" placeholder="Faktisk" value={l.faktisk_kr} onChange={(v) => opdater(l.id, { faktisk_kr: Number(v) || 0 })} style={{ padding: '6px', fontSize: 'var(--skrift-detalje)', minWidth: 0 }} />
+            <button onClick={() => fjern(l.id)} aria-label={`Fjern budgetlinjen${l.beskrivelse ? ` ${l.beskrivelse}` : ''}`} style={{ background: 'transparent', border: 'none', color: 'var(--fejl)', cursor: 'pointer', fontSize: 'var(--skrift-brod)', padding: '0 6px' }}>
               ×
             </button>
           </div>
@@ -2789,6 +2795,7 @@ function Deling({ token, snapshot, deltagelser, gearnavne, del, stop }: {
     <div>
       <input
         readOnly
+        aria-label="Delelink"
         value={link}
         onFocus={(e) => e.currentTarget.select()}
         style={{ width: '100%', fontSize: 'var(--skrift-detalje)', marginBottom: '8px' }}
@@ -3054,6 +3061,7 @@ function Turlog({ noter, tilfoej, saet, fjern }: {
                   {/* Indgangen kan rettes, men tidsstemplet bliver stående —
                       det er stadig den samme aften. */}
                   <textarea
+                    aria-label="Indgang i turloggen"
                     value={note.tekst}
                     onChange={(e) => saet(note.id, e.target.value)}
                     rows={Math.min(8, Math.max(2, note.tekst.split('\n').length))}
@@ -3157,11 +3165,13 @@ function Afgangstjekliste({ tjek, opret, gem }: {
           >
             <input
               type="checkbox"
+              aria-label={`Afkrydset: ${linje.tekst || 'tomt punkt'}`}
               checked={linje.afkrydset}
               onChange={(e) => gem(saetAfkrydset(tjek, linje.id, e.target.checked))}
               style={{ width: 'auto', flexShrink: 0 }}
             />
             <input
+              aria-label="Punktets tekst"
               value={linje.tekst}
               onChange={(e) => gem(saetTekst(tjek, linje.id, e.target.value))}
               style={{
@@ -3182,6 +3192,7 @@ function Afgangstjekliste({ tjek, opret, gem }: {
 
       <div style={{ display: 'flex', gap: '6px' }}>
         <input
+          aria-label="Tilføj et punkt"
           value={nyLinje}
           onChange={(e) => setNyLinje(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') tilfoej(); }}
