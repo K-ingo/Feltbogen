@@ -1,12 +1,14 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest';
 import { useRef, useState } from 'react';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 vi.mock('./pb', () => import('./test/pbMock'));
 
 import { naesteIFaelde, useDialogFokus } from './dialogFokus';
+import { db } from './db';
+import TurDetalje from './TurDetalje';
 import { NyTurArk } from './Ark';
 import { Qrfuldskaerm } from './Qrkode';
 import PaaTurTilstand from './PaaTurTilstand';
@@ -189,6 +191,81 @@ describe('På tur-skærmen', () => {
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(udloeser).toHaveFocus();
+  });
+});
+
+describe('På tur, der tegnes i stedet for skærmen', () => {
+  // Sådan står det i TurDetalje: når På tur er åben, er hele turskærmen —
+  // og dermed knappen — væk. Når den lukker, tegnes skærmen og knappen igen
+  // som nye elementer. Før stod fokus da på body.
+  function SomTurskaermen({ ventFoerst = false }: { ventFoerst?: boolean }) {
+    const [aaben, setAaben] = useState(false);
+    const aabn = async () => {
+      // TurDetalje sikrer afgangstjekket i basen, før skærmen åbner.
+      if (ventFoerst) await new Promise((r) => setTimeout(r, 10));
+      setAaben(true);
+    };
+    if (aaben) {
+      return (
+        <PaaTurTilstand
+          tur={lavTur({ navn: 'Fovslet Skov' })}
+          vejr={null}
+          skrivNote={() => {}}
+          luk={() => setAaben(false)}
+        />
+      );
+    }
+    return (
+      <div>
+        <button>Skift status</button>
+        <button onClick={() => void aabn()}>På tur</button>
+      </div>
+    );
+  }
+
+  it('giver fokus tilbage til På tur-knappen efter Escape', async () => {
+    tegn(<SomTurskaermen />);
+    screen.getByRole('button', { name: 'På tur' }).focus();
+    await userEvent.keyboard('{Enter}');
+    expect(screen.getByRole('dialog', { name: 'Fovslet Skov' })).toHaveFocus();
+
+    await userEvent.keyboard('{Escape}');
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'På tur' })).toHaveFocus();
+  });
+
+  it('giver fokus tilbage til På tur-knappen efter Luk', async () => {
+    tegn(<SomTurskaermen />);
+    await userEvent.click(screen.getByRole('button', { name: 'På tur' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Luk' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'På tur' })).toHaveFocus();
+  });
+
+  it('virker også, når skærmen først åbner efter et skriv i basen', async () => {
+    tegn(<SomTurskaermen ventFoerst />);
+    await userEvent.click(screen.getByRole('button', { name: 'På tur' }));
+    expect(await screen.findByRole('dialog', { name: 'Fovslet Skov' })).toBeInTheDocument();
+
+    await userEvent.keyboard('{Escape}');
+    expect(screen.getByRole('button', { name: 'På tur' })).toHaveFocus();
+  });
+
+  it('giver fokus tilbage på den rigtige turskærm (TurDetalje)', async () => {
+    const id = await db.ture.add(lavTur({ navn: 'Fovslet Skov', sted: 'Fovslet', status: 'aktiv' }));
+    tegn(<TurDetalje turId={id as number} tilbage={() => {}} />, DESKTOP);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'På tur' }));
+    expect(await screen.findByRole('dialog', { name: 'Fovslet Skov' })).toHaveFocus();
+
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.getByRole('button', { name: 'På tur' })).toHaveFocus());
+
+    await userEvent.click(screen.getByRole('button', { name: 'På tur' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Luk' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'På tur' })).toHaveFocus());
   });
 });
 

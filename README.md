@@ -247,7 +247,10 @@ samme hook, `useDialogFokus` i `src/dialogFokus.ts`. Den gør tre ting:
 
 1. flytter fokus ind, når laget åbner (det første felt, eller selve laget,
    hvor det første felt står langt nede), og tilbage til knappen, der åbnede
-   det, når det lukker;
+   det, når det lukker. Udløseren fanges, mens laget tegnes — ikke bagefter —
+   fordi På tur tegnes *i stedet for* turskærmen, så knappen er væk, når
+   lagets effekt kører. Ved luk findes knappen igen på slags og tekst, hvis
+   skærmen har tegnet den som et nyt element;
 2. fanger Tab og Shift+Tab inde i laget;
 3. lukker på Escape — kun det øverste, hvis flere er åbne.
 

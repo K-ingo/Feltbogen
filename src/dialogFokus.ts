@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 
 // Fokus i dialoger og ark.
@@ -72,6 +72,98 @@ function laegPaa(lag: AabentLag): boolean {
   return false;
 }
 
+// ── Udløseren ──────────────────────────────────
+//
+// Knappen, der åbnede laget, skal have fokus igen, når det lukker. To ting
+// gør det sværere, end det lyder:
+//
+// * Nogle lag tegnes *i stedet for* skærmen og ikke ovenpå den (På tur
+//   erstatter hele turskærmen). Når lagets effekt kører, er knappen allerede
+//   fjernet, og fokus står på body. Udløseren fanges derfor, mens laget
+//   tegnes — før React rører DOM'en.
+// * Når laget lukker, tegnes skærmen igen, og knappen er et nyt element med
+//   samme tekst. Den gamle er væk. Derfor gemmes en beskrivelse af knappen,
+//   så den kan findes igen.
+//
+// Safari giver ikke en knap fokus, når man klikker på den. Så er det seneste
+// klik det bedste bud på, hvad der åbnede laget.
+
+interface Udloeser {
+  el: HTMLElement;
+  tag: string;
+  tekst: string;
+  // Hvilken af knapperne med samme tekst, det var — der kan stå to "Luk".
+  nr: number;
+}
+
+const KLIKBAR = 'button, a[href], [role="button"], input, select, textarea, [tabindex]';
+let sidsteKlik: { el: HTMLElement; tid: number } | null = null;
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('click', (e) => {
+    const el = e.target instanceof Element ? e.target.closest<HTMLElement>(KLIKBAR) : null;
+    if (el) sidsteKlik = { el, tid: Date.now() };
+  }, true);
+}
+
+function tekstAf(el: Element): string {
+  return (el.getAttribute('aria-label') ?? el.textContent ?? '').replace(/\s+/g, ' ').trim();
+}
+
+function kandidater(tag: string, tekst: string): HTMLElement[] {
+  return Array.from(document.querySelectorAll<HTMLElement>(tag)).filter((el) => tekstAf(el) === tekst);
+}
+
+export function fangUdloeser(): Udloeser | null {
+  const aktivt = document.activeElement;
+  let el: HTMLElement | null =
+    aktivt instanceof HTMLElement && aktivt !== document.body ? aktivt : null;
+  // Et klik inden for de sidste sekunder. Åbningen kan vente på et skriv i
+  // basen (På tur sikrer afgangstjekket først), så ikke kun samme øjeblik.
+  if (!el && sidsteKlik && Date.now() - sidsteKlik.tid < 5000) el = sidsteKlik.el;
+  if (!el) return null;
+  const tag = el.tagName.toLowerCase();
+  const tekst = tekstAf(el);
+  const nr = el.isConnected ? Math.max(0, kandidater(tag, tekst).indexOf(el)) : 0;
+  return { el, tag, tekst, nr };
+}
+
+// Det element, udløseren er nu: det samme, hvis det stadig står der, ellers
+// et nyt med samme slags og tekst. Uden tekst er der intet at genkende på.
+export function genfind(u: Udloeser): HTMLElement | null {
+  if (u.el.isConnected) return u.el;
+  if (!u.tekst) return null;
+  const fundne = kandidater(u.tag, u.tekst);
+  return fundne[u.nr] ?? fundne[0] ?? null;
+}
+
+// Fokus står ingen steder, når laget, der havde det, lige er fjernet. Har
+// noget andet taget det i mellemtiden — en ny skærm med autofokus — skal det
+// blive der.
+function fokusErLedigt(): boolean {
+  const a = document.activeElement;
+  return !a || a === document.body || !a.isConnected;
+}
+
+function giveTilbage(u: Udloeser | null): void {
+  if (!u) return;
+  if (u.el.isConnected) {
+    u.el.focus();
+    return;
+  }
+  // Skærmen bag laget tegnes i samme omgang, som laget fjernes — men data,
+  // der hentes fra basen, kan komme et øjeblik efter. Så prøves der et par
+  // gange til.
+  let tilbage = 10;
+  const forsoeg = () => {
+    if (!fokusErLedigt()) return;
+    const el = genfind(u);
+    if (el) el.focus();
+    else if (tilbage-- > 0) setTimeout(forsoeg, 50);
+  };
+  forsoeg();
+}
+
 export interface DialogFokusValg {
   // Hvad der får fokus ved åbning. `felt`: det første felt, ellers den første
   // knap — et opret-ark åbner, fordi man skal skrive noget. `rod`: selve
@@ -90,9 +182,11 @@ export function useDialogFokus(
   const lukRef = useRef(luk);
   useEffect(() => { lukRef.current = luk; }, [luk]);
 
+  // Fanges under første tegning, ikke i effekten. Se "Udløseren" ovenfor.
+  const [udloeser] = useState(fangUdloeser);
+
   useEffect(() => {
     const id = Symbol('dialog');
-    const udloeser = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const rod = rodRef.current;
     const oeverst = laegPaa({ id, rod });
 
@@ -134,10 +228,10 @@ export function useDialogFokus(
       document.removeEventListener('keydown', paaTast);
       const plads = aabneLag.findIndex((lag) => lag.id === id);
       if (plads !== -1) aabneLag.splice(plads, 1);
-      // Tilbage hvor man kom fra — hvis det stadig findes. Er udløseren væk
-      // (man oprettede en tur og står nu på den), er der ikke noget at gå
-      // tilbage til, og fokus må blive, hvor den nye skærm sætter det.
-      if (udloeser && udloeser.isConnected) udloeser.focus();
+      // Tilbage hvor man kom fra — den samme knap, eller den samme knap
+      // tegnet igen. Findes den ikke længere (man oprettede en tur og står nu
+      // på den), må fokus blive, hvor den nye skærm sætter det.
+      giveTilbage(udloeser);
     };
     // Kun ved åbning og lukning. `foerst` ændrer sig ikke, mens laget er åbent.
     // eslint-disable-next-line react-hooks/exhaustive-deps
