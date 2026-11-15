@@ -7,8 +7,8 @@ vi.mock('./pb', () => import('./test/pbMock'));
 
 import { db } from './db';
 import TurDetalje from './TurDetalje';
-import { lavItem, lavTur } from './test/data';
-import { tegn, DESKTOP } from './test/skaerm';
+import { lavGruppe, lavItem, lavTur } from './test/data';
+import { tegn, DESKTOP, MOBIL } from './test/skaerm';
 
 // ─────────────────────────────────────────────
 // Tur-detalje · desktop
@@ -30,9 +30,9 @@ beforeEach(async () => {
   vi.spyOn(console, 'error').mockImplementation(() => {});
 });
 
-const visTur = async (felter = {}) => {
+const visTur = async (felter = {}, bredde = DESKTOP) => {
   const id = await db.ture.add(lavTur({ navn: 'Fovslet Skov', sted: 'Fovslet', ...felter }));
-  tegn(<TurDetalje turId={id as number} tilbage={vi.fn()} />, DESKTOP);
+  tegn(<TurDetalje turId={id as number} tilbage={vi.fn()} />, bredde);
   return id as number;
 };
 
@@ -72,6 +72,60 @@ describe('kun én fyldt primary', () => {
     expect(await screen.findByRole('button', { name: 'På tur' })).toBeInTheDocument();
     expect(fyldte()).toHaveLength(1);
     expect(fyldte()[0]).toHaveTextContent('Afslut tur');
+  });
+});
+
+// Overblik med alt foldet ud (0.2.18). Testene ovenfor ser kun skærmen, som
+// den åbner — med Vejrudsigt foldet sammen og uden motorforslag. Fold man
+// vejret ud, eller har motoren et grejsæt at foreslå, stod der før tre fyldte
+// knapper: turens næste skridt, "Hent vejr" og forslagets "Tag sættet med".
+// Nu er de to sidste outline, og det gælder på PC og telefon.
+describe('Overblik: én fyldt primary, også med vejr og forslag fremme', () => {
+  const visFyldtOverblik = async (status: 'kladde' | 'klar' | 'aktiv', bredde: number) => {
+    // Et grejsæt med turens aktivitet som tag giver motoren et forslag.
+    await db.grupper.add(lavGruppe({ navn: 'Bushcraftsæt', tags: ['bushcraft'] }));
+    await visTur({ status }, bredde);
+
+    const tagImod = await screen.findByRole('button', { name: 'Tag sættet med' });
+    await userEvent.click(screen.getByRole('button', { name: /Vejrudsigt/ }));
+    const hentVejr = await screen.findByRole('button', { name: 'Hent vejr' });
+    return { tagImod, hentVejr };
+  };
+
+  for (const [navn, bredde] of [['PC', DESKTOP], ['telefon', MOBIL]] as const) {
+    it(`har turens næste skridt som den eneste fyldte på en kladde (${navn})`, async () => {
+      const { tagImod, hentVejr } = await visFyldtOverblik('kladde', bredde);
+
+      expect(fyldte()).toHaveLength(1);
+      expect(fyldte()[0]).toHaveTextContent('Markér som klar');
+      expect(hentVejr).toHaveClass('ui-button--sekundaer');
+      expect(tagImod).toHaveClass('ui-button--sekundaer');
+      // Afvis er stadig ghost.
+      expect(screen.getByRole('button', { name: 'Ikke på denne tur' })).toHaveClass('ui-button--tekst');
+    });
+
+    it(`holder også på en klar tur (${navn})`, async () => {
+      await visFyldtOverblik('klar', bredde);
+
+      expect(fyldte()).toHaveLength(1);
+      expect(fyldte()[0]).toHaveTextContent('Start tur');
+    });
+  }
+
+  it('lader på-tur-skærmen være den fyldte på en aktiv tur på telefonen', async () => {
+    await visFyldtOverblik('aktiv', MOBIL);
+
+    expect(fyldte()).toHaveLength(1);
+    expect(fyldte()[0]).toHaveTextContent('Åbn på-tur-skærmen');
+    expect(screen.getByRole('button', { name: 'Afslut tur' })).toHaveClass('ui-button--sekundaer');
+  });
+
+  it('lader turens næste skridt være den fyldte på en aktiv tur på PC', async () => {
+    await visFyldtOverblik('aktiv', DESKTOP);
+
+    expect(fyldte()).toHaveLength(1);
+    expect(fyldte()[0]).toHaveTextContent('Afslut tur');
+    expect(screen.getByRole('button', { name: 'På tur' })).toHaveClass('ui-button--sekundaer');
   });
 });
 
