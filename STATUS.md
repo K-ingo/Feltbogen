@@ -202,6 +202,14 @@ sekund og ved online/offline/synlighed. Intet svar inden for fem sekunder er
 offline, og så står linjen som en advarsel på advarselsfladen.
 `useErOnline` i `useMedie.ts` er ikke ændret — Mere bruger den stadig.
 
+**Tur-detaljens Overblik (0.2.18)** havde stadig tre fyldte knapper, når man
+foldede vejret ud, og motoren havde et forslag: turens næste skridt, **Hent
+vejr** og forslagskortets **tag imod**. Nu er der én fyldt på både PC og
+telefon — turens næste skridt (Markér som klar / Start tur / Afslut tur /
+pak-af-tjek), på en aktiv tur på telefonen dog **Åbn på-tur-skærmen** som før.
+Hent vejr og tag imod er outline, afvis og Skift status er tekst. Testet i
+`TurDetalje.test.tsx` med vejret foldet ud og et grejsæt-forslag fremme.
+
 **Tomme skærme på Hjem, Ture og Grej** viser nu *Kom i gang* i stedet for
 én linje og én knap (research #2, sep 2026: en tom app skal give værdi, før
 inventaret findes). To konkrete skridt, ingen rundvisning: **Opret første

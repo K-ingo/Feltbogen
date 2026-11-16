@@ -1113,6 +1113,7 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
                   aabn={() => gaaTilMaal(f.type === 'vaegt' ? 'vaegt' : 'pakning')}
                   tagImod={() => void tagImodForslag(f)}
                   afvis={() => void afvisForslaget(f)}
+                  staerk={false}
                 />
               ))}
             </div>
@@ -2196,7 +2197,9 @@ function Vejrudsigt({ tur, data, hentes, fejl, hent }: {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
-        <Knap onClick={hent} disabled={hentes} variant="primaer" style={{ padding: '5px 12px', fontSize: 'var(--skrift-lille)' }}>
+        {/* Outline og ikke fyldt: Vejrudsigt står på Overblik, og dér er
+            turens næste skridt den ene fyldte knap (0.2.18). */}
+        <Knap onClick={hent} disabled={hentes} variant="sekundaer" style={{ padding: '5px 12px', fontSize: 'var(--skrift-lille)' }}>
           {hentes ? 'Henter...' : data ? 'Opdater' : 'Hent vejr'}
         </Knap>
       </div>

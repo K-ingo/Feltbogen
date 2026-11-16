@@ -918,8 +918,9 @@ export function Forslagskort({ forslag, aabn, tagImod, afvis, staerk = true }: {
   tagImod: () => void;
   afvis: () => void;
   // Om "tag imod"-knappen er den fyldte. På startskærmen er den ikke: dér må
-  // der kun være én fyldt accent, og den hører til på Næste Eventyr. Inde på
-  // turen er kortet den eneste handling i sit område, og der er den fyldt.
+  // der kun være én fyldt accent, og den hører til på Næste Eventyr. Heller
+  // ikke på turens Overblik (0.2.18): dér er turens næste skridt den fyldte,
+  // og kortene står under den i samme skærmbillede.
   staerk?: boolean;
 }) {
   return (
