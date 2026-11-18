@@ -1,5 +1,6 @@
+import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { useErDesktop, useSynligHoejde } from './useMedie';
+import { useErDesktop, useHoldSidenStille, useSkriverPaaTelefon, useSynligHoejde } from './useMedie';
 import { markerSet, useErSet, FAB_TIP_SET } from './indstillinger';
 import { FortrydToast } from './FortrydToast';
 import { Ikon } from './Ikon';
@@ -113,7 +114,29 @@ interface Props {
 export function Skal({ fane, skift, titel, undertitel, handlinger, fab, children }: Props) {
   const erDesktop = useErDesktop();
   const synligHoejde = useSynligHoejde();
+  const skriver = useSkriverPaaTelefon();
+  const indhold = useRef<HTMLElement>(null);
   const op = forael(fane);
+  // Skallen er lige så høj som det synlige felt. Ruller iOS også siden for at
+  // få feltet fri af tastaturet, er toppen skubbet op under statuslinjen.
+  useHoldSidenStille(!erDesktop && skriver);
+
+  // Mens man skriver, er navigationen væk, og indholdet har fået dens plads
+  // og tastaturet taget sin. Feltet, man står i, rulles frem, hvis det er
+  // havnet under kanten. `nearest` flytter kun, hvis det er nødvendigt. Felter
+  // i et ark ruller arket selv (Ark.tsx) — også de ark, der tegnes inde i
+  // indholdet — så kun felter uden for et lag her.
+  useEffect(() => {
+    if (erDesktop || !skriver) return;
+    const ramme = requestAnimationFrame(() => {
+      const aktivt = document.activeElement;
+      if (aktivt instanceof HTMLElement && indhold.current?.contains(aktivt)
+        && !aktivt.closest('[role="dialog"]')) {
+        aktivt.scrollIntoView?.({ block: 'nearest' });
+      }
+    });
+    return () => cancelAnimationFrame(ramme);
+  }, [erDesktop, skriver, synligHoejde]);
 
   if (erDesktop) {
     return (
@@ -167,7 +190,7 @@ export function Skal({ fane, skift, titel, undertitel, handlinger, fab, children
     }}>
       {titel && <Topbar titel={titel} tilbage={op && <Tilbagelinje til={op} skift={skift} />} />}
 
-      <main className="mobile-main" style={{
+      <main ref={indhold} className="mobile-main" style={{
         flex: 1,
         // Uden den her kan et flex-barn ikke blive lavere end sit indhold, og
         // så scroller kassen i stedet for indholdet.
@@ -184,7 +207,8 @@ export function Skal({ fane, skift, titel, undertitel, handlinger, fab, children
           margin: '0 auto',
           // Kun FAB'en skal der gøres plads til nu — den svæver 72 px over
           // bunden og er 54 px høj, og lå ellers oven på den sidste linje.
-          paddingBottom: fab ? '140px' : '24px'
+          // Mens man skriver, er den væk, og så er luften bare tomrum.
+          paddingBottom: fab && !skriver ? '140px' : '24px'
         }}>
           {undertitel && (
             <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-dæmpet)', marginBottom: '14px' }}>
@@ -195,10 +219,17 @@ export function Skal({ fane, skift, titel, undertitel, handlinger, fab, children
         </div>
       </main>
 
-      {fab && <Fab onClick={fab} />}
-      {fab && <FabTip />}
-      <FortrydToast bund="calc(136px + env(safe-area-inset-bottom))" />
-      <BundNav fane={fane} skift={skift} />
+      {/* Mens man skriver, er navigationen og plus-knappen væk. Skallen er
+          lige så høj som det synlige felt, så med tastaturet fremme ville
+          navigationen ellers ligge lige over tastaturet og dække feltet, man
+          skriver i. Den kommer tilbage, når feltet slipper fokus, eller
+          tastaturet lukkes. Se useSkriverPaaTelefon. */}
+      {fab && !skriver && <Fab onClick={fab} />}
+      {fab && !skriver && <FabTip />}
+      {/* Uden navigationen står beskeden lige over tastaturet, hvor
+          hjemmeknappens luft alligevel er gemt. */}
+      <FortrydToast bund={skriver ? 'var(--plads-4)' : 'calc(136px + env(safe-area-inset-bottom))'} />
+      {!skriver && <BundNav fane={fane} skift={skift} />}
     </div>
   );
 }

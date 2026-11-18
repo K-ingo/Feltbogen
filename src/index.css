@@ -204,6 +204,17 @@ input, textarea, select {
   min-height: var(--roerehoejde);
 }
 
+/* Gulvet gælder også de felter, der har fået en mindre skrift sat lokalt —
+   tags, deltagere, budget, pakkelisten, noter, turloggen. En inline-størrelse
+   slår reglen ovenfor, så på en berøringsskærm vinder gulvet med !important.
+   Kun dér: på PC zoomer intet, og felterne må stå i deres egen størrelse.
+   Brugerens egen zoom er ikke låst — viewport-meta'en sætter hverken
+   maximum-scale eller user-scalable, og det skal den heller ikke. Titlen er
+   større i forvejen og undtaget (TitelInput i ui.tsx). */
+@media (pointer: coarse) {
+  input:not(.titelfelt), textarea, select { font-size: var(--skrift-felt) !important; }
+}
+
 input:focus, textarea:focus, select:focus {
   border-color: var(--accent);
 }
@@ -483,6 +494,10 @@ button:disabled { cursor: not-allowed; }
 /* Med tastaturet fremme er hjemmeknappen gemt bag det, og dens luft er bare
    tabt plads over tastaturet. */
 .ark--tastatur .ark-fod { padding-bottom: var(--plads-4); }
+/* Med tastaturet fremme er laget lige så højt som det synlige felt, og dets
+   top er skærmens top. dvh følger ikke tastaturet på iOS, så det må ikke være
+   med i regnestykket her — kun laget og statuslinjen. */
+.ark--tastatur { max-height: calc(100% - env(safe-area-inset-top, 0px)); }
 .ark--bund .ark-hint {
   flex-shrink: 0;
   padding: var(--plads-2) 20px 0;

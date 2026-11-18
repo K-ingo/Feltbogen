@@ -240,6 +240,57 @@ på en underskærm, bliver hovedfanen markeret i navigationen, og der kommer en
 "‹ Grej"-linje over titlen — begge dele udledt, så en vej tilbage ikke kan
 blive glemt ét sted. En ny skærm skal derfor kun skrives ind i den ene tabel.
 
+**Bundnavigationen går væk, mens man skriver (0.2.21).** Mobilskallen er lige
+så høj som det synlige felt (`useSynligHoejde`), så når telefonens tastatur
+kommer frem, krymper den — og navigationen, der er dens nederste række, lagde
+sig lige over tastaturet og dækkede feltet. Nu tegnes navigationen og
+plus-knappen ikke, mens et skrivefelt (tekst-input, textarea, contenteditable —
+ikke afkrydsning, datovalg og knapper) har fokus på en berøringsskærm, og det
+aktive felt rulles frem (`block: 'nearest'`). Reglen står i `src/skrivefelt.ts`,
+lytterne i `useSkriverPaaTelefon` (`src/useMedie.ts`): `focusin`/`focusout`
+er det hurtige signal, så navigationen ikke når at stå over tastaturet under
+animationen; `visualViewport`-højden målt mod den højeste højde i samme bredde
+er det sikre, og det får navigationen tilbage, hvis tastaturet lukkes, mens
+feltet beholder fokus (Androids tilbage-knap). Med mus på en smal skærm bliver
+navigationen stående, og PC-sidebaren røres ikke. Arkene lå i forvejen over
+navigationen (`z-index` 100) og følger tastaturets overkant (`useSynligtFelt`).
+
+**Siden holdes stille, mens man skriver (0.2.21).** Skallen og bundarkene står
+efter det synlige felt (`visualViewport`: højde og `offsetTop`). Får et felt
+langt nede fokus — fx Bæreafstand i Ny tur med taltastaturet — ruller iOS
+desuden selve siden (`window.scrollY`), og så blev tastaturet regnet med to
+gange: arkets top lå under statuslinjen, bunden stod et godt stykke over
+tastaturet, og imellem var der tomt. `useHoldSidenStille` (`src/useMedie.ts`)
+ruller siden tilbage til 0, mens et bundark er åbent, eller mens man skriver i
+skallen. Siden har aldrig noget at rulle; feltet rulles frem inde i arket eller
+i indholdet. Med tastaturet fremme regnes arkets højde kun ud fra laget og
+statuslinjen (`.ark--tastatur`), ikke `dvh`, der ikke følger tastaturet på iOS.
+Mens man skriver, står fortryd-beskeden lige over tastaturet, og FAB-luften i
+bunden af indholdet er væk sammen med FAB'en.
+
+**Fokus uden for skrivefelter og lag, der lukker (0.2.21).** Ethvert nyt
+fokus afgør, om navigationen skal være væk, også fokus på en dato, en
+afkrydsning eller en knap. Før talte kun skrivefelter, og titel → «Fra» →
+Annuller i Ny tur efterlod navigationen skjult på Ture-listen. Et ark, der
+lukker, kalder `tjekSkrivefokus()`, fordi feltet forsvinder med arket og ikke
+altid sender et focusout. Når feltet slipper fokus, kommer navigationen først
+igen, når det synlige felt er tilbage i fuld højde, så den ikke står over
+tastaturet, mens det glider ned. Den venter højst 800 ms, hvis resize-eventet
+ikke kommer, og 300 ms uden `visualViewport` (`ventPaaTastatur` i
+`src/skrivefelt.ts`).
+
+**Ingen iOS-zoom på felterne (0.2.21).** Safari på iPhone zoomer ind på et
+felt med skrift under 16 px, når man rører ved det. Grundreglen for felter
+står allerede på `--skrift-felt` (1rem), men en række felter havde fået en
+mindre skrift sat inline: tags, deltagere, budget, pakkelisten, noter,
+turloggen (15 px) og indstillingerne. En regel under `@media (pointer:
+coarse)` løfter `input`, `textarea` og `select` til `--skrift-felt` med
+`!important`, så den også slår inline-størrelserne. Titelfeltet
+(`TitelInput`, klassen `titelfelt`) er større i forvejen og undtaget. På PC er
+intet ændret. Brugerens egen zoom er ikke låst: viewport-meta'en sætter
+hverken `maximum-scale` eller `user-scalable`, og `feltzoom.test.ts` holder
+fast i begge dele.
+
 ### Dialoger og fokus
 
 Alle lag over skærmen — opret-arkene og grejsæt-arkene (`Ark.tsx`), QR i fuld

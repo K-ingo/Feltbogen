@@ -210,6 +210,29 @@ pak-af-tjek), på en aktiv tur på telefonen dog **Åbn på-tur-skærmen** som f
 Hent vejr og tag imod er outline, afvis og Skift status er tekst. Testet i
 `TurDetalje.test.tsx` med vejret foldet ud og et grejsæt-forslag fremme.
 
+**Bundnavigationen over iOS-tastaturet (0.2.21).** Fra iPhone-testen: med
+fokus i et felt lå bundmenuen lige over tastaturet og dækkede feltet (fx turens
+titel på Tur-detalje). Nu skjules bundmenuen og plus-knappen, mens et
+skrivefelt har fokus på en berøringsskærm, og kommer igen ved blur eller når
+tastaturet lukkes. Se README under *Bundnavigationen går væk, mens man
+skriver*. Testet i `skrivefelt.test.ts` og `Skal.test.tsx` (jsdom) og i
+Chromium med iPhone-emulering mod `npm run preview` (Tur-detaljens titel og
+Ny tur-arket). **Ikke testet på en rigtig iPhone eller Android** — emuleringen
+har intet skærmtastatur, så `visualViewport`-delen er kun dækket af enhedstests.
+Opfølgning fra rigtig iPhone (head 138e330): i bundarkene (Ny tur, især
+Bæreafstand med taltastaturet) var arket skåret af under feltet, der var tomt
+ned til tastaturet, og toppen lå under statuslinjen. Årsagen var dobbelt
+kompensation: laget står efter `visualViewport`, og iOS rullede også siden.
+`useHoldSidenStille` ruller siden tilbage, mens et bundark er åbent eller man
+skriver. Desuden blev navigationen væk efter titel → dato → Annuller i Ny tur
+(fokus på et ikke-skrivefelt blev ikke talt med, og arket lukkede uden
+focusout). Det er rettet med en test for flowet. Efter blur venter
+navigationen nu på, at tastaturet er væk. Emil bekræftede arket på iPhone (d7843d0).
+Næste fejl var, at iOS zoomede ind på tag-feltet. Alle felter står nu på
+mindst 16 px på berøringsskærme (`@media (pointer: coarse)` i index.css), uden
+at brugerens zoom er låst. Testet i `Ark.test.tsx` og `Skal.test.tsx` (jsdom). **Endnu ikke
+bekræftet på en rigtig iPhone.**
+
 **Sync-fix: gendannelse vs. gravsten + falsk serverfejl (0.2.20).** To fejl,
 begge i `src/sync.ts`. (1) En sikkerhedskopi, der blev læst ind efter en
 sletning, kom op på serveren, men gravstenene fra sletningen skjulte posterne

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { erSkrivefelt, skjulBundnav, tastaturFremme, ventPaaTastatur } from './skrivefelt';
 
 // Under denne bredde er der ikke plads til sidebar ved siden af indholdet.
 export const DESKTOP_FRA = 900;
@@ -118,6 +119,175 @@ export function useSynligtFelt(): SynligtFelt | null {
   }, []);
 
   return felt;
+}
+
+// Om man står og skriver på en telefon — så skal bundnavigationen væk.
+//
+// Skallen er lige så høj som det synlige felt (useSynligHoejde), og når
+// tastaturet kommer frem, krymper den. Navigationen er skallens nederste
+// række og lægger sig dermed lige over tastaturet — oven i det felt, man
+// skriver i. Reglen står i skrivefelt.ts; her er kun lytterne.
+export function useSkriverPaaTelefon(): boolean {
+  const [skjult, setSkjult] = useState(() => typeof document !== 'undefined' && skjulBundnav({
+    fokusISkrivefelt: erSkrivefelt(document.activeElement),
+    tastatur: false,
+    beroering: erBeroering(),
+    lukketUdenBlur: false
+  }));
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    const beroering = erBeroering();
+
+    // Tilstanden står her og ikke i React-state: lytterne skal kunne læse
+    // den, som den er lige nu, og ikke som den var ved sidste tegning.
+    let fokus = erSkrivefelt(document.activeElement);
+    let tastatur = false;
+    let lukketUdenBlur = false;
+    // Feltet har sluppet fokus, men tastaturet er endnu ikke væk.
+    let venter = false;
+
+    let hoejeste = 0;
+    let bredde = window.innerWidth;
+    let aaben = false;
+    let ventende: ReturnType<typeof setTimeout> | undefined;
+    let ventGraense: ReturnType<typeof setTimeout> | undefined;
+
+    const regel = () => skjulBundnav({ fokusISkrivefelt: fokus, tastatur, beroering, lukketUdenBlur });
+    const opdater = () => setSkjult(regel() || venter);
+
+    const stopVent = () => {
+      venter = false;
+      if (ventGraense) clearTimeout(ventGraense);
+    };
+
+    const tjekFokus = () => {
+      const nu = erSkrivefelt(document.activeElement);
+      if (nu && !fokus) {
+        fokus = true;
+        lukketUdenBlur = false;
+        stopVent();
+      } else if (!nu && fokus) {
+        const varSkjult = regel();
+        fokus = false;
+        // Navigationen kommer først igen, når tastaturet er væk — ellers står
+        // den over tastaturet, mens det glider ned. Se ventPaaTastatur.
+        const ms = ventPaaTastatur({ varSkjult, tastatur, harViewport: !!vv });
+        stopVent();
+        if (ms > 0) {
+          venter = true;
+          ventGraense = setTimeout(() => { venter = false; opdater(); }, ms);
+        }
+      }
+      opdater();
+    };
+
+    const maal = () => {
+      const hoejde = vv?.height ?? window.innerHeight;
+      // Ny bredde er en drejet telefon, og så er den gamle højeste højde ikke
+      // længere et nulpunkt. Et tastatur, der står fremme under drejningen,
+      // er ikke "lukket" af den grund.
+      if (window.innerWidth !== bredde) {
+        bredde = window.innerWidth;
+        hoejeste = 0;
+        aaben = false;
+      }
+      hoejeste = Math.max(hoejeste, hoejde);
+      tastatur = tastaturFremme(hoejeste, hoejde);
+      if (tastatur) aaben = true;
+      else if (aaben) {
+        aaben = false;
+        lukketUdenBlur = true;
+      }
+      // Det synlige felt er tilbage i fuld højde: tastaturet er væk.
+      if (!tastatur && venter) stopVent();
+      // Et felt, der forsvinder fra siden, mens det har fokus, sender ikke
+      // altid et focusout. Ændrer det synlige felt sig, ses der efter igen.
+      tjekFokus();
+    };
+
+    // Fokus på hvad som helst — også en dato, en afkrydsning eller en knap —
+    // afgør det. Før talte kun skrivefelter, og fra titlen til datofeltet og
+    // videre ud af et ark blev navigationen væk på skærmen bagved.
+    const ind = () => {
+      if (ventende) clearTimeout(ventende);
+      tjekFokus();
+    };
+
+    // Ved skift fra ét felt til det næste kommer focusout før focusin. Der
+    // ventes en tur, så navigationen ikke blinker frem imellem de to.
+    const senere = () => {
+      if (ventende) clearTimeout(ventende);
+      ventende = setTimeout(tjekFokus, 0);
+    };
+
+    maal();
+    document.addEventListener('focusin', ind);
+    document.addEventListener('focusout', senere);
+    // Et lag, der lukker, tager feltet med sig, og ikke alle browsere sender
+    // et focusout for et felt, der forsvinder. Se tjekSkrivefokus.
+    window.addEventListener(SKRIVEFOKUS_TJEK, senere);
+    window.addEventListener('resize', maal);
+    vv?.addEventListener('resize', maal);
+
+    return () => {
+      if (ventende) clearTimeout(ventende);
+      stopVent();
+      document.removeEventListener('focusin', ind);
+      document.removeEventListener('focusout', senere);
+      window.removeEventListener(SKRIVEFOKUS_TJEK, senere);
+      window.removeEventListener('resize', maal);
+      vv?.removeEventListener('resize', maal);
+    };
+  }, []);
+
+  return skjult;
+}
+
+const SKRIVEFOKUS_TJEK = 'feltbogen:skrivefokus';
+
+// Bedes kaldt, når et lag med felter lukker. Så ser useSkriverPaaTelefon efter,
+// hvor fokus er nu, frem for at vente på et focusout, der måske aldrig kommer.
+export function tjekSkrivefokus(): void {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(SKRIVEFOKUS_TJEK));
+}
+
+// Holder siden selv rullet helt op, mens `aktiv` er sand.
+//
+// Mobilskallen og arkene står allerede efter det synlige felt: skallen er lige
+// så høj som det (useSynligHoejde), og arket lægges præcis over det
+// (useSynligtFelt). Får et felt langt nede fokus, ruller iOS desuden selve
+// siden (`window.scrollY`) for at få det fri af tastaturet — og så er
+// tastaturet regnet med to gange: laget er gjort lavere *og* skubbet op. Arkets
+// top ender under statuslinjen, bunden et godt stykke over tastaturet, og
+// imellem står et tomt felt. Siden har aldrig noget at rulle — indholdet
+// ruller inde i skallen og arket — så den rulles tilbage, hver gang iOS har
+// flyttet den, og feltet rulles frem indefra i stedet (Ark.tsx og Skal.tsx).
+export function useHoldSidenStille(aktiv: boolean): void {
+  useEffect(() => {
+    if (!aktiv) return;
+    const vv = window.visualViewport;
+    const tilbage = () => {
+      if (window.scrollY !== 0 || window.scrollX !== 0) window.scrollTo(0, 0);
+    };
+
+    tilbage();
+    window.addEventListener('scroll', tilbage);
+    vv?.addEventListener('resize', tilbage);
+    vv?.addEventListener('scroll', tilbage);
+    return () => {
+      window.removeEventListener('scroll', tilbage);
+      vv?.removeEventListener('resize', tilbage);
+      vv?.removeEventListener('scroll', tilbage);
+    };
+  }, [aktiv]);
+}
+
+// En berøringsskærm, hvor et felt med fokus betyder et tastatur på skærmen.
+function erBeroering(): boolean {
+  if (typeof window === 'undefined') return false;
+  const grov = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+  return grov || (typeof navigator !== 'undefined' && (navigator.maxTouchPoints ?? 0) > 0);
 }
 
 // Mere end det her skåret af bunden er et tastatur og ikke en adresselinje,
