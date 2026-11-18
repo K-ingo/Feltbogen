@@ -726,9 +726,11 @@ export function TitelInput({ value, onChange, placeholder, autoFokus, lys, ariaL
       // står for sig.
       aria-label={ariaLabel ?? (placeholder || 'Navn')}
       autoFocus={autoFokus}
-      // Klassen findes kun for ::placeholder, som en inline-style ikke kan
+      // `titel-lys` findes kun for ::placeholder, som en inline-style ikke kan
       // ramme. Se index.css — det er den samme grund som printreglerne har.
-      className={lys ? 'titel-lys' : undefined}
+      // `titelfelt` undtager titlen fra 16 px-gulvet på berøringsskærme: den
+      // er større i forvejen og skal ikke trykkes ned til feltstørrelse.
+      className={lys ? 'titelfelt titel-lys' : 'titelfelt'}
       style={{
         fontFamily: "'Fraunces', Georgia, serif",
         fontSize: 'var(--skrift-titel)',

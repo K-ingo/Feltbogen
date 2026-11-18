@@ -227,7 +227,10 @@ kompensation: laget står efter `visualViewport`, og iOS rullede også siden.
 skriver. Desuden blev navigationen væk efter titel → dato → Annuller i Ny tur
 (fokus på et ikke-skrivefelt blev ikke talt med, og arket lukkede uden
 focusout). Det er rettet med en test for flowet. Efter blur venter
-navigationen nu på, at tastaturet er væk. Testet i `Ark.test.tsx` og `Skal.test.tsx` (jsdom). **Endnu ikke
+navigationen nu på, at tastaturet er væk. Emil bekræftede arket på iPhone (d7843d0).
+Næste fejl var, at iOS zoomede ind på tag-feltet. Alle felter står nu på
+mindst 16 px på berøringsskærme (`@media (pointer: coarse)` i index.css), uden
+at brugerens zoom er låst. Testet i `Ark.test.tsx` og `Skal.test.tsx` (jsdom). **Endnu ikke
 bekræftet på en rigtig iPhone.**
 
 **Sync-fix: gendannelse vs. gravsten + falsk serverfejl (0.2.20).** To fejl,

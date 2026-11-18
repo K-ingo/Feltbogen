@@ -204,6 +204,17 @@ input, textarea, select {
   min-height: var(--roerehoejde);
 }
 
+/* Gulvet gælder også de felter, der har fået en mindre skrift sat lokalt —
+   tags, deltagere, budget, pakkelisten, noter, turloggen. En inline-størrelse
+   slår reglen ovenfor, så på en berøringsskærm vinder gulvet med !important.
+   Kun dér: på PC zoomer intet, og felterne må stå i deres egen størrelse.
+   Brugerens egen zoom er ikke låst — viewport-meta'en sætter hverken
+   maximum-scale eller user-scalable, og det skal den heller ikke. Titlen er
+   større i forvejen og undtaget (TitelInput i ui.tsx). */
+@media (pointer: coarse) {
+  input:not(.titelfelt), textarea, select { font-size: var(--skrift-felt) !important; }
+}
+
 input:focus, textarea:focus, select:focus {
   border-color: var(--accent);
 }

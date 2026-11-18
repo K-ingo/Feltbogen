@@ -279,6 +279,18 @@ tastaturet, mens det glider ned. Den venter højst 800 ms, hvis resize-eventet
 ikke kommer, og 300 ms uden `visualViewport` (`ventPaaTastatur` i
 `src/skrivefelt.ts`).
 
+**Ingen iOS-zoom på felterne (0.2.21).** Safari på iPhone zoomer ind på et
+felt med skrift under 16 px, når man rører ved det. Grundreglen for felter
+står allerede på `--skrift-felt` (1rem), men en række felter havde fået en
+mindre skrift sat inline: tags, deltagere, budget, pakkelisten, noter,
+turloggen (15 px) og indstillingerne. En regel under `@media (pointer:
+coarse)` løfter `input`, `textarea` og `select` til `--skrift-felt` med
+`!important`, så den også slår inline-størrelserne. Titelfeltet
+(`TitelInput`, klassen `titelfelt`) er større i forvejen og undtaget. På PC er
+intet ændret. Brugerens egen zoom er ikke låst: viewport-meta'en sætter
+hverken `maximum-scale` eller `user-scalable`, og `feltzoom.test.ts` holder
+fast i begge dele.
+
 ### Dialoger og fokus
 
 Alle lag over skærmen — opret-arkene og grejsæt-arkene (`Ark.tsx`), QR i fuld
