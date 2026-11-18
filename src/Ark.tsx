@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import type { ItemStatus } from './db';
 import { ITEM_STATUS } from './db';
 import { Felt, Knap, Label, Segment } from './ui';
-import { useErDesktop, useSynligtFelt } from './useMedie';
+import { useErDesktop, useHoldSidenStille, useSynligtFelt } from './useMedie';
 import { useDialogFokus } from './dialogFokus';
 import { LagerstedValg } from './LagerstedValg';
 import {
@@ -59,6 +59,11 @@ export function Ark({
   const panel = useRef<HTMLDivElement>(null);
   const felt = useSynligtFelt();
   const tastatur = bund && !!felt?.tastatur;
+  // Laget står over det synlige felt (top = offsetTop, højde = height). Det
+  // passer kun, så længe siden selv står stille — ruller iOS den også for at
+  // få et felt fri af tastaturet, er tastaturet regnet med to gange. Se
+  // useHoldSidenStille.
+  useHoldSidenStille(bund);
 
   // En slukket knap uden en grund ligner en fejl i appen. Grunden står også i
   // knappens navn, men det hjælper kun en skærmlæser.

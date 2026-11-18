@@ -255,6 +255,19 @@ feltet beholder fokus (Androids tilbage-knap). Med mus på en smal skærm bliver
 navigationen stående, og PC-sidebaren røres ikke. Arkene lå i forvejen over
 navigationen (`z-index` 100) og følger tastaturets overkant (`useSynligtFelt`).
 
+**Siden holdes stille, mens man skriver (0.2.21).** Skallen og bundarkene står
+efter det synlige felt (`visualViewport`: højde og `offsetTop`). Får et felt
+langt nede fokus — fx Bæreafstand i Ny tur med taltastaturet — ruller iOS
+desuden selve siden (`window.scrollY`), og så blev tastaturet regnet med to
+gange: arkets top lå under statuslinjen, bunden stod et godt stykke over
+tastaturet, og imellem var der tomt. `useHoldSidenStille` (`src/useMedie.ts`)
+ruller siden tilbage til 0, mens et bundark er åbent, eller mens man skriver i
+skallen. Siden har aldrig noget at rulle; feltet rulles frem inde i arket eller
+i indholdet. Med tastaturet fremme regnes arkets højde kun ud fra laget og
+statuslinjen (`.ark--tastatur`), ikke `dvh`, der ikke følger tastaturet på iOS.
+Mens man skriver, står fortryd-beskeden lige over tastaturet, og FAB-luften i
+bunden af indholdet er væk sammen med FAB'en.
+
 ### Dialoger og fokus
 
 Alle lag over skærmen — opret-arkene og grejsæt-arkene (`Ark.tsx`), QR i fuld

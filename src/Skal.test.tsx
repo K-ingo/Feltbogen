@@ -176,6 +176,25 @@ describe('bundnavigationen, mens man skriver', () => {
     beroering(0);
   });
 
+  it('fjerner FAB-luften og ruller siden tilbage, mens man skriver', async () => {
+    beroering(5);
+    const rul = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    tegnMedFelt();
+    const ramme = screen.getByLabelText('Titel').parentElement!;
+    expect(ramme.style.paddingBottom).toBe('140px');
+
+    await userEvent.click(screen.getByLabelText('Titel'));
+    expect(ramme.style.paddingBottom).toBe('24px');
+
+    Object.defineProperty(window, 'scrollY', { value: 300, configurable: true });
+    window.dispatchEvent(new Event('scroll'));
+    expect(rul).toHaveBeenCalledWith(0, 0);
+
+    Object.defineProperty(window, 'scrollY', { value: 0, configurable: true });
+    rul.mockRestore();
+    beroering(0);
+  });
+
   it('bliver stående ved en afkrydsning', async () => {
     beroering(5);
     tegnMedFelt();

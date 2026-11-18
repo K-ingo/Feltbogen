@@ -219,6 +219,13 @@ skriver*. Testet i `skrivefelt.test.ts` og `Skal.test.tsx` (jsdom) og i
 Chromium med iPhone-emulering mod `npm run preview` (Tur-detaljens titel og
 Ny tur-arket). **Ikke testet på en rigtig iPhone eller Android** — emuleringen
 har intet skærmtastatur, så `visualViewport`-delen er kun dækket af enhedstests.
+Opfølgning fra rigtig iPhone (head 138e330): i bundarkene (Ny tur, især
+Bæreafstand med taltastaturet) var arket skåret af under feltet, der var tomt
+ned til tastaturet, og toppen lå under statuslinjen. Årsagen var dobbelt
+kompensation: laget står efter `visualViewport`, og iOS rullede også siden.
+`useHoldSidenStille` ruller siden tilbage, mens et bundark er åbent eller man
+skriver. Testet i `Ark.test.tsx` og `Skal.test.tsx` (jsdom). **Endnu ikke
+bekræftet på en rigtig iPhone.**
 
 **Sync-fix: gendannelse vs. gravsten + falsk serverfejl (0.2.20).** To fejl,
 begge i `src/sync.ts`. (1) En sikkerhedskopi, der blev læst ind efter en

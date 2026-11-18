@@ -199,6 +199,37 @@ export function useSkriverPaaTelefon(): boolean {
   return skjulBundnav({ fokusISkrivefelt: fokus, tastatur, beroering: erBeroering(), lukketUdenBlur });
 }
 
+// Holder siden selv rullet helt op, mens `aktiv` er sand.
+//
+// Mobilskallen og arkene står allerede efter det synlige felt: skallen er lige
+// så høj som det (useSynligHoejde), og arket lægges præcis over det
+// (useSynligtFelt). Får et felt langt nede fokus, ruller iOS desuden selve
+// siden (`window.scrollY`) for at få det fri af tastaturet — og så er
+// tastaturet regnet med to gange: laget er gjort lavere *og* skubbet op. Arkets
+// top ender under statuslinjen, bunden et godt stykke over tastaturet, og
+// imellem står et tomt felt. Siden har aldrig noget at rulle — indholdet
+// ruller inde i skallen og arket — så den rulles tilbage, hver gang iOS har
+// flyttet den, og feltet rulles frem indefra i stedet (Ark.tsx og Skal.tsx).
+export function useHoldSidenStille(aktiv: boolean): void {
+  useEffect(() => {
+    if (!aktiv) return;
+    const vv = window.visualViewport;
+    const tilbage = () => {
+      if (window.scrollY !== 0 || window.scrollX !== 0) window.scrollTo(0, 0);
+    };
+
+    tilbage();
+    window.addEventListener('scroll', tilbage);
+    vv?.addEventListener('resize', tilbage);
+    vv?.addEventListener('scroll', tilbage);
+    return () => {
+      window.removeEventListener('scroll', tilbage);
+      vv?.removeEventListener('resize', tilbage);
+      vv?.removeEventListener('scroll', tilbage);
+    };
+  }, [aktiv]);
+}
+
 // En berøringsskærm, hvor et felt med fokus betyder et tastatur på skærmen.
 function erBeroering(): boolean {
   if (typeof window === 'undefined') return false;

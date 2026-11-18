@@ -388,6 +388,38 @@ describe('med tastaturet fremme', () => {
     expect(await screen.findByRole('dialog')).not.toHaveClass('ark--tastatur');
   });
 
+  // iOS ruller også selve siden for at få et felt fri af tastaturet. Laget er
+  // allerede lagt over det synlige felt, så den rulning er tastaturet regnet
+  // med en gang til: arkets top under statuslinjen og et tomrum over
+  // tastaturet. Fundet på iPhone i Bæreafstand med taltastaturet.
+  it('ruller siden tilbage, når iOS har rullet den under arket', async () => {
+    saetViewport(viewport(508));
+    const rul = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    tegn(<NyTurArk idag="2026-09-19" opret={vi.fn()} annuller={vi.fn()} />, MOBIL);
+    await screen.findByRole('dialog');
+    rul.mockClear();
+
+    Object.defineProperty(window, 'scrollY', { value: 330, configurable: true });
+    window.dispatchEvent(new Event('scroll'));
+    expect(rul).toHaveBeenCalledWith(0, 0);
+
+    Object.defineProperty(window, 'scrollY', { value: 0, configurable: true });
+    rul.mockRestore();
+  });
+
+  it('lader siden være på PC', async () => {
+    const rul = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    tegn(<NyTurArk idag="2026-09-19" opret={vi.fn()} annuller={vi.fn()} />, DESKTOP);
+    await screen.findByRole('dialog');
+
+    Object.defineProperty(window, 'scrollY', { value: 330, configurable: true });
+    window.dispatchEvent(new Event('scroll'));
+    expect(rul).not.toHaveBeenCalled();
+
+    Object.defineProperty(window, 'scrollY', { value: 0, configurable: true });
+    rul.mockRestore();
+  });
+
   it('rører ikke PC-arket', async () => {
     saetViewport(viewport(508, 120));
     tegn(<NyTurArk idag="2026-09-19" opret={vi.fn()} annuller={vi.fn()} />, DESKTOP);
