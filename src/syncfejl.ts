@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { saet, laes } from './indstillinger';
+import { erTimeout } from './netkald';
 
 // Hvorfor sync ikke virker.
 //
@@ -97,11 +98,30 @@ export function felterAf(e: unknown): string {
     .join(' · ');
 }
 
+// Kun en fejl fra nettet er en forbindelsesfejl.
+//
+// Før blev alt uden HTTP-status læst som "serveren blev ikke nået". Men en
+// fejl uden status er lige så tit en fejl her på enheden — en IndexedDB, der
+// sagde nej (Dexies BulkError ved to poster med samme uid), en kode, der
+// kastede. Den blev vist som "Serveren svarede ikke", mens netværksfanen viste
+// 200 på hvert eneste kald. Så peger beskeden det forkerte sted hen.
+//
+// Status 0 er PocketBase-klientens måde at sige, at fetch fejlede. Uden
+// klienten imellem er det en TypeError fra fetch, en TimeoutFejl fra
+// netkald.ts eller en afbrudt forespørgsel (AbortError). Alt andet er lokalt.
+function erNetfejl(e: unknown): boolean {
+  if (erTimeout(e)) return true;
+  if (e instanceof TypeError) return true;
+  const navn = (e as { name?: unknown } | null)?.name;
+  return navn === 'AbortError' || navn === 'NetworkError';
+}
+
 export function fejlartAf(e: unknown): Fejlart {
   const fejl = (e ?? {}) as PbFejl;
   const status = fejl.status;
 
-  if (status === 0 || status === undefined) return 'ingen_forbindelse';
+  if (status === 0) return 'ingen_forbindelse';
+  if (typeof status !== 'number') return erNetfejl(e) ? 'ingen_forbindelse' : 'ukendt';
   if (status === 401 || status === 403) return 'ikke_logget_ind';
   if (status >= 500) return 'server';
   if (status === 404) return 'findes_ikke';
@@ -117,7 +137,7 @@ export const FEJLTEKST: Record<Fejlart, string> = {
   afvist: 'Serveren afviste dataene. Det plejer at betyde, at et felt mangler i PocketBase-skemaet — se POCKETBASE.md.',
   findes_ikke: 'Det, appen spurgte efter, findes ikke på serveren. Er det en post, er den slettet deroppe, og så opretter appen den på ny næste gang, den sender. Er det en hel samling, mangler den i PocketBase — se POCKETBASE.md.',
   server: 'Serveren har problemer lige nu. Appen prøver igen af sig selv.',
-  ukendt: 'Noget gik galt undervejs op. Dine ting står stadig på enheden.'
+  ukendt: 'Noget gik galt under synkroniseringen, men det var ikke forbindelsen til serveren. Dine ting står stadig på enheden — prøv at synkronisere igen.'
 };
 
 // Teksten på skærmen.

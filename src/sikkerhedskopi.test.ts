@@ -5,7 +5,7 @@ vi.mock('./pb', () => import('./test/pbMock'));
 import { db } from './db';
 import { pbMock } from './test/pbMock';
 import { lavEksport, gendan } from './sikkerhedskopi';
-import { sendAltUsendt } from './sync';
+import { sendAltUsendt, hentFraPocketBase, opretTur, opretBillede, sletTur } from './sync';
 import { kanVises, hero } from './billeder';
 import { KOPI_VERSION } from './dataudveksling';
 import { lavBillede, lavItem, lavTur } from './test/data';
@@ -24,7 +24,7 @@ async function bytesAf(blob: Blob | null | undefined): Promise<number[]> {
 async function rydBasen() {
   await Promise.all([
     db.items.clear(), db.grupper.clear(), db.ture.clear(), db.steder.clear(),
-    db.personer.clear(), db.billeder.clear(), db.slettede.clear()
+    db.personer.clear(), db.billeder.clear(), db.tur_dage.clear(), db.slettede.clear()
   ]);
 }
 
@@ -178,5 +178,113 @@ describe('gendannelse med billeder', () => {
 
     expect(resultat.tilfoejet).toBe(1);
     expect(resultat.billeder).toEqual([]);
+  });
+});
+
+// Regression (0.2.20): opret tur med billeder og sync → eksportér → slet turen
+// og sync → importér mens man er logget ind → ryd site data og log ind igen.
+// Posterne kom op (POST 200), men gravstenene fra sletningen lå stadig, og
+// hentningen skjulte dem — på denne enhed og alle andre.
+describe('gendannelse vinder over gravsten', () => {
+  const gravsten = () => [...(pbMock.records.get('slettede')?.values() ?? [])];
+
+  async function turMedBilleder() {
+    const turId = await opretTur(lavTur({ navn: 'Møn' }));
+    const tur = (await db.ture.get(turId))!;
+    for (const navn of ['a.jpg', 'b.jpg', 'c.jpg']) {
+      await opretBillede(lavBillede({ tur_uid: tur.uid, navn, blob: new Blob([BYTES], { type: 'image/jpeg' }) }));
+    }
+    return { turId, tur };
+  }
+
+  it('kommer tilbage efter ryddet site data og nyt login', async () => {
+    const { turId, tur } = await turMedBilleder();
+    const kopi = (await lavEksport(ingenHentning)).json;
+
+    await sletTur(turId);
+    await sendAltUsendt();
+    expect(gravsten()).toHaveLength(4);
+    expect(await db.ture.count()).toBe(0);
+
+    const flettet = await gendan(kopi);
+    expect(flettet.tilfoejet).toBe(4);
+    await sendAltUsendt();
+
+    // Gravstenene for de gendannede poster er taget af.
+    expect(gravsten()).toEqual([]);
+
+    // Site data ryddet, logget ind igen: alt skal hentes fra serveren.
+    await rydBasen();
+    await hentFraPocketBase();
+
+    expect(await db.ture.toArray()).toEqual([expect.objectContaining({ uid: tur.uid, navn: 'Møn' })]);
+    expect(await db.billeder.where('tur_uid').equals(tur.uid).count()).toBe(3);
+  });
+
+  it('bliver stående ved næste hentning på samme enhed', async () => {
+    const { turId, tur } = await turMedBilleder();
+    const kopi = (await lavEksport(ingenHentning)).json;
+    await sletTur(turId);
+
+    await gendan(kopi);
+    await sendAltUsendt();
+    await hentFraPocketBase();
+    await hentFraPocketBase();
+
+    expect(await db.ture.where('uid').equals(tur.uid).count()).toBe(1);
+    expect(await db.billeder.count()).toBe(3);
+  });
+
+  // Uden forbindelse kan gravstenen ikke tages af med det samme. Det record,
+  // der kommer op bagefter, er nyere end den, og så vinder det alligevel.
+  it('vinder også, når kopien blev læst ind uden forbindelse', async () => {
+    const { turId, tur } = await turMedBilleder();
+    const kopi = (await lavEksport(ingenHentning)).json;
+    await sletTur(turId);
+
+    pbMock.offline = true;
+    await gendan(kopi);
+    pbMock.offline = false;
+    await sendAltUsendt();
+    expect(gravsten()).toHaveLength(4);
+
+    await rydBasen();
+    await hentFraPocketBase();
+
+    expect(await db.ture.where('uid').equals(tur.uid).count()).toBe(1);
+    expect(await db.billeder.count()).toBe(3);
+  });
+
+  // Sletningen nåede aldrig op, før kopien blev læst ind. Sporet må ikke
+  // sende en gravsten op bagefter, der er nyere end den gendannede post.
+  it('lægger ikke en ventende gravsten oven på det gendannede', async () => {
+    const { turId, tur } = await turMedBilleder();
+    const kopi = (await lavEksport(ingenHentning)).json;
+
+    pbMock.offline = true;
+    await sletTur(turId);
+    await gendan(kopi);
+    pbMock.offline = false;
+    await sendAltUsendt();
+
+    expect(gravsten()).toEqual([]);
+    expect(await db.slettede.count()).toBe(0);
+
+    await rydBasen();
+    await hentFraPocketBase();
+    expect(await db.ture.where('uid').equals(tur.uid).count()).toBe(1);
+    expect(await db.billeder.count()).toBe(3);
+  });
+
+  it('rører ikke gravsten for poster, kopien ikke indeholdt', async () => {
+    pbMock.seed('slettede', 'grav-x', { samling: 'items', uid: 'u-andet' });
+    const { tur } = await turMedBilleder();
+    const kopi = (await lavEksport(ingenHentning)).json;
+    await rydBasen();
+
+    await gendan(kopi);
+
+    expect(gravsten()).toEqual([expect.objectContaining({ uid: 'u-andet' })]);
+    expect(await db.ture.where('uid').equals(tur.uid).count()).toBe(1);
   });
 });

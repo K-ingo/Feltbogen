@@ -8,6 +8,7 @@ import {
 } from './dataudveksling';
 import type { Fletteresultat, HentBillede } from './dataudveksling';
 import { hentMedTimeout, TIMEOUT_FIL_MS } from './netkald';
+import { gendannetFraKopi } from './sync';
 
 // Sikkerhedskopien mod basen: hvad der læses ud, og hvad der lægges ind.
 //
@@ -80,6 +81,18 @@ export async function gendan(raa: string): Promise<Fletteresultat> {
     await db.personer.bulkAdd(flettet.personer);
     await db.billeder.bulkAdd(flettet.billeder);
   });
+
+  // En gendannelse vinder over ældre gravsten. Uden det lå de gendannede
+  // poster skjult på serveren: de blev sendt op, men næste hentning — og alle
+  // andre enheder — så gravstenen og fjernede dem igen. Se sync.ts.
+  await gendannetFraKopi([
+    ...flettet.items.map((p) => ({ samling: 'items', uid: p.uid })),
+    ...flettet.grupper.map((p) => ({ samling: 'grupper', uid: p.uid })),
+    ...flettet.ture.map((p) => ({ samling: 'ture', uid: p.uid })),
+    ...flettet.steder.map((p) => ({ samling: 'steder', uid: p.uid })),
+    ...flettet.personer.map((p) => ({ samling: 'personer', uid: p.uid })),
+    ...flettet.billeder.map((p) => ({ samling: 'billeder', uid: p.uid }))
+  ]);
 
   return flettet;
 }

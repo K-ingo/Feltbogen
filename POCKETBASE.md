@@ -301,6 +301,13 @@ der er slettet et andet sted, opretter den på ny. Der kommer ingen fejl på
 skærmen — kun en linje i browserens konsol. Det er med vilje: en manglende
 gravsten må aldrig kunne koste data, kun lade være med at spare dem.
 
+### `created` bruges
+
+Appen læser `created` på gravstenene (og på records) for at afgøre, om en post
+er gendannet fra en sikkerhedskopi *efter* sletningen — så vinder posten. Feltet
+laver PocketBase selv; der skal ikke tilføjes noget. Er det fjernet, vinder
+gravstenen altid, som før 0.2.20.
+
 ### De vokser, og det er meningen
 
 En gravsten er cirka 60 bytes og bliver liggende. Tusind sletninger fylder 60 kB.

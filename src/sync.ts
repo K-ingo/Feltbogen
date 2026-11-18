@@ -1,3 +1,4 @@
+import Dexie from 'dexie';
 import type { Table } from 'dexie';
 import type { RecordModel } from 'pocketbase';
 import {
@@ -1038,6 +1039,50 @@ async function tagGravstenAf(samling: string, uid: Reference): Promise<void> {
   await fjernGravsten(samling, uid);
 }
 
+// En sikkerhedskopi er læst ind: de poster, den lagde i basen, skal vinde
+// over de gravsten, der måtte ligge for dem.
+//
+// Det er den samme handling som en fortrydelse — posten kommer tilbage med sit
+// gamle uid — og den bruger samme vej: et ventende sletningsspor markeres
+// genskabt, og gravstenen tages af. Forskellen er antallet, så gravstenene
+// hentes én gang for alle frem for ét opslag pr. post.
+//
+// Lykkes det ikke nu (ingen forbindelse, ikke logget ind), er det ikke
+// kritisk: et record oprettet efter gravstenen vinder alligevel ved hentning
+// (se `skjultAfGravsten`). Det her rydder op, så serveren ikke bliver ved med
+// at påstå noget, der ikke er sandt længere.
+export async function gendannetFraKopi(poster: { samling: string; uid: Reference }[]): Promise<void> {
+  if (poster.length === 0) return;
+
+  // Sporene er lokale og skal markeres, uanset forbindelse — ellers sender
+  // sendUsendteSletninger() en gravsten op bagefter, der er nyere end den
+  // gendannede post.
+  const gendannede = new Set(poster.map((p) => `${p.samling}:${p.uid}`));
+  for (const spor of await db.slettede.toArray()) {
+    if (spor.id === undefined || !spor.uid || !gendannede.has(`${spor.samling}:${spor.uid}`)) continue;
+    await db.slettede.update(spor.id, { genskabt: true });
+  }
+
+  const bruger = nuvaerendeBruger();
+  if (!bruger || gravstenMangler) return;
+  if (!await kontoKlar(bruger.id)) return;
+
+  await koersel(async () => {
+    try {
+      const records = await pb.collection(GRAVSTEN_SAMLING).getFullList({
+        filter: pb.filter('user = {:bruger}', { bruger: bruger.id })
+      });
+      for (const r of records) {
+        if (!gendannede.has(`${tekst(r.samling)}:${tekst(r.uid)}`)) continue;
+        await pb.collection(GRAVSTEN_SAMLING).delete(r.id);
+      }
+    } catch (e) {
+      if (erIkkeFundet(e)) noterManglendeGravsten();
+      else console.error('Kunne ikke tage gravsten af efter gendannelse:', fejlDetaljer(e));
+    }
+  });
+}
+
 // Fortryder sletningen. Findes kun så længe nogen holder fast i den.
 export type Genskab = () => Promise<void>;
 
@@ -1184,13 +1229,23 @@ function glemManglendeGravsten(): void {
   gravstenMangler = false;
 }
 
-// Gravstenene for én bruger, grupperet efter samling.
+// Gravstenene for én bruger, grupperet efter samling: uid → hvornår den
+// nyeste gravsten for det uid blev lagt (ms), eller null, hvis serveren ikke
+// sagde det.
+//
+// Tidspunktet er der for gendannelsens skyld. En gravsten er en påstand om, at
+// posten var slettet, *da den blev lagt*. En record med samme uid, der er
+// oprettet bagefter — fra en sikkerhedskopi — er posten, der er kommet igen,
+// og den skal vinde. Uden tidspunkt (et `created`-felt, der mangler) vinder
+// gravstenen som før: i tvivl slettes der hellere end at en sletning går om.
 //
 // Fejler hentningen, kommer der et tomt svar tilbage og ikke en undtagelse:
 // uden gravsten sletter appen ingenting, og det er den rigtige måde at fejle
 // på. En kastet fejl ville afbryde hele hentningen.
-async function hentGravsten(brugerId: string): Promise<Map<string, Set<Reference>>> {
-  const efterSamling = new Map<string, Set<Reference>>();
+export type Gravlagte = Map<Reference, number | null>;
+
+async function hentGravsten(brugerId: string): Promise<Map<string, Gravlagte>> {
+  const efterSamling = new Map<string, Gravlagte>();
   if (gravstenMangler) return efterSamling;
 
   try {
@@ -1202,8 +1257,15 @@ async function hentGravsten(brugerId: string): Promise<Map<string, Set<Reference
       const gravsten: Gravsten = { uid: tekst(r.uid), samling: tekst(r.samling) };
       if (!gravsten.uid || !gravsten.samling) continue;
 
-      const uids = efterSamling.get(gravsten.samling) ?? new Set<Reference>();
-      uids.add(gravsten.uid);
+      const uids = efterSamling.get(gravsten.samling) ?? new Map<Reference, number | null>();
+      const lagt = tidspunkt(r.created);
+      const foer = uids.get(gravsten.uid);
+      // Den nyeste gravsten tæller. Mangler tidspunktet på én af dem, kan
+      // ingen record bevise at være nyere, og så står null.
+      uids.set(
+        gravsten.uid,
+        foer === undefined ? lagt : (foer === null || lagt === null ? null : Math.max(foer, lagt))
+      );
       efterSamling.set(gravsten.samling, uids);
     }
   } catch (e) {
@@ -1212,6 +1274,24 @@ async function hentGravsten(brugerId: string): Promise<Map<string, Set<Reference
   }
 
   return efterSamling;
+}
+
+// PocketBases tidsstempel som ms, eller null, hvis der ikke er noget at læse.
+function tidspunkt(v: unknown): number | null {
+  const raa = tekst(v);
+  if (!raa) return null;
+  const ms = new Date(raa).getTime();
+  return Number.isNaN(ms) ? null : ms;
+}
+
+// Er record'et dækket af en gravsten? Nej, hvis det er oprettet efter den
+// nyeste gravsten for sit uid — så er det gendannet, og gendannelsen vinder.
+function skjultAfGravsten(r: RecordModel, gravlagte: Gravlagte): boolean {
+  const lagt = gravlagte.get(uid(r));
+  if (lagt === undefined) return false;
+  if (lagt === null) return true;
+  const oprettet = tidspunkt(r.created);
+  return oprettet === null || oprettet <= lagt;
 }
 
 // Alle gravsten for ét uid. Filteret går på uid alene, fordi et uid er
@@ -1302,7 +1382,7 @@ async function sendUsendteSletninger(): Promise<{ ok: number; fejl: number }> {
 async function hent<T extends Post>(
   samling: Samling<T>,
   brugerId: string,
-  gravlagte: Set<Reference>
+  gravlagte: Gravlagte
 ): Promise<void> {
   const records = await pb.collection(samling.pbNavn).getFullList({
     filter: pb.filter('user = {:bruger}', { bruger: brugerId })
@@ -1325,15 +1405,18 @@ async function hent<T extends Post>(
   const slettede = await db.slettede.where('samling').equals(samling.pbNavn).toArray();
   const slettedePbIds = new Set(slettede.map((s) => s.pb_id));
 
+  // Gravlagt, men endnu ikke væk deroppe — sletningen af selve posten nåede
+  // ikke op. Den skal ikke hentes ned i mellemtiden. Et record, der er
+  // oprettet efter gravstenen, er derimod gendannet og tæller med.
+  const synlige = records.filter((r) => !slettedePbIds.has(r.id) && !skjultAfGravsten(r, gravlagte));
+
+  // Et uid, der står på et synligt record, lever — også selvom en ældre
+  // gravsten peger på det. Den lokale kopi må ikke fjernes af fjernGravlagte.
+  const levende = new Set(synlige.map(uid));
+
   const nye: T[] = [];
 
-  for (const r of records) {
-    if (slettedePbIds.has(r.id)) continue;
-
-    // Gravlagt, men endnu ikke væk deroppe — sletningen af selve posten nåede
-    // ikke op. Den skal ikke hentes ned i mellemtiden.
-    if (gravlagte.has(uid(r))) continue;
-
+  for (const r of udenDubletter(synlige, efterPbId)) {
     const lokal = efterPbId.get(r.id) ?? efterUid.get(uid(r));
     if (lokal) {
       await fletNed(samling, lokal, r);
@@ -1342,9 +1425,65 @@ async function hent<T extends Post>(
     }
   }
 
-  if (nye.length > 0) await samling.tabel.bulkAdd(nye);
-  await fjernGravlagte(samling, lokale, gravlagte);
+  await tilfoejNye(samling, nye);
+  await fjernGravlagte(samling, lokale, gravlagte, levende);
   efterSkrivning?.();
+}
+
+// Ét record pr. uid.
+//
+// Serveren kan have to records med samme uid: en oprettelse, der nåede frem,
+// men hvis svar gik tabt (timeout) og så blev sendt igen, eller en kopi, der
+// blev læst ind to gange. Lokalt er uid unikt (`&uid` i db.ts), så to af dem i
+// samme bulkAdd fik hele hentningen til at kaste — og fejlen, der ikke havde
+// nogen HTTP-status, blev vist som "Serveren svarede ikke".
+//
+// Valget er det, der taber mindst: kender enheden allerede et af dem (pb_id),
+// er det dét; ellers det senest ændrede, fordi det er dét, nogen har arbejdet
+// i. Lighed afgøres af id'et, så alle enheder vælger det samme. De andre
+// records bliver liggende på serveren urørt — at slette dem er ikke en
+// beslutning, en hentning skal træffe.
+function udenDubletter<P extends Post>(records: RecordModel[], efterPbId: Map<string, P>): RecordModel[] {
+  const valgt = new Map<Reference, RecordModel>();
+
+  for (const r of records) {
+    const noegle = uid(r);
+    const foer = valgt.get(noegle);
+    if (!foer || foretraek(r, foer, efterPbId)) valgt.set(noegle, r);
+  }
+
+  if (valgt.size < records.length) {
+    console.warn(`${records.length - valgt.size} dublet(ter) på serveren med samme uid — kun én af hver hentes.`);
+  }
+  return [...valgt.values()];
+}
+
+function foretraek<P extends Post>(a: RecordModel, b: RecordModel, efterPbId: Map<string, P>): boolean {
+  const aKendt = efterPbId.has(a.id);
+  const bKendt = efterPbId.has(b.id);
+  if (aKendt !== bKendt) return aKendt;
+
+  const aTid = tidspunkt(a.updated) ?? 0;
+  const bTid = tidspunkt(b.updated) ?? 0;
+  if (aTid !== bTid) return aTid > bTid;
+  return a.id < b.id;
+}
+
+// Lægger de nye poster i basen.
+//
+// En ConstraintError på uid betyder, at posten allerede er kommet ind ad en
+// anden vej, mens vi hentede — fx en sikkerhedskopi, der blev læst ind
+// samtidig. Det er ikke en fejl ved forbindelsen og ikke et tab: posten findes,
+// og næste hentning fletter. Alt andet kastes videre som før.
+async function tilfoejNye<T extends Post>(samling: Samling<T>, nye: T[]): Promise<void> {
+  if (nye.length === 0) return;
+
+  try {
+    await samling.tabel.bulkAdd(nye);
+  } catch (e) {
+    if (!(e instanceof Dexie.BulkError) || !e.failures.every((f) => f?.name === 'ConstraintError')) throw e;
+    console.warn(`${samling.pbNavn}: ${e.failures.length} post(er) fandtes allerede lokalt og blev sprunget over.`);
+  }
 }
 
 // Fjerner de lokale poster, serveren har en gravsten over.
@@ -1355,15 +1494,19 @@ async function hent<T extends Post>(
 // slettede, og gravstenen kan nå at være der endnu, i det korte stykke tid før
 // den bliver taget af igen. Uden den undtagelse ville en fortrydelse kunne
 // blive gjort om af den næste hentning.
+//
+// Og et uid, der står på et record oprettet efter gravstenen (`levende`), er
+// gendannet og bliver også stående.
 async function fjernGravlagte<T extends Post>(
   samling: Samling<T>,
   lokale: T[],
-  gravlagte: Set<Reference>
+  gravlagte: Gravlagte,
+  levende: Set<Reference>
 ): Promise<void> {
   if (gravlagte.size === 0) return;
 
   const doede = lokale
-    .filter((p) => gravlagte.has(p.uid) && !(!p.pb_id && p.usendt_aendring))
+    .filter((p) => gravlagte.has(p.uid) && !levende.has(p.uid) && !(!p.pb_id && p.usendt_aendring))
     .map((p) => p.id)
     .filter((id): id is number => id !== undefined);
 
@@ -1582,7 +1725,7 @@ async function hentFraPocketBaseNu(): Promise<void> {
     // Gravstenene hentes én gang for alle samlinger. Seks hentninger af den
     // samme lille liste ville være seks kald for det samme svar.
     const gravsten = await hentGravsten(bruger.id);
-    const ingen: Set<Reference> = new Set();
+    const ingen: Gravlagte = new Map();
     const for_ = (navn: string) => gravsten.get(navn) ?? ingen;
 
     await Promise.all([
