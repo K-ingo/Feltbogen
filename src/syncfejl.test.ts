@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import Dexie from 'dexie';
+import { TimeoutFejl } from './netkald';
 import {
   fejlartAf,
   laesSyncfejl,
@@ -21,9 +23,26 @@ describe('fejlartAf', () => {
     expect(fejlartAf({ status: 0 })).toBe('ingen_forbindelse');
   });
 
-  it('læser noget der slet ikke er en pb-fejl som manglende forbindelse', () => {
-    expect(fejlartAf(new Error('boom'))).toBe('ingen_forbindelse');
-    expect(fejlartAf(null)).toBe('ingen_forbindelse');
+  // Regression (0.2.20): en lokal fejl uden HTTP-status blev vist som
+  // "Serveren svarede ikke", selvom hvert kald havde svaret 200.
+  it('læser en lokal fejl uden status som ukendt — aldrig som forbindelsen', () => {
+    expect(fejlartAf(new Error('boom'))).toBe('ukendt');
+    expect(fejlartAf(null)).toBe('ukendt');
+    expect(fejlartAf(undefined)).toBe('ukendt');
+
+    const constraint = Object.assign(new Error('Key already exists'), { name: 'ConstraintError' });
+    const bulk = new Dexie.BulkError('items.bulkAdd(): 1 of 3 operations failed.', { 1: constraint });
+    expect(fejlartAf(bulk)).toBe('ukendt');
+  });
+
+  it('læser en netfejl uden pb-klienten imellem som manglende forbindelse', () => {
+    expect(fejlartAf(new TypeError('Failed to fetch'))).toBe('ingen_forbindelse');
+    expect(fejlartAf(new TimeoutFejl(15_000))).toBe('ingen_forbindelse');
+    expect(fejlartAf(Object.assign(new Error('afbrudt'), { name: 'AbortError' }))).toBe('ingen_forbindelse');
+  });
+
+  it('siger ikke, at det var forbindelsen, om en ukendt fejl', () => {
+    expect(fejltekst('ukendt', true)).not.toMatch(/svarede ikke|nå serveren/);
   });
 
   it('skelner en udløbet session fra et afslag', () => {

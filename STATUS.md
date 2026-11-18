@@ -210,6 +210,24 @@ pak-af-tjek), på en aktiv tur på telefonen dog **Åbn på-tur-skærmen** som f
 Hent vejr og tag imod er outline, afvis og Skift status er tekst. Testet i
 `TurDetalje.test.tsx` med vejret foldet ud og et grejsæt-forslag fremme.
 
+**Sync-fix: gendannelse vs. gravsten + falsk serverfejl (0.2.20).** To fejl,
+begge i `src/sync.ts`. (1) En sikkerhedskopi, der blev læst ind efter en
+sletning, kom op på serveren, men gravstenene fra sletningen skjulte posterne
+igen ved næste hentning og på alle andre enheder. Nu vinder et record, der er
+oprettet efter gravstenen (`skjultAfGravsten`), og `gendan()` tager
+gravstenene af for det, kopien lagde ind (`gendannetFraKopi`). (2) To records
+med samme uid på serveren fik `bulkAdd` mod `&uid` til at kaste en BulkError
+ved første hentning efter login, og `fejlartAf` læste den manglende status som
+"Serveren svarede ikke". Hentningen tager nu ét record pr. uid
+(`udenDubletter`), en ConstraintError ved indsættelse kastes ikke videre, og en
+fejl uden HTTP-status er kun en forbindelsesfejl, hvis den kommer fra nettet
+(TypeError, timeout, AbortError) — ellers `ukendt`. Ingen PocketBase-ændring.
+Dubletterne på serveren slettes ikke; de ignoreres. Regressionstests i
+`sync.test.ts`, `sikkerhedskopi.test.ts` og `syncfejl.test.ts`. Ikke testet mod
+en rigtig PocketBase: tidsreglen forudsætter, at `slettede` har `created`
+(autodate, som PocketBase laver selv); mangler det, vinder gravstenen som før,
+og kun oprydningen ved gendannelse hjælper.
+
 **Backup med billeder og fælles fetch-timeout (0.2.19).** Sikkerhedskopien
 (kopiversion 3) tager nu billederne med: visningskopien — og originalen, hvis
 den stadig ligger på enheden — står i JSON-filen som data-URL'er. Et billede,

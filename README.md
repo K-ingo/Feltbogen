@@ -653,6 +653,22 @@ kan gøre ved. Se `POCKETBASE.md` trin 7.
 En fortrydelse tager gravstenen af igen. Uden det ville den blive stående over
 et uid, der er tilbage, og slå posten ihjel på næste enhed i stedet.
 
+**En gendannelse fra sikkerhedskopi vinder over ældre gravsten (0.2.20).** En
+gravsten er en påstand om, at posten var slettet, *da den blev lagt*. Ved
+hentning skjules et record derfor kun, hvis det er oprettet samme tid som eller
+før den nyeste gravsten for sit uid (`created` på begge); et record oprettet
+bagefter er gendannet og hentes, og den lokale kopi får lov at blive. Mangler
+tidspunktet, vinder gravstenen som før. Desuden tager `gendan()` gravstenene af
+for de poster, kopien lagde ind (samme vej som en fortrydelse, men med én
+hentning af gravstenene for alle), og markerer et ventende sletningsspor som
+genskabt, så det ikke sender en nyere gravsten op bagefter.
+
+**Dubletter på serveren.** To records med samme uid — en oprettelse, hvis svar
+gik tabt og blev sendt igen, eller en kopi læst ind to gange — hentes som én
+post: den enheden allerede kender (pb_id), ellers den senest ændrede. De andre
+bliver liggende på serveren urørt. Lokalt er uid unikt (`&uid`), og før fik
+dubletten hele hentningen til at kaste en BulkError.
+
 ### Hvem den lokale base tilhører
 
 `logUd()` rydder kun sessionen. IndexedDB bliver liggende, og for den samme

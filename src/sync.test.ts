@@ -1233,3 +1233,108 @@ async function nyDagPaaTur(turUid: string) {
   void uid; void id;
   return opretTurDag(resten);
 }
+
+// Regression (0.2.20): to records med samme uid på serveren — en oprettelse,
+// hvis svar gik tabt og blev sendt igen, eller en kopi læst ind to gange. Lokalt
+// er uid unikt, så bulkAdd kastede en BulkError, og den blev vist som
+// "Serveren svarede ikke" ved første hentning efter login. Et nyt tryk fjernede
+// den, fordi de andre poster var kommet ind i mellemtiden.
+describe('dubletter på serveren', () => {
+  it('henter én post pr. uid uden at melde fejl', async () => {
+    pbMock.seed('items', 'pbA', { uid: 'u-dublet', navn: 'Ældre' });
+    pbMock.seed('items', 'pbB', { uid: 'u-dublet', navn: 'Nyere' });
+    pbMock.seed('items', 'pbC', { uid: 'u-anden', navn: 'Anden' });
+
+    await hentFraPocketBase();
+
+    expect(await laesSeneste()).toBeNull();
+    const items = await db.items.toArray();
+    expect(items).toHaveLength(2);
+    // Det senest ændrede vinder, når enheden ikke kender nogen af dem.
+    expect(items.find((i) => i.uid === 'u-dublet')).toMatchObject({ pb_id: 'pbB', navn: 'Nyere' });
+  });
+
+  it('er stabil ved næste hentning og holder fast i det record, enheden kender', async () => {
+    pbMock.seed('items', 'pbA', { uid: 'u-dublet', navn: 'Kendt' });
+    await hentFraPocketBase();
+    pbMock.seed('items', 'pbB', { uid: 'u-dublet', navn: 'Dublet' });
+
+    await hentFraPocketBase();
+    await hentFraPocketBase();
+
+    expect(await laesSeneste()).toBeNull();
+    const items = await db.items.toArray();
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ pb_id: 'pbA', navn: 'Kendt' });
+    // Dubletten bliver liggende på serveren — en hentning sletter ikke.
+    expect(pbMock.ids('items')).toEqual(['pbA', 'pbB']);
+  });
+
+  it('rydder en gammel fejl, når hentningen med dubletter går godt', async () => {
+    pbMock.seed('items', 'pbA', { uid: 'u-dublet', navn: 'A' });
+    pbMock.seed('items', 'pbB', { uid: 'u-dublet', navn: 'B' });
+    pbMock.offline = true;
+    await afstemMedServer();
+    expect((await laesSeneste())?.art).toBe('ingen_forbindelse');
+    pbMock.offline = false;
+
+    await afstemMedServer();
+
+    expect(await laesSeneste()).toBeNull();
+  });
+});
+
+// Regression (0.2.20): en gravsten er en påstand om, at posten var slettet, da
+// den blev lagt. Et record med samme uid, oprettet bagefter, er gendannet —
+// fra en sikkerhedskopi — og skal vinde.
+describe('gravsten mod gendannede records', () => {
+  const gravlaeg = (samling: string, uid: string, data: Record<string, unknown> = {}) =>
+    pbMock.seed('slettede', `grav-${uid}`, { samling, uid, ...data });
+
+  it('henter et record, der er oprettet efter gravstenen', async () => {
+    gravlaeg('ture', 't-1');
+    pbMock.seed('ture', 'pbNy', { uid: 't-1', navn: 'Gendannet' });
+
+    await hentFraPocketBase();
+
+    expect(await db.ture.toArray()).toEqual([expect.objectContaining({ uid: 't-1', pb_id: 'pbNy' })]);
+  });
+
+  it('skjuler stadig et record, der er ældre end gravstenen', async () => {
+    pbMock.seed('ture', 'pbGammel', { uid: 't-1', navn: 'Slettet' });
+    gravlaeg('ture', 't-1');
+
+    await hentFraPocketBase();
+
+    expect(await db.ture.count()).toBe(0);
+  });
+
+  it('lader gravstenen vinde, når den ikke har noget tidspunkt', async () => {
+    gravlaeg('ture', 't-1', { created: '' });
+    pbMock.seed('ture', 'pbNy', { uid: 't-1', navn: 'Uden tid' });
+
+    await hentFraPocketBase();
+
+    expect(await db.ture.count()).toBe(0);
+  });
+
+  it('fjerner ikke den lokale kopi af en gendannet post', async () => {
+    gravlaeg('items', 'u-1');
+    pbMock.seed('items', 'pbNy', { uid: 'u-1', navn: 'Tilbage' });
+    await db.items.add(lavItem({ uid: 'u-1', pb_id: 'pbNy', usendt_aendring: false }));
+
+    await hentFraPocketBase();
+
+    expect(await db.items.count()).toBe(1);
+  });
+
+  it('henter kun det gendannede record, når det gamle stadig ligger der', async () => {
+    pbMock.seed('items', 'pbGammel', { uid: 'u-1', navn: 'Gammel' });
+    gravlaeg('items', 'u-1');
+    pbMock.seed('items', 'pbNy', { uid: 'u-1', navn: 'Ny' });
+
+    await hentFraPocketBase();
+
+    expect(await db.items.toArray()).toEqual([expect.objectContaining({ pb_id: 'pbNy', navn: 'Ny' })]);
+  });
+});
