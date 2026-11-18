@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
+import { hentMedTimeout, TIMEOUT_FIL_MS } from './netkald';
 import type { Billede, Tur } from './db';
 import { Knap } from './ui';
 import { meldFortrydelse } from './fortryd';
@@ -226,7 +227,7 @@ export function Billedvisning({ billede, tilpas = 'cover' }: {
       // så længe der er net.
       void (async () => {
         try {
-          const svar = await fetch(billede.url);
+          const svar = await hentMedTimeout(billede.url, {}, TIMEOUT_FIL_MS);
           if (!svar.ok) return;
           const blob = await svar.blob();
           if (billede.id !== undefined) await db.billeder.update(billede.id, { blob });

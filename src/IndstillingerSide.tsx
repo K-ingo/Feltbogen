@@ -20,15 +20,8 @@ import { serveradresse, tjekForbindelse } from './pb';
 import { useSyncfejl, fejltekst, laesSeneste, synckvittering } from './syncfejl';
 import { useErOnline } from './useMedie';
 import { datoTekst } from './datotekst';
-import {
-  lavSikkerhedskopi,
-  tilJson,
-  laesSikkerhedskopi,
-  fletInd,
-  filnavn,
-  KopiFejl
-} from './dataudveksling';
-import type { Baseindhold } from './dataudveksling';
+import { filnavn, KopiFejl } from './dataudveksling';
+import { lavEksport, gendan, gemSomFil } from './sikkerhedskopi';
 import { Skal } from './Skal';
 import type { Indstillingsmaal } from './indstillingsmaal';
 import type { Fane } from './Skal';
@@ -79,6 +72,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
   const ture = useLiveQuery(() => db.ture.toArray()) ?? [];
   const steder = useLiveQuery(() => db.steder.toArray()) ?? [];
   const personerIBasen = useLiveQuery(() => db.personer.toArray()) ?? [];
+  const antalBilleder = useLiveQuery(() => db.billeder.count()) ?? 0;
   // Tælles om når basen ændrer sig, så tallet ikke står og lyver efter en sync.
   const usendt = useLiveQuery(usendtAntal, [], 0);
   const syncfejl = useSyncfejl();
@@ -127,43 +121,45 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
     setArbejder(null);
   };
 
-  // Alt der hører med i en kopi. Ét sted, så eksport og import ikke kan komme
-  // til at dække hver sit.
-  const base = { items, grupper, ture, steder, personer: personerIBasen };
+  // Hvad en kopi rummer, og hvordan den læses ind, står ét sted —
+  // sikkerhedskopi.ts — så eksport og import ikke kan komme til at dække hver
+  // sit. Billederne er med; et billede, der kun ligger på serveren, hentes ned
+  // til kopien først, og derfor er eksporten asynkron.
+  const eksporter = async () => {
+    setArbejder('eksport');
+    setDataBesked(null);
+    try {
+      const eksport = await lavEksport();
+      const navn = filnavn();
+      gemSomFil(eksport.json, navn);
 
-  const eksporter = () => {
-    const json = tilJson(lavSikkerhedskopi(base));
-    const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
-
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filnavn();
-    link.click();
-    URL.revokeObjectURL(url);
-
-    setDataBesked({ slags: 'ok', tekst: `${poster(antalIBasen(base))} gemt i ${link.download}.` });
+      setDataBesked(eksport.uden_fil === 0
+        ? { slags: 'ok', tekst: `${poster(eksport.antal)} gemt i ${navn}.` }
+        // Kopien er gemt, men den holder ikke alt, den kunne. Det skal siges
+        // — ikke stå grønt.
+        : {
+          slags: 'fejl',
+          tekst: `${poster(eksport.antal)} gemt i ${navn}, men ${billedtal(eksport.uden_fil)} kunne ikke hentes fra serveren `
+            + 'og er kun med som link. Prøv igen, når du har forbindelse.'
+        });
+    } catch {
+      setDataBesked({ slags: 'fejl', tekst: 'Kopien kunne ikke laves. Prøv igen.' });
+    }
+    setArbejder(null);
   };
 
   const importer = async (fil: File) => {
     setArbejder('import');
     setDataBesked(null);
     try {
-      const kopi = laesSikkerhedskopi(await fil.text());
-      const flettet = fletInd(kopi, base);
-
-      await db.transaction('rw', db.items, db.grupper, db.ture, db.steder, db.personer, async () => {
-        await db.items.bulkAdd(flettet.items);
-        await db.grupper.bulkAdd(flettet.grupper);
-        await db.ture.bulkAdd(flettet.ture);
-        await db.steder.bulkAdd(flettet.steder);
-        await db.personer.bulkAdd(flettet.personer);
-      });
+      const flettet = await gendan(await fil.text());
 
       setDataBesked({
         slags: 'ok',
         tekst: flettet.tilfoejet === 0
           ? 'Alt i filen fandtes allerede. Intet blev tilføjet.'
-          : `${poster(flettet.tilfoejet)} tilføjet${flettet.fandtes > 0 ? `, ${flettet.fandtes} fandtes i forvejen` : ''}.`
+          : `${poster(flettet.tilfoejet)} tilføjet${flettet.billeder.length > 0 ? ` (heraf ${billedtal(flettet.billeder.length)})` : ''}`
+            + `${flettet.fandtes > 0 ? `, ${flettet.fandtes} fandtes i forvejen` : ''}.`
       });
     } catch (e) {
       setDataBesked({
@@ -435,11 +431,13 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
             {/* Tallene på én linje: de er en kvittering for, hvad en kopi
                 rummer, og ikke fem indstillinger. */}
             <div style={{ fontSize: 'var(--skrift-knap)', color: 'var(--tekst-dæmpet)', lineHeight: 1.5 }}>
-              {items.length} grej · {grupper.length} grupper · {ture.length} ture · {steder.length} steder · {personerIBasen.length} personer
+              {items.length} grej · {grupper.length} grupper · {ture.length} ture · {steder.length} steder · {personerIBasen.length} personer · {antalBilleder} billeder
             </div>
 
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
-              <Knap onClick={eksporter}>Gem en kopi</Knap>
+              <Knap onClick={() => void eksporter()} disabled={arbejder !== null}>
+                {arbejder === 'eksport' ? 'Gemmer…' : 'Gem en kopi'}
+              </Knap>
               <Knap onClick={() => filvaelger.current?.click()} disabled={arbejder !== null}>
                 {arbejder === 'import' ? 'Læser…' : 'Læs en kopi ind'}
               </Knap>
@@ -461,7 +459,7 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
             <Kvittering besked={dataBesked} />
 
             <Hjaelp>
-              En JSON-fil uden billeder. Læser du en kopi ind, bliver der kun lagt til.
+              En JSON-fil med billederne i. Læser du en kopi ind, bliver der kun lagt til.
             </Hjaelp>
           </Kort>
 
@@ -561,11 +559,6 @@ function Navnefelt({ start, gem }: { start: string; gem: (v: string) => Promise<
   );
 }
 
-function antalIBasen(base: Baseindhold): number {
-  return base.items.length + base.grupper.length + base.ture.length
-    + base.steder.length + base.personer.length;
-}
-
 // Skabelonen redigeres som en liste af linjer. Den gemmes som JSON, men det
 // skal man ikke kunne se — man skriver punkter, ikke et array.
 function Skabelon({ linjer, gem, nulstil }: {
@@ -621,6 +614,10 @@ function Skabelon({ linjer, gem, nulstil }: {
 
 function poster(n: number): string {
   return `${n} ${n === 1 ? 'post' : 'poster'}`;
+}
+
+function billedtal(n: number): string {
+  return `${n} ${n === 1 ? 'billede' : 'billeder'}`;
 }
 
 function Kort({ children }: { children: React.ReactNode }) {

@@ -4,7 +4,8 @@ import { db } from './db';
 import { logUd } from './pb';
 import { rydEnhed } from './konto';
 import { usendtAntal } from './sync';
-import { lavSikkerhedskopi, tilJson, filnavn } from './dataudveksling';
+import { filnavn } from './dataudveksling';
+import { lavEksport, gemSomFil } from './sikkerhedskopi';
 import { Knap } from './ui';
 import { layout } from './layout';
 
@@ -27,6 +28,10 @@ interface Props {
 function KontoskiftSide({ brugerId }: Props) {
   const [arbejder, setArbejder] = useState(false);
   const [kopiTaget, setKopiTaget] = useState(false);
+  const [gemmer, setGemmer] = useState(false);
+  // Billeder, der kun lå på serveren og ikke kunne hentes ned til kopien.
+  const [udenFil, setUdenFil] = useState(0);
+  const [kopiFejl, setKopiFejl] = useState(false);
 
   const items = useLiveQuery(() => db.items.toArray(), []) ?? [];
   const grupper = useLiveQuery(() => db.grupper.toArray(), []) ?? [];
@@ -39,19 +44,22 @@ function KontoskiftSide({ brugerId }: Props) {
   // koster noget — resten ligger på serveren og kan hentes ned igen.
   const usendt = useLiveQuery(() => usendtAntal(), []);
 
-  const base = { items, grupper, ture, steder, personer };
   const antal = items.length + grupper.length + ture.length + steder.length + personer.length;
 
-  const gemKopi = () => {
-    const json = tilJson(lavSikkerhedskopi(base));
-    const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
-
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filnavn();
-    link.click();
-    URL.revokeObjectURL(url);
-    setKopiTaget(true);
+  // Billederne er med i kopien. Et billede, der kun ligger på serveren, hentes
+  // ned først — se sikkerhedskopi.ts.
+  const gemKopi = async () => {
+    setGemmer(true);
+    setKopiFejl(false);
+    try {
+      const eksport = await lavEksport();
+      gemSomFil(eksport.json, filnavn());
+      setUdenFil(eksport.uden_fil);
+      setKopiTaget(true);
+    } catch {
+      setKopiFejl(true);
+    }
+    setGemmer(false);
   };
 
   const ryd = async () => {
@@ -113,12 +121,18 @@ function KontoskiftSide({ brugerId }: Props) {
             fortsæt som før.
           </div>
 
-          <Knap onClick={gemKopi} style={{ padding: 'var(--plads-3)' }}>
-            {kopiTaget ? 'Gem en kopi igen' : 'Gem en kopi først'}
+          <Knap onClick={() => void gemKopi()} disabled={gemmer} style={{ padding: 'var(--plads-3)' }}>
+            {gemmer ? 'Gemmer…' : kopiTaget ? 'Gem en kopi igen' : 'Gem en kopi først'}
           </Knap>
           <div style={{ fontSize: 'var(--skrift-lille)', color: 'var(--tekst-svag)', lineHeight: 1.5, marginBottom: 'var(--plads-3)' }}>
-            Henter grej, grupper, ture, steder og personer ned som én fil.
-            <strong> Billeder er ikke med.</strong>
+            Henter grej, grupper, ture, steder, personer og billeder ned som én fil.
+            {(udenFil > 0 || kopiFejl) && (
+              <div role="status" style={{ color: 'var(--fejl)', marginTop: 'var(--plads-1)' }}>
+                {kopiFejl
+                  ? 'Kopien kunne ikke laves. Prøv igen.'
+                  : `${udenFil} ${udenFil === 1 ? 'billede' : 'billeder'} kunne ikke hentes fra serveren og er kun med som link.`}
+              </div>
+            )}
           </div>
 
           <Knap

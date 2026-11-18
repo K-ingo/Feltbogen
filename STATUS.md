@@ -210,6 +210,26 @@ pak-af-tjek), på en aktiv tur på telefonen dog **Åbn på-tur-skærmen** som f
 Hent vejr og tag imod er outline, afvis og Skift status er tekst. Testet i
 `TurDetalje.test.tsx` med vejret foldet ud og et grejsæt-forslag fremme.
 
+**Backup med billeder og fælles fetch-timeout (0.2.19).** Sikkerhedskopien
+(kopiversion 3) tager nu billederne med: visningskopien — og originalen, hvis
+den stadig ligger på enheden — står i JSON-filen som data-URL'er. Et billede,
+der kun ligger på serveren, hentes ned til kopien; kan det ikke, kommer det
+med som link, og skærmen siger det i stedet for at stå grønt. Gendannelsen
+lægger billederne tilbage som blobs uden det gamle link og pb_id, så de vises
+med det samme (også uden net) og sendes op ad den almindelige billed-sync.
+v1/v2-filer kan stadig læses. Logikken står i `src/dataudveksling.ts`, det der
+rører basen i `src/sikkerhedskopi.ts` (fælles for Indstillinger, kontoskiftet
+og rundvisningen). Ingen PocketBase-ændring.
+
+Alle netkald går nu gennem `hentMedTimeout` i `src/netkald.ts` (AbortController,
+15 s; 120 s for filer): PocketBase-klienten via `pb.beforeSend`, forbindelses-
+tjekket, vejr, stedsøgning og hentning af billeder. En timeout giver en dansk
+besked ("Serveren svarede ikke inden for 15 sekunder. …") på login, i
+forbindelsestjekket, ved vejr og stedsøgning; i sync tæller den som
+`ingen_forbindelse`. En test falder, hvis nogen skriver et råt `fetch(` uden
+om helperen. Ikke testet i en rigtig browser: JSON-filens størrelse med
+mange billeder (et turgalleri på 200 billeder er ~60-80 MB tekst).
+
 **Tomme skærme på Hjem, Ture og Grej** viser nu *Kom i gang* i stedet for
 én linje og én knap (research #2, sep 2026: en tom app skal give værdi, før
 inventaret findes). To konkrete skridt, ingen rundvisning: **Opret første
@@ -508,8 +528,10 @@ I den rækkefølge, de sandsynligvis er værd at tage.
 2. **Konflikter er last-write-wins.** Enkelt og forudsigeligt, men to enheder,
    der offline redigerer hver sit felt på samme post, flettes ikke.
    (`CODE_REVIEW.md` §4)
-3. **Billeder er ikke med i JSON-sikkerhedskopien.** En komplet backup kræver
-   et arkivformat med binære filer. (`CODE_REVIEW.md` §1)
+3. **Billeder i sikkerhedskopien fylder.** Fra 0.2.19 er billederne med som
+   base64 i JSON-filen. Det er enkelt og kan læses af én `JSON.parse`, men det
+   koster ca. en tredjedel ekstra og hele filen i hukommelsen. Bliver det et
+   problem, er næste skridt et arkivformat (zip) med binære filer.
 
 ### Kvalitet
 
