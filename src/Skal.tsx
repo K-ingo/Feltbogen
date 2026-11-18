@@ -1,5 +1,6 @@
+import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { useErDesktop, useSynligHoejde } from './useMedie';
+import { useErDesktop, useSkriverPaaTelefon, useSynligHoejde } from './useMedie';
 import { markerSet, useErSet, FAB_TIP_SET } from './indstillinger';
 import { FortrydToast } from './FortrydToast';
 import { Ikon } from './Ikon';
@@ -113,7 +114,24 @@ interface Props {
 export function Skal({ fane, skift, titel, undertitel, handlinger, fab, children }: Props) {
   const erDesktop = useErDesktop();
   const synligHoejde = useSynligHoejde();
+  const skriver = useSkriverPaaTelefon();
+  const indhold = useRef<HTMLElement>(null);
   const op = forael(fane);
+
+  // Mens man skriver, er navigationen væk, og indholdet har fået dens plads
+  // og tastaturet taget sin. Feltet, man står i, rulles frem, hvis det er
+  // havnet under kanten. `nearest` flytter kun, hvis det er nødvendigt. Felter
+  // i et ark ruller arket selv (Ark.tsx), så kun indholdet her.
+  useEffect(() => {
+    if (erDesktop || !skriver) return;
+    const ramme = requestAnimationFrame(() => {
+      const aktivt = document.activeElement;
+      if (aktivt instanceof HTMLElement && indhold.current?.contains(aktivt)) {
+        aktivt.scrollIntoView?.({ block: 'nearest' });
+      }
+    });
+    return () => cancelAnimationFrame(ramme);
+  }, [erDesktop, skriver, synligHoejde]);
 
   if (erDesktop) {
     return (
@@ -167,7 +185,7 @@ export function Skal({ fane, skift, titel, undertitel, handlinger, fab, children
     }}>
       {titel && <Topbar titel={titel} tilbage={op && <Tilbagelinje til={op} skift={skift} />} />}
 
-      <main className="mobile-main" style={{
+      <main ref={indhold} className="mobile-main" style={{
         flex: 1,
         // Uden den her kan et flex-barn ikke blive lavere end sit indhold, og
         // så scroller kassen i stedet for indholdet.
@@ -195,10 +213,15 @@ export function Skal({ fane, skift, titel, undertitel, handlinger, fab, children
         </div>
       </main>
 
-      {fab && <Fab onClick={fab} />}
-      {fab && <FabTip />}
+      {/* Mens man skriver, er navigationen og plus-knappen væk. Skallen er
+          lige så høj som det synlige felt, så med tastaturet fremme ville
+          navigationen ellers ligge lige over tastaturet og dække feltet, man
+          skriver i. Den kommer tilbage, når feltet slipper fokus, eller
+          tastaturet lukkes. Se useSkriverPaaTelefon. */}
+      {fab && !skriver && <Fab onClick={fab} />}
+      {fab && !skriver && <FabTip />}
       <FortrydToast bund="calc(136px + env(safe-area-inset-bottom))" />
-      <BundNav fane={fane} skift={skift} />
+      {!skriver && <BundNav fane={fane} skift={skift} />}
     </div>
   );
 }

@@ -210,6 +210,16 @@ pak-af-tjek), på en aktiv tur på telefonen dog **Åbn på-tur-skærmen** som f
 Hent vejr og tag imod er outline, afvis og Skift status er tekst. Testet i
 `TurDetalje.test.tsx` med vejret foldet ud og et grejsæt-forslag fremme.
 
+**Bundnavigationen over iOS-tastaturet (0.2.21).** Fra iPhone-testen: med
+fokus i et felt lå bundmenuen lige over tastaturet og dækkede feltet (fx turens
+titel på Tur-detalje). Nu skjules bundmenuen og plus-knappen, mens et
+skrivefelt har fokus på en berøringsskærm, og kommer igen ved blur eller når
+tastaturet lukkes. Se README under *Bundnavigationen går væk, mens man
+skriver*. Testet i `skrivefelt.test.ts` og `Skal.test.tsx` (jsdom) og i
+Chromium med iPhone-emulering mod `npm run preview` (Tur-detaljens titel og
+Ny tur-arket). **Ikke testet på en rigtig iPhone eller Android** — emuleringen
+har intet skærmtastatur, så `visualViewport`-delen er kun dækket af enhedstests.
+
 **Sync-fix: gendannelse vs. gravsten + falsk serverfejl (0.2.20).** To fejl,
 begge i `src/sync.ts`. (1) En sikkerhedskopi, der blev læst ind efter en
 sletning, kom op på serveren, men gravstenene fra sletningen skjulte posterne

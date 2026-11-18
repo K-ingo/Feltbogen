@@ -135,3 +135,67 @@ describe('plus-knappen', () => {
     expect(screen.getByRole('button', { name: /ny|tilføj|\+/i })).toBeInTheDocument();
   });
 });
+
+// ─────────────────────────────────────────────
+// Bundnavigationen og tastaturet
+//
+// Skallen er lige så høj som det synlige felt. Kommer tastaturet frem, ligger
+// navigationen ellers lige over det og dækker feltet, man skriver i — fundet
+// på iPhone i Tur-detaljens titel.
+// ─────────────────────────────────────────────
+
+describe('bundnavigationen, mens man skriver', () => {
+  const beroering = (punkter: number) =>
+    Object.defineProperty(navigator, 'maxTouchPoints', { value: punkter, configurable: true });
+
+  const tegnMedFelt = (bredde = MOBIL) => tegn(
+    <Skal fane="ture" skift={vi.fn()} titel="Tur" fab={vi.fn()}>
+      <input aria-label="Titel" />
+      <input aria-label="Sted" />
+      <input type="checkbox" aria-label="Pakket" />
+    </Skal>,
+    bredde
+  );
+
+  it('forsvinder, når et felt får fokus, og kommer igen bagefter', async () => {
+    beroering(5);
+    tegnMedFelt();
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tilføj' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByLabelText('Titel'));
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Tilføj' })).not.toBeInTheDocument();
+
+    // Fra ét felt til det næste: navigationen bliver væk.
+    await userEvent.click(screen.getByLabelText('Sted'));
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+
+    await userEvent.click(document.body);
+    expect(await screen.findByRole('navigation')).toBeInTheDocument();
+    beroering(0);
+  });
+
+  it('bliver stående ved en afkrydsning', async () => {
+    beroering(5);
+    tegnMedFelt();
+    await userEvent.click(screen.getByLabelText('Pakket'));
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
+    beroering(0);
+  });
+
+  it('bliver stående på en smal skærm uden berøring', async () => {
+    beroering(0);
+    tegnMedFelt();
+    await userEvent.click(screen.getByLabelText('Titel'));
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
+  });
+
+  it('rører ikke sidebaren på PC', async () => {
+    beroering(5);
+    tegnMedFelt(DESKTOP);
+    await userEvent.click(screen.getByLabelText('Titel'));
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
+    beroering(0);
+  });
+});

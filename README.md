@@ -240,6 +240,21 @@ på en underskærm, bliver hovedfanen markeret i navigationen, og der kommer en
 "‹ Grej"-linje over titlen — begge dele udledt, så en vej tilbage ikke kan
 blive glemt ét sted. En ny skærm skal derfor kun skrives ind i den ene tabel.
 
+**Bundnavigationen går væk, mens man skriver (0.2.21).** Mobilskallen er lige
+så høj som det synlige felt (`useSynligHoejde`), så når telefonens tastatur
+kommer frem, krymper den — og navigationen, der er dens nederste række, lagde
+sig lige over tastaturet og dækkede feltet. Nu tegnes navigationen og
+plus-knappen ikke, mens et skrivefelt (tekst-input, textarea, contenteditable —
+ikke afkrydsning, datovalg og knapper) har fokus på en berøringsskærm, og det
+aktive felt rulles frem (`block: 'nearest'`). Reglen står i `src/skrivefelt.ts`,
+lytterne i `useSkriverPaaTelefon` (`src/useMedie.ts`): `focusin`/`focusout`
+er det hurtige signal, så navigationen ikke når at stå over tastaturet under
+animationen; `visualViewport`-højden målt mod den højeste højde i samme bredde
+er det sikre, og det får navigationen tilbage, hvis tastaturet lukkes, mens
+feltet beholder fokus (Androids tilbage-knap). Med mus på en smal skærm bliver
+navigationen stående, og PC-sidebaren røres ikke. Arkene lå i forvejen over
+navigationen (`z-index` 100) og følger tastaturets overkant (`useSynligtFelt`).
+
 ### Dialoger og fokus
 
 Alle lag over skærmen — opret-arkene og grejsæt-arkene (`Ark.tsx`), QR i fuld

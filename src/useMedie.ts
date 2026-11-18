@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { erSkrivefelt, skjulBundnav, tastaturFremme } from './skrivefelt';
 
 // Under denne bredde er der ikke plads til sidebar ved siden af indholdet.
 export const DESKTOP_FRA = 900;
@@ -118,6 +119,91 @@ export function useSynligtFelt(): SynligtFelt | null {
   }, []);
 
   return felt;
+}
+
+// Om man står og skriver på en telefon — så skal bundnavigationen væk.
+//
+// Skallen er lige så høj som det synlige felt (useSynligHoejde), og når
+// tastaturet kommer frem, krymper den. Navigationen er skallens nederste
+// række og lægger sig dermed lige over tastaturet — oven i det felt, man
+// skriver i. Reglen står i skrivefelt.ts; her er kun lytterne.
+export function useSkriverPaaTelefon(): boolean {
+  const [fokus, setFokus] = useState(
+    () => typeof document !== 'undefined' && erSkrivefelt(document.activeElement)
+  );
+  const [tastatur, setTastatur] = useState(false);
+  const [lukketUdenBlur, setLukketUdenBlur] = useState(false);
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    let hoejeste = 0;
+    let bredde = window.innerWidth;
+    let aaben = false;
+    let ventende: ReturnType<typeof setTimeout> | undefined;
+
+    const tjekFokus = () => setFokus(erSkrivefelt(document.activeElement));
+
+    const maal = () => {
+      const hoejde = vv?.height ?? window.innerHeight;
+      // Ny bredde er en drejet telefon, og så er den gamle højeste højde ikke
+      // længere et nulpunkt. Et tastatur, der står fremme under drejningen,
+      // er ikke "lukket" af den grund.
+      if (window.innerWidth !== bredde) {
+        bredde = window.innerWidth;
+        hoejeste = 0;
+        aaben = false;
+      }
+      hoejeste = Math.max(hoejeste, hoejde);
+      const nu = tastaturFremme(hoejeste, hoejde);
+      if (nu) aaben = true;
+      else if (aaben) {
+        aaben = false;
+        setLukketUdenBlur(true);
+      }
+      setTastatur(nu);
+      // Et felt, der forsvinder fra siden, mens det har fokus, sender ikke
+      // altid et focusout. Ændrer det synlige felt sig, ses der efter igen.
+      tjekFokus();
+    };
+
+    const ind = (e: FocusEvent) => {
+      if (ventende) clearTimeout(ventende);
+      if (erSkrivefelt(e.target as Element | null)) {
+        setFokus(true);
+        setLukketUdenBlur(false);
+      }
+    };
+
+    // Ved skift fra ét felt til det næste kommer focusout før focusin. Der
+    // ventes en tur, så navigationen ikke blinker frem imellem de to.
+    const ud = () => {
+      if (ventende) clearTimeout(ventende);
+      ventende = setTimeout(tjekFokus, 0);
+    };
+
+    maal();
+    document.addEventListener('focusin', ind);
+    document.addEventListener('focusout', ud);
+    window.addEventListener('resize', maal);
+    vv?.addEventListener('resize', maal);
+
+    return () => {
+      if (ventende) clearTimeout(ventende);
+      document.removeEventListener('focusin', ind);
+      document.removeEventListener('focusout', ud);
+      window.removeEventListener('resize', maal);
+      vv?.removeEventListener('resize', maal);
+    };
+  }, []);
+
+  return skjulBundnav({ fokusISkrivefelt: fokus, tastatur, beroering: erBeroering(), lukketUdenBlur });
+}
+
+// En berøringsskærm, hvor et felt med fokus betyder et tastatur på skærmen.
+function erBeroering(): boolean {
+  if (typeof window === 'undefined') return false;
+  const grov = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+  return grov || (typeof navigator !== 'undefined' && (navigator.maxTouchPoints ?? 0) > 0);
 }
 
 // Mere end det her skåret af bunden er et tastatur og ikke en adresselinje,
