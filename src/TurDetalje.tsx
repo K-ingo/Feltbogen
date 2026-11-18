@@ -45,6 +45,7 @@ import {
   tildelGear,
   soegSted
 } from './smartMotor';
+import { netfejltekst } from './netkald';
 import type { VejrDag, VejrData, StedForslag, Advarsel, Pakkelinje, Pakkeafsnit, Beregninger, Baerevaegt, GruppeForslag } from './smartMotor';
 import {
   Badge,
@@ -332,7 +333,14 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
     if (!tur?.sted.trim()) return;
     setStedSoeger(true);
     setStedForslag([]);
-    const resultater = await soegSted(tur.sted);
+    let resultater: Awaited<ReturnType<typeof soegSted>>;
+    try {
+      resultater = await soegSted(tur.sted);
+    } catch (e) {
+      setStedSoeger(false);
+      setKoordinatFejl(netfejltekst(e));
+      return;
+    }
     setStedSoeger(false);
 
     if (resultater.length === 1) {
@@ -394,7 +402,14 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
 
     setVejrHentes(true);
     setVejrFejl('');
-    const data = await hentVejr(tur.koordinater.lat, tur.koordinater.lng, tur.startdato, tur.slutdato);
+    let data: Awaited<ReturnType<typeof hentVejr>>;
+    try {
+      data = await hentVejr(tur.koordinater.lat, tur.koordinater.lng, tur.startdato, tur.slutdato);
+    } catch (e) {
+      setVejrHentes(false);
+      setVejrFejl(netfejltekst(e));
+      return;
+    }
     setVejrHentes(false);
 
     if (data) {

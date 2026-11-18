@@ -7,6 +7,7 @@ import { besoegPaaSted, besoegstekst, noteFraBesoeg, turePaaSted } from './stede
 import { heroForSted } from './billeder';
 import { Billedvisning } from './BilledSektion';
 import { soegSted } from './smartMotor';
+import { netfejltekst } from './netkald';
 import type { StedForslag } from './smartMotor';
 import { formatterPeriode, siden } from './datotekst';
 import { sletSted, opdaterSted } from './sync';
@@ -88,7 +89,14 @@ function StedDetalje({ stedId, tilbage, aabnTur, opretTurHer, nyOprettet }: Prop
     setForslag([]);
     setKoordinatFejl('');
 
-    const resultater = await soegSted(q);
+    let resultater: Awaited<ReturnType<typeof soegSted>>;
+    try {
+      resultater = await soegSted(q);
+    } catch (e) {
+      setSoeger(false);
+      setKoordinatFejl(netfejltekst(e));
+      return;
+    }
     setSoeger(false);
 
     // Ét resultat er et svar, ikke et valg.

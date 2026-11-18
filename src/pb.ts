@@ -1,5 +1,6 @@
 import PocketBase from 'pocketbase';
 import { noterFejl, rydFejl } from './syncfejl';
+import { hentMedTimeout, erTimeout, netfejltekst } from './netkald';
 
 // Appen taler med sit eget domæne. Caddy tager /api/ og sender det videre til
 // PocketBase over Railways private netværk, så PocketBase ikke behøver en
@@ -21,6 +22,17 @@ const PB_URL = import.meta.env.VITE_PB_URL ?? '/';
 export const pb = new PocketBase(PB_URL);
 
 pb.autoCancellation(false);
+
+// Alle kald gennem klienten får en øvre grænse for, hvor længe de må tage —
+// se netkald.ts. Klienten har selv en `fetch`-indstilling pr. kald, og
+// `beforeSend` er stedet, hvor den kan sættes på dem alle uden at røre hvert
+// enkelt kald. Grænsen afgøres først, når kaldet går: på det tidspunkt har
+// klienten gjort et objekt med en fil om til FormData, og så får en upload den
+// lange grænse.
+pb.beforeSend = (url, options) => {
+  options.fetch = (adresse, init) => hentMedTimeout(adresse, init);
+  return { url, options };
+};
 
 export interface Bruger {
   id: string;
@@ -121,9 +133,10 @@ export async function tjekForbindelse(): Promise<Forbindelsestjek> {
   const adresse = helbredsadresse();
 
   try {
-    const svar = await fetch(adresse, { cache: 'no-store' });
+    const svar = await hentMedTimeout(adresse, { cache: 'no-store' });
     return laesHelbred(svar.status, svar.headers.get('content-type') ?? '', await svar.text());
-  } catch {
+  } catch (e) {
+    if (erTimeout(e)) return { ok: false, tekst: `${adresse} svarede ikke i tide. ${netfejltekst(e)}` };
     // Der kom aldrig et svar. Browseren siger ikke hvorfor — en server, der er
     // nede, og en, der afviser appens adresse, ser ens ud herfra — så begge
     // muligheder skal stå der.

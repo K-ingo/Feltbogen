@@ -87,7 +87,8 @@ appen starter.
 | Gravsten | `src/sync.ts` | Serverens påstand om, at noget er slettet med vilje — og reglen om at kun den kan slette lokalt |
 | Hvem basen tilhører | `src/konto.ts` | Ejermærket på enheden, og de tre overgange mellem konti |
 | Enhedens valg | `src/indstillinger.ts` | Det der hører til telefonen og ikke til dataene, og derfor ikke synkroniseres |
-| Sikkerhedskopi | `src/dataudveksling.ts` | Gear, grupper, ture, steder og personer ud og ind som én JSON-fil; billedfiler er ikke med |
+| Sikkerhedskopi | `src/dataudveksling.ts`, `src/sikkerhedskopi.ts` | Gear, grupper, ture, steder, personer og billeder ud og ind som én JSON-fil; billedfilerne som data-URL'er |
+| Netkald | `src/netkald.ts` | Én `fetch` med timeout (AbortController) for alle netkald — også PocketBase-klientens — og den danske fejltekst ved timeout |
 | Nye poster | `src/opret.ts` | Tomme poster med de samme standardværdier, uanset hvor man startede dem |
 | Datoer | `src/datotekst.ts` | Perioder og dage skrevet ud på dansk |
 | Statistik | `src/statistik.ts` | Aggregeringer over inventar og ture |

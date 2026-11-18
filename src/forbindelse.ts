@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { hentMedTimeout } from './netkald';
 
 // Om appen faktisk kan nå ud — ikke kun om der er et netværk.
 //
@@ -18,27 +19,26 @@ import { useEffect, useState } from 'react';
 export const PROEVEADRESSE = '/favicon.svg';
 export const FRIST_MS = 5000;
 
+// Fristen er netkald.ts' timeout med en kortere grænse: linjen skal hurtigt
+// kunne sige "offline", og et svar på et favicon tager ikke fem sekunder.
 export async function kanNaaUd(
-  hent: typeof fetch = fetch,
+  hent?: typeof fetch,
   online: boolean = navigator.onLine,
   fristMs: number = FRIST_MS
 ): Promise<boolean> {
   // Browseren ved det allerede. Intet kald, intet at vente på.
   if (!online) return false;
 
-  const afbryd = new AbortController();
-  const ur = setTimeout(() => afbryd.abort(), fristMs);
   try {
-    await hent(`${PROEVEADRESSE}?forbindelse=${Date.now()}`, {
-      method: 'HEAD',
-      cache: 'no-store',
-      signal: afbryd.signal
-    });
+    await hentMedTimeout(
+      `${PROEVEADRESSE}?forbindelse=${Date.now()}`,
+      { method: 'HEAD', cache: 'no-store' },
+      fristMs,
+      hent
+    );
     return true;
   } catch {
     return false;
-  } finally {
-    clearTimeout(ur);
   }
 }
 

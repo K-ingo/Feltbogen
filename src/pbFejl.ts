@@ -1,3 +1,5 @@
+import { erTimeout, netfejltekst } from './netkald';
+
 // Fejl fra PocketBase, oversat.
 //
 // Ligger for sig selv og ikke i `pb.ts`, fordi sync-testene erstatter hele
@@ -78,6 +80,9 @@ function feltBesked(felt: string, kode: string | undefined, engelsk: string | un
 export function loginFejlBesked(e: unknown): string {
   const fejl = (e ?? {}) as PbFejl;
   const besked = fejl.response?.message || fejl.message || 'Der skete en fejl';
+
+  // Kaldet blev afbrudt, fordi serveren ikke svarede i tide (netkald.ts).
+  if (erTimeout(e)) return netfejltekst(e);
 
   // Klienten pakker en fejlet fetch ind som en fejl med status 0. Det er ikke
   // et afvist login — serveren blev aldrig spurgt.

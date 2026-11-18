@@ -6,10 +6,14 @@ import {
   fletInd,
   filnavn,
   KopiFejl,
-  KOPI_VERSION
+  KOPI_VERSION,
+  blobTilData,
+  dataTilBlob,
+  pakBilleder,
+  udpakBillede
 } from './dataudveksling';
-import type { Baseindhold } from './dataudveksling';
-import { lavItem, lavGruppe, lavTur, lavSted, lavPerson } from './test/data';
+import type { Baseindhold, KopiBillede } from './dataudveksling';
+import { lavItem, lavGruppe, lavTur, lavSted, lavPerson, lavBillede } from './test/data';
 
 // Typen er ikke pynt. Uden den udleder oversætteren de tomme lister som
 // never[], og så kan en test ikke lægge et item i dem. Med den tjekkes
@@ -228,5 +232,70 @@ describe('filnavn', () => {
   it('sætter dato på med nul foran', () => {
     expect(filnavn(new Date(2026, 6, 5))).toBe('feltbogen-2026-07-05.json');
     expect(filnavn(new Date(2026, 11, 31))).toBe('feltbogen-2026-12-31.json');
+  });
+});
+
+describe('billedfilerne i kopien', () => {
+  it('går gennem en data-URL og kommer ud som de samme bytes', async () => {
+    const bytes = new Uint8Array([0, 1, 2, 254, 255, 128]);
+    const data = await blobTilData(new Blob([bytes], { type: 'image/png' }));
+
+    expect(data).toMatch(/^data:image\/png;base64,/);
+    const tilbage = dataTilBlob(data)!;
+    expect(tilbage.type).toBe('image/png');
+    expect(Array.from(new Uint8Array(await tilbage.arrayBuffer()))).toEqual(Array.from(bytes));
+  });
+
+  it('klarer et billede større end én bid', async () => {
+    const bytes = new Uint8Array(100_000).map((_, i) => i % 256);
+    const tilbage = dataTilBlob(await blobTilData(new Blob([bytes], { type: 'image/jpeg' })))!;
+    expect(tilbage.size).toBe(100_000);
+  });
+
+  // Filen kommer udefra. En data-URL med HTML i skal ikke ende som en Blob,
+  // der vises som et billede.
+  it('lukker kun billedtyper ind', () => {
+    const kopi = laesSikkerhedskopi(JSON.stringify({
+      version: 3,
+      billeder: [
+        { uid: 'b-1', data: 'data:text/html;base64,PGgxPmhlajwvaDE+', url: '' },
+        { uid: 'b-2', data: 'data:image/jpeg;base64,AAEC', url: '' },
+        { uid: 'b-3', data: 'ikke en data-url', url: 'https://pb.test/x.jpg' }
+      ]
+    }));
+
+    expect(kopi.billeder.map((b) => b.uid)).toEqual(['b-2', 'b-3']);
+    expect(kopi.billeder[1].data).toBe('');
+    expect(dataTilBlob('data:text/html;base64,PGgxPg==')).toBeNull();
+  });
+
+  it('pakker et billede med og lader lokale felter blive hjemme', async () => {
+    const billede = lavBillede({
+      id: 3, pb_id: 'pb9', uid: 'b-1', usendt_aendring: true,
+      blob: new Blob([new Uint8Array([1, 2, 3])], { type: 'image/jpeg' })
+    });
+
+    const { billeder, uden_fil } = await pakBilleder([billede]);
+
+    expect(uden_fil).toBe(0);
+    expect(billeder[0].uid).toBe('b-1');
+    expect(billeder[0].data).toMatch(/^data:image\/jpeg;base64,/);
+    for (const felt of ['id', 'pb_id', 'blob', 'original_blob', 'usendt_aendring']) {
+      expect(felt in billeder[0]).toBe(false);
+    }
+  });
+
+  it('udpakker til et billede, der sendes op på ny', () => {
+    const billede = udpakBillede({
+      ...lavBillede({ uid: 'b-1', url: 'https://gammel.test/x.jpg', original_url: 'https://gammel.test/o.jpg' }),
+      data: 'data:image/jpeg;base64,AAEC',
+      original_data: ''
+    } as unknown as KopiBillede);
+
+    expect(billede.blob).toBeInstanceOf(Blob);
+    expect(billede.url).toBe('');
+    // Originalen kom ikke med som fil, så linket er det eneste spor.
+    expect(billede.original_blob).toBeNull();
+    expect(billede.original_url).toBe('https://gammel.test/o.jpg');
   });
 });

@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { db } from './db';
-import { laesSikkerhedskopi, fletInd, KopiFejl } from './dataudveksling';
+import { KopiFejl } from './dataudveksling';
+import { gendan } from './sikkerhedskopi';
 import { Knap, Chip } from './ui';
 import { layout } from './layout';
 
@@ -340,22 +340,7 @@ function Komigang({ nytItem, nyTur, tilLogin, faerdig, kunOpslag, tilbage }: {
     setLaeser(true);
     setFejl('');
     try {
-      const kopi = laesSikkerhedskopi(await fil.text());
-      const flettet = fletInd(kopi, {
-        items: await db.items.toArray(),
-        grupper: await db.grupper.toArray(),
-        ture: await db.ture.toArray(),
-        steder: await db.steder.toArray(),
-        personer: await db.personer.toArray()
-      });
-
-      await db.transaction('rw', db.items, db.grupper, db.ture, db.steder, db.personer, async () => {
-        await db.items.bulkAdd(flettet.items);
-        await db.grupper.bulkAdd(flettet.grupper);
-        await db.ture.bulkAdd(flettet.ture);
-        await db.steder.bulkAdd(flettet.steder);
-        await db.personer.bulkAdd(flettet.personer);
-      });
+      await gendan(await fil.text());
 
       faerdig();
     } catch (e) {

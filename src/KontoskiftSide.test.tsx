@@ -77,10 +77,11 @@ describe('hvad skærmen siger', () => {
     expect(await screen.findByText(/ikke nået op/i)).toBeInTheDocument();
   });
 
-  it('siger at billeder ikke er med i kopien', async () => {
+  // Fra 0.2.19 er billederne med i kopien (sikkerhedskopi.ts).
+  it('siger at billederne er med i kopien', async () => {
     await somMaja();
 
-    expect(screen.getByText(/billeder er ikke med/i)).toBeInTheDocument();
+    expect(screen.getByText(/personer og billeder ned som én fil/i)).toBeInTheDocument();
   });
 });
 

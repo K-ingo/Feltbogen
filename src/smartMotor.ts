@@ -1,3 +1,4 @@
+import { hentMedTimeout, TimeoutFejl } from './netkald';
 import { etiket } from './db';
 import type { Item, Tur, Gruppe, Deltager, Overnatning, Reference, Aktivitetsniveau } from './db';
 
@@ -40,7 +41,7 @@ export async function hentVejr(
 ): Promise<VejrData | null> {
   try {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max,weathercode,sunrise,sunset&timezone=Europe/Copenhagen&start_date=${startdato}&end_date=${slutdato}`;
-    const svar = await fetch(url);
+    const svar = await hentMedTimeout(url);
     if (!svar.ok) return null;
 
     const data: OpenMeteoForecast = await svar.json();
@@ -64,6 +65,9 @@ export async function hentVejr(
       hentet: new Date().toISOString()
     };
   } catch (e) {
+    // En timeout er ikke det samme som "ingen udsigt": kalderen skal kunne
+    // sige, at serveren ikke svarede i tide.
+    if (e instanceof TimeoutFejl) throw e;
     console.error('Vejr-fejl:', e);
     return null;
   }
@@ -430,15 +434,24 @@ export async function soegSted(soegning: string): Promise<StedForslag[]> {
   const q = soegning.trim();
   if (q.length < 2) return [];
 
-  const [dawaResultater, openMeteoResultater] = await Promise.all([
-    soegDawa(q),
+  // Kilderne slås op hver for sig. Svarer én af dem ikke i tide, bruges den
+  // anden; svarer ingen af dem, kastes timeouten videre, så skærmen kan sige
+  // det i stedet for "Ingen resultater" — det er ikke det samme.
+  const svar = await Promise.allSettled([
+    hentDawaStednavne(q),
+    hentDawaAdresser(q),
     soegOpenMeteo(q)
   ]);
+  if (svar.every((s) => s.status === 'rejected')) {
+    throw (svar[0] as PromiseRejectedResult).reason;
+  }
+  // Rækkefølgen er den samme som før: DAWA først, så Open-Meteo.
+  const fundne = svar.flatMap((s) => (s.status === 'fulfilled' ? s.value : []));
 
   // Samme sted kan komme fra begge kilder — behold det første pr. koordinat.
   const set = new Set<string>();
   const unikke: StedForslag[] = [];
-  for (const forslag of [...dawaResultater, ...openMeteoResultater]) {
+  for (const forslag of fundne) {
     const noegle = `${forslag.lat.toFixed(3)},${forslag.lng.toFixed(3)}`;
     if (set.has(noegle)) continue;
     set.add(noegle);
@@ -462,7 +475,7 @@ interface GeocodingSvar {
 async function soegOpenMeteo(soegning: string): Promise<StedForslag[]> {
   try {
     const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(soegning)}&count=5&language=da&format=json`;
-    const svar = await fetch(url);
+    const svar = await hentMedTimeout(url);
     if (!svar.ok) return [];
 
     const data: GeocodingSvar = await svar.json();
@@ -476,17 +489,10 @@ async function soegOpenMeteo(soegning: string): Promise<StedForslag[]> {
       }];
     });
   } catch (e) {
+    if (e instanceof TimeoutFejl) throw e;
     console.error('Open-Meteo sted-søgning fejl:', e);
     return [];
   }
-}
-
-async function soegDawa(soegning: string): Promise<StedForslag[]> {
-  const [stednavne, adresser] = await Promise.all([
-    hentDawaStednavne(soegning),
-    hentDawaAdresser(soegning)
-  ]);
-  return [...stednavne, ...adresser];
 }
 
 interface DawaAdresse {
@@ -535,11 +541,12 @@ async function hentDawaStednavne(soegning: string): Promise<StedForslag[]> {
 
 async function hentDawa<T>(url: string): Promise<T[]> {
   try {
-    const svar = await fetch(url);
+    const svar = await hentMedTimeout(url);
     if (!svar.ok) return [];
     const data: unknown = await svar.json();
     return Array.isArray(data) ? (data as T[]) : [];
   } catch (e) {
+    if (e instanceof TimeoutFejl) throw e;
     console.error('DAWA sted-søgning fejl:', e);
     return [];
   }
