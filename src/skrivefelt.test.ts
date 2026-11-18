@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
-import { erSkrivefelt, skjulBundnav, tastaturFremme } from './skrivefelt';
+import {
+  erSkrivefelt, skjulBundnav, tastaturFremme, ventPaaTastatur, VENT_MED_VIEWPORT, VENT_UDEN_VIEWPORT
+} from './skrivefelt';
 
 const input = (type?: string) => {
   const el = document.createElement('input');
@@ -67,5 +69,23 @@ describe('skjulBundnav', () => {
 
   it('skjuler, når det synlige felt siger tastatur — også uden berøring', () => {
     expect(skjulBundnav({ ...grund, beroering: false, tastatur: true, lukketUdenBlur: true })).toBe(true);
+  });
+});
+
+describe('ventPaaTastatur', () => {
+  it('venter på tastaturet, når navigationen var skjult og tastaturet er fremme', () => {
+    expect(ventPaaTastatur({ varSkjult: true, tastatur: true, harViewport: true })).toBe(VENT_MED_VIEWPORT);
+  });
+
+  it('venter ikke, når tastaturet allerede er væk', () => {
+    expect(ventPaaTastatur({ varSkjult: true, tastatur: false, harViewport: true })).toBe(0);
+  });
+
+  it('venter ikke, når navigationen aldrig var skjult', () => {
+    expect(ventPaaTastatur({ varSkjult: false, tastatur: true, harViewport: true })).toBe(0);
+  });
+
+  it('holder en kort pause uden visualViewport', () => {
+    expect(ventPaaTastatur({ varSkjult: true, tastatur: false, harViewport: false })).toBe(VENT_UDEN_VIEWPORT);
   });
 });

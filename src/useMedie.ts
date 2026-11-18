@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { erSkrivefelt, skjulBundnav, tastaturFremme } from './skrivefelt';
+import { erSkrivefelt, skjulBundnav, tastaturFremme, ventPaaTastatur } from './skrivefelt';
 
 // Under denne bredde er der ikke plads til sidebar ved siden af indholdet.
 export const DESKTOP_FRA = 900;
@@ -128,20 +128,59 @@ export function useSynligtFelt(): SynligtFelt | null {
 // række og lægger sig dermed lige over tastaturet — oven i det felt, man
 // skriver i. Reglen står i skrivefelt.ts; her er kun lytterne.
 export function useSkriverPaaTelefon(): boolean {
-  const [fokus, setFokus] = useState(
-    () => typeof document !== 'undefined' && erSkrivefelt(document.activeElement)
-  );
-  const [tastatur, setTastatur] = useState(false);
-  const [lukketUdenBlur, setLukketUdenBlur] = useState(false);
+  const [skjult, setSkjult] = useState(() => typeof document !== 'undefined' && skjulBundnav({
+    fokusISkrivefelt: erSkrivefelt(document.activeElement),
+    tastatur: false,
+    beroering: erBeroering(),
+    lukketUdenBlur: false
+  }));
 
   useEffect(() => {
     const vv = window.visualViewport;
+    const beroering = erBeroering();
+
+    // Tilstanden står her og ikke i React-state: lytterne skal kunne læse
+    // den, som den er lige nu, og ikke som den var ved sidste tegning.
+    let fokus = erSkrivefelt(document.activeElement);
+    let tastatur = false;
+    let lukketUdenBlur = false;
+    // Feltet har sluppet fokus, men tastaturet er endnu ikke væk.
+    let venter = false;
+
     let hoejeste = 0;
     let bredde = window.innerWidth;
     let aaben = false;
     let ventende: ReturnType<typeof setTimeout> | undefined;
+    let ventGraense: ReturnType<typeof setTimeout> | undefined;
 
-    const tjekFokus = () => setFokus(erSkrivefelt(document.activeElement));
+    const regel = () => skjulBundnav({ fokusISkrivefelt: fokus, tastatur, beroering, lukketUdenBlur });
+    const opdater = () => setSkjult(regel() || venter);
+
+    const stopVent = () => {
+      venter = false;
+      if (ventGraense) clearTimeout(ventGraense);
+    };
+
+    const tjekFokus = () => {
+      const nu = erSkrivefelt(document.activeElement);
+      if (nu && !fokus) {
+        fokus = true;
+        lukketUdenBlur = false;
+        stopVent();
+      } else if (!nu && fokus) {
+        const varSkjult = regel();
+        fokus = false;
+        // Navigationen kommer først igen, når tastaturet er væk — ellers står
+        // den over tastaturet, mens det glider ned. Se ventPaaTastatur.
+        const ms = ventPaaTastatur({ varSkjult, tastatur, harViewport: !!vv });
+        stopVent();
+        if (ms > 0) {
+          venter = true;
+          ventGraense = setTimeout(() => { venter = false; opdater(); }, ms);
+        }
+      }
+      opdater();
+    };
 
     const maal = () => {
       const hoejde = vv?.height ?? window.innerHeight;
@@ -154,49 +193,63 @@ export function useSkriverPaaTelefon(): boolean {
         aaben = false;
       }
       hoejeste = Math.max(hoejeste, hoejde);
-      const nu = tastaturFremme(hoejeste, hoejde);
-      if (nu) aaben = true;
+      tastatur = tastaturFremme(hoejeste, hoejde);
+      if (tastatur) aaben = true;
       else if (aaben) {
         aaben = false;
-        setLukketUdenBlur(true);
+        lukketUdenBlur = true;
       }
-      setTastatur(nu);
+      // Det synlige felt er tilbage i fuld højde: tastaturet er væk.
+      if (!tastatur && venter) stopVent();
       // Et felt, der forsvinder fra siden, mens det har fokus, sender ikke
       // altid et focusout. Ændrer det synlige felt sig, ses der efter igen.
       tjekFokus();
     };
 
-    const ind = (e: FocusEvent) => {
+    // Fokus på hvad som helst — også en dato, en afkrydsning eller en knap —
+    // afgør det. Før talte kun skrivefelter, og fra titlen til datofeltet og
+    // videre ud af et ark blev navigationen væk på skærmen bagved.
+    const ind = () => {
       if (ventende) clearTimeout(ventende);
-      if (erSkrivefelt(e.target as Element | null)) {
-        setFokus(true);
-        setLukketUdenBlur(false);
-      }
+      tjekFokus();
     };
 
     // Ved skift fra ét felt til det næste kommer focusout før focusin. Der
     // ventes en tur, så navigationen ikke blinker frem imellem de to.
-    const ud = () => {
+    const senere = () => {
       if (ventende) clearTimeout(ventende);
       ventende = setTimeout(tjekFokus, 0);
     };
 
     maal();
     document.addEventListener('focusin', ind);
-    document.addEventListener('focusout', ud);
+    document.addEventListener('focusout', senere);
+    // Et lag, der lukker, tager feltet med sig, og ikke alle browsere sender
+    // et focusout for et felt, der forsvinder. Se tjekSkrivefokus.
+    window.addEventListener(SKRIVEFOKUS_TJEK, senere);
     window.addEventListener('resize', maal);
     vv?.addEventListener('resize', maal);
 
     return () => {
       if (ventende) clearTimeout(ventende);
+      stopVent();
       document.removeEventListener('focusin', ind);
-      document.removeEventListener('focusout', ud);
+      document.removeEventListener('focusout', senere);
+      window.removeEventListener(SKRIVEFOKUS_TJEK, senere);
       window.removeEventListener('resize', maal);
       vv?.removeEventListener('resize', maal);
     };
   }, []);
 
-  return skjulBundnav({ fokusISkrivefelt: fokus, tastatur, beroering: erBeroering(), lukketUdenBlur });
+  return skjult;
+}
+
+const SKRIVEFOKUS_TJEK = 'feltbogen:skrivefokus';
+
+// Bedes kaldt, når et lag med felter lukker. Så ser useSkriverPaaTelefon efter,
+// hvor fokus er nu, frem for at vente på et focusout, der måske aldrig kommer.
+export function tjekSkrivefokus(): void {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(SKRIVEFOKUS_TJEK));
 }
 
 // Holder siden selv rullet helt op, mens `aktiv` er sand.

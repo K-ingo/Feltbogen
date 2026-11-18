@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import type { ItemStatus } from './db';
 import { ITEM_STATUS } from './db';
 import { Felt, Knap, Label, Segment } from './ui';
-import { useErDesktop, useHoldSidenStille, useSynligtFelt } from './useMedie';
+import { tjekSkrivefokus, useErDesktop, useHoldSidenStille, useSynligtFelt } from './useMedie';
 import { useDialogFokus } from './dialogFokus';
 import { LagerstedValg } from './LagerstedValg';
 import {
@@ -64,6 +64,10 @@ export function Ark({
   // få et felt fri af tastaturet, er tastaturet regnet med to gange. Se
   // useHoldSidenStille.
   useHoldSidenStille(bund);
+  // Lukker arket med fokus i et af sine felter, forsvinder feltet uden et
+  // focusout i alle browsere. Så skal skallen se efter selv, ellers bliver
+  // bundnavigationen væk på skærmen bagved.
+  useEffect(() => tjekSkrivefokus, []);
 
   // En slukket knap uden en grund ligner en fejl i appen. Grunden står også i
   // knappens navn, men det hjælper kun en skærmlæser.

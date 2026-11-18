@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { act, screen } from '@testing-library/react';
+import { useState } from 'react';
 import userEvent from '@testing-library/user-event';
 
 import { Skal } from './Skal';
 import type { Fane } from './Skal';
 import { tegn, MOBIL, DESKTOP } from './test/skaerm';
+import { NyTurArk } from './Ark';
 
 // ─────────────────────────────────────────────
 // Navigationen
@@ -216,5 +218,83 @@ describe('bundnavigationen, mens man skriver', () => {
     await userEvent.click(screen.getByLabelText('Titel'));
     expect(screen.getByRole('navigation')).toBeInTheDocument();
     beroering(0);
+  });
+});
+
+// Fundet headless: titel → datofeltet «Fra» → Annuller i Ny tur. Datofeltet er
+// ikke et skrivefelt, og arket tager feltet med sig, når det lukker — så kom der
+// aldrig et tjek, og navigationen blev væk på Ture-listen bagved.
+describe('bundnavigationen, når et ark lukker', () => {
+  const beroering = (punkter: number) =>
+    Object.defineProperty(navigator, 'maxTouchPoints', { value: punkter, configurable: true });
+
+  function TureMedArk() {
+    const [aaben, setAaben] = useState(true);
+    return (
+      <>
+        <Skal fane="ture" skift={vi.fn()} titel="Ture" fab={() => setAaben(true)}>liste</Skal>
+        {aaben && <NyTurArk idag="2026-09-19" opret={vi.fn()} annuller={() => setAaben(false)} />}
+      </>
+    );
+  }
+
+  it('kommer igen efter titel → dato → Annuller', async () => {
+    beroering(5);
+    tegn(<TureMedArk />, MOBIL);
+
+    await userEvent.click(await screen.findByLabelText('Titel'));
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByLabelText('Fra'));
+    await userEvent.click(screen.getByRole('button', { name: 'Annuller' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(await screen.findByRole('navigation')).toBeInTheDocument();
+    beroering(0);
+  });
+
+  it('kommer igen, når arket lukker med fokus i titlen', async () => {
+    beroering(5);
+    tegn(<TureMedArk />, MOBIL);
+
+    await userEvent.click(await screen.findByLabelText('Titel'));
+    await userEvent.keyboard('{Escape}');
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(await screen.findByRole('navigation')).toBeInTheDocument();
+    beroering(0);
+  });
+});
+
+// Ved blur er tastaturet stadig på vej ned. Kommer navigationen frem med det
+// samme, står den et øjeblik over tastaturet på iPhone.
+describe('bundnavigationen venter på, at tastaturet er væk', () => {
+  class FalskViewport extends EventTarget {
+    height = 844;
+    offsetTop = 0;
+    saet(h: number) { this.height = h; this.dispatchEvent(new Event('resize')); }
+  }
+
+  it('kommer først igen, når det synlige felt er tilbage i fuld højde', async () => {
+    Object.defineProperty(navigator, 'maxTouchPoints', { value: 5, configurable: true });
+    const vv = new FalskViewport();
+    Object.defineProperty(window, 'visualViewport', { value: vv, configurable: true });
+    window.innerHeight = 844;
+
+    tegn(<Skal fane="ture" skift={vi.fn()} titel="Tur"><input aria-label="Titel" /></Skal>, MOBIL);
+    await userEvent.click(screen.getByLabelText('Titel'));
+    act(() => vv.saet(500));
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+
+    // Feltet slipper fokus, men tastaturet står der endnu.
+    await userEvent.click(document.body);
+    await act(() => new Promise((r) => setTimeout(r, 50)));
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+
+    act(() => vv.saet(844));
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
+
+    Object.defineProperty(window, 'visualViewport', { value: undefined, configurable: true });
+    Object.defineProperty(navigator, 'maxTouchPoints', { value: 0, configurable: true });
   });
 });

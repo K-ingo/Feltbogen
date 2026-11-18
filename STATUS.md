@@ -224,7 +224,10 @@ Bæreafstand med taltastaturet) var arket skåret af under feltet, der var tomt
 ned til tastaturet, og toppen lå under statuslinjen. Årsagen var dobbelt
 kompensation: laget står efter `visualViewport`, og iOS rullede også siden.
 `useHoldSidenStille` ruller siden tilbage, mens et bundark er åbent eller man
-skriver. Testet i `Ark.test.tsx` og `Skal.test.tsx` (jsdom). **Endnu ikke
+skriver. Desuden blev navigationen væk efter titel → dato → Annuller i Ny tur
+(fokus på et ikke-skrivefelt blev ikke talt med, og arket lukkede uden
+focusout). Det er rettet med en test for flowet. Efter blur venter
+navigationen nu på, at tastaturet er væk. Testet i `Ark.test.tsx` og `Skal.test.tsx` (jsdom). **Endnu ikke
 bekræftet på en rigtig iPhone.**
 
 **Sync-fix: gendannelse vs. gravsten + falsk serverfejl (0.2.20).** To fejl,

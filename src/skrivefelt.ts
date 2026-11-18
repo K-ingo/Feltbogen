@@ -59,3 +59,25 @@ export function skjulBundnav({ fokusISkrivefelt, tastatur, beroering, lukketUden
   if (tastatur) return true;
   return beroering && !lukketUdenBlur;
 }
+
+// Hvor længe navigationen skal vente, efter feltet har sluppet fokus.
+//
+// Slipper feltet fokus, er tastaturet stadig på vej ned, og kommer
+// navigationen frem med det samme, står den et øjeblik over tastaturet. Den
+// venter derfor på, at det synlige felt er tilbage i fuld højde (resize på
+// visualViewport) — men højst `VENT_MED_VIEWPORT`, hvis den besked aldrig
+// kommer. Uden visualViewport er der intet at vente på, kun en kort pause, der
+// svarer til tastaturets animation. Var navigationen ikke skjult, eller er
+// tastaturet allerede væk, er der intet at vente på.
+export const VENT_MED_VIEWPORT = 800;
+export const VENT_UDEN_VIEWPORT = 300;
+
+export function ventPaaTastatur({ varSkjult, tastatur, harViewport }: {
+  varSkjult: boolean;
+  tastatur: boolean;
+  harViewport: boolean;
+}): number {
+  if (!varSkjult) return 0;
+  if (!harViewport) return VENT_UDEN_VIEWPORT;
+  return tastatur ? VENT_MED_VIEWPORT : 0;
+}

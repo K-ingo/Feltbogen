@@ -268,6 +268,17 @@ statuslinjen (`.ark--tastatur`), ikke `dvh`, der ikke følger tastaturet på iOS
 Mens man skriver, står fortryd-beskeden lige over tastaturet, og FAB-luften i
 bunden af indholdet er væk sammen med FAB'en.
 
+**Fokus uden for skrivefelter og lag, der lukker (0.2.21).** Ethvert nyt
+fokus afgør, om navigationen skal være væk, også fokus på en dato, en
+afkrydsning eller en knap. Før talte kun skrivefelter, og titel → «Fra» →
+Annuller i Ny tur efterlod navigationen skjult på Ture-listen. Et ark, der
+lukker, kalder `tjekSkrivefokus()`, fordi feltet forsvinder med arket og ikke
+altid sender et focusout. Når feltet slipper fokus, kommer navigationen først
+igen, når det synlige felt er tilbage i fuld højde, så den ikke står over
+tastaturet, mens det glider ned. Den venter højst 800 ms, hvis resize-eventet
+ikke kommer, og 300 ms uden `visualViewport` (`ventPaaTastatur` i
+`src/skrivefelt.ts`).
+
 ### Dialoger og fokus
 
 Alle lag over skærmen — opret-arkene og grejsæt-arkene (`Ark.tsx`), QR i fuld
