@@ -18,6 +18,10 @@ Source of truth also in Notion. Do not invent new colors.
 **Typography:** Fraunces (display) · Inter (UI/body)
 **Radius:** primary button 10px · cards 10–16px · utility 2px
 
+| Token | Value | Use |
+| --- | --- | --- |
+| `--skrift-felt` | `1rem` (16px) | Font size in `input`, `textarea` and `select` on touch screens (`pointer: coarse`), so iOS Safari does not zoom in when a field is tapped. Acts as a floor over smaller inline sizes. The title field (`.titelfelt`, `TitelInput`) is exempt — it is larger already. User zoom is never locked. |
+
 ## CTA rules
 - Max **one** filled primary (`#315C45` + cream text) per viewport
 - Outline/secondary for next priority; ghost/text for the rest

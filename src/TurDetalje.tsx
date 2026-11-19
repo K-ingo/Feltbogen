@@ -1,4 +1,4 @@
-import { useState, useEffect, useId, useRef } from 'react';
+import { useState, useEffect, useId, useLayoutEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, etiket, TUR_STATUS, OVERNATNING, AKTIVITET, TERRAEN, ERFARING, PAK_AF_NIVEAU } from './db';
@@ -1063,17 +1063,21 @@ function TurDetalje({ turId, tilbage, nyOprettet, maal }: Props) {
         ? 'minmax(0, 1.3fr) minmax(320px, 1fr)'
         : erDesktop
           ? 'minmax(0, 1.2fr) minmax(300px, 1fr)'
-          : '1fr',
+          : 'minmax(0, 1fr)',
       gap: erDesktop ? '20px' : '8px',
       alignItems: 'start'
     }}>
       {/* minWidth: 0 er ikke til pynt. Et grid-barn må som udgangspunkt ikke
           blive smallere end sit indhold, og så skubber et bredt felt inde i et
-          kort hele spalten ud over skærmkanten i stedet for at give efter. */}
-      <div style={{ display: 'grid', gap: erDesktop ? '10px' : '8px', alignContent: 'start', minWidth: 0 }}>
+          kort hele spalten ud over skærmkanten i stedet for at give efter.
+          Det samme gælder inde i spalten: uden et spor med minmax(0, 1fr) er
+          sporet `auto` og mindst så bredt som det bredeste felts naturlige
+          bredde. Med 16 px skrift (0.2.21) blev det bredere end en 320 px
+          skærm, og Afgangs-tjekket blev skåret af. */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: erDesktop ? '10px' : '8px', alignContent: 'start', minWidth: 0 }}>
         {venstre}
       </div>
-      <div style={{ display: 'grid', gap: erDesktop ? '10px' : '8px', alignContent: 'start', minWidth: 0 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: erDesktop ? '10px' : '8px', alignContent: 'start', minWidth: 0 }}>
         {hoejre}
       </div>
     </div>
@@ -3175,11 +3179,11 @@ function Afgangstjekliste({ tjek, opret, gem }: {
 
   return (
     <div>
-      <div style={{ display: 'grid', gap: '2px', marginBottom: '12px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '2px', marginBottom: '12px' }}>
         {tjek.linjer.map((linje) => (
           <div
             key={linje.id}
-            style={{ display: 'flex', alignItems: 'center', gap: '9px', padding: '5px 0' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '9px', padding: '5px 0', minWidth: 0 }}
           >
             <input
               type="checkbox"
@@ -3188,20 +3192,10 @@ function Afgangstjekliste({ tjek, opret, gem }: {
               onChange={(e) => gem(saetAfkrydset(tjek, linje.id, e.target.checked))}
               style={{ width: 'auto', flexShrink: 0 }}
             />
-            <input
-              aria-label="Punktets tekst"
-              value={linje.tekst}
-              onChange={(e) => gem(saetTekst(tjek, linje.id, e.target.value))}
-              style={{
-                flex: 1,
-                minWidth: 0,
-                fontSize: 'var(--skrift-knap)',
-                border: 'none',
-                background: 'transparent',
-                padding: '2px 0',
-                textDecoration: linje.afkrydset ? 'line-through' : 'none',
-                color: linje.afkrydset ? 'var(--tekst-svag)' : 'var(--tekst)'
-              }}
+            <Punkttekst
+              tekst={linje.tekst}
+              afkrydset={linje.afkrydset}
+              skift={(t) => gem(saetTekst(tjek, linje.id, t))}
             />
             <FjernKnap onClick={() => gem(fjernLinje(tjek, linje.id))} label={`Fjern ${linje.tekst}`} />
           </div>
@@ -3220,6 +3214,61 @@ function Afgangstjekliste({ tjek, opret, gem }: {
         <Knap onClick={tilfoej} disabled={!nyLinje.trim()}>+ Tilføj</Knap>
       </div>
     </div>
+  );
+}
+
+// Teksten i ét afgangspunkt. Et tekstområde og ikke et <input>, fordi et
+// input ikke kan ombryde: "Sagt hvor jeg er, og hvornår jeg er hjemme" blev
+// skåret af på en smal telefon, efter felterne fik 16 px skrift (0.2.21).
+// Højden følger teksten, så punktet står som én linje, til det ikke kan mere.
+// Enter laver ikke et linjeskift — et punkt er én linje, der bare må ombrydes.
+function Punkttekst({ tekst, afkrydset, skift }: {
+  tekst: string;
+  afkrydset: boolean;
+  skift: (tekst: string) => void;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  useLayoutEffect(() => {
+    const felt = ref.current;
+    if (!felt) return;
+    const tilpas = () => {
+      felt.style.height = 'auto';
+      felt.style.height = `${felt.scrollHeight}px`;
+    };
+    tilpas();
+    // Bredden ændrer sig, når telefonen vendes, og så flytter ombrydningen.
+    if (typeof ResizeObserver === 'undefined') return;
+    const iagttager = new ResizeObserver(tilpas);
+    iagttager.observe(felt);
+    return () => iagttager.disconnect();
+  }, [tekst]);
+
+  return (
+    <textarea
+      ref={ref}
+      aria-label="Punktets tekst"
+      rows={1}
+      value={tekst}
+      onChange={(e) => skift(e.target.value.replace(/\n/g, ' '))}
+      onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}
+      style={{
+        flex: 1,
+        minWidth: 0,
+        fontSize: 'var(--skrift-knap)',
+        fontFamily: 'inherit',
+        // 10 + 24 + 10 = --roerehoejde: én linje står midt for afkrydsningen.
+        lineHeight: 1.5,
+        border: 'none',
+        background: 'transparent',
+        padding: '10px 0',
+        resize: 'none',
+        overflow: 'hidden',
+        overflowWrap: 'anywhere',
+        textDecoration: afkrydset ? 'line-through' : 'none',
+        color: afkrydset ? 'var(--tekst-svag)' : 'var(--tekst)'
+      }}
+    />
   );
 }
 

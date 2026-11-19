@@ -233,6 +233,15 @@ mindst 16 px på berøringsskærme (`@media (pointer: coarse)` i index.css), ude
 at brugerens zoom er låst. Testet i `Ark.test.tsx` og `Skal.test.tsx` (jsdom). **Endnu ikke
 bekræftet på en rigtig iPhone.**
 
+**Tre små UI-rettelser fra Noor (0.2.22).** (1) Afgangs-tjekkets punkt 3–5
+blev skåret af på en smal telefon efter 16 px-skriften: spalterne på
+Tur-detalje kan nu krympe (`minmax(0, 1fr)`), og punktets tekst ombrydes i et
+tekstområde. (2) `--skrift-felt` står nu i `docs/design/TOKENS.md` med værdi og
+formål. (3) Din vægt og Kalorier i Indstillinger står i én spalte, som de
+andre felter. Testet i `TurDetalje.test.tsx`, `IndstillingerSide.test.tsx` og
+`feltzoom.test.ts` (jsdom) og i Chromium med telefon-emulering ved 320, 375
+og 430 px. **Ikke testet på en rigtig iPhone.**
+
 **Sync-fix: gendannelse vs. gravsten + falsk serverfejl (0.2.20).** To fejl,
 begge i `src/sync.ts`. (1) En sikkerhedskopi, der blev læst ind efter en
 sletning, kom op på serveren, men gravstenene fra sletningen skjulte posterne

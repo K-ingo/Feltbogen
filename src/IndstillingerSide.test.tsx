@@ -277,6 +277,20 @@ describe('fire spande', () => {
     expect(screen.getByLabelText(/Din vægt/)).toBeInTheDocument();
   });
 
+  it('stiller Din vægt og Kalorier i én spalte, som de andre felter', async () => {
+    // Side om side ombrød "Kalorier pr. dag · valgfrit" på en telefon, og
+    // feltet stod en linje under "Din vægt" (Noor).
+    vis();
+    await klar();
+
+    const kalorier = screen.getByLabelText(/Kalorier pr\. dag/);
+    // Det nærmeste, der holder begge felter, er gridet de står i.
+    let raekke: HTMLElement | null = screen.getByLabelText(/Din vægt/);
+    while (raekke && !raekke.contains(kalorier)) raekke = raekke.parentElement;
+    expect(raekke?.style.display).toBe('grid');
+    expect(raekke?.style.gridTemplateColumns).toBe('minmax(0, 1fr)');
+  });
+
   it('folder fejlfinding og afgangs-tjekket væk, uden at de forsvinder', async () => {
     vis();
     await klar();
