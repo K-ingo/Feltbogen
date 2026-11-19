@@ -8,6 +8,7 @@ vi.mock('./pb', () => import('./test/pbMock'));
 import { db } from './db';
 import TurDetalje from './TurDetalje';
 import { lavGruppe, lavItem, lavTur } from './test/data';
+import { nytAfgangsTjek, STANDARD_SKABELON } from './afgangsTjek';
 import { tegn, DESKTOP, MOBIL } from './test/skaerm';
 
 // ─────────────────────────────────────────────
@@ -183,5 +184,44 @@ describe('den primære knap følger turens forløb', () => {
 
     expect(await screen.findByRole('button', { name: /pak-af-tjek/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Afslut tur' })).not.toBeInTheDocument();
+  });
+});
+
+describe('Afgangs-tjek på en smal telefon', () => {
+  // Fra Noor: efter 16 px skrift i felterne (0.2.21) blev de lange punkter
+  // skåret af. Et <input> kan ikke ombryde, så teksten står i et tekstområde,
+  // og spalten må give efter for sit indhold (minmax(0, 1fr)).
+  const visAfgang = async () => {
+    await visTur({ status: 'aktiv', afgangs_tjek: nytAfgangsTjek() }, 320);
+    const undervejs = await screen.findByRole('tab', { name: 'Undervejs' }).catch(() => null);
+    if (undervejs) await userEvent.click(undervejs);
+    return screen.findAllByRole('textbox', { name: 'Punktets tekst' });
+  };
+
+  it('viser hvert punkt i et felt, der kan ombryde', async () => {
+    const felter = await visAfgang();
+    expect(felter).toHaveLength(STANDARD_SKABELON.length);
+    for (const felt of felter) expect(felt.tagName).toBe('TEXTAREA');
+    expect(felter[2]).toHaveValue('Sagt hvor jeg er, og hvornår jeg er hjemme');
+  });
+
+  it('lader spalten krympe under indholdets naturlige bredde', async () => {
+    const [felt] = await visAfgang();
+    let el: HTMLElement | null = felt;
+    const spor: string[] = [];
+    while (el) {
+      if (el.style.display === 'grid') spor.push(el.style.gridTemplateColumns);
+      el = el.parentElement;
+    }
+    expect(spor.length).toBeGreaterThan(0);
+    for (const s of spor) expect(s).toMatch(/minmax\(0,/);
+  });
+
+  it('laver ikke et linjeskift på Enter — et punkt er én linje', async () => {
+    const [felt] = await visAfgang();
+    await userEvent.click(felt);
+    await userEvent.keyboard('{End}{Enter}x');
+    const tur = (await db.ture.toArray())[0];
+    expect(tur.afgangs_tjek?.linjer[0].tekst).toBe('Nøglerx');
   });
 });

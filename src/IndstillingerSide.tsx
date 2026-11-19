@@ -341,7 +341,10 @@ function IndstillingerSide({ fane, skift, tilLogin, seRundvisning, maal }: Props
             enhed og deles aldrig med gæster på dine ture.
           </Afsnitstekst>
           <Kort>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
+            {/* Én spalte, som "Dit navn": stod de to side om side, ombrød
+                "Kalorier pr. dag · valgfrit" på en telefon, og feltet rykkede
+                en linje ned under "Din vægt". */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '12px' }}>
               <Felt
                 label="Din vægt"
                 type="number"

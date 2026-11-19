@@ -291,6 +291,21 @@ intet ændret. Brugerens egen zoom er ikke låst: viewport-meta'en sætter
 hverken `maximum-scale` eller `user-scalable`, og `feltzoom.test.ts` holder
 fast i begge dele.
 
+**Afgangs-tjekket på en smal telefon (0.2.22).** Efter 16 px-skriften blev de
+lange punkter («Sagt hvor jeg er, og hvornår jeg er hjemme» og de to næste)
+skåret af ved 320–430 px. Der var to årsager. Spalterne i `spalter()`
+(`src/TurDetalje.tsx`) var grid uden et eksplicit spor, og et `auto`-spor må
+ikke blive smallere end det bredeste felts naturlige bredde, som voksede med
+skriften. Spalterne og selve listen står nu på `minmax(0, 1fr)`. Og et
+`<input>` kan ikke ombryde, så punktets tekst står i et tekstområde
+(`Punkttekst`), hvis højde følger teksten. Enter laver ikke et linjeskift: et
+punkt er én linje, der bare må ombrydes.
+
+**Din vægt og Kalorier i Indstillinger (0.2.22).** De to felter stod side om
+side, og ved telefonbredde ombrød «Kalorier pr. dag · valgfrit», så feltet
+stod en linje lavere end «Din vægt». De står nu i én spalte i fuld bredde,
+som «Dit navn», med den samme `Felt`-komponent.
+
 ### Dialoger og fokus
 
 Alle lag over skærmen — opret-arkene og grejsæt-arkene (`Ark.tsx`), QR i fuld

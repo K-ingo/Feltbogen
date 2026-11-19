@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 // holder fast i reglen og i, at brugerens egen zoom ikke er låst.
 const css = readFileSync(fileURLToPath(new URL('./index.css', import.meta.url)), 'utf8');
 const html = readFileSync(fileURLToPath(new URL('../index.html', import.meta.url)), 'utf8');
+const tokens = readFileSync(fileURLToPath(new URL('../docs/design/TOKENS.md', import.meta.url)), 'utf8');
 
 describe('felterne zoomer ikke på iOS', () => {
   it('løfter alle felter til --skrift-felt på en berøringsskærm', () => {
@@ -24,5 +25,15 @@ describe('felterne zoomer ikke på iOS', () => {
     const meta = /<meta name="viewport" content="([^"]+)"/.exec(html)?.[1] ?? '';
     expect(meta).not.toBe('');
     expect(meta).not.toMatch(/maximum-scale|user-scalable/);
+  });
+
+  // index.css og TOKENS.md er den samme tabel to steder (AGENTS.md → Design).
+  it('står i TOKENS.md med samme værdi som i index.css', () => {
+    const iCss = /--skrift-felt:\s*([\d.]+rem)/.exec(css)?.[1];
+    const raekke = tokens.split('\n').find((l) => l.includes('`--skrift-felt`')) ?? '';
+    expect(iCss).toBeTruthy();
+    expect(raekke).toContain(`\`${iCss}\``);
+    expect(raekke).toContain('16px');
+    expect(raekke).toMatch(/titelfelt|title field/);
   });
 });
